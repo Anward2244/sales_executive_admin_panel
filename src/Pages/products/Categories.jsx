@@ -544,7 +544,7 @@ const Categories = () => {
           </div>
 
           {/* Table Container */}
-          <div className="dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
+          <div className="bg-slate-100/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
@@ -778,14 +778,14 @@ const Categories = () => {
       {deleteConfirmOpen && categoryToDelete && createPortal(
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-slate-950/50 backdrop-blur-md animate-fade-in"
+            className="absolute inset-0 dark:bg-slate-950/50 backdrop-blur-lg animate-fade-in"
             onClick={() => {
               setDeleteConfirmOpen(false);
               setCategoryToDelete(null);
               setTypedConfirmName('');
             }}
           />
-          <div className="relative bg-white dark:bg-slate-950 border border-red-200 dark:border-red-500/20 rounded-3xl p-6 shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-white/40 dark:bg-slate-950 border border-red-200 dark:border-red-500/20 rounded-3xl p-6 shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-4">
               <FiTrash2 className="text-xl" />
             </div>

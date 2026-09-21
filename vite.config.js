@@ -43,24 +43,24 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'https://monster-airline-relevant-earn.trycloudflare.com',
+        target: 'http://213.210.36.19:5001',
         changeOrigin: true,
         secure: false,
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => {
-            proxyReq.setHeader('origin', 'https://monster-airline-relevant-earn.trycloudflare.com');
-            proxyReq.setHeader('referer', 'https://monster-airline-relevant-earn.trycloudflare.com');
+            proxyReq.setHeader('origin', 'http://213.210.36.19:5001');
+            proxyReq.setHeader('referer', 'http://213.210.36.19:5001');
           });
         }
       },
       '/uploads': {
-        target: 'https://monster-airline-relevant-earn.trycloudflare.com',
+        target: 'http://213.210.36.19:5001',
         changeOrigin: true,
         secure: false,
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => {
-            proxyReq.setHeader('origin', 'https://monster-airline-relevant-earn.trycloudflare.com');
-            proxyReq.setHeader('referer', 'https://monster-airline-relevant-earn.trycloudflare.com');
+            proxyReq.setHeader('origin', 'http://213.210.36.19:5001');
+            proxyReq.setHeader('referer', 'http://213.210.36.19:5001');
           });
         }
       }

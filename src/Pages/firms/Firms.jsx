@@ -879,7 +879,7 @@ const Firms = () => {
           </button>
         </div>
       ) : (
-        <div className="relative z-10 bg-white/5 dark:bg-transparent border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl shadow-slate-500/30 dark:shadow-black/50 rounded-3xl overflow-hidden flex flex-col h-full isolate will-change-transform">
+        <div className="relative z-10 bg-white/20 dark:bg-transparent border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl shadow-slate-500/30 dark:shadow-black/50 rounded-3xl overflow-hidden flex flex-col h-full isolate will-change-transform">
           <div className="overflow-auto custom-scrollbar max-h-[70vh]">
             <table className="w-full text-left border-collapse whitespace-nowrap min-w-200">
               <thead className="sticky top-0 z-20 bg-white/60 dark:bg-slate-900/80 backdrop-blur-md shadow-xs dark:shadow-md border-b border-slate-200/80 dark:border-white/10">
@@ -1339,7 +1339,7 @@ const Firms = () => {
             />
 
             {/* Modal Dialog */}
-            <div className="relative w-full max-w-2xl bg-white/40 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
+            <div className="relative w-full max-w-2xl bg-white/20 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
               {/* Header */}
               <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
                 <div className="flex items-center gap-3">
@@ -1652,7 +1652,7 @@ const Firms = () => {
             />
 
             {/* Modal Dialog */}
-            <div className="relative w-full max-w-2xl bg-white/40 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
+            <div className="relative w-full max-w-2xl bg-white/20 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
               {/* Header */}
               <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
                 <div className="flex items-center gap-3">
@@ -1961,7 +1961,7 @@ const Firms = () => {
             />
 
             {/* Modal Box */}
-            <div className="relative w-full max-w-2xl bg-white/40 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
+            <div className="relative w-full max-w-2xl bg-white/20 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
               {/* Modal Header */}
               <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
                 <div className="flex items-center gap-3">

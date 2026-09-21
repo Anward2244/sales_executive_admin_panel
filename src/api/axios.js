@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const BASE_URL = import.meta.env.DEV ? '' : 'https://monster-airline-relevant-earn.trycloudflare.com';
+export const BASE_URL = import.meta.env.DEV ? '' : 'http://213.210.36.19:5001';
 // export const BASE_URL_DEV = 'http://192.168.1.4:5046';
 
 

@@ -439,7 +439,7 @@ const Companies = () => {
       )}
 
       {/* Main Companies Table (styled matching Users.jsx) */}
-      <div className="relative z-10 bg-white/5 dark:bg-transparent border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl shadow-slate-500/30 dark:shadow-black/50 rounded-3xl overflow-hidden flex flex-col h-full isolate will-change-transform">
+      <div className="relative z-10 bg-white/20 dark:bg-transparent border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl shadow-slate-500/30 dark:shadow-black/50 rounded-3xl overflow-hidden flex flex-col h-full isolate will-change-transform">
         {loading ? (
           <div className="p-16 flex flex-col items-center justify-center">
             <FiLoader className="text-3xl text-blue-600 animate-spin" />

@@ -1275,10 +1275,10 @@ const Dashboard = () => {
       {selectedOrder && createPortal(
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-slate-950/50 backdrop-blur-md animate-fade-in"
+            className="absolute inset-0 dark:bg-slate-950/50 backdrop-blur-lg animate-fade-in"
             onClick={() => setSelectedOrder(null)}
           />
-          <div className="relative bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-white/40 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200 dark:border-white/10">
               <div className="flex items-center gap-3">
