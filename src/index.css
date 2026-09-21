@@ -1,0 +1,284 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant light (&:where(.light, .light *));
+
+/* ========================================================
+   CUSTOM SCROLLBAR
+   ======================================================== */
+
+/* 1. Firefox support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2564eb60 transparent;
+}
+
+/* 2. WebKit support (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-track,
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.5);
+  border-radius: 10px;
+  border: 2px solid #ffffff;
+}
+
+.dark ::-webkit-scrollbar-thumb,
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #2564eb60;
+  border: 2px solid #000000;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ========================================================
+   TABLE COLUMN BORDERS
+   ======================================================== */
+table th:not(:last-child),
+table td:not(:last-child) {
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ========================================================
+   PANEL BACKGROUND GRADIENTS
+   ======================================================== */
+.panel-bg-dark {
+  background: linear-gradient(to bottom right, #000000 0%, #020617 50%, #172554 100%) !important;
+}
+
+.panel-bg-light {
+  background: linear-gradient(135deg, #ffffff 0%, #d4dbe1 35%, #dbeafe 65%, #93c5fd 100%) !important;
+}
+
+/* ========================================================
+   GLOBAL APP LAYOUT SIZING
+   ======================================================== */
+html,
+body,
+#root {
+  height: 100%;
+  height: 100dvh;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ========================================================
+   AUTOFILL INPUT OVERRIDES (LIGHT & DARK THEMES)
+   ======================================================== */
+
+/* 1. Light Theme Autofill (Default / .light / [data-theme="light"]) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active,
+.light input:-webkit-autofill,
+.light input:-webkit-autofill:hover, 
+.light input:-webkit-autofill:focus, 
+.light input:-webkit-autofill:active,
+[data-theme="light"] input:-webkit-autofill,
+[data-theme="light"] input:-webkit-autofill:hover, 
+[data-theme="light"] input:-webkit-autofill:focus, 
+[data-theme="light"] input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* 2. Dark Theme Autofill (.dark / [data-theme="dark"]) */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover, 
+.dark input:-webkit-autofill:focus, 
+.dark input:-webkit-autofill:active,
+[data-theme="dark"] input:-webkit-autofill,
+[data-theme="dark"] input:-webkit-autofill:hover, 
+[data-theme="dark"] input:-webkit-autofill:focus, 
+[data-theme="dark"] input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #090e1f inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ========================================================
+   AMBIENT GLOW MOTION ANIMATION
+   ======================================================== */
+@keyframes float-glow {
+  0% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  25% {
+    transform: translate(15vw, -10vh) scale(1.15) rotate(40deg);
+  }
+  50% {
+    transform: translate(30vw, 15vh) scale(0.9) rotate(80deg);
+  }
+  75% {
+    transform: translate(-10vw, 25vh) scale(1.1) rotate(120deg);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1) rotate(180deg);
+  }
+}
+
+.animate-glow {
+  animation: float-glow 50s infinite ease-in-out;
+}
+
+@keyframes float-glow-alt {
+  0% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  25% {
+    transform: translate(-15vw, 15vh) scale(0.85) rotate(-45deg);
+  }
+  50% {
+    transform: translate(-30vw, -10vh) scale(1.1) rotate(-90deg);
+  }
+  75% {
+    transform: translate(10vw, -25vh) scale(0.95) rotate(-135deg);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1) rotate(-180deg);
+  }
+}
+
+.animate-glow-alt {
+  animation: float-glow-alt 40s infinite ease-in-out;
+}
+
+/* ========================================================
+   GLOWING ROTATING BORDER FOR CARDS (ON HOVER)
+   ======================================================== */
+@keyframes rotate-glow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.glowing-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 1.5px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+}
+
+.glowing-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 25%,
+    var(--glow-color, #3b82f6) 45%,
+    var(--glow-color-alt, #818cf8) 60%,
+    transparent 80%
+  );
+  animation: rotate-glow 4s linear infinite;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.glowing-card:hover::before {
+  opacity: 1;
+}
+
+.glowing-card-inner {
+  position: relative;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(24px);
+  border-radius: 22.5px;
+  z-index: 2;
+  height: 100%;
+  width: 100%;
+  transition: background-color 0.4s ease;
+}
+
+.dark .glowing-card-inner,
+[data-theme="dark"] .glowing-card-inner {
+  background: rgba(11, 19, 43, 0.88);
+}
+
+.glowing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px -10px var(--glow-shadow, rgba(59, 130, 246, 0.4));
+}
+
+.glowing-card:hover .glowing-card-inner {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.dark .glowing-card:hover .glowing-card-inner,
+[data-theme="dark"] .glowing-card:hover .glowing-card-inner {
+  background: rgba(15, 25, 55, 0.92);
+}
+
+/* ========================================================
+   DROPDOWN & POPUP OPENING ANIMATIONS
+   ======================================================== */
+@keyframes dropdown-fade {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-dropdown {
+  animation: dropdown-fade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top;
+}
+
+@keyframes dropdown-fade-up {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-dropdown-up {
+  animation: dropdown-fade-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: bottom;
+}
