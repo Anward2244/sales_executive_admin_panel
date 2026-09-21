@@ -697,7 +697,7 @@ const UsersList = () => {
           </button>
         </div>
       ) : (
-        <div className="relative z-10 bg-white/5 dark:bg-transparent border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl shadow-slate-500/30 dark:shadow-black/50 rounded-3xl overflow-hidden flex flex-col h-full isolate will-change-transform">
+        <div className="relative z-10 bg-white/10 dark:bg-transparent border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl shadow-slate-500/30 dark:shadow-black/50 rounded-3xl overflow-hidden flex flex-col h-full isolate will-change-transform">
           <div className="overflow-auto custom-scrollbar max-h-[70vh]">
             <table className="w-full text-left border-collapse whitespace-nowrap min-w-200">
               <thead className="sticky top-0 z-20 bg-white/60 dark:bg-slate-900/80 backdrop-blur-md shadow-xs dark:shadow-md border-b border-slate-200/80 dark:border-white/10">

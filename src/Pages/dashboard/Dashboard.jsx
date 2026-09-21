@@ -29,14 +29,15 @@ import {
   FiActivity,
   FiFilter
 } from 'react-icons/fi';
-import { BiRupee } from 'react-icons/bi';
-import Chart from 'react-apexcharts';
+import VisxTrendChart from '@/components/dashboard/VisxTrendChart';
+import VisxPipelineDonut from '@/components/dashboard/VisxPipelineDonut';
 import { useTheme } from '@/Context/ThemeContext';
 import { getDashboardMetricsApi, getReportsApi } from '@/api/axios';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import CopyButton from '@/components/ui/CopyButton';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
+import { BiRupee } from 'react-icons/bi';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -189,214 +190,6 @@ const Dashboard = () => {
     return { totalRev, totalOrd, peakRev, avgRev };
   }, [processedTrendData]);
 
-  // Chart 1: Area chart options & series
-  const trendChartOptions = useMemo(() => {
-    const isRevenue = trendMetric === 'revenue';
-    const primaryColor = isRevenue ? '#10b981' : '#3b82f6';
-    const categories = processedTrendData.map((d) => {
-      try {
-        const parts = String(d.date).split('-');
-        if (parts.length === 3) {
-          const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-          return dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-        }
-        return d.date;
-      } catch {
-        return d.date;
-      }
-    });
-
-    return {
-      chart: {
-        id: 'dashboard-velocity-trend',
-        type: 'area',
-        height: 310,
-        toolbar: { show: false },
-        zoom: { enabled: false },
-        animations: {
-          enabled: true,
-          easing: 'easeinout',
-          speed: 650
-        },
-        fontFamily: 'inherit',
-        background: 'transparent'
-      },
-      colors: [primaryColor],
-      fill: {
-        type: 'gradient',
-        gradient: {
-          shadeIntensity: 1,
-          type: 'vertical',
-          opacityFrom: isDark ? 0.45 : 0.35,
-          opacityTo: 0.05,
-          stops: [0, 90, 100]
-        }
-      },
-      stroke: {
-        curve: 'smooth',
-        width: 3,
-        colors: [primaryColor]
-      },
-      markers: {
-        size: processedTrendData.length <= 10 ? 4 : 0,
-        colors: [primaryColor],
-        strokeColors: isDark ? '#0f172a' : '#ffffff',
-        strokeWidth: 2,
-        hover: { size: 6 }
-      },
-      dataLabels: {
-        enabled: false
-      },
-      grid: {
-        borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.06)',
-        strokeDashArray: 4,
-        padding: { top: 10, right: 15, bottom: 0, left: 10 }
-      },
-      xaxis: {
-        categories,
-        axisBorder: { show: false },
-        axisTicks: { show: false },
-        labels: {
-          style: {
-            colors: isDark ? '#94a3b8' : '#64748b',
-            fontSize: '11px',
-            fontFamily: 'inherit',
-            fontWeight: 500
-          }
-        },
-        tooltip: { enabled: false }
-      },
-      yaxis: {
-        labels: {
-          style: {
-            colors: isDark ? '#94a3b8' : '#64748b',
-            fontSize: '11px',
-            fontFamily: 'inherit',
-            fontWeight: 500
-          },
-          formatter: (val) => {
-            if (!isRevenue) return Math.round(val);
-            if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
-            if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
-            if (val >= 1000) return `₹${(val / 1000).toFixed(0)}k`;
-            return `₹${Math.round(val)}`;
-          }
-        }
-      },
-      tooltip: {
-        theme: isDark ? 'dark' : 'light',
-        x: { show: true },
-        y: {
-          formatter: (val) => {
-            if (isRevenue) {
-              return `₹${Number(val).toLocaleString('en-IN')}`;
-            }
-            return `${val} orders`;
-          }
-        }
-      },
-      theme: {
-        mode: isDark ? 'dark' : 'light'
-      }
-    };
-  }, [trendMetric, processedTrendData, isDark]);
-
-  const trendChartSeries = useMemo(
-    () => [
-      {
-        name: trendMetric === 'revenue' ? 'Revenue (₹)' : 'Orders Placed',
-        data: processedTrendData.map((d) => (trendMetric === 'revenue' ? d.revenue : d.orders))
-      }
-    ],
-    [trendMetric, processedTrendData]
-  );
-
-  // Chart 2: Donut series & options
-  const statusSeries = useMemo(
-    () => [
-      Number(statusBreakdown.PENDING?.count || 0),
-      Number(statusBreakdown.APPROVED?.count || 0),
-      Number(statusBreakdown.DISPATCHED?.count || 0),
-      Number(statusBreakdown.REJECTED?.count || 0)
-    ],
-    [statusBreakdown]
-  );
-
-  const statusDonutOptions = useMemo(
-    () => ({
-      chart: {
-        type: 'donut',
-        background: 'transparent',
-        fontFamily: 'inherit',
-        animations: {
-          enabled: true,
-          easing: 'easeinout',
-          speed: 650
-        }
-      },
-      labels: ['Pending', 'Approved', 'Dispatched', 'Rejected'],
-      colors: ['#f59e0b', '#3b82f6', '#10b981', '#f43f5e'],
-      stroke: {
-        width: 2,
-        colors: [isDark ? '#0f172a' : '#ffffff']
-      },
-      dataLabels: {
-        enabled: false
-      },
-      plotOptions: {
-        pie: {
-          donut: {
-            size: '72%',
-            labels: {
-              show: true,
-              name: {
-                show: true,
-                fontSize: '12px',
-                fontFamily: 'inherit',
-                fontWeight: 600,
-                color: isDark ? '#94a3b8' : '#64748b',
-                offsetY: -4
-              },
-              value: {
-                show: true,
-                fontSize: '22px',
-                fontWeight: 800,
-                fontFamily: 'inherit',
-                color: isDark ? '#ffffff' : '#0f172a',
-                offsetY: 6,
-                formatter: (val) => `${val}`
-              },
-              total: {
-                show: true,
-                showAlways: true,
-                label: 'Total Orders',
-                fontSize: '11px',
-                fontWeight: 600,
-                color: isDark ? '#94a3b8' : '#64748b',
-                formatter: () => `${totalStatusCount}`
-              }
-            }
-          }
-        }
-      },
-      legend: {
-        show: false
-      },
-      tooltip: {
-        theme: isDark ? 'dark' : 'light',
-        y: {
-          formatter: (val) => {
-            const pct = Math.round((val / (totalStatusCount || 1)) * 100);
-            return `${val} Orders (${pct}%)`;
-          }
-        }
-      },
-      theme: {
-        mode: isDark ? 'dark' : 'light'
-      }
-    }),
-    [isDark, totalStatusCount]
-  );
 
   // Top Metric Cards Config
   const metricCards = [
@@ -1108,11 +901,11 @@ const Dashboard = () => {
                   </div>
                 </div>
               ) : (
-                <Chart
-                  options={trendChartOptions}
-                  series={trendChartSeries}
-                  type="area"
+                <VisxTrendChart
+                  data={processedTrendData}
+                  metric={trendMetric}
                   height={310}
+                  isDark={isDark}
                 />
               )}
             </div>
@@ -1185,11 +978,11 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div className="w-full">
-                  <Chart
-                    options={statusDonutOptions}
-                    series={statusSeries}
-                    type="donut"
+                  <VisxPipelineDonut
+                    statusBreakdown={statusBreakdown}
+                    totalCount={totalStatusCount}
                     height={230}
+                    isDark={isDark}
                   />
                 </div>
               )}

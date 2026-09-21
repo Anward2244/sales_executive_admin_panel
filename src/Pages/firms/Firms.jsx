@@ -317,28 +317,26 @@ const Firms = () => {
     return Array.from(map.values());
   }, [availableCompanies, firms]);
 
-  // Counts for tabs (matching Users.jsx pattern)
+  // Counts for tabs (dynamic based on selected company)
   const tabCounts = useMemo(() => {
     let activeCount = 0;
     let inactiveCount = 0;
-    const byCompany = {};
 
-    firms.forEach((f) => {
+    const baseList = selectedCompany
+      ? firms.filter((f) => f.companyId?._id === selectedCompany)
+      : firms;
+
+    baseList.forEach((f) => {
       if (f.isActive) activeCount++;
       else inactiveCount++;
-
-      if (f.companyId?._id) {
-        byCompany[f.companyId._id] = (byCompany[f.companyId._id] || 0) + 1;
-      }
     });
 
     return {
-      all: firms.length,
+      all: baseList.length,
       active: activeCount,
-      inactive: inactiveCount,
-      byCompany
+      inactive: inactiveCount
     };
-  }, [firms]);
+  }, [firms, selectedCompany]);
 
   // Tab Filtering
   const tabFilteredFirms = useMemo(() => {
@@ -448,16 +446,13 @@ const Firms = () => {
   // Dropdown options
   const companyFilterOptions = useMemo(() => {
     return [
-      { value: '', label: selectedCompany ? `Company: Filtered` : 'All Companies' },
-      ...allCompanyOptions.map((c) => ({ value: c.id, label: `${c.name} (${c.code})` }))
+      { value: '', label: 'All Companies' },
+      ...allCompanyOptions.map((c) => ({
+        value: c.id,
+        label: `${c.name}${c.code ? ` (${c.code})` : ''}`
+      }))
     ];
-  }, [allCompanyOptions, selectedCompany]);
-
-  const statusOptions = [
-    { value: '', label: selectedStatus ? `Status: ${selectedStatus.toUpperCase()}` : 'All Status' },
-    { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' }
-  ];
+  }, [allCompanyOptions]);
 
   // Pagination logic
   const totalPages = Math.ceil(sortedFirms.length / firmsPerPage) || 1;
@@ -666,8 +661,8 @@ const Firms = () => {
         </div>
       )}
 
-      {/* Top Title & Search Bar (matching Users.jsx) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Top Title & Header Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             Firms List
@@ -677,82 +672,17 @@ const Firms = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative w-full md:w-80">
-            <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-400 z-10" />
-            <input
-              type="text"
-              placeholder="Search by name, code, contact, GSTIN, city..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-black/40 shadow-xs dark:shadow-inner backdrop-blur-md text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-medium transition-all"
-            />
-            {searchInput && (
-              <button
-                type="button"
-                onClick={() => setSearchInput('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
-              >
-                <FiX className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
+        <div className="flex items-center gap-2.5">
           <button
+            type="button"
             onClick={() => fetchFirms(false)}
             disabled={loading}
-            className="p-2.5 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs shrink-0"
+            className="p-2.5 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs shrink-0 disabled:opacity-50"
             title="Refresh Firms"
           >
             <FiRefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
           </button>
-        </div>
-      </div>
 
-      {/* Metrics & Filter Bar (matching Users.jsx) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-semibold text-slate-600 dark:text-slate-400 px-1 py-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-full shadow-xs dark:shadow-none text-slate-600 dark:text-slate-400">
-            Total Firms: <strong className="text-slate-900 dark:text-white">{firms.length}</strong>
-          </span>
-          {(searchTerm || selectedCompany || selectedStatus || firmTab !== 'all') && (
-            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full">
-              Showing: <strong>{sortedFirms.length}</strong>
-            </span>
-          )}
-        </div>
-
-        {/* Dropdown Filters & Actions */}
-        <div className="flex items-center gap-2">
-          <div className="min-w-[140px]">
-            <CustomDropdown
-              value=""
-              onChange={(val) => handleFilterChange('company', val)}
-              options={companyFilterOptions}
-              statusColor={`!px-3 !py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 font-bold ${
-                selectedCompany ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'
-              }`}
-            />
-          </div>
-          <div className="min-w-[120px]">
-            <CustomDropdown
-              value=""
-              onChange={(val) => handleFilterChange('status', val)}
-              options={statusOptions}
-              statusColor={`!px-3 !py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 font-bold ${
-                selectedStatus ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'
-              }`}
-            />
-          </div>
-          {(searchTerm || selectedCompany || selectedStatus || firmTab !== 'all') && (
-            <button
-              onClick={handleClearFilters}
-              className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 hover:text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:hover:text-white text-xs font-bold rounded-xl border border-slate-300 dark:border-white/10 transition-all cursor-pointer"
-              title="Reset Filters"
-            >
-              Reset
-            </button>
-          )}
           <button
             type="button"
             onClick={() => {
@@ -760,7 +690,7 @@ const Firms = () => {
               setCreateFormData(INITIAL_FORM_STATE);
               setIsCreateModalOpen(true);
             }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer shrink-0"
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer shrink-0 active:scale-95"
           >
             <FiPlus className="w-3.5 h-3.5" />
             <span>Add Firm</span>
@@ -768,96 +698,140 @@ const Firms = () => {
         </div>
       </div>
 
-      {/* Tabs Switcher (matching Users.jsx) */}
-      <div className="relative z-20 flex flex-wrap items-center gap-2 p-2 bg-white/40 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-2xl backdrop-blur-xl shadow-md shadow-slate-500/30 dark:shadow-none">
-        <button
-          onClick={() => handleTabChange('all')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            firmTab === 'all'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-          }`}
-        >
-          <FiServer className="text-sm shrink-0" />
-          <span>All Firms</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
-              firmTab === 'all'
-                ? 'bg-white/20 text-white'
-                : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300'
-            }`}
-          >
-            {tabCounts.all}
-          </span>
-        </button>
+      {/* Unified Filter & Search Bar */}
+      <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-md flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+        {/* Left: Search Input */}
+        <div className="relative w-full lg:w-96">
+          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+          <input
+            type="text"
+            placeholder="Search by name, code, contact, GSTIN, city..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => setSearchInput('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+            >
+              <FiX className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
 
-        <button
-          onClick={() => handleTabChange('active')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            firmTab === 'active'
-              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-          }`}
-        >
-          <FiCheck className="text-sm shrink-0" />
-          <span>Active</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
-              firmTab === 'active'
-                ? 'bg-white/20 text-white'
-                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-            }`}
-          >
-            {tabCounts.active}
-          </span>
-        </button>
-
-        <button
-          onClick={() => handleTabChange('inactive')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            firmTab === 'inactive'
-              ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-          }`}
-        >
-          <FiX className="text-sm shrink-0" />
-          <span>Inactive</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
-              firmTab === 'inactive'
-                ? 'bg-white/20 text-white'
-                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-            }`}
-          >
-            {tabCounts.inactive}
-          </span>
-        </button>
-
-        {/* Dynamic tabs for parent companies */}
-        {allCompanyOptions.map((comp) => (
-          <button
-            key={comp.id}
-            onClick={() => handleTabChange(comp.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              firmTab === comp.id
-                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-            }`}
-          >
-            <FiBriefcase className="text-sm shrink-0" />
-            <span>{comp.name}</span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
-                firmTab === comp.id
-                  ? 'bg-white/20 text-white'
-                  : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+        {/* Right: Segmented Status Tabs + Company Selector + Reset */}
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap justify-between lg:justify-end">
+          {/* Status Segmented Tabs */}
+          <div className="flex items-center p-1 bg-slate-100/80 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleTabChange('all')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                firmTab === 'all'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
               }`}
             >
-              {tabCounts.byCompany[comp.id] || 0}
-            </span>
-          </button>
-        ))}
+              <span>All</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-extrabold ${
+                  firmTab === 'all'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                {tabCounts.all}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('active')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                firmTab === 'active'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+              }`}
+            >
+              <span>Active</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-extrabold ${
+                  firmTab === 'active'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                {tabCounts.active}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('inactive')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                firmTab === 'inactive'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+              }`}
+            >
+              <span>Inactive</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-extrabold ${
+                  firmTab === 'inactive'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                }`}
+              >
+                {tabCounts.inactive}
+              </span>
+            </button>
+          </div>
+
+          {/* Parent Company Dropdown */}
+          <div className="w-full sm:w-auto min-w-[170px] sm:min-w-[190px]">
+            <CustomDropdown
+              value={selectedCompany}
+              onChange={(val) => handleFilterChange('company', val)}
+              options={companyFilterOptions}
+              defaultLabel="All Companies"
+              statusColor={`!px-3 !py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-black/20 font-bold ${
+                selectedCompany ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'
+              }`}
+            />
+          </div>
+
+          {/* Reset Filters */}
+          {(searchTerm || selectedCompany || selectedStatus || firmTab !== 'all') && (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 hover:text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:hover:text-white text-xs font-bold rounded-xl border border-slate-300 dark:border-white/10 transition-all cursor-pointer shrink-0"
+              title="Reset Filters"
+            >
+              Reset
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Active Filter Info Strip */}
+      {(searchTerm || selectedCompany || selectedStatus || firmTab !== 'all') && (
+        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 -mt-2">
+          <span>
+            Showing <strong className="text-slate-900 dark:text-white">{sortedFirms.length}</strong> of{' '}
+            <strong className="text-slate-900 dark:text-white">{firms.length}</strong> firms
+          </span>
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            className="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer text-xs"
+          >
+            Clear all filters
+          </button>
+        </div>
+      )}
 
       {/* Content Area (matching Users.jsx) */}
       {loading ? (

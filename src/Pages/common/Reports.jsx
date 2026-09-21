@@ -345,7 +345,7 @@ const Reports = () => {
                     className="fixed inset-0 z-20"
                     onClick={() => setExportMenuOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-white/10 py-2 z-30 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="absolute right-0 mt-2 w-56 bg-white/40 dark:bg-slate-950/50 backdrop-blur-lg rounded-2xl shadow-xl border border-slate-200 dark:border-white/10 py-2 z-30 animate-in fade-in slide-in-from-top-2 duration-150">
                     <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                       Download CSV Datasets
                     </div>
@@ -400,7 +400,7 @@ const Reports = () => {
       )}
 
       {/* Date Range Selector Banner */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs">
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs">
         <div className="flex items-center gap-2">
           <FiCalendar className="text-blue-500 text-sm" />
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Reporting Window:</span>
@@ -431,7 +431,7 @@ const Reports = () => {
       {/* Top 4 KPI Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Orders */}
-        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs relative overflow-hidden group">
+        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -457,7 +457,7 @@ const Reports = () => {
         </div>
 
         {/* Gross Revenue */}
-        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs relative overflow-hidden group">
+        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -482,7 +482,7 @@ const Reports = () => {
         </div>
 
         {/* Average Order Value (AOV) */}
-        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs relative overflow-hidden group">
+        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -507,7 +507,7 @@ const Reports = () => {
         </div>
 
         {/* Units Sold */}
-        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs relative overflow-hidden group">
+        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -535,7 +535,7 @@ const Reports = () => {
       {/* Middle Row: Status Breakdown & Daily Trend */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Status Breakdown Card */}
-        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between">
+        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
@@ -626,7 +626,7 @@ const Reports = () => {
         </div>
 
         {/* Daily Trend Card */}
-        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between">
+        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
@@ -706,7 +706,7 @@ const Reports = () => {
       </div>
 
       {/* Product Performance Section */}
-      <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
+      <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
         <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-2xl">
@@ -828,7 +828,7 @@ const Reports = () => {
       </div>
 
       {/* Orders Ledger Section */}
-      <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
+      <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
         <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1028,8 +1028,8 @@ const Reports = () => {
 
       {/* Order Details Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in duration-200">
+          <div className="bg-white/20 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-3">

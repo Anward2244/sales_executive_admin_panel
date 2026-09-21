@@ -125,10 +125,10 @@ const InternetStrengthIndicator = ({ compact = true, className = '' }) => {
         level: 0,
         bars: 0,
         label: 'Offline',
-        color: 'text-rose-500 dark:text-rose-400',
-        barColor: 'bg-rose-500',
-        badgeBg: 'bg-rose-500/10 border-rose-500/20 text-rose-500 dark:text-rose-400',
-        dotColor: 'bg-rose-500'
+        color: 'text-rose-600 dark:text-rose-400',
+        barColor: 'bg-rose-500 dark:bg-rose-400',
+        badgeBg: 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-300',
+        dotColor: 'bg-rose-500 dark:bg-rose-400'
       };
     }
 
@@ -137,10 +137,10 @@ const InternetStrengthIndicator = ({ compact = true, className = '' }) => {
         level: 3,
         bars: 3,
         label: 'Checking...',
-        color: 'text-blue-500 dark:text-blue-400',
-        barColor: 'bg-blue-500',
-        badgeBg: 'bg-blue-500/10 border-blue-500/20 text-blue-500',
-        dotColor: 'bg-blue-500'
+        color: 'text-blue-600 dark:text-blue-400',
+        barColor: 'bg-blue-500 dark:bg-blue-400',
+        badgeBg: 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-300',
+        dotColor: 'bg-blue-500 dark:bg-blue-400'
       };
     }
 
@@ -150,9 +150,9 @@ const InternetStrengthIndicator = ({ compact = true, className = '' }) => {
         bars: 4,
         label: 'Excellent',
         color: 'text-emerald-600 dark:text-emerald-400',
-        barColor: 'bg-emerald-500',
-        badgeBg: 'bg-emerald-500/50 border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
-        dotColor: 'bg-emerald-500'
+        barColor: 'bg-emerald-500 dark:bg-emerald-400',
+        badgeBg: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300',
+        dotColor: 'bg-emerald-500 dark:bg-emerald-400'
       };
     }
 
@@ -161,10 +161,10 @@ const InternetStrengthIndicator = ({ compact = true, className = '' }) => {
         level: 3,
         bars: 3,
         label: 'Good',
-        color: 'text-emerald-500/50 dark:text-emerald-400',
-        barColor: 'bg-emerald-500/50',
-        badgeBg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 dark:text-emerald-400',
-        dotColor: 'bg-emerald-500'
+        color: 'text-emerald-600 dark:text-emerald-400',
+        barColor: 'bg-emerald-500 dark:bg-emerald-400',
+        badgeBg: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300',
+        dotColor: 'bg-emerald-500 dark:bg-emerald-400'
       };
     }
 
@@ -173,10 +173,10 @@ const InternetStrengthIndicator = ({ compact = true, className = '' }) => {
         level: 2,
         bars: 2,
         label: 'Fair',
-        color: 'text-amber-500 dark:text-amber-400',
-        barColor: 'bg-amber-500',
-        badgeBg: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400',
-        dotColor: 'bg-amber-500'
+        color: 'text-amber-600 dark:text-amber-400',
+        barColor: 'bg-amber-500 dark:bg-amber-400',
+        badgeBg: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-300',
+        dotColor: 'bg-amber-500 dark:bg-amber-400'
       };
     }
 
@@ -184,10 +184,10 @@ const InternetStrengthIndicator = ({ compact = true, className = '' }) => {
       level: 1,
       bars: 1,
       label: 'Poor',
-      color: 'text-rose-500 dark:text-rose-400',
-      barColor: 'bg-rose-500',
-      badgeBg: 'bg-rose-500/10 border-rose-500/20 text-rose-500 dark:text-rose-400',
-      dotColor: 'bg-rose-500'
+      color: 'text-rose-600 dark:text-rose-400',
+      barColor: 'bg-rose-500 dark:bg-rose-400',
+      badgeBg: 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-300',
+      dotColor: 'bg-rose-500 dark:bg-rose-400'
     };
   };
 
