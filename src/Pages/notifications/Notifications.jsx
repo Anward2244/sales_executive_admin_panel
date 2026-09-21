@@ -363,50 +363,51 @@ const Notifications = () => {
             ? `${meta.total} Total`
             : null
         }
-      >
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Refresh Button */}
-          <button
-            type="button"
-            onClick={() => fetchNotifications(currentPage, true)}
-            disabled={refreshing || loading}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white/80 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs disabled:opacity-50"
-            title="Refresh notifications list"
-          >
-            <FiRefreshCw className={`text-sm ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
+        actions={
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Refresh Button */}
+            <button
+              type="button"
+              onClick={() => fetchNotifications(currentPage, true)}
+              disabled={refreshing || loading}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white/80 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              title="Refresh notifications list"
+            >
+              <FiRefreshCw className={`text-sm ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
+              <span>Refresh</span>
+            </button>
 
-          {/* Mark All As Read */}
-          <button
-            type="button"
-            onClick={handleMarkAllAsRead}
-            disabled={markingAllRead || unreadCount === 0}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 dark:disabled:text-slate-600 rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/25 cursor-pointer disabled:cursor-not-allowed disabled:shadow-none"
-          >
-            <MdDoneAll className="text-base" />
-            <span>{markingAllRead ? 'Marking...' : 'Mark All as Read'}</span>
-          </button>
+            {/* Mark All As Read */}
+            <button
+              type="button"
+              onClick={handleMarkAllAsRead}
+              disabled={markingAllRead || unreadCount === 0}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 dark:disabled:text-slate-600 rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/25 cursor-pointer disabled:cursor-not-allowed disabled:shadow-none"
+            >
+              <MdDoneAll className="text-base" />
+              <span>{markingAllRead ? 'Marking...' : 'Mark All as Read'}</span>
+            </button>
 
-          {/* Register Device Token */}
-          <button
-            type="button"
-            onClick={() => {
-              setDeviceTokenError(null);
-              setDeviceTokenSuccess(null);
-              setIsDeviceTokenModalOpen(true);
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs"
-            title="Register Push Notification Device Token"
-          >
-            <FiSmartphone className="text-sm text-blue-500" />
-            <span className="hidden md:inline">Device Token</span>
-          </button>
-        </div>
-      </PageHeader>
+            {/* Register Device Token Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setDeviceTokenError(null);
+                setDeviceTokenSuccess(null);
+                setIsDeviceTokenModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-emerald-600/25 cursor-pointer"
+              title="Register Push Notification Device Token"
+            >
+              <FiSmartphone className="text-sm" />
+              <span>Register Device Token</span>
+            </button>
+          </div>
+        }
+      />
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         {/* Total */}
         <Card className="p-4 flex items-center justify-between">
           <div>
@@ -468,6 +469,34 @@ const Notifications = () => {
           </div>
           <div className="w-11 h-11 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center border border-cyan-500/20">
             <FiShoppingBag className="text-xl" />
+          </div>
+        </Card>
+
+        {/* Push Device Token Card */}
+        <Card className="p-4 flex items-center justify-between col-span-2 sm:col-span-1">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Device Push
+            </p>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-1 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+              <span>FCM Ready</span>
+            </h3>
+            <button
+              type="button"
+              onClick={() => {
+                setDeviceTokenError(null);
+                setDeviceTokenSuccess(null);
+                setIsDeviceTokenModalOpen(true);
+              }}
+              className="text-xs font-extrabold text-blue-600 dark:text-blue-400 hover:underline mt-1 cursor-pointer flex items-center gap-1"
+            >
+              <span>Register Token</span>
+              <FiArrowRight className="text-xs" />
+            </button>
+          </div>
+          <div className="w-11 h-11 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+            <FiSmartphone className="text-xl" />
           </div>
         </Card>
       </div>
@@ -836,8 +865,8 @@ const Notifications = () => {
 
       {/* ================= Notification Details Modal ================= */}
       {selectedNotification && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200/80 dark:border-white/10 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-white/40 dark:bg-slate-950/25 rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200/80 dark:border-white/10 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-200/80 dark:border-white/10">
               <div className="flex items-center gap-3">
@@ -1007,8 +1036,8 @@ const Notifications = () => {
 
       {/* ================= Device Token Registration Modal ================= */}
       {isDeviceTokenModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-white/40 dark:bg-slate-950/25 rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-white/10">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20">

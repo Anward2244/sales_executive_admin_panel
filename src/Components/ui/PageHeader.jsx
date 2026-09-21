@@ -9,11 +9,12 @@ const PageHeader = ({
   subtitle,
   action,
   actions,
+  children,
   className = ''
 }) => {
   const HeaderIcon = Icon || BadgeIcon;
   const headerText = description || subtitle;
-  const headerAction = action || actions;
+  const headerAction = action || actions || children;
 
   return (
     <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 relative z-10 ${className}`}>
