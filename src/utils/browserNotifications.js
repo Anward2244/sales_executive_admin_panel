@@ -10,7 +10,13 @@ export const DEFAULT_NOTIFICATION_SETTINGS = {
   browserAlertsEnabled: true, // in-app master switch for desktop notifications
   toastAlertsEnabled: true,   // in-app master switch for floating toasts
   soundEnabled: true,         // in-app sound chime toggle
-  toastDuration: 6000,        // toast auto-dismiss duration in ms
+  soundType: 'chime',         // 'chime' | 'bell' | 'ping' | 'subtle'
+  soundVolume: 0.8,           // 0.1 to 1.0
+  toastDuration: 5000,        // toast auto-dismiss duration in ms
+  toastPosition: 'top-right', // 'top-right' | 'top-center' | 'bottom-right'
+  quietHoursEnabled: false,   // Do not disturb mode
+  quietHoursStart: '22:00',
+  quietHoursEnd: '07:00',
   categories: {
     orders: true,
     quotes: true,
@@ -154,27 +160,56 @@ export const requestBrowserNotificationPermission = async () => {
 };
 
 /**
+ * Check if quiet hours (Do Not Disturb) is currently active
+ */
+export const isQuietHoursActive = () => {
+  const settings = getNotificationSettings();
+  if (!settings.quietHoursEnabled) return false;
+  try {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const [startH, startM] = (settings.quietHoursStart || '22:00').split(':').map(Number);
+    const [endH, endM] = (settings.quietHoursEnd || '07:00').split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+
+    if (startMinutes <= endMinutes) {
+      return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    } else {
+      return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+    }
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Play a notification audio chime via Web Audio API
  */
-export const playNotificationSound = (type = 'chime') => {
+export const playNotificationSound = (customType, customVolume) => {
   if (!isSoundEnabled()) return;
+  if (isQuietHoursActive() && !customType) return;
+
+  const settings = getNotificationSettings();
+  const tone = customType || settings.soundType || 'chime';
+  const volumeMultiplier = typeof customVolume === 'number' ? customVolume : (settings.soundVolume ?? 0.8);
 
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
     const ctx = new AudioContext();
+    const now = ctx.currentTime;
 
-    if (type === 'chime') {
+    if (tone === 'chime') {
       // Pleasant two-tone chime (F#5 to A5)
-      const now = ctx.currentTime;
-      
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.connect(gain1);
       gain1.connect(ctx.destination);
       osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(739.99, now); // F#5
-      gain1.gain.setValueAtTime(0.08, now);
+      osc1.frequency.setValueAtTime(739.99, now);
+      gain1.gain.setValueAtTime(0.08 * volumeMultiplier, now);
       gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
       osc1.start(now);
       osc1.stop(now + 0.35);
@@ -184,11 +219,47 @@ export const playNotificationSound = (type = 'chime') => {
       osc2.connect(gain2);
       gain2.connect(ctx.destination);
       osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(880.00, now + 0.12); // A5
-      gain2.gain.setValueAtTime(0.1, now + 0.12);
+      osc2.frequency.setValueAtTime(880.00, now + 0.12);
+      gain2.gain.setValueAtTime(0.1 * volumeMultiplier, now + 0.12);
       gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
       osc2.start(now + 0.12);
       osc2.stop(now + 0.6);
+    } else if (tone === 'bell') {
+      // Warm resonant bell ping (E5 659.25Hz with harmonic)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(659.25, now);
+      gain.gain.setValueAtTime(0.12 * volumeMultiplier, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+      osc.start(now);
+      osc.stop(now + 0.8);
+    } else if (tone === 'ping') {
+      // High crisp ping (C6 1046.5Hz)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1046.5, now);
+      gain.gain.setValueAtTime(0.09 * volumeMultiplier, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+      osc.start(now);
+      osc.stop(now + 0.28);
+    } else if (tone === 'subtle') {
+      // Soft gentle tap/tone (G4 392Hz)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(392.0, now);
+      gain.gain.setValueAtTime(0.06 * volumeMultiplier, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+      osc.start(now);
+      osc.stop(now + 0.18);
     }
 
     if (navigator.vibrate) {
@@ -220,6 +291,11 @@ export const showBrowserNotification = ({
 
   const settings = getNotificationSettings();
   if (category && settings.categories && settings.categories[category] === false) {
+    return false;
+  }
+
+  // Respect Quiet Hours / Do Not Disturb
+  if (!tag?.includes('test') && isQuietHoursActive()) {
     return false;
   }
 

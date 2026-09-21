@@ -15,7 +15,13 @@ import HeaderSearch from './HeaderSearch';
 import InternetStrengthIndicator from './InternetStrengthIndicator';
 import auricLightLogo from '@/assets/auric_light.png';
 import auricDarkLogo from '@/assets/auric_dark.png';
-import { api, BASE_URL } from '@/api/axios';
+import {
+  api,
+  BASE_URL,
+  getNotificationsApi,
+  markNotificationAsReadApi,
+  markAllNotificationsAsReadApi
+} from '@/api/axios';
 import { isRouteAllowed } from '@/utils/rbac';
 import {
   isBrowserNotificationSupported,
@@ -147,6 +153,9 @@ const Layout = () => {
   const [usersDeletionUnreadCount, setUsersDeletionUnreadCount] = useState(0);
   const [quotesUnreadCount, setQuotesUnreadCount] = useState(0);
   const [brokenImagesUnreadCount, setBrokenImagesUnreadCount] = useState(0);
+  const [inAppNotifications, setInAppNotifications] = useState([]);
+  const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
+  const prevNotificationsRef = useRef(null);
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [browserPermission, setBrowserPermission] = useState(() => getNotificationPermission());
   const [browserAlertsEnabled, setBrowserAlertsEnabled] = useState(() => isBrowserAlertsEnabled());
@@ -302,6 +311,13 @@ const Layout = () => {
     if (id === 'quotes') setQuotesUnreadCount(0);
     if (id === 'broken-images') setBrokenImagesUnreadCount(0);
     if (id === 'image-errors') setFailedImageProductNames([]);
+    if (typeof id === 'string' && id.startsWith('inapp-')) {
+      const rawId = id.replace('inapp-', '');
+      markNotificationAsReadApi(rawId).catch(() => {});
+      setNotificationsUnreadCount(prev => Math.max(0, prev - 1));
+      setInAppNotifications(prev => prev.map(n => ((n._id === rawId || n.id === rawId) ? { ...n, isRead: true } : n)));
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
+    }
   };
 
   const clearAllNotifications = () => {
@@ -313,6 +329,10 @@ const Layout = () => {
     setQuotesUnreadCount(0);
     setBrokenImagesUnreadCount(0);
     setFailedImageProductNames([]);
+    markAllNotificationsAsReadApi().catch(() => {});
+    setNotificationsUnreadCount(0);
+    setInAppNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    window.dispatchEvent(new CustomEvent('notifications-updated'));
   };
 
   const toggleSubMenu = (menuName) => {
@@ -448,11 +468,39 @@ const Layout = () => {
         color: 'text-rose-400 bg-rose-500/10'
       });
     }
+
+    // In-app notifications from API (GET /notifications)
+    inAppNotifications
+      .filter((n) => !n.isRead)
+      .slice(0, 5)
+      .forEach((item) => {
+        const isPO =
+          (item.type || '').toUpperCase().includes('PO') ||
+          (item.relatedEntityType || '').toUpperCase() === 'PURCHASEORDER';
+        list.unshift({
+          id: `inapp-${item._id || item.id}`,
+          title: item.title || 'Notification',
+          description: item.message || 'New system update.',
+          path: isPO ? '/purchase-orders' : '/notifications',
+          icon: isPO ? <FiPackage /> : <FiBell />,
+          color: isPO ? 'text-cyan-400 bg-cyan-500/10' : 'text-blue-400 bg-blue-500/10'
+        });
+      });
+
     return list;
   };
 
   const notificationsList = getNotificationsList();
-  const totalUnreadCount = chatUnreadCount + ordersUnreadCount + usersUnreadCount + usersVerifyUnreadCount + usersDeletionUnreadCount + quotesUnreadCount + brokenImagesUnreadCount + (failedImageProductNames.length > 0 ? 1 : 0);
+  const totalUnreadCount =
+    chatUnreadCount +
+    ordersUnreadCount +
+    usersUnreadCount +
+    usersVerifyUnreadCount +
+    usersDeletionUnreadCount +
+    quotesUnreadCount +
+    brokenImagesUnreadCount +
+    notificationsUnreadCount +
+    (failedImageProductNames.length > 0 ? 1 : 0);
 
   // Request Browser Notification Permission on load / show banner
   useEffect(() => {
@@ -551,6 +599,74 @@ const Layout = () => {
     const chatInterval = getPollingInterval('chat', 15);
     const intervalId = setInterval(fetchUnreadCount, chatInterval);
     return () => clearInterval(intervalId);
+  }, [user, pollingConfigVersion]);
+
+  // Poll in-app notifications (GET /notifications)
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchNotifications = async () => {
+      if (!user) return;
+      try {
+        const response = await getNotificationsApi({ page: 1, limit: 20 });
+        const resData = response.data || {};
+        const list = Array.isArray(resData.data)
+          ? resData.data
+          : Array.isArray(resData)
+            ? resData
+            : Array.isArray(resData.notifications)
+              ? resData.notifications
+              : [];
+
+        if (!isMounted) return;
+
+        const unreadList = list.filter((n) => !n.isRead);
+        const unreadCount = unreadList.length;
+
+        // Trigger in-app toast for new incoming notifications
+        if (prevNotificationsRef.current !== null && !isInitialDataLoad.current) {
+          const prevIds = new Set(prevNotificationsRef.current.map((n) => n._id || n.id));
+          const newItems = unreadList.filter((n) => !prevIds.has(n._id || n.id));
+
+          if (newItems.length > 0) {
+            newItems.forEach((item) => {
+              const isPO =
+                (item.type || '').toUpperCase().includes('PO') ||
+                (item.relatedEntityType || '').toUpperCase() === 'PURCHASEORDER';
+              addToast(
+                item.title || 'New Notification',
+                item.message || 'You received a new notification.',
+                isPO ? '/purchase-orders' : '/notifications',
+                isPO ? FiPackage : FiBell,
+                `notif-${item._id || item.id}`,
+                'notifications'
+              );
+            });
+          }
+        }
+
+        prevNotificationsRef.current = list;
+        setInAppNotifications(list);
+        setNotificationsUnreadCount(unreadCount);
+      } catch (err) {
+        console.error('Failed to poll notifications in Layout:', err);
+      }
+    };
+
+    fetchNotifications();
+    const interval = getPollingInterval('notifications', 15);
+    const intervalId = setInterval(fetchNotifications, interval);
+
+    const onNotifsUpdated = () => {
+      fetchNotifications();
+    };
+    window.addEventListener('notifications-updated', onNotifsUpdated);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+      window.removeEventListener('notifications-updated', onNotifsUpdated);
+    };
   }, [user, pollingConfigVersion]);
 
   // Clear counts when visiting the page
@@ -948,6 +1064,7 @@ const Layout = () => {
     if (path === '/users/list') return usersUnreadCount + usersVerifyUnreadCount + usersDeletionUnreadCount;
     if (path === '/quotes') return quotesUnreadCount;
     if (path === '/products/broken-images') return brokenImagesUnreadCount + (failedImageProductNames.length > 0 ? 1 : 0);
+    if (path === '/notifications') return notificationsUnreadCount;
     return 0;
   };
 
@@ -1079,8 +1196,9 @@ const Layout = () => {
             >
               <FiBell className="text-xl cursor-pointer" />
               {totalUnreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 bg-red-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full border border-slate-900 shadow-sm animate-pulse">
-                  {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 pointer-events-none">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-white dark:border-slate-950 shadow-xs"></span>
                 </span>
               )}
             </button>
@@ -1201,6 +1319,26 @@ const Layout = () => {
                       </div>
                     ))
                   )}
+                </div>
+
+                {/* Mobile Dropdown Footer */}
+                <div className={`px-3 py-2 border-t flex items-center justify-between text-[10px] ${
+                  isDark ? 'border-white/5 bg-slate-950/40 text-slate-400' : 'border-slate-100 bg-slate-50/80 text-slate-500'
+                }`}>
+                  <Link
+                    to="/notifications"
+                    onClick={() => setIsNotificationsDropdownOpen(false)}
+                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1"
+                  >
+                    View All Notifications &rarr;
+                  </Link>
+                  <Link
+                    to="/settings/notifications"
+                    onClick={() => setIsNotificationsDropdownOpen(false)}
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                  >
+                    Settings
+                  </Link>
                 </div>
               </div>
             )}
@@ -1525,7 +1663,10 @@ const Layout = () => {
                           ${isExpanded ? 'text-lg' : 'text-base lg:mr-0'}`}
                       />
                       {!isExpanded && badgeCount > 0 && (
-                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900 shadow-sm animate-pulse pointer-events-none" />
+                        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 pointer-events-none">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500 border-2 border-white dark:border-slate-900 shadow-sm"></span>
+                        </span>
                       )}
                     </div>
                   )}
@@ -1533,10 +1674,15 @@ const Layout = () => {
                     }`}>{menu.name}</span>
                 </div>
                 {badgeCount > 0 && (
-                  <span className={`ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shrink-0 shadow-sm transition-all duration-300 ease-in-out ${isExpanded ? 'opacity-100 max-w-[50px] ml-2' : 'opacity-0 max-w-0 overflow-hidden ml-0'
-                    }`}>
-                    {badgeCount > 9 ? '9+' : badgeCount}
-                  </span>
+                  <div className={`ml-2 flex items-center gap-1.5 transition-all duration-300 ease-in-out ${isExpanded ? 'opacity-100 max-w-[60px] ml-2' : 'opacity-0 max-w-0 overflow-hidden ml-0'}`}>
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    <span className="flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-red-500 text-[10px] font-black text-white shrink-0 shadow-sm">
+                      {badgeCount > 9 ? '9+' : badgeCount}
+                    </span>
+                  </div>
                 )}
               </Link>
             );
@@ -1567,11 +1713,13 @@ const Layout = () => {
               <button
                 onClick={() => setIsNotificationsDropdownOpen(!isNotificationsDropdownOpen)}
                 className={`${isDark ? 'text-slate-400 hover:text-blue-500' : 'text-slate-600 hover:text-blue-600'} relative transition-colors mt-1 focus:outline-none`}
+                title="Notifications"
               >
                 <FiBell className="text-xl cursor-pointer" />
                 {totalUnreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 bg-red-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-slate-900 shadow-sm animate-pulse">
-                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                  <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 pointer-events-none">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-white dark:border-slate-950 shadow-xs"></span>
                   </span>
                 )}
               </button>
@@ -1735,14 +1883,20 @@ const Layout = () => {
                   </div>
 
                   {/* Dropdown footer link to notification settings */}
-                  <div className={`px-3.5 py-2 border-t flex items-center justify-between text-[10px] ${
+                  <div className={`px-3.5 py-2.5 border-t flex items-center justify-between text-[11px] ${
                     isDark ? 'border-white/5 bg-slate-950/40 text-slate-400' : 'border-slate-100 bg-slate-50/80 text-slate-500'
                   }`}>
-                    <span>Alert preferences</span>
+                    <Link
+                      to="/notifications"
+                      onClick={() => setIsNotificationsDropdownOpen(false)}
+                      className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1"
+                    >
+                      View All Notifications &rarr;
+                    </Link>
                     <Link
                       to="/settings/notifications"
                       onClick={() => setIsNotificationsDropdownOpen(false)}
-                      className="text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 hover:underline transition-colors"
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-white font-medium flex items-center gap-1 hover:underline transition-colors"
                     >
                       <FiSettings size={11} /> Settings
                     </Link>

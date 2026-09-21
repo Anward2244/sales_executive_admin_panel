@@ -1,21 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FiSettings,
   FiSun,
   FiMoon,
   FiBell,
+  FiBellOff,
   FiVolume2,
+  FiVolumeX,
+  FiVolume1,
   FiLayout,
   FiCheck,
   FiCheckCircle,
   FiAlertCircle,
+  FiAlertTriangle,
   FiTrash2,
   FiMonitor,
   FiZap,
   FiSliders,
   FiClock,
   FiLayers,
-  FiActivity
+  FiActivity,
+  FiShield,
+  FiHelpCircle,
+  FiInfo,
+  FiExternalLink,
+  FiCompass,
+  FiSmartphone,
+  FiRefreshCw,
+  FiChevronDown,
+  FiChevronUp,
+  FiCopy,
+  FiEye,
+  FiX,
+  FiArrowRight,
+  FiMessageSquare,
+  FiShoppingBag,
+  FiPackage,
+  FiUsers,
+  FiFileText,
+  FiImage
 } from 'react-icons/fi';
 import { useTheme } from '@/Context/ThemeContext';
 import { useAuth } from '@/Context/AuthContext';
@@ -29,8 +52,10 @@ import {
   requestBrowserNotificationPermission,
   showBrowserNotification,
   playNotificationSound,
+  isQuietHoursActive,
   DEFAULT_NOTIFICATION_SETTINGS
 } from '@/utils/browserNotifications';
+import appIconImg from '@/assets/auric.png';
 
 const getInitialStorage = () => {
   try {
@@ -66,6 +91,9 @@ const Settings = () => {
   const [notificationConfig, setNotificationConfig] = useState(() => getNotificationSettings());
   const [browserPermission, setBrowserPermission] = useState(() => getNotificationPermission());
   const [isRequestingPermission, setIsRequestingPermission] = useState(false);
+  const [guideBrowserTab, setGuideBrowserTab] = useState('chrome'); // 'chrome' | 'edge' | 'safari' | 'firefox' | 'windows'
+  const [isGuideOpen, setIsGuideOpen] = useState(true);
+  const [previewTab, setPreviewTab] = useState('os'); // 'os' | 'toast'
 
   // Display Preferences State (Stored in LocalStorage)
   const [displayPrefs, setDisplayPrefs] = useState(() => {
@@ -154,19 +182,109 @@ const Settings = () => {
     triggerFeedback(`Refresh interval for ${categoryKey} set to ${seconds}s`);
   };
 
+  // Refresh browser permission status
+  const handleRefreshPermission = () => {
+    const perm = getNotificationPermission();
+    setBrowserPermission(perm);
+    triggerFeedback(`Browser permission status: ${perm}`);
+  };
+
+  // Sound type change
+  const handleSoundTypeChange = (tone) => {
+    const updated = {
+      ...notificationConfig,
+      soundType: tone
+    };
+    const saved = saveNotificationSettings(updated);
+    setNotificationConfig(saved);
+    playNotificationSound(tone, notificationConfig.soundVolume);
+    triggerFeedback(`Chime tone set to ${tone.toUpperCase()}`);
+  };
+
+  // Sound volume change
+  const handleSoundVolumeChange = (vol) => {
+    const volume = Number(vol);
+    const updated = {
+      ...notificationConfig,
+      soundVolume: volume
+    };
+    const saved = saveNotificationSettings(updated);
+    setNotificationConfig(saved);
+    playNotificationSound(notificationConfig.soundType, volume);
+    triggerFeedback(`Volume set to ${Math.round(volume * 100)}%`);
+  };
+
+  // Toast duration change
+  const handleToastDurationChange = (durationMs) => {
+    const ms = Number(durationMs);
+    const updated = {
+      ...notificationConfig,
+      toastDuration: ms
+    };
+    const saved = saveNotificationSettings(updated);
+    setNotificationConfig(saved);
+    triggerFeedback(`Toast auto-dismiss set to ${ms === 0 ? 'Manual Dismiss' : ms / 1000 + 's'}`);
+  };
+
+  // Toast position change
+  const handleToastPositionChange = (position) => {
+    const updated = {
+      ...notificationConfig,
+      toastPosition: position
+    };
+    const saved = saveNotificationSettings(updated);
+    setNotificationConfig(saved);
+    triggerFeedback(`Toast placement set to ${position}`);
+  };
+
+  // Quiet hours toggle & time
+  const handleQuietHoursToggle = () => {
+    const updated = {
+      ...notificationConfig,
+      quietHoursEnabled: !notificationConfig.quietHoursEnabled
+    };
+    const saved = saveNotificationSettings(updated);
+    setNotificationConfig(saved);
+    triggerFeedback(`Quiet Hours (Do Not Disturb) ${updated.quietHoursEnabled ? 'enabled' : 'disabled'}`);
+  };
+
+  const handleQuietHoursTimeChange = (field, val) => {
+    const updated = {
+      ...notificationConfig,
+      [field]: val
+    };
+    const saved = saveNotificationSettings(updated);
+    setNotificationConfig(saved);
+  };
+
+  // Copy site URL
+  const handleCopySiteUrl = () => {
+    try {
+      navigator.clipboard.writeText(window.location.origin);
+      triggerFeedback('Site URL copied to clipboard!');
+    } catch {
+      triggerFeedback('Unable to copy URL automatically', 'error');
+    }
+  };
+
   // Request native permission
   const handleRequestPermission = async () => {
     setIsRequestingPermission(true);
     try {
       const granted = await requestBrowserNotificationPermission();
-      setBrowserPermission(granted ? 'granted' : 'denied');
-      if (granted) {
+      const currentPerm = getNotificationPermission();
+      setBrowserPermission(currentPerm);
+      if (granted === 'granted' || currentPerm === 'granted') {
         triggerFeedback('Desktop notification permission granted!');
-        showBrowserNotification('Notifications Active', {
-          body: 'Auric Admin Panel desktop alerts are now configured.'
+        showBrowserNotification({
+          title: 'Auric Desktop Alerts Active',
+          body: 'Browser notifications are now authorized and ready to alert you on new orders and events.',
+          tag: 'test-permission-granted'
         });
+      } else if (currentPerm === 'denied') {
+        triggerFeedback('Notifications were blocked in your browser settings.', 'error');
       } else {
-        triggerFeedback('Permission was not granted by your browser.', 'error');
+        triggerFeedback('Notification request was dismissed or unsupported.', 'info');
       }
     } finally {
       setIsRequestingPermission(false);
@@ -174,19 +292,35 @@ const Settings = () => {
   };
 
   // Test sound
-  const handleTestSound = () => {
-    playNotificationSound();
-    triggerFeedback('Sound chime triggered');
+  const handleTestSound = (customTone) => {
+    const tone = customTone || notificationConfig.soundType || 'chime';
+    playNotificationSound(tone, notificationConfig.soundVolume);
+    triggerFeedback(`Auditioning "${tone}" sound chime`);
   };
 
   // Test desktop notification
   const handleTestNotification = () => {
-    showBrowserNotification('Auric Panel Test Alert', {
-      body: 'Real-time telemetry and push alerts are functioning properly.',
-      icon: '/favicon.ico'
+    if (!isBrowserNotificationSupported()) {
+      triggerFeedback('Notifications are not supported in this browser.', 'error');
+      return;
+    }
+    if (browserPermission !== 'granted') {
+      triggerFeedback(`Browser permission is "${browserPermission}". Please click "Enable Desktop Alerts" or unblock in your browser.`, 'error');
+    }
+
+    const sent = showBrowserNotification({
+      title: 'New Purchase Order Received',
+      body: 'Purchase Order PO-2026-000001 for B New Mobiles (₹1,122,543) submitted.',
+      path: '/purchase-orders',
+      tag: 'test-auric-alert'
     });
-    playNotificationSound();
-    triggerFeedback('Test notification sent');
+    playNotificationSound(notificationConfig.soundType, notificationConfig.soundVolume);
+
+    if (sent) {
+      triggerFeedback('Desktop test notification sent! Check your screen/action center.');
+    } else if (browserPermission === 'granted') {
+      triggerFeedback('Test alert dispatched to system notification tray.');
+    }
   };
 
   // Reset all preferences
@@ -636,11 +770,128 @@ const Settings = () => {
       )}
 
       {/* ========================================================
-          TAB 2: NOTIFICATIONS & AUDIO ALERTS
+          TAB 2: NOTIFICATIONS, CUSTOMIZATION & BROWSER GUIDE
           ======================================================== */}
       {activeTab === 'notifications' && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          {/* Native Browser Notification Status Banner */}
+          {/* 1. Hero Permission Status & Quick Action Card */}
+          <div
+            className={`p-6 sm:p-7 rounded-3xl border transition-all relative overflow-hidden backdrop-blur-xl ${
+              isDark
+                ? 'bg-slate-900/60 border-white/10 shadow-2xl'
+                : 'bg-white/80 border-slate-200/80 shadow-xl shadow-slate-900/5'
+            }`}
+          >
+            {/* Ambient Background Glow */}
+            <div
+              className={`absolute -right-16 -top-16 w-64 h-64 rounded-full pointer-events-none filter blur-3xl opacity-20 ${
+                browserPermission === 'granted'
+                  ? 'bg-emerald-500'
+                  : browserPermission === 'denied'
+                  ? 'bg-rose-500'
+                  : 'bg-amber-500'
+              }`}
+            />
+
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
+              <div className="flex items-start sm:items-center gap-4">
+                <div
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 border shadow-md transition-transform duration-300 ${
+                    browserPermission === 'granted'
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : browserPermission === 'denied'
+                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                      : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                  }`}
+                >
+                  {browserPermission === 'granted' ? (
+                    <FiBell className="animate-pulse" />
+                  ) : browserPermission === 'denied' ? (
+                    <FiBellOff />
+                  ) : (
+                    <FiAlertCircle />
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                      Browser Desktop Push Notifications
+                    </h2>
+                    <span
+                      className={`text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border inline-flex items-center gap-1.5 ${
+                        browserPermission === 'granted'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                          : browserPermission === 'denied'
+                          ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                      }`}
+                    >
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          browserPermission === 'granted'
+                            ? 'bg-emerald-500 animate-ping'
+                            : browserPermission === 'denied'
+                            ? 'bg-rose-500'
+                            : 'bg-amber-500 animate-pulse'
+                        }`}
+                      />
+                      <span>
+                        {browserPermission === 'granted'
+                          ? 'Permission Granted (Active)'
+                          : browserPermission === 'denied'
+                          ? 'Permission Blocked / Denied'
+                          : 'Permission Required'}
+                      </span>
+                    </span>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                    {browserPermission === 'granted'
+                      ? 'Your browser is authorized to display OS-level push notifications. You will receive immediate alerts for incoming purchase orders, quote submissions, and support chats even when working in other tabs.'
+                      : browserPermission === 'denied'
+                      ? 'Notifications are currently blocked by your browser settings. Desktop push banners will not appear until unblocked in your browser address bar. Check our troubleshooting guide below.'
+                      : 'Enable desktop push notifications so sales managers and admins receive real-time alerts when new procurement orders are placed by sales executives.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0 w-full lg:w-auto">
+                {browserPermission !== 'granted' && isBrowserNotificationSupported() && (
+                  <button
+                    type="button"
+                    disabled={isRequestingPermission}
+                    onClick={handleRequestPermission}
+                    className="flex-1 lg:flex-none px-4 py-2.5 text-xs font-extrabold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <FiBell className="text-sm" />
+                    <span>{isRequestingPermission ? 'Requesting...' : 'Enable Desktop Alerts'}</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleTestNotification}
+                  className="flex-1 lg:flex-none px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <FiZap className="text-amber-500" />
+                  <span>Send Test Alert</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleRefreshPermission}
+                  title="Check browser permission again"
+                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer"
+                >
+                  <FiRefreshCw className="text-sm" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Live Notification Mockup Preview */}
           <div
             className={`p-6 rounded-3xl border backdrop-blur-xl ${
               isDark
@@ -648,51 +899,122 @@ const Settings = () => {
                 : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
             }`}
           >
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <FiBell className="text-blue-500" /> Desktop Push Notifications
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Browser notification status:{' '}
-                  <span
-                    className={`font-bold capitalize ${
-                      browserPermission === 'granted'
-                        ? 'text-emerald-500'
-                        : browserPermission === 'denied'
-                        ? 'text-rose-500'
-                        : 'text-amber-500'
-                    }`}
-                  >
-                    {browserPermission}
-                  </span>
-                </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  <FiEye className="text-base" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                    Live Alert Previews
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Preview how alerts appear across your Operating System and the Admin Panel
+                  </p>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                {browserPermission !== 'granted' && isBrowserNotificationSupported() && (
-                  <button
-                    type="button"
-                    disabled={isRequestingPermission}
-                    onClick={handleRequestPermission}
-                    className="px-4 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/25 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {isRequestingPermission ? 'Requesting...' : 'Enable Desktop Alerts'}
-                  </button>
-                )}
-
+              {/* Preview Mode Switcher */}
+              <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold self-start sm:self-auto">
                 <button
                   type="button"
-                  onClick={handleTestNotification}
-                  className="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition-all cursor-pointer"
+                  onClick={() => setPreviewTab('os')}
+                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                    previewTab === 'os'
+                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
                 >
-                  Send Test Alert
+                  Desktop OS Push
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewTab('toast')}
+                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                    previewTab === 'toast'
+                      ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-bold'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  In-App Floating Toast
                 </button>
               </div>
             </div>
+
+            {/* Mockup Display Box */}
+            <div className="p-5 sm:p-7 rounded-2xl bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200/60 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/80 border border-slate-200/70 dark:border-white/10 relative overflow-hidden flex items-center justify-center min-h-[170px]">
+              {previewTab === 'os' ? (
+                /* Windows / macOS Desktop Notification Card */
+                <div className="w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-2xl p-4 border border-slate-300 dark:border-white/15 shadow-2xl animate-in zoom-in-95 duration-150 text-left">
+                  {/* Top Bar */}
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2 border-b border-slate-100 dark:border-white/5 pb-2">
+                    <div className="flex items-center gap-2">
+                      <img src={appIconImg} alt="Auric" className="w-4 h-4 object-contain rounded-xs" />
+                      <span className="font-bold text-slate-700 dark:text-slate-300">Auric Admin Panel</span>
+                      <span>&bull;</span>
+                      <span>Google Chrome</span>
+                    </div>
+                    <span className="text-[10px]">Just now</span>
+                  </div>
+
+                  {/* Body */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20 shrink-0">
+                      <FiPackage />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                        New Purchase Order Received
+                      </h4>
+                      <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-snug line-clamp-2">
+                        Purchase Order PO-2026-000001 for B New Mobiles (₹1,122,543) submitted.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Mock Action Buttons */}
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/5 flex justify-end gap-2 text-xs">
+                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-semibold text-[11px]">
+                      Dismiss
+                    </span>
+                    <span className="px-3 py-1 rounded-lg bg-blue-600 text-white font-bold text-[11px] shadow-xs">
+                      View Order &rarr;
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* In-App Floating Toast Preview */
+                <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl p-4 border border-blue-500/40 shadow-2xl animate-in zoom-in-95 duration-150 text-left relative overflow-hidden">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-base border border-emerald-500/20 shrink-0">
+                      <FiCheckCircle />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          Order Approved
+                        </span>
+                        <span className="text-[10px] text-slate-400">2s ago</span>
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-1">
+                        PO-2026-000003 Approved by Manager
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Dispatch quote finalized and sent to warehouse fulfillment.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Auto-Dismiss Timer Bar */}
+                  <div className="w-full bg-slate-100 dark:bg-white/5 h-1 rounded-full overflow-hidden mt-3">
+                    <div className="h-full bg-blue-600 w-3/4 rounded-full" />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Master Channels */}
+          {/* 3. Master Alert Channels */}
           <div
             className={`p-6 rounded-3xl border backdrop-blur-xl ${
               isDark
@@ -701,18 +1023,23 @@ const Settings = () => {
             }`}
           >
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-              <FiSliders className="text-blue-500" /> Master Alert Channels
+              <FiSliders className="text-blue-500" /> Master Notification Channels
             </h3>
 
             <div className="space-y-4">
-              {/* Browser Alerts Master */}
+              {/* Browser Desktop Push */}
               <div className="flex items-center justify-between py-2 border-b border-slate-200/80 dark:border-white/10">
                 <div>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">
-                    Desktop System Notifications
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                      Desktop System Push Banners
+                    </p>
+                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                      OS Level
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Show OS-level notification popups even when the browser tab is in the background.
+                    Deliver native popups through Windows / macOS notification centers even when tab is backgrounded.
                   </p>
                 </div>
                 <button
@@ -732,17 +1059,17 @@ const Settings = () => {
                 </button>
               </div>
 
-              {/* Sound Master */}
+              {/* Sound Chimes */}
               <div className="flex items-center justify-between py-2 border-b border-slate-200/80 dark:border-white/10">
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-bold text-slate-900 dark:text-white">
-                      Audio Notification Chime
+                      Audio Notification Chimes
                     </p>
                     <button
                       type="button"
-                      onClick={handleTestSound}
-                      className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                      onClick={() => handleTestSound()}
+                      className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <FiVolume2 /> Test Chime
                     </button>
@@ -769,13 +1096,13 @@ const Settings = () => {
               </div>
 
               {/* Toast Alerts Master */}
-              <div className="flex items-center justify-between py-2">
+              <div className="flex items-center justify-between py-2 border-b border-slate-200/80 dark:border-white/10">
                 <div>
                   <p className="text-sm font-bold text-slate-900 dark:text-white">
                     In-App Floating Toast Banners
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Render top-right real-time status banners inside the admin panel.
+                    Render real-time floating status banners inside the top corner of the admin portal.
                   </p>
                 </div>
                 <button
@@ -794,10 +1121,247 @@ const Settings = () => {
                   />
                 </button>
               </div>
+
+              {/* Quiet Hours / Do Not Disturb */}
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                      Do Not Disturb (Quiet Hours)
+                    </p>
+                    {notificationConfig.quietHoursEnabled && (
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isQuietHoursActive()
+                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                            : 'bg-slate-100 dark:bg-white/5 text-slate-500'
+                        }`}
+                      >
+                        {isQuietHoursActive() ? 'Currently Active' : 'Scheduled'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Automatically mute audible chimes and suppress desktop popups during off-hours or focus windows.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleQuietHoursToggle}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    notificationConfig.quietHoursEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                  role="switch"
+                  aria-checked={notificationConfig.quietHoursEnabled}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      notificationConfig.quietHoursEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Notification Categories & Polling Intervals */}
+          {/* 4. Audio & In-App Customization Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Audio Tone & Volume Customization */}
+            <div
+              className={`p-6 rounded-3xl border backdrop-blur-xl flex flex-col justify-between ${
+                isDark
+                  ? 'bg-slate-900/50 border-white/10'
+                  : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
+              }`}
+            >
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
+                  <FiVolume2 className="text-blue-500" /> Audio Tone & Volume
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                  Select synthesizer tone style and listening volume level
+                </p>
+
+                {/* Tone Options */}
+                <div className="space-y-2 mb-4">
+                  {[
+                    { key: 'chime', label: 'Chime', desc: 'Pleasant two-tone melody (F#5 & A5)' },
+                    { key: 'bell', label: 'Bell Ping', desc: 'Resonant harmonic bell (E5)' },
+                    { key: 'ping', label: 'Crisp Ping', desc: 'High-frequency alert ping (C6)' },
+                    { key: 'subtle', label: 'Subtle Tap', desc: 'Soft wooden click (G4)' }
+                  ].map((t) => {
+                    const isSelected = (notificationConfig.soundType || 'chime') === t.key;
+                    return (
+                      <div
+                        key={t.key}
+                        onClick={() => handleSoundTypeChange(t.key)}
+                        className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30'
+                            : 'border-slate-200/80 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                              isSelected
+                                ? 'border-blue-600 bg-blue-600 text-white'
+                                : 'border-slate-300 dark:border-slate-600'
+                            }`}
+                          >
+                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                              {t.label}
+                            </span>
+                            <span className="text-[11px] text-slate-400 block">{t.desc}</span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTestSound(t.key);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <FiVolume1 className="text-xs" />
+                          <span>Audition</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Volume selector */}
+              <div className="pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Volume Level:</span>
+                <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold">
+                  {[
+                    { val: 0.3, label: '30% Soft' },
+                    { val: 0.6, label: '60% Mid' },
+                    { val: 1.0, label: '100% Full' }
+                  ].map((v) => (
+                    <button
+                      key={v.val}
+                      type="button"
+                      onClick={() => handleSoundVolumeChange(v.val)}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                        notificationConfig.soundVolume === v.val
+                          ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* In-App Toast & Quiet Hours Settings */}
+            <div
+              className={`p-6 rounded-3xl border backdrop-blur-xl flex flex-col justify-between ${
+                isDark
+                  ? 'bg-slate-900/50 border-white/10'
+                  : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
+              }`}
+            >
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
+                  <FiLayout className="text-blue-500" /> Toast Duration & Quiet Hours
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                  Configure on-screen banner persistence and scheduled mute windows
+                </p>
+
+                {/* Toast Duration Selector */}
+                <div className="space-y-3 mb-5">
+                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                    Toast Auto-Dismiss Duration:
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { ms: 3000, label: '3 Seconds' },
+                      { ms: 5000, label: '5 Seconds' },
+                      { ms: 8000, label: '8 Seconds' },
+                      { ms: 12000, label: '12 Seconds' },
+                      { ms: 0, label: 'Manual Dismiss' }
+                    ].map((dur) => (
+                      <button
+                        key={dur.ms}
+                        type="button"
+                        onClick={() => handleToastDurationChange(dur.ms)}
+                        className={`p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                          notificationConfig.toastDuration === dur.ms
+                            ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shadow-xs'
+                            : 'border-slate-200/80 dark:border-white/5 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                        }`}
+                      >
+                        {dur.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quiet Hours Schedule Configuration */}
+                {notificationConfig.quietHoursEnabled && (
+                  <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-3 animate-in fade-in duration-150">
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-400 block">
+                      Scheduled Quiet Window (24h format):
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <span className="text-[11px] font-semibold text-slate-500 block mb-1">Mute from:</span>
+                        <input
+                          type="time"
+                          value={notificationConfig.quietHoursStart || '22:00'}
+                          onChange={(e) => handleQuietHoursTimeChange('quietHoursStart', e.target.value)}
+                          className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white"
+                        />
+                      </div>
+                      <span className="text-slate-400 font-bold mt-4">&rarr;</span>
+                      <div>
+                        <span className="text-[11px] font-semibold text-slate-500 block mb-1">Until:</span>
+                        <input
+                          type="time"
+                          value={notificationConfig.quietHoursEnd || '07:00'}
+                          onChange={(e) => handleQuietHoursTimeChange('quietHoursEnd', e.target.value)}
+                          className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Placement selector */}
+              <div className="pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Screen Position:</span>
+                <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold">
+                  {['top-right', 'top-center', 'bottom-right'].map((pos) => (
+                    <button
+                      key={pos}
+                      type="button"
+                      onClick={() => handleToastPositionChange(pos)}
+                      className={`px-2.5 py-1 rounded-lg capitalize transition-all cursor-pointer ${
+                        (notificationConfig.toastPosition || 'top-right') === pos
+                          ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {pos.replace('-', ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Notification Categories & Polling Intervals */}
           <div
             className={`p-6 rounded-3xl border backdrop-blur-xl ${
               isDark
@@ -805,64 +1369,117 @@ const Settings = () => {
                 : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
             }`}
           >
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-              <FiClock className="text-blue-500" /> Category Channels & Polling Intervals
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  <FiClock className="text-blue-500" /> Category Channels & Polling Intervals
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Granularly subscribe to business events and tune background check intervals
+                </p>
+              </div>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
-                { key: 'orders', label: 'Purchase Orders & Dispatch', desc: 'Alerts when buyers place or update order states.' },
-                { key: 'quotes', label: 'Price Quote Requests', desc: 'Notifications for new and pending quotation bids.' },
-                { key: 'users', label: 'New User Registrations', desc: 'Account approvals and KYC verification alerts.' },
-                { key: 'chat', label: 'Live Customer Support Messages', desc: 'Direct messages from active buyer conversations.' },
-                { key: 'brokenImages', label: 'Product Catalog Health', desc: 'Scans and alerts on missing item imagery.' },
-                { key: 'apiRequests', label: 'API & Telemetry Health', desc: 'Network status drops and latency alerts.' }
-              ].map(cat => {
+                {
+                  key: 'orders',
+                  label: 'Purchase Orders & Dispatch',
+                  desc: 'Real-time alerts when sales reps create POs or when dispatch approvals occur.',
+                  icon: FiShoppingBag,
+                  color: 'text-blue-500 bg-blue-500/10 border-blue-500/20'
+                },
+                {
+                  key: 'quotes',
+                  label: 'Price Quote Requests',
+                  desc: 'Notifications for buyer quotation bids and wholesale price inquiries.',
+                  icon: FiFileText,
+                  color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
+                },
+                {
+                  key: 'users',
+                  label: 'New User Registrations',
+                  desc: 'Staff account creations, sales rep onboarding, and purchasing firm KYC approvals.',
+                  icon: FiUsers,
+                  color: 'text-purple-500 bg-purple-500/10 border-purple-500/20'
+                },
+                {
+                  key: 'chat',
+                  label: 'Live Sales Support Chat',
+                  desc: 'Direct incoming customer conversations and buyer inquiries.',
+                  icon: FiMessageSquare,
+                  color: 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+                },
+                {
+                  key: 'brokenImages',
+                  label: 'Product Catalog Health',
+                  desc: 'Automated background scans that flag missing or broken product image assets.',
+                  icon: FiImage,
+                  color: 'text-rose-500 bg-rose-500/10 border-rose-500/20'
+                },
+                {
+                  key: 'apiRequests',
+                  label: 'API & Telemetry Health',
+                  desc: 'Network heartbeat drops, database latency spikes, and cloud gateway telemetry.',
+                  icon: FiActivity,
+                  color: 'text-cyan-500 bg-cyan-500/10 border-cyan-500/20'
+                }
+              ].map((cat) => {
                 const isEnabled = notificationConfig.categories?.[cat.key] !== false;
                 const interval = notificationConfig.pollingIntervals?.[cat.key] || 30;
+                const IconComponent = cat.icon;
 
                 return (
                   <div
                     key={cat.key}
-                    className={`p-4 rounded-2xl border transition-all ${
+                    className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
                       isEnabled
                         ? isDark
-                          ? 'bg-white/[0.02] border-white/10'
-                          : 'bg-slate-50 border-slate-200'
-                        : 'opacity-60 bg-transparent border-dashed border-slate-300 dark:border-white/5'
+                          ? 'bg-white/[0.02] border-white/10 shadow-xs'
+                          : 'bg-slate-50/80 border-slate-200/80 shadow-xs'
+                        : 'opacity-55 bg-transparent border-dashed border-slate-300 dark:border-white/5'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">
-                        {cat.label}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleCategoryToggle(cat.key)}
-                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          isEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
-                        }`}
-                        role="switch"
-                        aria-checked={isEnabled}
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                            isEnabled ? 'translate-x-4' : 'translate-x-0'
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className={`p-1.5 rounded-lg border ${cat.color}`}>
+                            <IconComponent className="text-sm" />
+                          </div>
+                          <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                            {cat.label}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCategoryToggle(cat.key)}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            isEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
                           }`}
-                        />
-                      </button>
+                          role="switch"
+                          aria-checked={isEnabled}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                              isEnabled ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-3 leading-snug">
+                        {cat.desc}
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{cat.desc}</p>
 
                     <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-white/5">
-                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                        Check Interval:
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                        Frequency:
                       </span>
                       <select
                         value={interval}
                         disabled={!isEnabled}
                         onChange={(e) => handleIntervalChange(cat.key, e.target.value)}
-                        className="text-xs font-bold py-1 px-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer disabled:opacity-40"
+                        className="text-xs font-bold py-1 px-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer disabled:opacity-40"
                       >
                         <option value={15}>15s (Realtime)</option>
                         <option value={30}>30s (Default)</option>
@@ -874,6 +1491,380 @@ const Settings = () => {
                 );
               })}
             </div>
+          </div>
+
+          {/* 6. Step-by-Step Browser Notification Setup & Troubleshooting Guide */}
+          <div
+            id="browser-notification-guide"
+            className={`rounded-3xl border backdrop-blur-xl transition-all overflow-hidden ${
+              isDark
+                ? 'bg-slate-900/60 border-white/10'
+                : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
+            }`}
+          >
+            {/* Guide Header Banner */}
+            <div
+              onClick={() => setIsGuideOpen(!isGuideOpen)}
+              className="p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between cursor-pointer group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20 shadow-xs">
+                  <FiCompass />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      Browser Setup & Troubleshooting Guide
+                    </h3>
+                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                      Step-by-Step
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Instructions for Chrome, Edge, Safari, Firefox & Windows OS Notification settings
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">
+                  {isGuideOpen ? 'Hide Guide' : 'Show Guide'}
+                </span>
+                <div className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                  {isGuideOpen ? <FiChevronUp /> : <FiChevronDown />}
+                </div>
+              </div>
+            </div>
+
+            {/* Guide Body */}
+            {isGuideOpen && (
+              <div className="p-6 space-y-6 animate-in fade-in duration-200">
+                {/* Browser Selection Tabs */}
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {[
+                    { key: 'chrome', label: 'Chrome / Brave', icon: FiCompass },
+                    { key: 'edge', label: 'Microsoft Edge', icon: FiMonitor },
+                    { key: 'safari', label: 'Apple Safari', icon: FiCompass },
+                    { key: 'firefox', label: 'Mozilla Firefox', icon: FiShield },
+                    { key: 'windows', label: 'Windows 11 / 10 OS', icon: FiSliders }
+                  ].map((tab) => {
+                    const TabIcon = tab.icon;
+                    const isActive = guideBrowserTab === tab.key;
+                    return (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setGuideBrowserTab(tab.key)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                          isActive
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                            : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        <TabIcon className="text-xs" />
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Tab Instructions Content */}
+                <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5">
+                  {guideBrowserTab === 'chrome' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          1
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Click the "Site Information" icon in the Address Bar
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        In Google Chrome or Brave, look at the address bar at the top of your screen. Click the{' '}
+                        <strong className="text-slate-900 dark:text-white">Tune / Sliders icon</strong> (or padlock) immediately to the left of the URL.
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          2
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Toggle "Notifications" to Allow
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        In the popup menu that appears, locate <strong className="text-slate-900 dark:text-white">Notifications</strong> and switch the toggle to{' '}
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                          Allow
+                        </span>.
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          3
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Resetting Blocked Settings in Chrome Settings
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        If notifications remain blocked, open a new Chrome tab and navigate to:{' '}
+                        <code className="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-mono text-[11px]">
+                          chrome://settings/content/notifications
+                        </code>
+                        . Ensure your site URL is listed under "Allowed to send notifications".
+                      </p>
+                    </div>
+                  )}
+
+                  {guideBrowserTab === 'edge' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          1
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Click the Padlock icon in Microsoft Edge
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        Click the <strong className="text-slate-900 dark:text-white">Lock icon 🔒</strong> on the left side of the address bar.
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          2
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Select "Permissions for this site"
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        In the dropdown menu, locate <strong className="text-slate-900 dark:text-white">Notifications</strong> and select{' '}
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                          Allow
+                        </span>.
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          3
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Edge Global Permission Manager
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        To inspect Edge global notification exceptions, navigate to{' '}
+                        <code className="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-mono text-[11px]">
+                          edge://settings/content/notifications
+                        </code>{' '}
+                        in a new tab.
+                      </p>
+                    </div>
+                  )}
+
+                  {guideBrowserTab === 'safari' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          1
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Open Safari Preferences / Settings
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        Click <strong className="text-slate-900 dark:text-white">Safari</strong> in the top macOS menu bar and choose{' '}
+                        <strong className="text-slate-900 dark:text-white">Settings</strong> (or press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">Cmd + ,</kbd>).
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          2
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Navigate to Websites &rarr; Notifications
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        Select the <strong className="text-slate-900 dark:text-white">Websites</strong> tab at the top, then choose{' '}
+                        <strong className="text-slate-900 dark:text-white">Notifications</strong> in the left sidebar. Locate this admin site and select{' '}
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                          Allow
+                        </span>.
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          3
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Verify macOS System Settings
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        Ensure <strong className="text-slate-900 dark:text-white">System Settings &rarr; Notifications &rarr; Safari</strong> has "Allow Notifications" turned on.
+                      </p>
+                    </div>
+                  )}
+
+                  {guideBrowserTab === 'firefox' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          1
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Click the Shield / Permissions Icon
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        Click the permission toggle icon to the left of the URL bar in Firefox.
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          2
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Clear "Blocked Temporarily" or Click Allow
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        Remove any temporary block and toggle Notifications to{' '}
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                          Allowed
+                        </span>.
+                      </p>
+                    </div>
+                  )}
+
+                  {guideBrowserTab === 'windows' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          1
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Check Windows 11 / 10 "Focus Assist" or "Do Not Disturb"
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        Open the Windows Notification Center (click date/time in the bottom-right corner or press{' '}
+                        <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">Win + N</kbd>). If the{' '}
+                        <strong className="text-slate-900 dark:text-white">Bell with Zzz (Do Not Disturb)</strong> is active, Windows will silence all desktop popups! Turn it off to see popups.
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          2
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Enable Browser Notifications in Windows Settings
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        Press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">Win + I</kbd> to open Windows Settings &rarr;{' '}
+                        <strong className="text-slate-900 dark:text-white">System &rarr; Notifications</strong>. Ensure "Notifications" is toggled{' '}
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                          On
+                        </span>.
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          3
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Allow Google Chrome / Edge Banners
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
+                        Scroll down to "Notifications from apps and other senders", click on your browser (Chrome or Edge), and make sure{' '}
+                        <strong className="text-slate-900 dark:text-white">"Show notification banners"</strong> is checked.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* 7. Live System Diagnostics Table */}
+                <div className="pt-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-1.5">
+                    <FiShield className="text-emerald-500" /> Live Diagnostics Checklist
+                  </h4>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                      <span className="text-[10px] text-slate-400 block font-medium">Notification API:</span>
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
+                        <FiCheckCircle className="text-xs" /> Supported
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                      <span className="text-[10px] text-slate-400 block font-medium">Permission State:</span>
+                      <span
+                        className={`text-xs font-bold capitalize flex items-center gap-1 mt-0.5 ${
+                          browserPermission === 'granted'
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : browserPermission === 'denied'
+                            ? 'text-rose-600 dark:text-rose-400'
+                            : 'text-amber-600 dark:text-amber-400'
+                        }`}
+                      >
+                        {browserPermission === 'granted' ? (
+                          <FiCheckCircle className="text-xs" />
+                        ) : (
+                          <FiAlertCircle className="text-xs" />
+                        )}
+                        {browserPermission}
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                      <span className="text-[10px] text-slate-400 block font-medium">Web Audio Engine:</span>
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
+                        <FiCheckCircle className="text-xs" /> Synthesizer Ready
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                      <span className="text-[10px] text-slate-400 block font-medium">Local Preferences:</span>
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-0.5">
+                        <FiCheckCircle className="text-xs" /> Synced
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Diagnostic Footer Quick Actions */}
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200/60 dark:border-white/5 text-xs">
+                    <span className="text-slate-500 dark:text-slate-400">
+                      Need to copy this panel's origin URL for browser site settings?
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCopySiteUrl}
+                        className="px-3 py-1.5 rounded-lg bg-slate-200/70 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <FiCopy className="text-xs" />
+                        <span>Copy Origin URL</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleTestNotification}
+                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                      >
+                        <FiZap className="text-xs text-amber-400" />
+                        <span>Trigger Test Alert</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

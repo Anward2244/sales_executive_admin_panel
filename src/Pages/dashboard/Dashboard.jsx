@@ -24,10 +24,15 @@ import {
   FiUser,
   FiTag,
   FiAlertCircle,
-  FiLoader
+  FiLoader,
+  FiPieChart,
+  FiActivity,
+  FiFilter
 } from 'react-icons/fi';
 import { BiRupee } from 'react-icons/bi';
-import { getDashboardMetricsApi } from '@/api/axios';
+import Chart from 'react-apexcharts';
+import { useTheme } from '@/Context/ThemeContext';
+import { getDashboardMetricsApi, getReportsApi } from '@/api/axios';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import CopyButton from '@/components/ui/CopyButton';
@@ -35,13 +40,19 @@ import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { isDark } = useTheme();
   const [dashboardData, setDashboardData] = useState(null);
+  const [reportsData, setReportsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // Fetch dashboard data from GET /dashboard
+  // Chart 1 controls
+  const [trendMetric, setTrendMetric] = useState('revenue'); // 'revenue' | 'orders'
+  const [trendRange, setTrendRange] = useState('30d'); // '7d' | '30d' | 'all'
+
+  // Fetch dashboard and analytics reports data
   const fetchDashboardMetrics = useCallback(async (isManual = false) => {
     if (isManual) {
       setRefreshing(true);
@@ -51,9 +62,22 @@ const Dashboard = () => {
     setError(null);
 
     try {
-      const response = await getDashboardMetricsApi();
-      const resData = response?.data?.data || response?.data || {};
-      setDashboardData(resData);
+      const [dashRes, repRes] = await Promise.allSettled([
+        getDashboardMetricsApi(),
+        getReportsApi({ limit: 30 })
+      ]);
+
+      if (dashRes.status === 'fulfilled') {
+        const resData = dashRes.value?.data?.data || dashRes.value?.data || {};
+        setDashboardData(resData);
+      } else {
+        throw dashRes.reason;
+      }
+
+      if (repRes.status === 'fulfilled') {
+        const repData = repRes.value?.data?.data || repRes.value?.data || {};
+        setReportsData(repData);
+      }
     } catch (err) {
       console.error('Failed to load dashboard metrics:', err);
       setError(err.response?.data?.message || 'Failed to load dashboard metrics. Please check network connectivity.');
@@ -111,6 +135,268 @@ const Dashboard = () => {
   const recentOrders = Array.isArray(dashboardData?.recentOrders)
     ? dashboardData.recentOrders
     : [];
+
+  // Process daily trend data for Chart 1
+  const processedTrendData = useMemo(() => {
+    let rawTrend = [];
+    if (Array.isArray(reportsData?.dailyTrend) && reportsData.dailyTrend.length > 0) {
+      rawTrend = reportsData.dailyTrend.map((d) => ({
+        date: d._id || d.date,
+        revenue: Number(d.totalAmount) || 0,
+        orders: Number(d.orderCount) || 0
+      }));
+    } else if (Array.isArray(recentOrders) && recentOrders.length > 0) {
+      const dateMap = {};
+      recentOrders.forEach((o) => {
+        if (!o.createdAt) return;
+        const d = new Date(o.createdAt).toISOString().split('T')[0];
+        if (!dateMap[d]) {
+          dateMap[d] = { date: d, revenue: 0, orders: 0 };
+        }
+        dateMap[d].revenue += Number(o.totalAmount || o.totalValue || 0);
+        dateMap[d].orders += 1;
+      });
+      rawTrend = Object.values(dateMap).sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    if (rawTrend.length === 0) {
+      const today = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        rawTrend.push({
+          date: d.toISOString().split('T')[0],
+          revenue: 0,
+          orders: 0
+        });
+      }
+    }
+
+    if (trendRange === '7d') {
+      return rawTrend.slice(-7);
+    } else if (trendRange === '30d') {
+      return rawTrend.slice(-30);
+    }
+    return rawTrend;
+  }, [reportsData, recentOrders, trendRange]);
+
+  // Aggregate metrics for Chart 1 stat footer
+  const trendSummary = useMemo(() => {
+    const totalRev = processedTrendData.reduce((acc, cur) => acc + cur.revenue, 0);
+    const totalOrd = processedTrendData.reduce((acc, cur) => acc + cur.orders, 0);
+    const peakRev = Math.max(...processedTrendData.map((d) => d.revenue), 0);
+    const avgRev = processedTrendData.length ? Math.round(totalRev / processedTrendData.length) : 0;
+    return { totalRev, totalOrd, peakRev, avgRev };
+  }, [processedTrendData]);
+
+  // Chart 1: Area chart options & series
+  const trendChartOptions = useMemo(() => {
+    const isRevenue = trendMetric === 'revenue';
+    const primaryColor = isRevenue ? '#10b981' : '#3b82f6';
+    const categories = processedTrendData.map((d) => {
+      try {
+        const parts = String(d.date).split('-');
+        if (parts.length === 3) {
+          const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+          return dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        }
+        return d.date;
+      } catch {
+        return d.date;
+      }
+    });
+
+    return {
+      chart: {
+        id: 'dashboard-velocity-trend',
+        type: 'area',
+        height: 310,
+        toolbar: { show: false },
+        zoom: { enabled: false },
+        animations: {
+          enabled: true,
+          easing: 'easeinout',
+          speed: 650
+        },
+        fontFamily: 'inherit',
+        background: 'transparent'
+      },
+      colors: [primaryColor],
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shadeIntensity: 1,
+          type: 'vertical',
+          opacityFrom: isDark ? 0.45 : 0.35,
+          opacityTo: 0.05,
+          stops: [0, 90, 100]
+        }
+      },
+      stroke: {
+        curve: 'smooth',
+        width: 3,
+        colors: [primaryColor]
+      },
+      markers: {
+        size: processedTrendData.length <= 10 ? 4 : 0,
+        colors: [primaryColor],
+        strokeColors: isDark ? '#0f172a' : '#ffffff',
+        strokeWidth: 2,
+        hover: { size: 6 }
+      },
+      dataLabels: {
+        enabled: false
+      },
+      grid: {
+        borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.06)',
+        strokeDashArray: 4,
+        padding: { top: 10, right: 15, bottom: 0, left: 10 }
+      },
+      xaxis: {
+        categories,
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+        labels: {
+          style: {
+            colors: isDark ? '#94a3b8' : '#64748b',
+            fontSize: '11px',
+            fontFamily: 'inherit',
+            fontWeight: 500
+          }
+        },
+        tooltip: { enabled: false }
+      },
+      yaxis: {
+        labels: {
+          style: {
+            colors: isDark ? '#94a3b8' : '#64748b',
+            fontSize: '11px',
+            fontFamily: 'inherit',
+            fontWeight: 500
+          },
+          formatter: (val) => {
+            if (!isRevenue) return Math.round(val);
+            if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
+            if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
+            if (val >= 1000) return `₹${(val / 1000).toFixed(0)}k`;
+            return `₹${Math.round(val)}`;
+          }
+        }
+      },
+      tooltip: {
+        theme: isDark ? 'dark' : 'light',
+        x: { show: true },
+        y: {
+          formatter: (val) => {
+            if (isRevenue) {
+              return `₹${Number(val).toLocaleString('en-IN')}`;
+            }
+            return `${val} orders`;
+          }
+        }
+      },
+      theme: {
+        mode: isDark ? 'dark' : 'light'
+      }
+    };
+  }, [trendMetric, processedTrendData, isDark]);
+
+  const trendChartSeries = useMemo(
+    () => [
+      {
+        name: trendMetric === 'revenue' ? 'Revenue (₹)' : 'Orders Placed',
+        data: processedTrendData.map((d) => (trendMetric === 'revenue' ? d.revenue : d.orders))
+      }
+    ],
+    [trendMetric, processedTrendData]
+  );
+
+  // Chart 2: Donut series & options
+  const statusSeries = useMemo(
+    () => [
+      Number(statusBreakdown.PENDING?.count || 0),
+      Number(statusBreakdown.APPROVED?.count || 0),
+      Number(statusBreakdown.DISPATCHED?.count || 0),
+      Number(statusBreakdown.REJECTED?.count || 0)
+    ],
+    [statusBreakdown]
+  );
+
+  const statusDonutOptions = useMemo(
+    () => ({
+      chart: {
+        type: 'donut',
+        background: 'transparent',
+        fontFamily: 'inherit',
+        animations: {
+          enabled: true,
+          easing: 'easeinout',
+          speed: 650
+        }
+      },
+      labels: ['Pending', 'Approved', 'Dispatched', 'Rejected'],
+      colors: ['#f59e0b', '#3b82f6', '#10b981', '#f43f5e'],
+      stroke: {
+        width: 2,
+        colors: [isDark ? '#0f172a' : '#ffffff']
+      },
+      dataLabels: {
+        enabled: false
+      },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '72%',
+            labels: {
+              show: true,
+              name: {
+                show: true,
+                fontSize: '12px',
+                fontFamily: 'inherit',
+                fontWeight: 600,
+                color: isDark ? '#94a3b8' : '#64748b',
+                offsetY: -4
+              },
+              value: {
+                show: true,
+                fontSize: '22px',
+                fontWeight: 800,
+                fontFamily: 'inherit',
+                color: isDark ? '#ffffff' : '#0f172a',
+                offsetY: 6,
+                formatter: (val) => `${val}`
+              },
+              total: {
+                show: true,
+                showAlways: true,
+                label: 'Total Orders',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: isDark ? '#94a3b8' : '#64748b',
+                formatter: () => `${totalStatusCount}`
+              }
+            }
+          }
+        }
+      },
+      legend: {
+        show: false
+      },
+      tooltip: {
+        theme: isDark ? 'dark' : 'light',
+        y: {
+          formatter: (val) => {
+            const pct = Math.round((val / (totalStatusCount || 1)) * 100);
+            return `${val} Orders (${pct}%)`;
+          }
+        }
+      },
+      theme: {
+        mode: isDark ? 'dark' : 'light'
+      }
+    }),
+    [isDark, totalStatusCount]
+  );
 
   // Top Metric Cards Config
   const metricCards = [
@@ -736,7 +1022,256 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 5. Order Snapshot Details Modal */}
+      {/* 5. Performance Analytics & Order Pipeline Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
+        {/* Chart 1: Revenue & Order Velocity Trend (Area/Spline) */}
+        <div className="lg:col-span-7 xl:col-span-8 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div>
+            {/* Header with Title and Switchers */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/20 shadow-xs">
+                  <FiTrendingUp />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                      Revenue & Order Velocity
+                    </h2>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      Live Trend
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Day-by-day procurement traction and gross booked values
+                  </p>
+                </div>
+              </div>
+
+              {/* Controls: Metric Toggle & Time Range */}
+              <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                {/* Metric Selector */}
+                <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setTrendMetric('revenue')}
+                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                      trendMetric === 'revenue'
+                        ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-bold'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Revenue (₹)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTrendMetric('orders')}
+                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                      trendMetric === 'orders'
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Orders
+                  </button>
+                </div>
+
+                {/* Range Filter */}
+                <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold">
+                  {['7d', '30d', 'all'].map((rng) => (
+                    <button
+                      key={rng}
+                      type="button"
+                      onClick={() => setTrendRange(rng)}
+                      className={`px-2.5 py-1 rounded-lg transition-all uppercase text-[11px] cursor-pointer ${
+                        trendRange === rng
+                          ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-bold'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {rng === 'all' ? 'All' : rng}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Chart Canvas */}
+            <div className="pt-4 min-h-[310px]">
+              {loading ? (
+                <div className="h-[310px] flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-2 text-slate-400">
+                    <FiLoader className="text-2xl animate-spin text-emerald-500" />
+                    <span className="text-xs">Loading analytics trend...</span>
+                  </div>
+                </div>
+              ) : (
+                <Chart
+                  options={trendChartOptions}
+                  series={trendChartSeries}
+                  type="area"
+                  height={310}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Quick Stat Highlights Footer */}
+          <div className="pt-4 mt-2 border-t border-slate-200/80 dark:border-white/10 grid grid-cols-3 gap-2 text-center sm:text-left">
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+              <span className="text-[11px] font-medium text-slate-400 block">Period Volume</span>
+              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
+                {trendMetric === 'revenue'
+                  ? `₹${trendSummary.totalRev.toLocaleString('en-IN')}`
+                  : `${trendSummary.totalOrd} Orders`}
+              </span>
+            </div>
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+              <span className="text-[11px] font-medium text-slate-400 block">Daily Average</span>
+              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
+                {trendMetric === 'revenue'
+                  ? `₹${trendSummary.avgRev.toLocaleString('en-IN')}`
+                  : `${(trendSummary.totalOrd / (processedTrendData.length || 1)).toFixed(1)} / day`}
+              </span>
+            </div>
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+              <span className="text-[11px] font-medium text-slate-400 block">Peak Performance</span>
+              <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+                {trendMetric === 'revenue'
+                  ? `₹${trendSummary.peakRev.toLocaleString('en-IN')}`
+                  : `${Math.max(...processedTrendData.map((d) => d.orders), 0)} Orders`}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Chart 2: Order Lifecycle & Pipeline Breakdown (Donut) */}
+        <div className="lg:col-span-5 xl:col-span-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-500/10 dark:bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div>
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg border border-amber-500/20 shadow-xs">
+                  <FiPieChart />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                    Order Pipeline
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Status lifecycle & fulfillment stage
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/10">
+                4 Stages
+              </span>
+            </div>
+
+            {/* Donut Chart Canvas */}
+            <div className="py-2 flex items-center justify-center min-h-[220px]">
+              {loading ? (
+                <div className="h-[220px] flex items-center justify-center">
+                  <FiLoader className="text-2xl animate-spin text-amber-500" />
+                </div>
+              ) : totalStatusCount === 0 ? (
+                <div className="h-[220px] flex flex-col items-center justify-center text-slate-400 text-xs">
+                  <FiPackage className="text-3xl mb-2 opacity-50" />
+                  <span>No orders in pipeline yet</span>
+                </div>
+              ) : (
+                <div className="w-full">
+                  <Chart
+                    options={statusDonutOptions}
+                    series={statusSeries}
+                    type="donut"
+                    height={230}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Interactive Status Breakdown List */}
+          <div className="space-y-2 pt-3 border-t border-slate-200/80 dark:border-white/10">
+            {[
+              {
+                key: 'PENDING',
+                label: 'Pending Approval',
+                badgeBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+                dotColor: 'bg-amber-500',
+                barColor: 'bg-amber-500',
+                count: statusBreakdown.PENDING?.count || 0,
+                value: statusBreakdown.PENDING?.value || 0
+              },
+              {
+                key: 'APPROVED',
+                label: 'Approved',
+                badgeBg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+                dotColor: 'bg-blue-500',
+                barColor: 'bg-blue-500',
+                count: statusBreakdown.APPROVED?.count || 0,
+                value: statusBreakdown.APPROVED?.value || 0
+              },
+              {
+                key: 'DISPATCHED',
+                label: 'Dispatched / Fulfilled',
+                badgeBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+                dotColor: 'bg-emerald-500',
+                barColor: 'bg-emerald-500',
+                count: statusBreakdown.DISPATCHED?.count || 0,
+                value: statusBreakdown.DISPATCHED?.value || 0
+              },
+              {
+                key: 'REJECTED',
+                label: 'Rejected',
+                badgeBg: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+                dotColor: 'bg-rose-500',
+                barColor: 'bg-rose-500',
+                count: statusBreakdown.REJECTED?.count || 0,
+                value: statusBreakdown.REJECTED?.value || 0
+              }
+            ].map((st) => {
+              const pct = totalStatusCount > 0 ? Math.round((st.count / totalStatusCount) * 100) : 0;
+              return (
+                <div
+                  key={st.key}
+                  className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all"
+                >
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${st.dotColor}`} />
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">{st.label}</span>
+                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/10 text-slate-700 dark:text-slate-300">
+                        {st.count}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-slate-900 dark:text-white font-mono">
+                        ₹{Number(st.value).toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-[10px] text-slate-400 ml-1 font-medium">({pct}%)</span>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="w-full bg-slate-200/60 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${st.barColor} rounded-full transition-all duration-500`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* 6. Order Snapshot Details Modal */}
       {selectedOrder && createPortal(
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <div
