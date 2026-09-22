@@ -49,9 +49,19 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // Chart 1 controls
-  const [trendMetric, setTrendMetric] = useState('revenue'); // 'revenue' | 'orders'
+  // Chart 1 controls - Mixed Chart series toggles & range
+  const [visibleSeries, setVisibleSeries] = useState({ revenue: true, orders: true });
   const [trendRange, setTrendRange] = useState('30d'); // '7d' | '30d' | 'all'
+
+  const toggleSeries = (key) => {
+    setVisibleSeries((prev) => {
+      // Keep at least one series visible
+      if (prev[key] && Object.values(prev).filter(Boolean).length <= 1) {
+        return prev;
+      }
+      return { ...prev, [key]: !prev[key] };
+    });
+  };
 
   // Fetch dashboard and analytics reports data
   const fetchDashboardMetrics = useCallback(async (isManual = false) => {
@@ -187,7 +197,8 @@ const Dashboard = () => {
     const totalOrd = processedTrendData.reduce((acc, cur) => acc + cur.orders, 0);
     const peakRev = Math.max(...processedTrendData.map((d) => d.revenue), 0);
     const avgRev = processedTrendData.length ? Math.round(totalRev / processedTrendData.length) : 0;
-    return { totalRev, totalOrd, peakRev, avgRev };
+    const avgOrderValue = totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0;
+    return { totalRev, totalOrd, peakRev, avgRev, avgOrderValue };
   }, [processedTrendData]);
 
 
@@ -817,12 +828,12 @@ const Dashboard = () => {
 
       {/* 5. Performance Analytics & Order Pipeline Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
-        {/* Chart 1: Revenue & Order Velocity Trend (Area/Spline) */}
+        {/* Chart 1: Revenue & Orders Mixed Combo Chart */}
         <div className="lg:col-span-7 xl:col-span-8 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col justify-between">
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
           <div>
-            {/* Header with Title and Switchers */}
+            {/* Header with Title, Series Legend Toggles, and Range Selector */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-white/10">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/20 shadow-xs">
@@ -831,43 +842,55 @@ const Dashboard = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                      Revenue & Order Velocity
+                      Revenue & Orders Mix
                     </h2>
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      Live Trend
+                      Mixed Chart
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Day-by-day procurement traction and gross booked values
+                    Dual-axis view of gross revenue (₹) and daily order count
                   </p>
                 </div>
               </div>
 
-              {/* Controls: Metric Toggle & Time Range */}
+              {/* Controls: Series Legend Toggles & Time Range */}
               <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                {/* Metric Selector */}
-                <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold">
+                {/* Series Legend Toggles */}
+                <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold gap-1">
                   <button
                     type="button"
-                    onClick={() => setTrendMetric('revenue')}
-                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                      trendMetric === 'revenue'
+                    onClick={() => toggleSeries('revenue')}
+                    className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      visibleSeries.revenue
                         ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-bold'
-                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 opacity-60'
                     }`}
+                    title="Toggle Revenue series"
                   >
-                    Revenue (₹)
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        visibleSeries.revenue ? 'bg-emerald-500' : 'bg-slate-400'
+                      }`}
+                    />
+                    <span>Revenue (₹)</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTrendMetric('orders')}
-                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                      trendMetric === 'orders'
+                    onClick={() => toggleSeries('orders')}
+                    className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      visibleSeries.orders
                         ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
-                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 opacity-60'
                     }`}
+                    title="Toggle Orders series"
                   >
-                    Orders
+                    <span
+                      className={`w-2 h-2 rounded-sm ${
+                        visibleSeries.orders ? 'bg-blue-500' : 'bg-slate-400'
+                      }`}
+                    />
+                    <span>Orders</span>
                   </button>
                 </div>
 
@@ -892,9 +915,9 @@ const Dashboard = () => {
             </div>
 
             {/* Chart Canvas */}
-            <div className="pt-4 min-h-[310px]">
+            <div className="pt-4 min-h-[320px]">
               {loading ? (
-                <div className="h-[310px] flex items-center justify-center">
+                <div className="h-[320px] flex items-center justify-center">
                   <div className="flex flex-col items-center gap-2 text-slate-400">
                     <FiLoader className="text-2xl animate-spin text-emerald-500" />
                     <span className="text-xs">Loading analytics trend...</span>
@@ -903,38 +926,38 @@ const Dashboard = () => {
               ) : (
                 <VisxTrendChart
                   data={processedTrendData}
-                  metric={trendMetric}
-                  height={310}
+                  visibleSeries={visibleSeries}
+                  height={320}
                   isDark={isDark}
                 />
               )}
             </div>
           </div>
 
-          {/* Quick Stat Highlights Footer */}
-          <div className="pt-4 mt-2 border-t border-slate-200/80 dark:border-white/10 grid grid-cols-3 gap-2 text-center sm:text-left">
+          {/* Comprehensive 4-Metric Quick Stat Highlights Footer */}
+          <div className="pt-4 mt-2 border-t border-slate-200/80 dark:border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center sm:text-left">
             <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-              <span className="text-[11px] font-medium text-slate-400 block">Period Volume</span>
-              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
-                {trendMetric === 'revenue'
-                  ? `₹${trendSummary.totalRev.toLocaleString('en-IN')}`
-                  : `${trendSummary.totalOrd} Orders`}
-              </span>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-              <span className="text-[11px] font-medium text-slate-400 block">Daily Average</span>
-              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
-                {trendMetric === 'revenue'
-                  ? `₹${trendSummary.avgRev.toLocaleString('en-IN')}`
-                  : `${(trendSummary.totalOrd / (processedTrendData.length || 1)).toFixed(1)} / day`}
-              </span>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-              <span className="text-[11px] font-medium text-slate-400 block">Peak Performance</span>
+              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Period Revenue</span>
               <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                {trendMetric === 'revenue'
-                  ? `₹${trendSummary.peakRev.toLocaleString('en-IN')}`
-                  : `${Math.max(...processedTrendData.map((d) => d.orders), 0)} Orders`}
+                ₹{trendSummary.totalRev.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Total Orders</span>
+              <span className="text-sm sm:text-base font-extrabold text-blue-600 dark:text-blue-400 font-mono">
+                {trendSummary.totalOrd} Orders
+              </span>
+            </div>
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Avg Order Value</span>
+              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
+                ₹{trendSummary.avgOrderValue.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Peak Day Revenue</span>
+              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
+                ₹{trendSummary.peakRev.toLocaleString('en-IN')}
               </span>
             </div>
           </div>

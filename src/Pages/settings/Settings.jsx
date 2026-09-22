@@ -55,6 +55,11 @@ import {
   isQuietHoursActive,
   DEFAULT_NOTIFICATION_SETTINGS
 } from '@/utils/browserNotifications';
+import {
+  useDisplayPreferences,
+  saveDisplayPreferences,
+  DEFAULT_DISPLAY_PREFERENCES
+} from '@/utils/displayPreferences';
 import appIconImg from '@/assets/auric.png';
 
 const getInitialStorage = () => {
@@ -95,21 +100,8 @@ const Settings = () => {
   const [isGuideOpen, setIsGuideOpen] = useState(true);
   const [previewTab, setPreviewTab] = useState('os'); // 'os' | 'toast'
 
-  // Display Preferences State (Stored in LocalStorage)
-  const [displayPrefs, setDisplayPrefs] = useState(() => {
-    try {
-      const saved = localStorage.getItem('inizio_display_preferences');
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // fallback
-    }
-    return {
-      density: 'comfortable', // 'comfortable' | 'compact'
-      ambientGlow: true,
-      timeFormat: '12h', // '12h' | '24h'
-      autoScrollToTop: true
-    };
-  });
+  // Display Preferences State (Managed globally via useDisplayPreferences)
+  const { preferences: displayPrefs, updatePreference: updateDisplayPrefState, setPreferences: setDisplayPrefs } = useDisplayPreferences();
 
   // Local Storage Usage calculation initialized lazily
   const [storageUsage, setStorageUsage] = useState(getInitialStorage);
@@ -127,15 +119,7 @@ const Settings = () => {
 
   // Sync display preferences
   const updateDisplayPref = (key, value) => {
-    setDisplayPrefs(prev => {
-      const updated = { ...prev, [key]: value };
-      try {
-        localStorage.setItem('inizio_display_preferences', JSON.stringify(updated));
-      } catch (e) {
-        console.error('Failed to save display prefs:', e);
-      }
-      return updated;
-    });
+    updateDisplayPrefState(key, value);
     triggerFeedback('Display preference updated');
   };
 
@@ -342,18 +326,8 @@ const Settings = () => {
     setNotificationConfig(DEFAULT_NOTIFICATION_SETTINGS);
 
     // Reset display prefs
-    const defaultDisplay = {
-      density: 'comfortable',
-      ambientGlow: true,
-      timeFormat: '12h',
-      autoScrollToTop: true
-    };
-    setDisplayPrefs(defaultDisplay);
-    try {
-      localStorage.setItem('inizio_display_preferences', JSON.stringify(defaultDisplay));
-    } catch {
-      // ignore
-    }
+    saveDisplayPreferences(DEFAULT_DISPLAY_PREFERENCES);
+    setDisplayPrefs(DEFAULT_DISPLAY_PREFERENCES);
 
     refreshStorage();
     triggerFeedback('All settings successfully reset to defaults');

@@ -603,25 +603,38 @@ const PurchaseOrders = () => {
         badgeText="Procurement Lifecycle"
         badgeIcon={FiShoppingCart}
         actions={
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="relative w-full sm:w-80">
+              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+              <input
+                type="text"
+                placeholder="Search PO #, company, firm, rep..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-10 pr-9 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 shadow-xs"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                >
+                  <FiX size={14} />
+                </button>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={() => fetchOrders(true)}
               disabled={refreshing}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-white/80 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-200/80 dark:border-white/10 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-white/80 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-200/80 dark:border-white/10 transition-all shadow-xs cursor-pointer disabled:opacity-50 shrink-0"
               title="Refresh Orders"
             >
               <FiRefreshCcw className={`text-sm ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleOpenCreateModal}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <FiPlus className="text-base" />
-              <span>Create Purchase Order</span>
             </button>
           </div>
         }
@@ -732,28 +745,16 @@ const PurchaseOrders = () => {
             })}
           </div>
 
-          {/* Search Box */}
-          <div className="relative w-full md:w-80">
-            <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
-            <input
-              type="text"
-              placeholder="Search PO #, company, firm, rep..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full pl-10 pr-4 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                <FiX size={14} />
-              </button>
-            )}
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
+            <button
+              type="button"
+              onClick={handleOpenCreateModal}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <FiPlus className="text-base" />
+              <span>Create Purchase Order</span>
+            </button>
           </div>
         </div>
       </div>

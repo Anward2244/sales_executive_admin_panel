@@ -307,16 +307,40 @@ const Categories = () => {
         badgeText={`${categories.length} Categories`}
         badgeIcon={FiGrid}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="relative w-full sm:w-80">
+              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+              <input
+                type="text"
+                placeholder="Search category name, code, ID..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-10 pr-9 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 font-medium shadow-xs"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setCurrentPage(1);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                >
+                  <FiX size={14} />
+                </button>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => fetchCategories(true)}
               disabled={refreshing || loading}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300 text-sm font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              className="p-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:border-blue-500/40 transition-all cursor-pointer shadow-xs disabled:opacity-50 shrink-0"
               title="Refresh categories"
             >
               <FiRefreshCcw className={`text-base ${refreshing ? 'animate-spin text-blue-500' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         }
@@ -481,37 +505,10 @@ const Categories = () => {
 
         {/* Right Column: Categories List & Filter Table */}
         <div className="lg:col-span-8 space-y-4">
-          {/* Search and Filter Toolbar */}
-          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs">
-            {/* Search Input */}
-            <div className="relative w-full sm:w-80">
-              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
-              <input
-                type="text"
-                placeholder="Search category name, code, ID..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-10 pr-9 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 font-medium"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setCurrentPage(1);
-                  }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
-                >
-                  <FiX size={14} />
-                </button>
-              )}
-            </div>
-
+          {/* Action and Filter Toolbar */}
+          <div className="flex items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs">
             {/* Status Tabs */}
-            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {[
                 { id: 'all', label: 'All', count: countsByTab.all },
                 { id: 'active', label: 'Active', count: countsByTab.active },

@@ -231,10 +231,10 @@ export const deleteFirmApi = async (id) => {
 
 export const getUsersApi = async (params = {}) => {
   try {
-    return await api.get('/v1/users', { params });
+    return await api.get('/users', { params });
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.get('/users', { params });
+      return await api.get('/v1/users', { params });
     }
     throw err;
   }
@@ -242,10 +242,10 @@ export const getUsersApi = async (params = {}) => {
 
 export const getUserByIdApi = async (id) => {
   try {
-    return await api.get(`/v1/users/${id}`);
+    return await api.get(`/users/${id}`);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.get(`/users/${id}`);
+      return await api.get(`/v1/users/${id}`);
     }
     throw err;
   }
@@ -253,10 +253,10 @@ export const getUserByIdApi = async (id) => {
 
 export const createUserApi = async (userData) => {
   try {
-    return await api.post('/v1/users', userData);
+    return await api.post('/users', userData);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.post('/users', userData);
+      return await api.post('/v1/users', userData);
     }
     throw err;
   }
@@ -264,10 +264,10 @@ export const createUserApi = async (userData) => {
 
 export const updateUserApi = async (id, userData) => {
   try {
-    return await api.patch(`/v1/users/${id}`, userData);
+    return await api.patch(`/users/${id}`, userData);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.patch(`/users/${id}`, userData);
+      return await api.patch(`/v1/users/${id}`, userData);
     }
     throw err;
   }
@@ -275,10 +275,10 @@ export const updateUserApi = async (id, userData) => {
 
 export const updateUserStatusApi = async (id, isActive) => {
   try {
-    return await api.patch(`/v1/users/${id}/status`, { isActive });
+    return await api.patch(`/users/${id}/status`, { isActive });
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.patch(`/users/${id}/status`, { isActive });
+      return await api.patch(`/v1/users/${id}/status`, { isActive });
     }
     throw err;
   }
@@ -352,10 +352,10 @@ export const getProductsApi = async (params = {}) => {
 
 export const createProductApi = async (productData) => {
   try {
-    return await api.post('/v1/products', productData);
+    return await api.post('/products', productData);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.post('/products', productData);
+      return await api.post('/v1/products', productData);
     }
     throw err;
   }
@@ -363,10 +363,10 @@ export const createProductApi = async (productData) => {
 
 export const bulkCreateProductsApi = async (productsArray) => {
   try {
-    return await api.post('/v1/products/bulk', { products: productsArray });
+    return await api.post('/products/bulk', { products: productsArray });
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.post('/products/bulk', { products: productsArray });
+      return await api.post('/v1/products/bulk', { products: productsArray });
     }
     throw err;
   }
@@ -374,10 +374,10 @@ export const bulkCreateProductsApi = async (productsArray) => {
 
 export const getProductByIdApi = async (id) => {
   try {
-    return await api.get(`/v1/products/${id}`);
+    return await api.get(`/products/${id}`);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.get(`/products/${id}`);
+      return await api.get(`/v1/products/${id}`);
     }
     throw err;
   }
@@ -385,10 +385,17 @@ export const getProductByIdApi = async (id) => {
 
 export const updateProductApi = async (id, productData) => {
   try {
-    return await api.patch(`/v1/products/${id}`, productData);
+    return await api.patch(`/products/${id}`, productData);
   } catch (err) {
-    if (err.response?.status === 404) {
-      return await api.patch(`/products/${id}`, productData);
+    if (err.response?.status === 404 || err.response?.status === 405) {
+      try {
+        return await api.put(`/products/${id}`, productData);
+      } catch (err2) {
+        if (err2.response?.status === 404) {
+          return await api.patch(`/v1/products/${id}`, productData);
+        }
+        throw err2;
+      }
     }
     throw err;
   }

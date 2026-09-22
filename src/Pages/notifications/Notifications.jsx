@@ -364,43 +364,34 @@ const Notifications = () => {
             : null
         }
         actions={
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {/* Refresh Button */}
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="relative w-full sm:w-80">
+              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by title, message, ID..."
+                className="w-full pl-9 pr-7 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900 dark:text-white placeholder-slate-400 text-xs font-medium transition-all shadow-xs"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer text-xs"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => fetchNotifications(currentPage, true)}
               disabled={refreshing || loading}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white/80 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              className="p-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:border-blue-500/40 transition-all cursor-pointer shadow-xs disabled:opacity-50 shrink-0"
               title="Refresh notifications list"
             >
-              <FiRefreshCw className={`text-sm ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
-              <span>Refresh</span>
-            </button>
-
-            {/* Mark All As Read */}
-            <button
-              type="button"
-              onClick={handleMarkAllAsRead}
-              disabled={markingAllRead || unreadCount === 0}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 dark:disabled:text-slate-600 rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/25 cursor-pointer disabled:cursor-not-allowed disabled:shadow-none"
-            >
-              <MdDoneAll className="text-base" />
-              <span>{markingAllRead ? 'Marking...' : 'Mark All as Read'}</span>
-            </button>
-
-            {/* Register Device Token Button */}
-            <button
-              type="button"
-              onClick={() => {
-                setDeviceTokenError(null);
-                setDeviceTokenSuccess(null);
-                setIsDeviceTokenModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md shadow-emerald-600/25 cursor-pointer"
-              title="Register Push Notification Device Token"
-            >
-              <FiSmartphone className="text-sm" />
-              <span>Register Device Token</span>
+              <FiRefreshCw className={`text-base ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
             </button>
           </div>
         }
@@ -559,25 +550,18 @@ const Notifications = () => {
               </select>
             )}
 
-            {/* Search Input */}
-            <div className="relative flex-1 sm:w-64 max-w-sm">
-              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by title, message, ID..."
-                className="w-full pl-9 pr-7 py-2 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-xs font-medium transition-all"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer text-xs"
-                >
-                  &times;
-                </button>
-              )}
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Mark All As Read */}
+              <button
+                type="button"
+                onClick={handleMarkAllAsRead}
+                disabled={markingAllRead || unreadCount === 0}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white disabled:text-slate-400 dark:disabled:text-slate-600 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed"
+              >
+                <MdDoneAll className="text-xs" />
+                <span>{markingAllRead ? 'Marking...' : 'Mark Read'}</span>
+              </button>
             </div>
 
             {/* Per page limit */}

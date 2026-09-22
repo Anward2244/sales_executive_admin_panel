@@ -4,7 +4,7 @@ import { AreaClosed, LinePath, Bar } from '@visx/shape';
 import { curveMonotoneX } from '@visx/curve';
 import { LinearGradient } from '@visx/gradient';
 import { scaleTime, scaleLinear } from '@visx/scale';
-import { AxisBottom, AxisLeft } from '@visx/axis';
+import { AxisBottom, AxisLeft, AxisRight } from '@visx/axis';
 import { GridRows } from '@visx/grid';
 import { ParentSize } from '@visx/responsive';
 import { useTooltip, TooltipWithBounds, defaultStyles } from '@visx/tooltip';
@@ -29,8 +29,15 @@ const formatDateLabel = (date) => {
   }
 };
 
-const formatYAxis = (val, isRevenue) => {
-  if (!isRevenue) return Math.round(val);
+const formatFullDate = (date) => {
+  try {
+    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch {
+    return String(date);
+  }
+};
+
+const formatRevenueAxis = (val) => {
   if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
   if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
   if (val >= 1000) return `₹${(val / 1000).toFixed(0)}k`;
@@ -41,16 +48,21 @@ const InnerTrendChart = ({
   width,
   height,
   data = [],
-  metric = 'revenue',
+  visibleSeries = { revenue: true, orders: true },
   isDark = false
 }) => {
-  const margin = { top: 16, right: 20, bottom: 32, left: 52 };
+  const showRevenue = visibleSeries.revenue ?? true;
+  const showOrders = visibleSeries.orders ?? true;
+
+  const margin = {
+    top: 20,
+    right: showOrders ? 52 : 20,
+    bottom: 34,
+    left: showRevenue ? 58 : 24
+  };
+
   const innerWidth = Math.max(0, width - margin.left - margin.right);
   const innerHeight = Math.max(0, height - margin.top - margin.bottom);
-
-  const isRevenue = metric === 'revenue';
-  const primaryColor = isRevenue ? '#10b981' : '#3b82f6';
-  const gradientId = isRevenue ? 'visx-emerald-gradient' : 'visx-blue-gradient';
 
   // Tooltip setup
   const {
@@ -64,31 +76,58 @@ const InnerTrendChart = ({
 
   // Accessors
   const getDate = useCallback((d) => parseDate(d.date), []);
-  const getValue = useCallback((d) => (isRevenue ? d.revenue : d.orders), [isRevenue]);
+  const getRevenue = useCallback((d) => Number(d.revenue) || 0, []);
+  const getOrders = useCallback((d) => Number(d.orders) || 0, []);
+
+  // Compute bar width based on innerWidth & item count
+  const barWidth = useMemo(() => {
+    if (!data.length) return 14;
+    const available = innerWidth / Math.max(data.length, 1);
+    return Math.max(8, Math.min(28, available * 0.45));
+  }, [data.length, innerWidth]);
 
   // Scales
   const dateScale = useMemo(() => {
     if (!data.length) return scaleTime({ range: [0, innerWidth] });
-    return scaleTime({
-      range: [0, innerWidth],
-      domain: [
-        Math.min(...data.map((d) => getDate(d).getTime())),
-        Math.max(...data.map((d) => getDate(d).getTime()))
-      ]
-    });
-  }, [data, innerWidth, getDate]);
+    const minTime = Math.min(...data.map((d) => getDate(d).getTime()));
+    const maxTime = Math.max(...data.map((d) => getDate(d).getTime()));
 
-  const valueScale = useMemo(() => {
+    // When single item or identical dates
+    if (minTime === maxTime) {
+      return scaleTime({
+        range: [innerWidth / 2, innerWidth / 2],
+        domain: [new Date(minTime), new Date(maxTime)]
+      });
+    }
+
+    const pad = Math.max(barWidth / 2 + 6, 16);
+    return scaleTime({
+      range: [pad, Math.max(pad + 10, innerWidth - pad)],
+      domain: [new Date(minTime), new Date(maxTime)]
+    });
+  }, [data, innerWidth, barWidth, getDate]);
+
+  const revenueScale = useMemo(() => {
     if (!data.length) return scaleLinear({ range: [innerHeight, 0] });
-    const maxVal = Math.max(...data.map(getValue), 0);
+    const maxVal = Math.max(...data.map(getRevenue), 0);
     return scaleLinear({
       range: [innerHeight, 0],
-      domain: [0, maxVal > 0 ? maxVal * 1.15 : 10],
+      domain: [0, maxVal > 0 ? maxVal * 1.18 : 10000],
       nice: true
     });
-  }, [data, innerHeight, getValue]);
+  }, [data, innerHeight, getRevenue]);
 
-  // Pointer move handler
+  const orderScale = useMemo(() => {
+    if (!data.length) return scaleLinear({ range: [innerHeight, 0] });
+    const maxVal = Math.max(...data.map(getOrders), 0);
+    return scaleLinear({
+      range: [innerHeight, 0],
+      domain: [0, maxVal > 0 ? Math.max(Math.ceil(maxVal * 1.25), 4) : 5],
+      nice: true
+    });
+  }, [data, innerHeight, getOrders]);
+
+  // Pointer move handler for tooltip
   const handlePointerMove = useCallback(
     (event) => {
       if (!data.length) return;
@@ -116,35 +155,55 @@ const InnerTrendChart = ({
 
       if (closestItem) {
         const itemX = dateScale(getDate(closestItem));
-        const itemY = valueScale(getValue(closestItem));
+        const revY = revenueScale(getRevenue(closestItem));
+        const ordY = orderScale(getOrders(closestItem));
+        const itemY = showRevenue ? revY : ordY;
 
         showTooltip({
           tooltipData: closestItem,
           tooltipLeft: itemX + margin.left,
-          tooltipTop: itemY + margin.top
+          tooltipTop: Math.max(margin.top + 10, itemY + margin.top)
         });
       }
     },
-    [data, margin.left, margin.top, innerWidth, dateScale, valueScale, getDate, getValue, hideTooltip, showTooltip]
+    [data, margin.left, margin.top, innerWidth, dateScale, revenueScale, orderScale, showRevenue, getDate, getRevenue, getOrders, hideTooltip, showTooltip]
   );
 
   if (width < 50 || height < 50) return null;
 
+  const isSelectedDate = (item) => {
+    if (!tooltipData) return false;
+    return getDate(item).getTime() === getDate(tooltipData).getTime();
+  };
+
   return (
-    <div className="relative select-none">
+    <div className="relative select-none w-full">
       <svg width={width} height={height} className="overflow-visible">
-        <LinearGradient
-          id={gradientId}
-          from={primaryColor}
-          to={primaryColor}
-          fromOpacity={isDark ? 0.45 : 0.35}
-          toOpacity={0.02}
-        />
+        <defs>
+          {/* Revenue Emerald Gradient */}
+          <LinearGradient
+            id="mix-revenue-gradient"
+            from="#10b981"
+            to="#10b981"
+            fromOpacity={isDark ? 0.38 : 0.28}
+            toOpacity={0.01}
+          />
+          {/* Orders Bar Indigo/Blue Gradient */}
+          <linearGradient id="mix-order-bar-gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#60a5fa" stopOpacity={isDark ? 0.85 : 0.9} />
+            <stop offset="100%" stopColor="#3b82f6" stopOpacity={isDark ? 0.55 : 0.65} />
+          </linearGradient>
+          {/* Active Orders Bar Hover Gradient */}
+          <linearGradient id="mix-order-bar-hover" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#93c5fd" stopOpacity={1} />
+            <stop offset="100%" stopColor="#2563eb" stopOpacity={0.9} />
+          </linearGradient>
+        </defs>
 
         <Group left={margin.left} top={margin.top}>
-          {/* Subtle Grid Rows */}
+          {/* Subtle Grid Rows (aligned to Revenue or Orders scale) */}
           <GridRows
-            scale={valueScale}
+            scale={showRevenue ? revenueScale : orderScale}
             width={innerWidth}
             strokeDasharray="4 4"
             stroke={isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.06)'}
@@ -152,57 +211,95 @@ const InnerTrendChart = ({
             numTicks={5}
           />
 
-          {/* Area Closed */}
-          {data.length > 1 && (
-            <AreaClosed
-              data={data}
-              x={(d) => dateScale(getDate(d)) ?? 0}
-              y={(d) => valueScale(getValue(d)) ?? 0}
-              yScale={valueScale}
-              strokeWidth={0}
-              curve={curveMonotoneX}
-              fill={`url(#${gradientId})`}
-            />
+          {/* LAYER 1: Orders (Rounded Bars) */}
+          {showOrders &&
+            data.map((d, i) => {
+              const ordersCount = getOrders(d);
+              const barHeight = Math.max(0, innerHeight - orderScale(ordersCount));
+              const barX = dateScale(getDate(d)) - barWidth / 2;
+              const barY = orderScale(ordersCount);
+              const isHovered = isSelectedDate(d);
+
+              return (
+                <g key={`bar-${i}`}>
+                  {/* Subtle bar shadow / highlight glow on hover */}
+                  {isHovered && barHeight > 0 && (
+                    <rect
+                      x={barX - 2}
+                      y={barY - 2}
+                      width={barWidth + 4}
+                      height={barHeight + 4}
+                      rx={Math.min(6, barWidth / 2)}
+                      fill="rgba(59, 130, 246, 0.25)"
+                      pointerEvents="none"
+                    />
+                  )}
+                  <rect
+                    x={barX}
+                    y={barY}
+                    width={barWidth}
+                    height={barHeight}
+                    rx={Math.min(4, barWidth / 3)}
+                    fill={isHovered ? 'url(#mix-order-bar-hover)' : 'url(#mix-order-bar-gradient)'}
+                    stroke={isHovered ? '#60a5fa' : 'transparent'}
+                    strokeWidth={isHovered ? 1.5 : 0}
+                    className="transition-all duration-150"
+                  />
+                </g>
+              );
+            })}
+
+          {/* LAYER 2: Revenue (Area Closed + Spline Line) */}
+          {showRevenue && data.length > 1 && (
+            <>
+              <AreaClosed
+                data={data}
+                x={(d) => dateScale(getDate(d)) ?? 0}
+                y={(d) => revenueScale(getRevenue(d)) ?? 0}
+                yScale={revenueScale}
+                strokeWidth={0}
+                curve={curveMonotoneX}
+                fill="url(#mix-revenue-gradient)"
+              />
+              <LinePath
+                data={data}
+                x={(d) => dateScale(getDate(d)) ?? 0}
+                y={(d) => revenueScale(getRevenue(d)) ?? 0}
+                stroke="#10b981"
+                strokeWidth={2.75}
+                curve={curveMonotoneX}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </>
           )}
 
-          {/* Smooth Line Path */}
-          {data.length > 1 && (
-            <LinePath
-              data={data}
-              x={(d) => dateScale(getDate(d)) ?? 0}
-              y={(d) => valueScale(getValue(d)) ?? 0}
-              stroke={primaryColor}
-              strokeWidth={2.5}
-              curve={curveMonotoneX}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
-
-          {/* Data Points (if few items) */}
-          {data.length <= 12 &&
+          {/* Revenue Marker Dots (when fewer points or highlighted) */}
+          {showRevenue &&
+            data.length <= 16 &&
             data.map((d, i) => {
               const cx = dateScale(getDate(d));
-              const cy = valueScale(getValue(d));
+              const cy = revenueScale(getRevenue(d));
+              const isHovered = isSelectedDate(d);
               return (
                 <circle
-                  key={`point-${i}`}
+                  key={`rev-point-${i}`}
                   cx={cx}
                   cy={cy}
-                  r={3.5}
-                  fill={primaryColor}
+                  r={isHovered ? 5.5 : 3.5}
+                  fill="#10b981"
                   stroke={isDark ? '#0f172a' : '#ffffff'}
-                  strokeWidth={2}
-                  className="transition-transform duration-200"
+                  strokeWidth={isHovered ? 2.5 : 2}
+                  className="transition-all duration-150"
                 />
               );
             })}
 
-          {/* Bottom X-Axis */}
+          {/* Bottom X-Axis: Dates */}
           <AxisBottom
             top={innerHeight}
             scale={dateScale}
-            numTicks={innerWidth > 500 ? 7 : 4}
+            numTicks={innerWidth > 520 ? 7 : 4}
             tickFormat={formatDateLabel}
             stroke="transparent"
             tickStroke="transparent"
@@ -211,62 +308,90 @@ const InnerTrendChart = ({
               fontSize: 11,
               fontFamily: 'inherit',
               fontWeight: 500,
-              textAnchor: 'middle'
+              textAnchor: 'middle',
+              dy: 4
             })}
           />
 
-          {/* Left Y-Axis */}
-          <AxisLeft
-            scale={valueScale}
-            numTicks={5}
-            tickFormat={(val) => formatYAxis(val, isRevenue)}
-            stroke="transparent"
-            tickStroke="transparent"
-            tickLabelProps={() => ({
-              fill: isDark ? '#94a3b8' : '#64748b',
-              fontSize: 11,
-              fontFamily: 'inherit',
-              fontWeight: 500,
-              textAnchor: 'end',
-              dx: -4,
-              dy: 3
-            })}
-          />
+          {/* Left Y-Axis: Revenue (₹) */}
+          {showRevenue && (
+            <AxisLeft
+              scale={revenueScale}
+              numTicks={5}
+              tickFormat={formatRevenueAxis}
+              stroke="transparent"
+              tickStroke="transparent"
+              tickLabelProps={() => ({
+                fill: isDark ? '#34d399' : '#059669',
+                fontSize: 11,
+                fontFamily: 'inherit',
+                fontWeight: 600,
+                textAnchor: 'end',
+                dx: -4,
+                dy: 3
+              })}
+            />
+          )}
+
+          {/* Right Y-Axis: Orders (Count) */}
+          {showOrders && (
+            <AxisRight
+              left={innerWidth}
+              scale={orderScale}
+              numTicks={Math.min(5, Math.max(...data.map(getOrders), 5))}
+              tickFormat={(val) => Math.round(val)}
+              stroke="transparent"
+              tickStroke="transparent"
+              tickLabelProps={() => ({
+                fill: isDark ? '#60a5fa' : '#2563eb',
+                fontSize: 11,
+                fontFamily: 'inherit',
+                fontWeight: 600,
+                textAnchor: 'start',
+                dx: 4,
+                dy: 3
+              })}
+            />
+          )}
 
           {/* Interactive Crosshair when Hovered */}
           {tooltipOpen && tooltipData && (
             <g pointerEvents="none">
-              {/* Vertical dotted guide line */}
+              {/* Vertical dotted crosshair line */}
               <line
                 x1={dateScale(getDate(tooltipData))}
                 x2={dateScale(getDate(tooltipData))}
                 y1={0}
                 y2={innerHeight}
-                stroke={isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)'}
+                stroke={isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.22)'}
                 strokeWidth={1.5}
                 strokeDasharray="3 3"
               />
-              {/* Active Outer Pulsing Ring */}
-              <circle
-                cx={dateScale(getDate(tooltipData))}
-                cy={valueScale(getValue(tooltipData))}
-                r={8}
-                fill={primaryColor}
-                fillOpacity={0.25}
-              />
-              {/* Active Center Solid Point */}
-              <circle
-                cx={dateScale(getDate(tooltipData))}
-                cy={valueScale(getValue(tooltipData))}
-                r={4.5}
-                fill={primaryColor}
-                stroke={isDark ? '#0f172a' : '#ffffff'}
-                strokeWidth={2}
-              />
+
+              {/* Active Pulsing Ring on Revenue Point */}
+              {showRevenue && (
+                <>
+                  <circle
+                    cx={dateScale(getDate(tooltipData))}
+                    cy={revenueScale(getRevenue(tooltipData))}
+                    r={9}
+                    fill="#10b981"
+                    fillOpacity={0.25}
+                  />
+                  <circle
+                    cx={dateScale(getDate(tooltipData))}
+                    cy={revenueScale(getRevenue(tooltipData))}
+                    r={5}
+                    fill="#10b981"
+                    stroke={isDark ? '#0f172a' : '#ffffff'}
+                    strokeWidth={2}
+                  />
+                </>
+              )}
             </g>
           )}
 
-          {/* Invisible Overlay Capture Layer */}
+          {/* Invisible Overlay to Capture Pointer Movements */}
           <Bar
             x={0}
             y={0}
@@ -282,43 +407,69 @@ const InnerTrendChart = ({
         </Group>
       </svg>
 
-      {/* Floating Tooltip Box */}
+      {/* Floating Rich Tooltip Box */}
       {tooltipOpen && tooltipData && (
         <TooltipWithBounds
-          key={Math.random()}
+          key={`tooltip-${getDate(tooltipData).getTime()}`}
           top={tooltipTop}
           left={tooltipLeft}
           style={{
             ...defaultStyles,
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.96)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.94)' : 'rgba(255, 255, 255, 0.98)',
             color: isDark ? '#ffffff' : '#0f172a',
             border: isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(226, 232, 240, 0.9)',
-            borderRadius: '14px',
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            backdropFilter: 'blur(12px)',
-            padding: '8px 12px',
+            borderRadius: '16px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            backdropFilter: 'blur(16px)',
+            padding: '10px 14px',
             fontSize: '12px',
             pointerEvents: 'none',
-            zIndex: 100
+            zIndex: 100,
+            minWidth: '180px'
           }}
         >
-          <div className="space-y-1">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-              {formatDateLabel(getDate(tooltipData))}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-white/10 pb-1.5">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                {formatFullDate(getDate(tooltipData))}
+              </span>
+              <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                Daily
+              </span>
             </div>
-            <div className="flex items-center gap-2">
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: primaryColor }}
-              />
-              <span className="font-semibold text-slate-600 dark:text-slate-300">
-                {isRevenue ? 'Revenue' : 'Orders'}:
-              </span>
-              <span className="font-extrabold font-mono text-slate-900 dark:text-white">
-                {isRevenue
-                  ? `₹${Number(tooltipData.revenue || 0).toLocaleString('en-IN')}`
-                  : `${tooltipData.orders || 0} orders`}
-              </span>
+
+            <div className="space-y-1.5">
+              {/* Revenue Row */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">Revenue</span>
+                </div>
+                <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  ₹{Number(tooltipData.revenue || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              {/* Orders Row */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-md bg-blue-500 shrink-0" />
+                  <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">Orders</span>
+                </div>
+                <span className="text-xs font-black font-mono text-blue-600 dark:text-blue-400">
+                  {tooltipData.orders || 0} {tooltipData.orders === 1 ? 'order' : 'orders'}
+                </span>
+              </div>
+
+              {/* Dynamic Avg Order Value Row if orders > 0 */}
+              {Number(tooltipData.orders) > 0 && Number(tooltipData.revenue) > 0 && (
+                <div className="flex items-center justify-between gap-4 pt-1 border-t border-dashed border-slate-200 dark:border-white/10 text-[11px]">
+                  <span className="text-slate-400">Avg Value</span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
+                    ₹{Math.round(Number(tooltipData.revenue) / Number(tooltipData.orders)).toLocaleString('en-IN')}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </TooltipWithBounds>
@@ -327,7 +478,12 @@ const InnerTrendChart = ({
   );
 };
 
-const VisxTrendChart = ({ data = [], metric = 'revenue', height = 310, isDark = false }) => {
+const VisxTrendChart = ({
+  data = [],
+  visibleSeries = { revenue: true, orders: true },
+  height = 320,
+  isDark = false
+}) => {
   return (
     <div style={{ width: '100%', height }}>
       <ParentSize debounceTime={10}>
@@ -336,7 +492,7 @@ const VisxTrendChart = ({ data = [], metric = 'revenue', height = 310, isDark = 
             width={width}
             height={pHeight || height}
             data={data}
-            metric={metric}
+            visibleSeries={visibleSeries}
             isDark={isDark}
           />
         )}

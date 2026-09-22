@@ -4,7 +4,8 @@ import { createPortal } from 'react-dom';
 import {
   FiArrowLeft, FiCheck, FiX, FiLoader, FiAlertCircle,
   FiUser, FiMail, FiPhone, FiBriefcase, FiHash, FiCalendar,
-  FiClock, FiEdit3, FiCopy, FiShield, FiImage, FiPower
+  FiClock, FiEdit3, FiCopy, FiShield, FiImage, FiPower,
+  FiMapPin, FiExternalLink, FiUsers
 } from 'react-icons/fi';
 import { getUserByIdApi, updateUserApi, updateUserStatusApi } from '@/api/axios';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
@@ -79,6 +80,9 @@ const UserDetails = () => {
     role: 'SALES_EXECUTIVE',
     employeeCode: '',
     profileImage: '',
+    reportingManager: '',
+    territory: '',
+    emergencyContact: '',
     isActive: true
   });
   const [saving, setSaving] = useState(false);
@@ -127,6 +131,9 @@ const UserDetails = () => {
       role: user.role || 'SALES_EXECUTIVE',
       employeeCode: user.employeeCode || '',
       profileImage: user.profileImage || '',
+      reportingManager: user.reportingManager || '',
+      territory: user.territory || '',
+      emergencyContact: user.emergencyContact || '',
       isActive: user.isActive !== undefined ? user.isActive : true
     });
     setSaveError('');
@@ -152,9 +159,6 @@ const UserDetails = () => {
     if (!editForm.phone.trim()) {
       return setSaveError('Phone number is required.');
     }
-    if (!editForm.employeeCode.trim()) {
-      return setSaveError('Employee code is required.');
-    }
 
     setSaving(true);
     try {
@@ -165,6 +169,9 @@ const UserDetails = () => {
         role: editForm.role,
         employeeCode: editForm.employeeCode.trim(),
         profileImage: editForm.profileImage.trim(),
+        reportingManager: editForm.reportingManager.trim(),
+        territory: editForm.territory.trim(),
+        emergencyContact: editForm.emergencyContact.trim(),
         isActive: Boolean(editForm.isActive)
       };
 
@@ -348,6 +355,22 @@ const UserDetails = () => {
                         <span>Created {formatDateDDMMYYYY(user.createdAt)}</span>
                       </div>
                     )}
+
+                    {user.reportingManager && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-300 dark:text-slate-600">•</span>
+                        <FiUser size={12} className="text-slate-400" />
+                        <span>Reports to: <strong className="text-slate-700 dark:text-slate-300 font-semibold">{user.reportingManager}</strong></span>
+                      </div>
+                    )}
+
+                    {user.territory && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-300 dark:text-slate-600">•</span>
+                        <FiMapPin size={12} className="text-slate-400" />
+                        <span>Territory: <strong className="text-slate-700 dark:text-slate-300 font-semibold">{user.territory}</strong></span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -395,7 +418,17 @@ const UserDetails = () => {
 
                 <div className="p-3.5 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-2xl">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Employee Code</span>
-                  <p className="text-slate-900 dark:text-white font-semibold text-sm mt-1 font-mono">{user.employeeCode || 'N/A'}</p>
+                  <p className="text-slate-900 dark:text-white font-semibold text-sm mt-1 font-mono">{user.employeeCode || '-'}</p>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-2xl">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Reporting Manager</span>
+                  <p className="text-slate-900 dark:text-white font-semibold text-sm mt-1">{user.reportingManager || 'Not Assigned'}</p>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-2xl">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Territory / Region</span>
+                  <p className="text-slate-900 dark:text-white font-semibold text-sm mt-1">{user.territory || 'Unassigned'}</p>
                 </div>
 
                 <div className="p-3.5 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-2xl col-span-1 sm:col-span-2">
@@ -444,6 +477,14 @@ const UserDetails = () => {
                 </div>
 
                 <div className="p-3.5 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-2xl flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Emergency Contact</span>
+                    <p className="text-slate-900 dark:text-white font-semibold text-sm mt-1 font-mono">{user.emergencyContact || 'Not provided'}</p>
+                  </div>
+                  {user.emergencyContact && <CopyButton text={user.emergencyContact} />}
+                </div>
+
+                <div className="p-3.5 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-2xl flex items-center justify-between">
                   <div className="min-w-0 flex-1 pr-2">
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Profile Image URL</span>
                     <p className="text-slate-700 dark:text-slate-300 text-xs mt-1 truncate font-mono" title={user.profileImage || 'None'}>
@@ -459,6 +500,59 @@ const UserDetails = () => {
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Assigned Companies Card */}
+            <div className="bg-white/40 dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 shadow-xl dark:shadow-2xl backdrop-blur-xl space-y-4 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <FiBriefcase className="text-blue-600 dark:text-blue-400" />
+                  <span>Assigned Companies</span>
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                  {Array.isArray(user.assignedCompanyIds) ? user.assignedCompanyIds.length : 0} Assigned
+                </span>
+              </div>
+
+              {Array.isArray(user.assignedCompanyIds) && user.assignedCompanyIds.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {user.assignedCompanyIds.map((companyId, idx) => (
+                    <div
+                      key={companyId || idx}
+                      className="p-3.5 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-2xl flex items-center justify-between gap-2 hover:border-blue-500/40 transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs shrink-0 font-bold">
+                          <FiBriefcase size={14} />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Company ID</span>
+                          <p className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 truncate select-all" title={companyId}>
+                            {companyId}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <CopyButton text={companyId} size={11} title="Copy Company ID" />
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/companies/${companyId}`)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                          title="View Company Details"
+                        >
+                          <FiExternalLink size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-slate-50/50 dark:bg-white/[0.01] border border-dashed border-slate-200 dark:border-white/10 rounded-2xl">
+                  <FiBriefcase className="text-3xl text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No Companies Assigned</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">This user is not mapped to any specific customer or supplier companies.</p>
+                </div>
+              )}
             </div>
 
             {/* Timestamps & Audit Card */}
@@ -602,17 +696,58 @@ const UserDetails = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Employee Code *</label>
-                <input
-                  type="text"
-                  name="employeeCode"
-                  value={editForm.employeeCode}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="SE-105"
-                  className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white text-xs font-mono font-medium focus:ring-2 focus:ring-blue-500/50 outline-none"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Employee Code <span className="text-slate-400 text-[10px] font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="employeeCode"
+                    value={editForm.employeeCode}
+                    onChange={handleInputChange}
+                    placeholder="SE-105"
+                    className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white text-xs font-mono font-medium focus:ring-2 focus:ring-blue-500/50 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Reporting Manager</label>
+                  <input
+                    type="text"
+                    name="reportingManager"
+                    value={editForm.reportingManager}
+                    onChange={handleInputChange}
+                    placeholder="Vansh Jain"
+                    className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-blue-500/50 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Territory / Region</label>
+                  <input
+                    type="text"
+                    name="territory"
+                    value={editForm.territory}
+                    onChange={handleInputChange}
+                    placeholder="North Region"
+                    className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-blue-500/50 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Emergency Contact</label>
+                  <input
+                    type="tel"
+                    name="emergencyContact"
+                    value={editForm.emergencyContact}
+                    onChange={handleInputChange}
+                    placeholder="+919876543210"
+                    className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-blue-500/50 outline-none"
+                  />
+                </div>
               </div>
 
               <div>

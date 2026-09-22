@@ -314,23 +314,28 @@ const Companies = () => {
         description="Manage and organize partner companies, brand entities, and operational organizations."
         badgeText="Directory"
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="relative w-full sm:w-80">
+              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+              <input
+                type="text"
+                placeholder="Search by company name, code, or description..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-10 pr-4 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 shadow-xs"
+              />
+            </div>
             <button
               type="button"
               onClick={() => fetchCompanies(true)}
               disabled={loading || refreshing}
-              className="p-2.5 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl transition-all border border-slate-200/80 dark:border-white/10 cursor-pointer disabled:opacity-50"
+              className="p-2.5 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl transition-all border border-slate-200/80 dark:border-white/10 cursor-pointer disabled:opacity-50 shadow-xs shrink-0"
               title="Refresh companies list"
             >
               <FiRefreshCcw className={`text-base ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenModal}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer active:scale-95"
-            >
-              <FiPlus className="text-base" />
-              <span>Add Company</span>
             </button>
           </div>
         }
@@ -375,20 +380,17 @@ const Companies = () => {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* Filter and Action Bar */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-none p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-md">
-        <div className="relative w-full sm:w-96">
-          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
-          <input
-            type="text"
-            placeholder="Search by company name, code, or description..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full pl-10 pr-4 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400"
-          />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={handleOpenModal}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer active:scale-95"
+          >
+            <FiPlus className="text-base" />
+            <span>Add Company</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10 w-full sm:w-auto justify-center">

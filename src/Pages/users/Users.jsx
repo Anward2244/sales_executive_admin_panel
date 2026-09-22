@@ -87,8 +87,8 @@ const UsersList = () => {
 
 
   // Pagination State
-  const [usersPerPage] = useState(10);
-  const [, setPaginationMeta] = useState(null);
+  const [usersPerPage, setUsersPerPage] = useState(20);
+  const [paginationMeta, setPaginationMeta] = useState(null);
 
   const { setUsersUnreadCount } = useOutletContext() || {};
 
@@ -246,6 +246,7 @@ const UsersList = () => {
     let inactiveCount = 0;
     let salesCount = 0;
     let adminCount = 0;
+    let assignedCompaniesCount = 0;
 
     users.forEach(u => {
       if (u.isActive) activeCount++;
@@ -254,6 +255,10 @@ const UsersList = () => {
       const role = (u.role || '').toUpperCase();
       if (role === 'SALES_EXECUTIVE') salesCount++;
       if (role === 'ADMIN') adminCount++;
+
+      if (Array.isArray(u.assignedCompanyIds) && u.assignedCompanyIds.length > 0) {
+        assignedCompaniesCount++;
+      }
     });
 
     return {
@@ -261,7 +266,8 @@ const UsersList = () => {
       active: activeCount,
       inactive: inactiveCount,
       sales: salesCount,
-      admin: adminCount
+      admin: adminCount,
+      assignedCompanies: assignedCompaniesCount
     };
   }, [users]);
 
@@ -276,6 +282,8 @@ const UsersList = () => {
         return users.filter(u => (u.role || '').toUpperCase() === 'SALES_EXECUTIVE');
       case 'ADMIN':
         return users.filter(u => (u.role || '').toUpperCase() === 'ADMIN');
+      case 'assigned':
+        return users.filter(u => Array.isArray(u.assignedCompanyIds) && u.assignedCompanyIds.length > 0);
       default:
         return users;
     }
@@ -310,6 +318,9 @@ const UsersList = () => {
         const employeeCode = (user.employeeCode || '').toLowerCase();
         const role = (user.role || '').toLowerCase();
         const statusText = user.isActive ? 'active' : 'inactive';
+        const reportingManager = (user.reportingManager || '').toLowerCase();
+        const assignedCompaniesMatch = Array.isArray(user.assignedCompanyIds) &&
+          user.assignedCompanyIds.some(cid => String(cid).toLowerCase().includes(term));
 
         const createdAtStr = user.createdAt ? formatDateDDMMYYYY(user.createdAt).toLowerCase() : '';
 
@@ -322,6 +333,8 @@ const UsersList = () => {
           employeeCode.includes(term) ||
           role.includes(term) ||
           statusText.includes(term) ||
+          reportingManager.includes(term) ||
+          assignedCompaniesMatch ||
           createdAtStr.includes(term);
 
         if (!matches) return false;
@@ -343,6 +356,9 @@ const UsersList = () => {
       if (sortKey === 'name') {
         aVal = getUserFullName(a).toLowerCase();
         bVal = getUserFullName(b).toLowerCase();
+      } else if (sortKey === 'assignedCompanies') {
+        aVal = Array.isArray(a.assignedCompanyIds) ? a.assignedCompanyIds.length : 0;
+        bVal = Array.isArray(b.assignedCompanyIds) ? b.assignedCompanyIds.length : 0;
       } else if (sortKey === 'createdAt' || sortKey === 'updatedAt' || sortKey === 'lastLoginAt') {
         aVal = aVal ? new Date(aVal).getTime() : 0;
         bVal = bVal ? new Date(bVal).getTime() : 0;
@@ -430,21 +446,25 @@ const UsersList = () => {
     if (!formData.phone.trim()) {
       return setFormError('Phone number is required.');
     }
-    if (!formData.employeeCode.trim()) {
-      return setFormError('Employee code is required.');
-    }
 
     setSubmitting(true);
     try {
       // 2. Send payload to backend
       const payload = {
-        ...formData,
         firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
         email: formData.email.trim(),
+        password: formData.password,
         phone: formData.phone.trim(),
-        employeeCode: formData.employeeCode.trim()
+        role: formData.role || 'SALES_EXECUTIVE',
+        isActive: formData.isActive !== false,
+        assignedCompanyIds: []
       };
+      if (formData.lastName?.trim()) {
+        payload.lastName = formData.lastName.trim();
+      }
+      if (formData.employeeCode?.trim()) {
+        payload.employeeCode = formData.employeeCode.trim();
+      }
 
       const response = await createUserApi(payload);
 
@@ -504,6 +524,15 @@ const UsersList = () => {
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto">
+          <button
+            onClick={() => fetchUsers(false)}
+            disabled={loading}
+            className="p-2.5 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs shrink-0"
+            title="Refresh Users"
+          >
+            <FiRefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
+          </button>
+
           <div className="relative w-full md:w-80">
             <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-400 z-10" />
             <input 
@@ -523,15 +552,6 @@ const UsersList = () => {
               </button>
             )}
           </div>
-
-          <button
-            onClick={() => fetchUsers(false)}
-            disabled={loading}
-            className="p-2.5 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs shrink-0"
-            title="Refresh Users"
-          >
-            <FiRefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
-          </button>
         </div>
       </div>
 
@@ -675,6 +695,23 @@ const UsersList = () => {
             {tabCounts.inactive}
           </span>
         </button>
+
+        <button
+          onClick={() => handleTabChange('assigned')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            userTab === 'assigned'
+              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+          }`}
+        >
+          <FiBriefcase className="text-sm shrink-0" />
+          <span>With Companies</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
+            userTab === 'assigned' ? 'bg-white/20 text-white' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+          }`}>
+            {tabCounts.assignedCompanies}
+          </span>
+        </button>
       </div>
 
       {/* Content Area */}
@@ -741,6 +778,21 @@ const UsersList = () => {
 
                   {/* Role */}
                   <th className="p-4 font-bold text-center">Role</th>
+
+                  {/* Assigned Companies */}
+                  <th 
+                    onClick={() => handleSortChange('assignedCompanies')}
+                    className="p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className={sortKey === 'assignedCompanies' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>Companies</span>
+                      {sortKey === 'assignedCompanies' ? (
+                        sortOrder === 'asc' ? <span className="text-blue-600 dark:text-blue-400">▲</span> : <span className="text-blue-600 dark:text-blue-400">▼</span>
+                      ) : (
+                        <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                      )}
+                    </div>
+                  </th>
 
                   <th className="p-4 font-bold text-center">Status</th>
 
@@ -853,6 +905,21 @@ const UsersList = () => {
                           </span>
                         </td>
 
+                        {/* Assigned Companies */}
+                        <td className="p-4 text-sm text-center">
+                          {Array.isArray(user.assignedCompanyIds) && user.assignedCompanyIds.length > 0 ? (
+                            <span 
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                              title={`${user.assignedCompanyIds.length} Assigned ${user.assignedCompanyIds.length === 1 ? 'Company' : 'Companies'}: ${user.assignedCompanyIds.join(', ')}`}
+                            >
+                              <FiBriefcase className="text-xs" />
+                              <span>{user.assignedCompanyIds.length} {user.assignedCompanyIds.length === 1 ? 'Company' : 'Companies'}</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500 text-xs font-mono">-</span>
+                          )}
+                        </td>
+
                         {/* Status Toggle (PATCH /users/{id}/status) */}
                         <td className="p-4 text-sm text-center">
                           <button
@@ -924,7 +991,7 @@ const UsersList = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={10} className="p-12 text-center text-slate-500 dark:text-slate-400 italic">
+                    <td colSpan={11} className="p-12 text-center text-slate-500 dark:text-slate-400 italic">
                       {searchTerm || selectedRole || selectedStatus || userTab !== 'all'
                         ? 'No matching users found for current filters.' 
                         : 'No users found.'}
@@ -938,9 +1005,26 @@ const UsersList = () => {
           {/* Pagination Controls */}
           {!loading && !error && sortedUsers.length > 0 && (
             <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50 dark:bg-white/[0.02] backdrop-blur-md">
-              <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 text-center sm:text-left">
-                Showing <span className="font-bold text-slate-800 dark:text-white">{indexOfFirstUser + 1}</span> to <span className="font-bold text-slate-800 dark:text-white">{Math.min(indexOfLastUser, sortedUsers.length)}</span> of <span className="font-bold text-slate-800 dark:text-white">{sortedUsers.length}</span> users
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 text-center sm:text-left">
+                  Showing <span className="font-bold text-slate-800 dark:text-white">{indexOfFirstUser + 1}</span> to <span className="font-bold text-slate-800 dark:text-white">{Math.min(indexOfLastUser, sortedUsers.length)}</span> of <span className="font-bold text-slate-800 dark:text-white">{sortedUsers.length}</span> users
+                </span>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="hidden sm:inline font-medium">Rows:</span>
+                  <select
+                    value={usersPerPage}
+                    onChange={(e) => {
+                      setUsersPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="px-2 py-1 bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
               <div className="flex space-x-2">
                 <button 
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -1110,13 +1194,14 @@ const UsersList = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Employee Code *</label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Employee Code <span className="text-slate-400 text-[10px] font-normal">(Optional)</span>
+                  </label>
                   <input
                     type="text"
                     name="employeeCode"
                     value={formData.employeeCode}
                     onChange={handleInputChange}
-                    required
                     placeholder="SE-105"
                     className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white text-xs font-mono font-medium focus:ring-2 focus:ring-blue-500/50 outline-none"
                   />

@@ -22,7 +22,8 @@ self.addEventListener('notificationclick', (event) => {
         }
         return client.focus();
       }
-      return self.clients.openWindow('/chat');
+      const targetUrl = event.notification?.data?.url || '/';
+      return self.clients.openWindow(targetUrl);
     })
   );
 });

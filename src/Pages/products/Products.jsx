@@ -8,8 +8,6 @@ import {
   FiX,
   FiSave,
   FiPackage,
-  FiGrid,
-  FiList,
   FiEye,
   FiCheckCircle,
   FiAlertCircle,
@@ -59,11 +57,9 @@ const INITIAL_PRODUCT_FORM = {
   name: '',
   sku: '',
   categoryId: '',
-  brand: 'Auric',
+  brand: 'Whatnot',
   unit: 'PCS',
-  defaultPrice: '',
   description: '',
-  images: [''],
   isActive: true
 };
 
@@ -76,19 +72,11 @@ const Products = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  // View & Filter States
-  const [viewMode, setViewMode] = useState(() => {
-    try {
-      return localStorage.getItem('products_view_mode') || 'grid';
-    } catch {
-      return 'grid';
-    }
-  });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
   const [selectedBrandFilter, setSelectedBrandFilter] = useState('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
-  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'price-asc', 'price-desc', 'name-asc'
+  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'name-asc'
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -106,7 +94,6 @@ const Products = () => {
 
   // Details Modal & Delete Confirm Modal
   const [detailsProduct, setDetailsProduct] = useState(null);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [deleteConfirmProduct, setDeleteConfirmProduct] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -136,15 +123,6 @@ const Products = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isActionsOpen]);
-
-  const handleViewModeChange = (mode) => {
-    setViewMode(mode);
-    try {
-      localStorage.setItem('products_view_mode', mode);
-    } catch {
-      // ignore
-    }
-  };
 
   // Fetch products & categories
   const fetchData = useCallback(async (isSilent = false) => {
@@ -225,8 +203,6 @@ const Products = () => {
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === 'price-asc') return (a.defaultPrice || 0) - (b.defaultPrice || 0);
-        if (sortBy === 'price-desc') return (b.defaultPrice || 0) - (a.defaultPrice || 0);
         if (sortBy === 'name-asc') return String(a.name || '').localeCompare(String(b.name || ''));
         if (sortBy === 'oldest') return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
         // Default: newest
@@ -291,11 +267,9 @@ const Products = () => {
       name: product.name || '',
       sku: product.sku || '',
       categoryId: catId,
-      brand: product.brand || 'Auric',
+      brand: product.brand || 'Whatnot',
       unit: product.unit || 'PCS',
-      defaultPrice: product.defaultPrice !== undefined && product.defaultPrice !== null ? String(product.defaultPrice) : '',
       description: product.description || '',
-      images: Array.isArray(product.images) && product.images.length > 0 ? [...product.images] : [''],
       isActive: product.isActive !== undefined ? Boolean(product.isActive) : true
     });
     setFormError('');
@@ -306,8 +280,8 @@ const Products = () => {
   const handleNameChange = (nameVal) => {
     const updated = { ...formData, name: nameVal };
     if (!editingProduct && !formData.skuManual) {
-      // Auto slugify SKU: e.g. "Auric BoomBox IPX7" -> "AURIC-BOOM-001"
-      const prefix = (formData.brand || 'PRD').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+      // Auto slugify SKU: e.g. "Whatnot NitroCharge 65W" -> "WNOT-NITRO-001"
+      const prefix = (formData.brand || 'WNOT').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
       const namePart = nameVal
         .toUpperCase()
         .replace(/[^A-Z0-9\s]/g, '')
@@ -322,55 +296,33 @@ const Products = () => {
     setFormData(updated);
   };
 
-  // Add / Remove / Update Image URLs
-  const handleImageChange = (index, val) => {
-    const newImages = [...formData.images];
-    newImages[index] = val;
-    setFormData({ ...formData, images: newImages });
-  };
-
-  const handleAddImageField = () => {
-    setFormData({ ...formData, images: [...formData.images, ''] });
-  };
-
-  const handleRemoveImageField = (index) => {
-    const newImages = formData.images.filter((_, i) => i !== index);
-    setFormData({ ...formData, images: newImages.length > 0 ? newImages : [''] });
-  };
-
   // Save Product (Create or Update)
   const handleSaveProduct = async (e) => {
     e.preventDefault();
     setFormError('');
 
     if (!formData.name.trim()) {
-      setFormError('Product title is required.');
+      setFormError('Product name is required.');
       return;
     }
     if (!formData.sku.trim()) {
       setFormError('Product SKU code is required.');
       return;
     }
-    if (formData.defaultPrice === '' || isNaN(Number(formData.defaultPrice)) || Number(formData.defaultPrice) < 0) {
-      setFormError('Please provide a valid default price (INR).');
+    if (!formData.categoryId) {
+      setFormError('Please select a category.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const cleanImages = formData.images
-        .map((img) => img.trim())
-        .filter((img) => img.length > 0);
-
       const payload = {
         name: formData.name.trim(),
         sku: formData.sku.trim().toUpperCase(),
-        categoryId: formData.categoryId || undefined,
-        brand: formData.brand.trim() || 'Auric',
-        unit: formData.unit.trim() || 'PCS',
-        defaultPrice: Number(formData.defaultPrice),
+        categoryId: formData.categoryId,
         description: formData.description.trim(),
-        images: cleanImages,
+        brand: formData.brand.trim() || 'Whatnot',
+        unit: formData.unit.trim() || 'PCS',
         isActive: Boolean(formData.isActive)
       };
 
@@ -401,6 +353,7 @@ const Products = () => {
     }
   };
 
+
   // Delete Product
   const handleDeleteProduct = async () => {
     if (!deleteConfirmProduct) return;
@@ -424,7 +377,7 @@ const Products = () => {
   // Export to CSV
   const handleExportCSV = () => {
     if (!filteredProducts.length) return;
-    const headers = ['Product Name', 'SKU', 'Brand', 'Category', 'Unit', 'Default Price (INR)', 'Status', 'Date Added'];
+    const headers = ['Product Name', 'SKU', 'Brand', 'Category', 'Unit', 'Status', 'Date Added'];
     const rows = [headers];
     filteredProducts.forEach((p) => {
       const catName = typeof p.categoryId === 'object' ? p.categoryId?.name : '';
@@ -434,7 +387,6 @@ const Products = () => {
         p.brand || '',
         catName || '',
         p.unit || 'PCS',
-        p.defaultPrice || 0,
         p.isActive ? 'Active' : 'Inactive',
         p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN') : ''
       ]);
@@ -476,33 +428,25 @@ const Products = () => {
         badgeText={`${products.length} Products`}
         badgeIcon={FiPackage}
         actions={
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {/* View Mode Toggle */}
-            <div className="flex items-center bg-slate-100 dark:bg-white/5 p-1 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-xs">
-              <button
-                type="button"
-                onClick={() => handleViewModeChange('grid')}
-                className={`p-2 rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'grid'
-                    ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                }`}
-                title="Grid View"
-              >
-                <FiGrid className="text-sm" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleViewModeChange('list')}
-                className={`p-2 rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'list'
-                    ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                }`}
-                title="Table View"
-              >
-                <FiList className="text-sm" />
-              </button>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="relative w-full sm:w-80">
+              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, SKU, or brand..."
+                className="w-full pl-9 pr-8 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 transition-all shadow-xs"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                >
+                  <FiX size={12} />
+                </button>
+              )}
             </div>
 
             {/* Refresh Button */}
@@ -511,105 +455,9 @@ const Products = () => {
               onClick={() => fetchData(true)}
               disabled={loading || refreshing}
               title="Refresh Products"
-              className="p-2.5 bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:border-blue-500/40 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              className="p-2.5 bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:border-blue-500/40 transition-all cursor-pointer shadow-xs disabled:opacity-50 shrink-0"
             >
               <FiRefreshCw className={`text-base ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
-            </button>
-
-            {/* Actions Dropdown */}
-            <div className="relative" ref={actionsDropdownRef}>
-              <button
-                type="button"
-                onClick={() => setIsActionsOpen((prev) => !prev)}
-                className="flex items-center gap-2 px-3.5 py-2.5 bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-95"
-              >
-                <span>Actions</span>
-                <FiChevronDown className={`text-xs transition-transform duration-200 ${isActionsOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {isActionsOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                  {/* Option 1: Import Products via Excel */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsActionsOpen(false);
-                      setIsImportModalOpen(true);
-                    }}
-                    className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 text-left transition-colors cursor-pointer group"
-                  >
-                    <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors shrink-0">
-                      <FiUploadCloud className="text-base" />
-                    </span>
-                    <div>
-                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
-                        Import Products
-                      </div>
-                      <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
-                        Bulk import via Excel or CSV
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Option 2: Download Sample File */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsActionsOpen(false);
-                      downloadProductExcelTemplate(categories);
-                      showToast('Sample Excel template downloaded.');
-                    }}
-                    className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-blue-50/80 dark:hover:bg-blue-950/30 text-left transition-colors cursor-pointer group"
-                  >
-                    <span className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
-                      <FiFileText className="text-base" />
-                    </span>
-                    <div>
-                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                        Download Sample File
-                      </div>
-                      <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
-                        Pre-formatted .xlsx with categories
-                      </div>
-                    </div>
-                  </button>
-
-                  <div className="my-1 border-t border-slate-100 dark:border-white/5" />
-
-                  {/* Option 3: Export Catalog CSV */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsActionsOpen(false);
-                      handleExportCSV();
-                    }}
-                    disabled={products.length === 0}
-                    className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-left transition-colors cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <span className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 group-hover:bg-slate-700 group-hover:text-white transition-colors shrink-0">
-                      <FiDownload className="text-base" />
-                    </span>
-                    <div>
-                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                        Export Catalog CSV
-                      </div>
-                      <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
-                        Download current inventory list
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Add Product Button */}
-            <button
-              type="button"
-              onClick={handleOpenAdd}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer active:scale-95"
-            >
-              <FiPlus className="text-base" />
-              <span>Add Product</span>
             </button>
           </div>
         }
@@ -632,27 +480,105 @@ const Products = () => {
         </div>
       )}
 
-      {/* Filters Bar */}
+      {/* Actions & Filters Bar */}
       <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-4 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl flex flex-col md:flex-row gap-3 items-center justify-between">
-        {/* Search */}
-        <div className="relative w-full md:w-80">
-          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, SKU, or brand..."
-            className="w-full pl-9 pr-8 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 transition-all"
-          />
-          {searchQuery && (
+        {/* Action Controls */}
+        <div className="flex items-center gap-2.5 flex-wrap w-full md:w-auto">
+          {/* Actions Dropdown */}
+          <div className="relative" ref={actionsDropdownRef}>
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              onClick={() => setIsActionsOpen((prev) => !prev)}
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-95"
             >
-              <FiX size={12} />
+              <span>Actions</span>
+              <FiChevronDown className={`text-xs transition-transform duration-200 ${isActionsOpen ? 'rotate-180' : ''}`} />
             </button>
-          )}
+
+            {isActionsOpen && (
+              <div className="absolute left-0 mt-2 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                {/* Option 1: Import Products via Excel */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsActionsOpen(false);
+                    setIsImportModalOpen(true);
+                  }}
+                  className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 text-left transition-colors cursor-pointer group"
+                >
+                  <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors shrink-0">
+                    <FiUploadCloud className="text-base" />
+                  </span>
+                  <div>
+                    <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+                      Import Products
+                    </div>
+                    <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                      Bulk import via Excel or CSV
+                    </div>
+                  </div>
+                </button>
+
+                {/* Option 2: Download Sample File */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsActionsOpen(false);
+                    downloadProductExcelTemplate(categories);
+                    showToast('Sample Excel template downloaded.');
+                  }}
+                  className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-blue-50/80 dark:hover:bg-blue-950/30 text-left transition-colors cursor-pointer group"
+                >
+                  <span className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
+                    <FiFileText className="text-base" />
+                  </span>
+                  <div>
+                    <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                      Download Sample File
+                    </div>
+                    <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                      Pre-formatted .xlsx with categories
+                    </div>
+                  </div>
+                </button>
+
+                <div className="my-1 border-t border-slate-100 dark:border-white/5" />
+
+                {/* Option 3: Export Catalog CSV */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsActionsOpen(false);
+                    handleExportCSV();
+                  }}
+                  disabled={products.length === 0}
+                  className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-left transition-colors cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 group-hover:bg-slate-700 group-hover:text-white transition-colors shrink-0">
+                    <FiDownload className="text-base" />
+                  </span>
+                  <div>
+                    <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Export Catalog CSV
+                    </div>
+                    <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                      Download current inventory list
+                    </div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Add Product Button */}
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer active:scale-95"
+          >
+            <FiPlus className="text-base" />
+            <span>Add Product</span>
+          </button>
         </div>
 
         {/* Filter Dropdowns */}
@@ -706,8 +632,6 @@ const Products = () => {
           >
             <option value="newest">Newest Added</option>
             <option value="oldest">Oldest First</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
             <option value="name-asc">Name: A to Z</option>
           </select>
 
@@ -807,142 +731,7 @@ const Products = () => {
             </button>
           </div>
         </div>
-      ) : viewMode === 'grid' ? (
-        /* ================= GRID VIEW ================= */
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5">
-          {paginatedProducts.map((product) => {
-            const primaryImg = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : '';
-            const catName = typeof product.categoryId === 'object' ? product.categoryId?.name : '';
-
-            return (
-              <div
-                key={product._id}
-                onClick={() => {
-                  setDetailsProduct(product);
-                  setActiveImageIndex(0);
-                }}
-                className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs hover:border-blue-500/40 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between overflow-hidden cursor-pointer"
-              >
-                <div>
-                  {/* Thumbnail / Image Container */}
-                  <div className="relative h-44 sm:h-48 w-full bg-slate-50/80 dark:bg-slate-950/40 p-3.5 overflow-hidden flex items-center justify-center border-b border-slate-100 dark:border-white/5">
-                    {primaryImg ? (
-                      <img
-                        src={getImageUrl(primaryImg)}
-                        alt={product.name}
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-slate-300 dark:text-slate-600">
-                        <FiImage className="text-3xl" />
-                        <span className="text-[10px] font-bold mt-1">No Image</span>
-                      </div>
-                    )}
-
-                    {/* Status Badge */}
-                    <div className="absolute top-2.5 left-2.5 z-10">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-extrabold backdrop-blur-md shadow-xs ${
-                          product.isActive
-                            ? 'bg-emerald-500/90 text-white'
-                            : 'bg-slate-800/80 text-slate-300'
-                        }`}
-                      >
-                        {product.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-
-                    {/* Brand Pill */}
-                    {product.brand && (
-                      <div className="absolute top-2.5 right-2.5 z-10">
-                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-white/90 dark:bg-slate-900/90 text-slate-800 dark:text-white backdrop-blur-md shadow-xs max-w-[110px] truncate block">
-                          {product.brand}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Unit Pill */}
-                    <div className="absolute bottom-2.5 right-2.5 z-10">
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-black/60 text-white backdrop-blur-md">
-                        {product.unit || 'PCS'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Body Content */}
-                  <div className="p-4">
-                    {/* Category */}
-                    {catName && (
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1 truncate">
-                        {catName}
-                      </div>
-                    )}
-
-                    {/* Product Name */}
-                    <h3 className="font-bold text-slate-900 dark:text-white text-sm leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
-                      {product.name}
-                    </h3>
-
-                    {/* SKU Code */}
-                    <div className="mt-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                      <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded">
-                        {product.sku}
-                      </span>
-                      <CopyButton text={product.sku} />
-                    </div>
-
-                    {/* Description snippet */}
-                    {product.description && (
-                      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                        {product.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Card Footer: Price & Action Buttons */}
-                <div className="p-4 pt-2.5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Default Price
-                    </span>
-                    <div className="text-lg font-black text-slate-900 dark:text-white">
-                      {formatCurrency(product.defaultPrice)}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      onClick={(e) => handleOpenEdit(product, e)}
-                      title="Edit Product"
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
-                    >
-                      <FiEdit2 className="text-sm" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirmProduct(product);
-                      }}
-                      title="Delete Product"
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors cursor-pointer"
-                    >
-                      <FiTrash2 className="text-sm" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       ) : (
-        /* ================= TABLE VIEW ================= */
         <div className="bg-white/20 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -953,50 +742,39 @@ const Products = () => {
                   <th className="py-3 px-4">Brand</th>
                   <th className="py-3 px-4">Category</th>
                   <th className="py-3 px-4 text-center">Unit</th>
-                  <th className="py-3 px-4 text-right">Default Price</th>
+                  <th className="py-3 px-4">Description</th>
                   <th className="py-3 px-4 text-center">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
                 {paginatedProducts.map((product, idx) => {
-                  const primaryImg = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : '';
                   const catName = typeof product.categoryId === 'object' ? product.categoryId?.name : '';
                   const serialNumber = indexOfFirstItem + idx + 1;
 
                   return (
                     <tr
                       key={product._id}
-                      onClick={() => {
-                        setDetailsProduct(product);
-                        setActiveImageIndex(0);
-                      }}
+                      onClick={() => setDetailsProduct(product)}
                       className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
                     >
                       {/* S.No. */}
                       <td className="py-3.5 px-4 text-center font-mono text-xs font-semibold text-slate-500 dark:text-slate-400">
                         {serialNumber}
                       </td>
-                      {/* Product Thumbnail, Name & SKU */}
+
+                      {/* Product Name & SKU */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-black/30 overflow-hidden shrink-0 flex items-center justify-center border border-slate-200/60 dark:border-white/10">
-                            {primaryImg ? (
-                              <img
-                                src={getImageUrl(primaryImg)}
-                                alt={product.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <FiImage className="text-slate-400 text-lg" />
-                            )}
+                          <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20">
+                            <FiPackage className="text-base" />
                           </div>
                           <div>
                             <div className="font-bold text-slate-900 dark:text-white text-xs max-w-sm line-clamp-1">
                               {product.name}
                             </div>
                             <div className="flex items-center gap-1.5 mt-0.5" onClick={(e) => e.stopPropagation()}>
-                              <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                              <span className="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400">
                                 {product.sku}
                               </span>
                               <CopyButton text={product.sku} />
@@ -1026,11 +804,11 @@ const Products = () => {
                         </span>
                       </td>
 
-                      {/* Default Price */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="font-extrabold text-slate-900 dark:text-white text-sm">
-                          {formatCurrency(product.defaultPrice)}
-                        </div>
+                      {/* Description */}
+                      <td className="py-3.5 px-4 max-w-xs">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                          {product.description || '—'}
+                        </p>
                       </td>
 
                       {/* Status */}
@@ -1218,8 +996,8 @@ const Products = () => {
                 </div>
               </div>
 
-              {/* Category, Unit & Price Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Category & Unit Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Category *
@@ -1228,11 +1006,12 @@ const Products = () => {
                     value={formData.categoryId}
                     onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                     className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                    required
                   >
                     <option value="">Select Category</option>
                     {categories.map((c) => (
                       <option key={c._id} value={c._id}>
-                        {c.name} ({c.code})
+                        {c.name} {c.code ? `(${c.code})` : ''}
                       </option>
                     ))}
                   </select>
@@ -1248,21 +1027,7 @@ const Products = () => {
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                     placeholder="e.g. PCS, BOX, SET"
                     className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden uppercase"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Default Price (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.defaultPrice}
-                    onChange={(e) => setFormData({ ...formData, defaultPrice: e.target.value })}
-                    placeholder="2499"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-hidden"
                     required
-                    min="0"
                   />
                 </div>
               </div>
@@ -1276,48 +1041,9 @@ const Products = () => {
                   rows={3}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Key features, wattage, battery life, drivers, warranty details..."
+                  placeholder="e.g. Ultra-compact 65W GaN adapter"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden resize-none"
                 />
-              </div>
-
-              {/* Product Images URLs */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Product Image URLs
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleAddImageField}
-                    className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <FiPlus />
-                    <span>Add Image URL</span>
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {formData.images.map((imgUrl, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <input
-                        type="url"
-                        value={imgUrl}
-                        onChange={(e) => handleImageChange(idx, e.target.value)}
-                        placeholder="https://images.unsplash.com/..."
-                        className="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden"
-                      />
-                      {formData.images.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImageField(idx)}
-                          className="p-2 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-                        >
-                          <FiTrash2 className="text-xs" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
               </div>
 
               {/* Status Toggle */}
@@ -1398,49 +1124,12 @@ const Products = () => {
 
             {/* Modal Body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Image Preview & Thumbnails */}
-              {Array.isArray(detailsProduct.images) && detailsProduct.images.length > 0 && (
-                <div className="space-y-3">
-                  <div className="h-64 w-full rounded-2xl bg-slate-100 dark:bg-black/40 overflow-hidden flex items-center justify-center border border-slate-200/60 dark:border-white/10">
-                    <img
-                      src={getImageUrl(detailsProduct.images[activeImageIndex] || detailsProduct.images[0])}
-                      alt={detailsProduct.name}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  {detailsProduct.images.length > 1 && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                      {detailsProduct.images.map((img, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setActiveImageIndex(i)}
-                          className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
-                            activeImageIndex === i
-                              ? 'border-blue-600 scale-105'
-                              : 'border-transparent opacity-60 hover:opacity-100'
-                          }`}
-                        >
-                          <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Grid Specifications */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-white/5">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Price</span>
-                  <span className="text-base font-extrabold text-slate-900 dark:text-white">
-                    {formatCurrency(detailsProduct.defaultPrice)}
-                  </span>
-                </div>
-                <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Brand</span>
                   <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                    {detailsProduct.brand || 'Auric'}
+                    {detailsProduct.brand || 'Whatnot'}
                   </span>
                 </div>
                 <div>
@@ -1455,6 +1144,18 @@ const Products = () => {
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Unit</span>
                   <span className="text-sm font-mono font-bold text-slate-800 dark:text-slate-200">
                     {detailsProduct.unit || 'PCS'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Status</span>
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold mt-0.5 ${
+                      detailsProduct.isActive
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    {detailsProduct.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
               </div>

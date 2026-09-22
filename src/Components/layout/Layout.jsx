@@ -35,10 +35,12 @@ import {
   isToastAlertsEnabled,
   getPollingInterval
 } from '@/utils/browserNotifications';
+import { useDisplayPreferences } from '@/utils/displayPreferences';
 
 const Layout = () => {
   const { user, logout, userPermissions } = useAuth();
   const { theme, isDark, toggleTheme } = useTheme();
+  const { preferences: displayPrefs } = useDisplayPreferences();
   const auricLogo = isDark ? auricDarkLogo : auricLightLogo;
   const location = useLocation();
   const mainRef = useRef(null);
@@ -56,7 +58,7 @@ const Layout = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   const checkScrollState = () => {
-    if (isChatRoute) {
+    if (!displayPrefs.autoScrollToTop || isChatRoute) {
       if (showScrollTop) setShowScrollTop(false);
       return;
     }
@@ -85,6 +87,10 @@ const Layout = () => {
     }
     setShowScrollTop(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    checkScrollState();
+  }, [displayPrefs.autoScrollToTop]);
 
   useEffect(() => {
     const handleEvents = (e) => {
@@ -116,7 +122,7 @@ const Layout = () => {
       }
       clearInterval(intervalId);
     };
-  }, [location.pathname]);
+  }, [location.pathname, displayPrefs.autoScrollToTop]);
 
   const scrollToTop = () => {
     if (mainRef.current) {
@@ -207,8 +213,6 @@ const Layout = () => {
     }
   }, [isNotificationsDropdownOpen]);
 
-  const prevContactsRef = useRef([]);
-  const isInitialLoad = useRef(true);
   const prevOrdersRef = useRef(null);
   const prevUsersRef = useRef(null);
   const prevPendingRef = useRef(null);
@@ -529,77 +533,6 @@ const Layout = () => {
       });
     }
   };
-
-  // Poll chat unread count
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      if (!user) return;
-      try {
-        const token = sessionStorage.getItem('accessToken');
-        const response = await api.get('/chat/users/list', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const contacts = Array.isArray(response.data) ? response.data : [];
-
-        // Check for new messages to trigger device notifications
-        contacts.forEach(contact => {
-          const prevContact = prevContactsRef.current.find(c => c.userId === contact.userId);
-          const prevUnread = prevContact ? (Number(prevContact.unreadCount) || 0) : 0;
-          const currentUnread = Number(contact.unreadCount) || 0;
-
-          if (!isInitialLoad.current && currentUnread > prevUnread) {
-            // 1. Vibrate & Play Sound (Supported across most mobile browsers)
-            try {
-              if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-              const AudioContext = window.AudioContext || window.webkitAudioContext;
-              if (AudioContext) {
-                const ctx = new AudioContext();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-                gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                osc.start();
-                gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
-                osc.stop(ctx.currentTime + 0.5);
-              }
-            } catch (err) {
-              console.log('Audio/Vibration failed', err);
-            }
-
-            const isNotOnChatPage = !window.location.pathname.includes('/chat');
-
-            // Trigger In-App Toast (when in view) or Browser Notification (when tab is hidden/backgrounded)
-            if (isNotOnChatPage || document.hidden) {
-              addToast(
-                `New Message`,
-                `From ${contact.name || 'Customer'}: ${contact.lastMessage || 'You received a new message.'}`,
-                '/chat',
-                FiMessageSquare,
-                `chat-${contact.userId}`,
-                'chat'
-              );
-            }
-          }
-        });
-
-        prevContactsRef.current = contacts;
-        isInitialLoad.current = false;
-
-        const totalUnread = contacts.reduce((sum, contact) => sum + (Number(contact.unreadCount) || 0), 0);
-        setChatUnreadCount(totalUnread);
-      } catch (error) {
-        console.error("Failed to fetch unread messages count", error);
-      }
-    };
-
-    fetchUnreadCount();
-    const chatInterval = getPollingInterval('chat', 15);
-    const intervalId = setInterval(fetchUnreadCount, chatInterval);
-    return () => clearInterval(intervalId);
-  }, [user, pollingConfigVersion]);
 
   // Poll in-app notifications (GET /notifications)
   useEffect(() => {
@@ -1079,18 +1012,20 @@ const Layout = () => {
     }`}>
 
       {/* Global Ambient Glows */}
-      {isDark ? (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-          <div className="absolute top-10 left-10 w-80 h-80 bg-blue-500/30 rounded-full mix-blend-screen filter blur-[80px] opacity-60 transform-gpu animate-glow"></div>
-          <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-500/20 rounded-full mix-blend-screen filter blur-[100px] opacity-70 transform-gpu animate-glow-alt" style={{ animationDelay: '-12s' }}></div>
-        </div>
-      ) : (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-          {/* Blue glowing moving blobs for Light Mode */}
-          <div className="absolute -top-12 -left-12 w-[420px] h-[420px] bg-gradient-to-br from-blue-400/40 to-sky-400/35 rounded-full filter blur-[75px] opacity-80 transform-gpu animate-glow"></div>
-          {/* <div className="absolute bottom-0 right-0 w-[480px] h-[480px] bg-gradient-to-tl from-blue-500/35 to-indigo-400/30 rounded-full filter blur-[95px] opacity-85 transform-gpu animate-glow-alt" style={{ animationDelay: '-12s' }}></div> */}
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[380px] h-[380px] bg-gradient-to-tr from-sky-400/30 to-blue-500/25 rounded-full filter blur-[85px] opacity-75 transform-gpu animate-glow" style={{ animationDelay: '-25s' }}></div>
-        </div>
+      {displayPrefs.ambientGlow && (
+        isDark ? (
+          <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+            <div className="absolute top-10 left-10 w-80 h-80 bg-blue-500/30 rounded-full mix-blend-screen filter blur-[80px] opacity-60 transform-gpu animate-glow"></div>
+            <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-500/20 rounded-full mix-blend-screen filter blur-[100px] opacity-70 transform-gpu animate-glow-alt" style={{ animationDelay: '-12s' }}></div>
+          </div>
+        ) : (
+          <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+            {/* Blue glowing moving blobs for Light Mode */}
+            <div className="absolute -top-12 -left-12 w-[420px] h-[420px] bg-gradient-to-br from-blue-400/40 to-sky-400/35 rounded-full filter blur-[75px] opacity-80 transform-gpu animate-glow"></div>
+            {/* <div className="absolute bottom-0 right-0 w-[480px] h-[480px] bg-gradient-to-tl from-blue-500/35 to-indigo-400/30 rounded-full filter blur-[95px] opacity-85 transform-gpu animate-glow-alt" style={{ animationDelay: '-12s' }}></div> */}
+            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[380px] h-[380px] bg-gradient-to-tr from-sky-400/30 to-blue-500/25 rounded-full filter blur-[85px] opacity-75 transform-gpu animate-glow" style={{ animationDelay: '-25s' }}></div>
+          </div>
+        )
       )}
 
       {/* Toast Notification Stack Container */}
@@ -1452,24 +1387,26 @@ const Layout = () => {
           fixed inset-y-0 left-0 z-50 flex flex-col
           transform transition-all duration-300 ease-in-out lg:translate-x-0 overflow-hidden
           ${isDark 
-            ? 'panel-bg-dark border-r border-white/10 shadow-2xl shadow-black/80 backdrop-blur-2xl' 
-            : 'panel-bg-light border-r border-slate-200/80 shadow-2xl shadow-slate-900/15 backdrop-blur-xl'
+            ? 'bg-slate-950/50 border-r border-white/10 shadow-2xl shadow-black/80 backdrop-blur-2xl' 
+            : 'bg-white/60 border-r border-slate-200/80 shadow-2xl shadow-slate-900/15 backdrop-blur-lg'
           }
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
           ${isExpanded ? 'w-72 sm:w-80' : 'lg:w-20 w-72 sm:w-80'}
         `}
       >
         {/* Sidebar Ambient Glows */}
-        {isDark ? (
-          <div className="absolute top-0 left-0 w-full h-full pointer-events-none -z-10 transform-gpu">
-            <div className="absolute top-[10%] left-[-20%] w-64 h-64 bg-blue-600/20 rounded-full mix-blend-screen filter blur-[80px] opacity-60 transform-gpu animate-glow"></div>
-            <div className="absolute bottom-[20%] right-[-20%] w-72 h-72 bg-blue-600/50 rounded-full mix-blend-screen filter blur-[100px] opacity-50 transform-gpu animate-glow" style={{ animationDelay: '-5s' }}></div>
-          </div>
-        ) : (
-          <div className="absolute top-0 left-0 w-full h-full pointer-events-none -z-10 transform-gpu">
-            <div className="absolute top-[10%] left-[-20%] w-64 h-64 bg-blue-400/15 rounded-full filter blur-[75px] opacity-60 transform-gpu"></div>
-            <div className="absolute bottom-[20%] right-[-20%] w-72 h-72 bg-sky-300/20 rounded-full filter blur-[95px] opacity-50 transform-gpu"></div>
-          </div>
+        {displayPrefs.ambientGlow && (
+          isDark ? (
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none -z-10 transform-gpu">
+              <div className="absolute top-[10%] left-[-20%] w-64 h-64 bg-blue-600/20 rounded-full mix-blend-screen filter blur-[80px] opacity-60 transform-gpu animate-glow"></div>
+              <div className="absolute bottom-[20%] right-[-20%] w-72 h-72 bg-blue-600/50 rounded-full mix-blend-screen filter blur-[100px] opacity-50 transform-gpu animate-glow" style={{ animationDelay: '-5s' }}></div>
+            </div>
+          ) : (
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none -z-10 transform-gpu">
+              <div className="absolute top-[10%] left-[-20%] w-64 h-64 bg-blue-400/15 rounded-full filter blur-[75px] opacity-60 transform-gpu"></div>
+              <div className="absolute bottom-[20%] right-[-20%] w-72 h-72 bg-sky-300/20 rounded-full filter blur-[95px] opacity-50 transform-gpu"></div>
+            </div>
+          )
         )}
 
         <div className={`h-16 flex items-center justify-center border-b bg-transparent shrink-0 relative overflow-hidden ${
@@ -1530,15 +1467,15 @@ const Layout = () => {
                       w-full h-12 flex items-center justify-between px-3.5 transition-all duration-200 group rounded-xl relative cursor-pointer
                       ${isChildActive
                         ? isDark
-                          ? 'bg-gradient-to-r from-blue-600/25 to-blue-500/15 text-white font-semibold border border-blue-500/40 shadow-sm shadow-blue-500/10'
-                          : 'bg-gradient-to-r from-blue-600/15 to-indigo-600/10 text-blue-700 font-bold border border-blue-400/30 shadow-sm shadow-blue-500/5'
+                          ? 'bg-gradient-to-r from-blue-600/25 to-blue-500/15 text-white font-semibold border border-blue-500/40 shadow-sm shadow-blue-500/10 hover:shadow-md hover:shadow-blue-500/20'
+                          : 'bg-gradient-to-r from-blue-600/15 to-indigo-600/10 text-blue-700 font-bold border border-blue-400/30 shadow-sm shadow-blue-500/5 hover:shadow-md hover:shadow-blue-500/15'
                         : isExpanded
                           ? isDark
-                            ? 'text-slate-300 border border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/10 hover:translate-x-0.5'
-                            : 'text-slate-600 border border-transparent hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200/80 hover:translate-x-0.5'
+                            ? 'text-slate-300 border border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/10 hover:translate-x-0.5 hover:shadow-md hover:shadow-black/30'
+                            : 'text-slate-600 border border-transparent hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200/80 hover:translate-x-0.5 hover:shadow-md hover:shadow-slate-900/10'
                           : isDark
-                            ? 'bg-white/[0.02] border border-white/5 text-slate-300 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03]'
-                            : 'bg-slate-100/60 border border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03]'
+                            ? 'bg-white/[0.02] border border-white/5 text-slate-300 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03] hover:shadow-md hover:shadow-black/30'
+                            : 'bg-slate-100/60 border border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03] hover:shadow-md hover:shadow-slate-900/10'
                       }
                     `}
                   >
@@ -1593,11 +1530,11 @@ const Layout = () => {
                                 flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200
                                 ${isSubActive
                                     ? isDark
-                                      ? 'bg-blue-600/25 text-white font-bold border border-blue-500/40 shadow-sm shadow-blue-500/10'
-                                      : 'bg-blue-600/15 text-blue-700 font-bold border border-blue-400/40 shadow-sm shadow-blue-500/5'
+                                      ? 'bg-blue-600/25 text-white font-bold border border-blue-500/40 shadow-sm shadow-blue-500/10 hover:shadow-md hover:shadow-blue-500/20'
+                                      : 'bg-blue-600/15 text-blue-700 font-bold border border-blue-400/40 shadow-sm shadow-blue-500/5 hover:shadow-md hover:shadow-blue-500/15'
                                     : isDark
-                                      ? 'text-slate-400 hover:bg-white/[0.03] border border-transparent hover:border-white/15 hover:text-slate-100 hover:translate-x-1'
-                                      : 'text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 hover:text-slate-900 hover:translate-x-1'
+                                      ? 'text-slate-400 hover:bg-white/[0.03] border border-transparent hover:border-white/15 hover:text-slate-100 hover:translate-x-1 hover:shadow-sm hover:shadow-black/30'
+                                      : 'text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 hover:text-slate-900 hover:translate-x-1 hover:shadow-sm hover:shadow-slate-900/10'
                                   }
                               `}
                               >
@@ -1640,15 +1577,15 @@ const Layout = () => {
                   w-full h-12 flex items-center justify-between px-3.5 transition-all duration-200 group rounded-xl relative cursor-pointer
                   ${isActive
                     ? isDark
-                      ? 'bg-gradient-to-r from-blue-600/25 to-blue-500/15 text-white font-semibold border border-blue-500/40 shadow-sm shadow-blue-500/10'
-                      : 'bg-gradient-to-r from-blue-600/15 to-indigo-600/10 text-blue-700 font-bold border border-blue-400/40 shadow-sm shadow-blue-500/5'
+                      ? 'bg-gradient-to-r from-blue-600/25 to-blue-500/15 text-white font-semibold border border-blue-500/40 shadow-sm shadow-blue-500/10 hover:shadow-md hover:shadow-blue-500/20'
+                      : 'bg-gradient-to-r from-blue-600/15 to-indigo-600/10 text-blue-700 font-bold border border-blue-400/40 shadow-sm shadow-blue-500/5 hover:shadow-md hover:shadow-blue-500/15'
                     : isExpanded
                       ? isDark
-                        ? 'text-slate-300 border border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/10 hover:translate-x-0.5'
-                        : 'text-slate-600 border border-transparent hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200/80 hover:translate-x-0.5'
+                        ? 'text-slate-300 border border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/10 hover:translate-x-0.5 hover:shadow-md hover:shadow-black/30'
+                        : 'text-slate-600 border border-transparent hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200/80 hover:translate-x-0.5 hover:shadow-md hover:shadow-slate-900/10'
                       : isDark
-                        ? 'bg-white/[0.02] border border-white/5 text-slate-300 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03]'
-                        : 'bg-slate-100/60 border border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03]'
+                        ? 'bg-white/[0.02] border border-white/5 text-slate-300 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03] hover:shadow-md hover:shadow-black/30'
+                        : 'bg-slate-100/60 border border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03] hover:shadow-md hover:shadow-slate-900/10'
                   }
                 `}
               >
@@ -2061,7 +1998,7 @@ const Layout = () => {
       </div>
 
       {/* Scroll to Top Floating Button (Rendered directly into document.body to avoid parent CSS clipping) */}
-      {!isChatRoute && typeof document !== 'undefined' && createPortal(
+      {displayPrefs.autoScrollToTop && !isChatRoute && typeof document !== 'undefined' && createPortal(
         <button
           type="button"
           onClick={scrollToTop}

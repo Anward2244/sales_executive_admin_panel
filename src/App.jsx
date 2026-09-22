@@ -4,7 +4,9 @@ import { AuthProvider } from '@/Context/AuthContext';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import Layout from '@/components/layout/Layout';
 import { ConfirmationProvider } from '@/Context/ConfirmationContext';
-import { ThemeProvider } from '@/Context/ThemeContext';
+import { ThemeProvider, useTheme } from '@/Context/ThemeContext';
+import auricLightLogo from '@/assets/auric_light.png';
+import auricDarkLogo from '@/assets/auric_dark.png';
 
 // Lazy Loaded Pages (Clean Architecture)
 const Login = lazy(() => import('@/pages/auth/Login'));
@@ -22,18 +24,55 @@ const UserDetails = lazy(() => import('@/pages/users/UserDetails'));
 const Profile = lazy(() => import('@/pages/common/Profile'));
 const Settings = lazy(() => import('@/pages/settings/Settings'));
 
+const PageLoadingFallback = () => {
+  const { isDark } = useTheme();
+  const auricLogo = isDark ? auricDarkLogo : auricLightLogo;
+
+  return (
+    <div
+      className={`h-screen w-screen flex flex-col justify-center items-center relative overflow-hidden transition-colors duration-300 ${
+        isDark ? 'panel-bg-dark text-slate-300' : 'panel-bg-light text-slate-700'
+      }`}
+    >
+      {/* Ambient background lighting */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] rounded-full filter blur-[120px] opacity-25 dark:opacity-35 bg-blue-400/40 dark:bg-blue-600/40 pointer-events-none" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] rounded-full filter blur-[90px] opacity-20 dark:opacity-25 bg-sky-300/35 dark:bg-indigo-500/30 pointer-events-none" />
+      </div>
+
+      {/* Center Content */}
+      <div className="relative z-10 flex flex-col items-center">
+        {/* Brand Logo */}
+        <div className="mb-6 transform hover:scale-105 transition-transform duration-300">
+          <img
+            src={auricLogo}
+            alt="Auric Logo"
+            className="h-60 w-auto object-contain drop-shadow-md select-none"
+          />
+        </div>
+
+        {/* Dynamic Dual-Ring Spinner */}
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-12 h-12 rounded-full bg-blue-500/15 dark:bg-blue-500/20 blur-md animate-pulse" />
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-500/20 dark:border-blue-400/20 border-t-blue-600 dark:border-t-blue-400 border-b-blue-600 dark:border-b-blue-400" />
+        </div>
+
+        {/* Status Text */}
+        <p className="text-slate-600 dark:text-slate-400 mt-5 font-semibold text-xs tracking-widest uppercase select-none drop-shadow-sm">
+          Loading page elements...
+        </p>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <ConfirmationProvider>
           <BrowserRouter>
-            <Suspense fallback={
-              <div className="h-screen w-screen flex flex-col justify-center items-center bg-slate-950">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-                <p className="text-slate-400 mt-4 font-semibold text-xs tracking-wider uppercase">Loading page elements...</p>
-              </div>
-            }>
+            <Suspense fallback={<PageLoadingFallback />}>
               <Routes>
                 {/* Public Auth Route */}
                 <Route path="/login" element={<Login />} />
