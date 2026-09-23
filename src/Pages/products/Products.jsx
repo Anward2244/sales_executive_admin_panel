@@ -32,6 +32,8 @@ import { BiRupee } from 'react-icons/bi';
 import PageHeader from '@/components/ui/PageHeader';
 import Skeleton from '@/components/ui/Skeleton';
 import CopyButton from '@/components/ui/CopyButton';
+import CustomDropdown from '@/components/ui/CustomDropdown';
+import { useDisplayPreferences } from '@/utils/displayPreferences';
 import {
   getProductsApi,
   createProductApi,
@@ -79,8 +81,9 @@ const Products = () => {
   const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'name-asc'
 
   // Pagination State
+  const { preferences: displayPrefs } = useDisplayPreferences();
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(12);
+  const itemsPerPage = displayPrefs.rowsPerPage || 10;
 
   // Modal & Dropdown States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -481,7 +484,7 @@ const Products = () => {
       )}
 
       {/* Actions & Filters Bar */}
-      <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-4 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl flex flex-col md:flex-row gap-3 items-center justify-between">
+      <div className="bg-white/40 dark:bg-slate-900/60 p-4 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl flex flex-col md:flex-row gap-3 items-center justify-between">
         {/* Action Controls */}
         <div className="flex items-center gap-2.5 flex-wrap w-full md:w-auto">
           {/* Actions Dropdown */}
@@ -496,7 +499,7 @@ const Products = () => {
             </button>
 
             {isActionsOpen && (
-              <div className="absolute left-0 mt-2 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute left-0 mt-2 w-64 bg-white/40 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 {/* Option 1: Import Products via Excel */}
                 <button
                   type="button"
@@ -584,56 +587,60 @@ const Products = () => {
         {/* Filter Dropdowns */}
         <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
           {/* Category Filter */}
-          <select
-            value={selectedCategoryFilter}
-            onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
-          >
-            <option value="ALL">All Categories</option>
-            {categories.map((c) => (
-              <option key={c._id} value={c._id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <div className="min-w-[140px]">
+            <CustomDropdown
+              value={selectedCategoryFilter}
+              onChange={(val) => setSelectedCategoryFilter(val)}
+              options={[
+                { value: 'ALL', label: 'All Categories' },
+                ...categories.map((c) => ({ value: c._id, label: c.name }))
+              ]}
+              statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+            />
+          </div>
 
           {/* Brand Filter */}
           {uniqueBrands.length > 0 && (
-            <select
-              value={selectedBrandFilter}
-              onChange={(e) => setSelectedBrandFilter(e.target.value)}
-              className="px-3 py-2 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
-            >
-              <option value="ALL">All Brands</option>
-              {uniqueBrands.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
+            <div className="min-w-[130px]">
+              <CustomDropdown
+                value={selectedBrandFilter}
+                onChange={(val) => setSelectedBrandFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Brands' },
+                  ...uniqueBrands.map((b) => ({ value: b, label: b }))
+                ]}
+                statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+              />
+            </div>
           )}
 
           {/* Status Filter */}
-          <select
-            value={selectedStatusFilter}
-            onChange={(e) => setSelectedStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="ACTIVE">Active Only</option>
-            <option value="INACTIVE">Inactive Only</option>
-          </select>
+          <div className="min-w-[130px]">
+            <CustomDropdown
+              value={selectedStatusFilter}
+              onChange={(val) => setSelectedStatusFilter(val)}
+              options={[
+                { value: 'ALL', label: 'All Statuses' },
+                { value: 'ACTIVE', label: 'Active Only' },
+                { value: 'INACTIVE', label: 'Inactive Only' }
+              ]}
+              statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+            />
+          </div>
 
           {/* Sort By */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
-          >
-            <option value="newest">Newest Added</option>
-            <option value="oldest">Oldest First</option>
-            <option value="name-asc">Name: A to Z</option>
-          </select>
+          <div className="min-w-[135px]">
+            <CustomDropdown
+              value={sortBy}
+              onChange={(val) => setSortBy(val)}
+              options={[
+                { value: 'newest', label: 'Newest Added' },
+                { value: 'oldest', label: 'Oldest First' },
+                { value: 'name-asc', label: 'Name: A to Z' }
+              ]}
+              statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+            />
+          </div>
 
           {/* Reset Filters */}
           {(searchQuery || selectedCategoryFilter !== 'ALL' || selectedBrandFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || sortBy !== 'newest') && (
@@ -673,21 +680,6 @@ const Products = () => {
               {filteredProducts.length} filtered
             </span>
           )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span>Rows per page:</span>
-          <select
-            value={itemsPerPage}
-            onChange={(e) => setItemsPerPage(Number(e.target.value))}
-            className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
-          >
-            <option value={10}>10</option>
-            <option value={12}>12</option>
-            <option value={24}>24</option>
-            <option value={48}>48</option>
-            <option value={100}>100</option>
-          </select>
         </div>
       </div>
 
@@ -1002,19 +994,16 @@ const Products = () => {
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Category *
                   </label>
-                  <select
+                  <CustomDropdown
                     value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.name} {c.code ? `(${c.code})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, categoryId: val })}
+                    defaultLabel="Select Category"
+                    options={categories.map((c) => ({
+                      value: c._id,
+                      label: `${c.name} ${c.code ? `(${c.code})` : ''}`
+                    }))}
+                    statusColor="!px-3.5 !py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+                  />
                 </div>
 
                 <div>

@@ -12,6 +12,7 @@ import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import { useConfirm } from '@/Context/ConfirmationContext';
 import CopyButton from '@/components/ui/CopyButton';
 import GmailLink from '@/components/ui/GmailLink';
+import CustomDropdown from '@/components/ui/CustomDropdown';
 
 const getUserFullName = (user) => {
   if (!user) return '';
@@ -684,15 +685,17 @@ const UserDetails = () => {
 
                 <div>
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Role *</label>
-                  <select
-                    name="role"
-                    value={editForm.role}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-blue-500/50 outline-none cursor-pointer"
-                  >
-                    <option value="SALES_EXECUTIVE">Sales Executive</option>
-                    <option value="ADMIN">Admin</option>
-                  </select>
+                  <div className="mt-1">
+                    <CustomDropdown
+                      value={editForm.role}
+                      onChange={(val) => setEditForm((prev) => ({ ...prev, role: val }))}
+                      options={[
+                        { value: 'SALES_EXECUTIVE', label: 'Sales Executive' },
+                        { value: 'ADMIN', label: 'Admin' }
+                      ]}
+                      statusColor="!p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white text-xs font-medium"
+                    />
+                  </div>
                 </div>
               </div>
 

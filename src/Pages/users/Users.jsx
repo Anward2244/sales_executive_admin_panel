@@ -12,6 +12,7 @@ import { useConfirm } from '@/Context/ConfirmationContext';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import GmailLink from '@/components/ui/GmailLink';
+import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { createPortal } from 'react-dom';
 
 const getUserFullName = (user) => {
@@ -87,7 +88,8 @@ const UsersList = () => {
 
 
   // Pagination State
-  const [usersPerPage, setUsersPerPage] = useState(20);
+  const { preferences: displayPrefs } = useDisplayPreferences();
+  const usersPerPage = displayPrefs.rowsPerPage || 10;
   const [paginationMeta, setPaginationMeta] = useState(null);
 
   const { setUsersUnreadCount } = useOutletContext() || {};
@@ -1009,21 +1011,6 @@ const UsersList = () => {
                 <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 text-center sm:text-left">
                   Showing <span className="font-bold text-slate-800 dark:text-white">{indexOfFirstUser + 1}</span> to <span className="font-bold text-slate-800 dark:text-white">{Math.min(indexOfLastUser, sortedUsers.length)}</span> of <span className="font-bold text-slate-800 dark:text-white">{sortedUsers.length}</span> users
                 </span>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  <span className="hidden sm:inline font-medium">Rows:</span>
-                  <select
-                    value={usersPerPage}
-                    onChange={(e) => {
-                      setUsersPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="px-2 py-1 bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer"
-                  >
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
               </div>
               <div className="flex space-x-2">
                 <button 
@@ -1183,15 +1170,17 @@ const UsersList = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Role *</label>
-                  <select
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-blue-500/50 outline-none cursor-pointer"
-                  >
-                    <option value="SALES_EXECUTIVE">Sales Executive</option>
-                    <option value="ADMIN">Admin</option>
-                  </select>
+                  <div className="mt-1">
+                    <CustomDropdown
+                      value={formData.role}
+                      onChange={(val) => setFormData((prev) => ({ ...prev, role: val }))}
+                      options={[
+                        { value: 'SALES_EXECUTIVE', label: 'Sales Executive' },
+                        { value: 'ADMIN', label: 'Admin' }
+                      ]}
+                      statusColor="!p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white text-xs font-medium"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">

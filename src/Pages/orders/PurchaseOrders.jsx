@@ -42,6 +42,8 @@ import { useConfirm } from '@/Context/ConfirmationContext';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import PageHeader from '@/components/ui/PageHeader';
 import CopyButton from '@/components/ui/CopyButton';
+import CustomDropdown from '@/components/ui/CustomDropdown';
+import { useDisplayPreferences } from '@/utils/displayPreferences';
 
 const STATUS_TABS = [
   { key: 'all', label: 'All Orders' },
@@ -114,8 +116,9 @@ const PurchaseOrders = () => {
   const [companyFilter, setCompanyFilter] = useState('all');
 
   // Pagination
+  const { preferences: displayPrefs } = useDisplayPreferences();
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = displayPrefs.rowsPerPage || 10;
 
   // Selection / Details Modal (GET /purchase-orders/{id})
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -1503,19 +1506,20 @@ const PurchaseOrders = () => {
                             </span>
                           )}
                         </div>
-                        <select
+                        <CustomDropdown
                           value={createForm.companyId}
-                          onChange={(e) => setCreateForm((prev) => ({ ...prev, companyId: e.target.value }))}
+                          onChange={(val) => setCreateForm((prev) => ({ ...prev, companyId: val }))}
                           disabled={createSubmitting || loadingEntities}
-                          className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                        >
-                          <option value="">Select Trading Company</option>
-                          {companiesList.map((c) => (
-                            <option key={c._id} value={c._id}>
-                              {c.name} {c.code ? `(${c.code})` : ''}
-                            </option>
-                          ))}
-                        </select>
+                          defaultLabel="Select Trading Company"
+                          options={[
+                            { value: '', label: 'Select Trading Company' },
+                            ...companiesList.map((c) => ({
+                              value: c._id,
+                              label: `${c.name} ${c.code ? `(${c.code})` : ''}`
+                            }))
+                          ]}
+                          statusColor="!px-3.5 !py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white"
+                        />
                         <input
                           type="text"
                           placeholder="Or paste custom companyId..."
@@ -1537,19 +1541,20 @@ const PurchaseOrders = () => {
                             </span>
                           )}
                         </div>
-                        <select
+                        <CustomDropdown
                           value={createForm.firmId}
-                          onChange={(e) => setCreateForm((prev) => ({ ...prev, firmId: e.target.value }))}
+                          onChange={(val) => setCreateForm((prev) => ({ ...prev, firmId: val }))}
                           disabled={createSubmitting || loadingEntities}
-                          className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                        >
-                          <option value="">Select Purchasing Firm</option>
-                          {firmsList.map((f) => (
-                            <option key={f._id} value={f._id}>
-                              {f.firmName} {f.city ? `(${f.city})` : ''}
-                            </option>
-                          ))}
-                        </select>
+                          defaultLabel="Select Purchasing Firm"
+                          options={[
+                            { value: '', label: 'Select Purchasing Firm' },
+                            ...firmsList.map((f) => ({
+                              value: f._id,
+                              label: `${f.firmName} ${f.city ? `(${f.city})` : ''}`
+                            }))
+                          ]}
+                          statusColor="!px-3.5 !py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white"
+                        />
                         <input
                           type="text"
                           placeholder="Or paste custom firmId..."
@@ -1585,19 +1590,20 @@ const PurchaseOrders = () => {
                           >
                             {/* Product Selector / Custom ProductId Input */}
                             <div className="flex-1 w-full space-y-1">
-                              <select
+                              <CustomDropdown
                                 value={item.productId}
-                                onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}
+                                onChange={(val) => handleItemChange(idx, 'productId', val)}
                                 disabled={createSubmitting}
-                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                              >
-                                <option value="">Select Catalog Product</option>
-                                {productsList.map((p) => (
-                                  <option key={p._id} value={p._id}>
-                                    {p.name} {p.sku ? `[${p.sku}]` : ''} - ₹{p.defaultPrice || p.price || 0}
-                                  </option>
-                                ))}
-                              </select>
+                                defaultLabel="Select Catalog Product"
+                                options={[
+                                  { value: '', label: 'Select Catalog Product' },
+                                  ...productsList.map((p) => ({
+                                    value: p._id,
+                                    label: `${p.name} ${p.sku ? `[${p.sku}]` : ''} - ₹${p.defaultPrice || p.price || 0}`
+                                  }))
+                                ]}
+                                statusColor="!px-3 !py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
+                              />
                               <input
                                 type="text"
                                 placeholder="Or enter productId..."

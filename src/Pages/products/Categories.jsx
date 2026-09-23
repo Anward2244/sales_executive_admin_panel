@@ -16,6 +16,7 @@ import {
 import { formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import CopyButton from '@/components/ui/CopyButton';
 import PageHeader from '@/components/ui/PageHeader';
+import { useDisplayPreferences } from '@/utils/displayPreferences';
 
 const INITIAL_FORM_STATE = {
   name: '',
@@ -40,10 +41,11 @@ const Categories = () => {
   const [isCodeManuallyEdited, setIsCodeManuallyEdited] = useState(false);
 
   // Filter & Pagination State
+  const { preferences: displayPrefs } = useDisplayPreferences();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = displayPrefs.rowsPerPage || 10;
 
   // Feedback & Modal States
   const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: '' }

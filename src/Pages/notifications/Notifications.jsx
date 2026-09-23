@@ -33,6 +33,8 @@ import {
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import CopyButton from '@/components/ui/CopyButton';
+import CustomDropdown from '@/components/ui/CustomDropdown';
+import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 
 const Notifications = () => {
@@ -53,8 +55,9 @@ const Notifications = () => {
     hasNextPage: false,
     hasPrevPage: false
   });
+  const { preferences: displayPrefs } = useDisplayPreferences();
   const [currentPage, setCurrentPage] = useState(1);
-  const [limitPerPage, setLimitPerPage] = useState(20);
+  const limitPerPage = displayPrefs.rowsPerPage || 10;
 
   // Filters & Search
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'unread' | 'read'
@@ -536,18 +539,20 @@ const Notifications = () => {
           <div className="flex items-center gap-2.5 flex-wrap flex-1 lg:justify-end">
             {/* Type selector */}
             {availableTypes.length > 0 && (
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="px-3 py-2 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
-              >
-                <option value="ALL">All Event Types</option>
-                {availableTypes.map((t) => (
-                  <option key={t} value={t}>
-                    {t.replace(/_/g, ' ')}
-                  </option>
-                ))}
-              </select>
+              <div className="min-w-[160px]">
+                <CustomDropdown
+                  value={typeFilter}
+                  onChange={(val) => setTypeFilter(val)}
+                  options={[
+                    { value: 'ALL', label: 'All Event Types' },
+                    ...availableTypes.map((t) => ({
+                      value: t,
+                      label: t.replace(/_/g, ' ')
+                    }))
+                  ]}
+                  statusColor="!px-3 !py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 font-semibold text-slate-700 dark:text-slate-300"
+                />
+              </div>
             )}
 
             {/* Action Buttons */}
@@ -562,23 +567,6 @@ const Notifications = () => {
                 <MdDoneAll className="text-xs" />
                 <span>{markingAllRead ? 'Marking...' : 'Mark Read'}</span>
               </button>
-            </div>
-
-            {/* Per page limit */}
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <span className="hidden sm:inline font-medium">Rows:</span>
-              <select
-                value={limitPerPage}
-                onChange={(e) => {
-                  setLimitPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="px-2 py-2 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
             </div>
           </div>
         </div>

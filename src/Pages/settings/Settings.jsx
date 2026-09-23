@@ -43,6 +43,7 @@ import {
 import { useTheme } from '@/Context/ThemeContext';
 import { useAuth } from '@/Context/AuthContext';
 import { useConfirm } from '@/Context/ConfirmationContext';
+import CustomDropdown from '@/components/ui/CustomDropdown';
 import PageHeader from '@/components/ui/PageHeader';
 import {
   getNotificationSettings,
@@ -97,7 +98,7 @@ const Settings = () => {
   const [browserPermission, setBrowserPermission] = useState(() => getNotificationPermission());
   const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const [guideBrowserTab, setGuideBrowserTab] = useState('chrome'); // 'chrome' | 'edge' | 'safari' | 'firefox' | 'windows'
-  const [isGuideOpen, setIsGuideOpen] = useState(true);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [previewTab, setPreviewTab] = useState('os'); // 'os' | 'toast'
 
   // Display Preferences State (Managed globally via useDisplayPreferences)
@@ -610,7 +611,7 @@ const Settings = () => {
                 className={`p-5 rounded-3xl border-2 transition-all duration-300 cursor-pointer relative overflow-hidden group ${
                   isDark
                     ? 'border-blue-500 bg-slate-900 shadow-xl shadow-blue-500/10 ring-4 ring-blue-500/10'
-                    : 'border-slate-200/50 dark:border-white/10 bg-white/40 dark:bg-slate-900/30 hover:border-blue-400/50'
+                    : 'border-slate-200/50 dark:border-white/10 bg-white/80 dark:bg-slate-900/30 hover:border-blue-400/50'
                 }`}
               >
                 {isDark && (
@@ -677,7 +678,7 @@ const Settings = () => {
             className={`p-6 rounded-3xl border backdrop-blur-xl ${
               isDark
                 ? 'bg-slate-900/50 border-white/10'
-                : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
+                : 'bg-white/40 border-slate-200/80 shadow-xl shadow-slate-500/30'
             }`}
           >
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
@@ -822,7 +823,7 @@ const Settings = () => {
 
                   <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
                     {browserPermission === 'granted'
-                      ? 'Your browser is authorized to display OS-level push notifications. You will receive immediate alerts for incoming purchase orders, quote submissions, and support chats even when working in other tabs.'
+                      ? 'Your browser is authorized to display OS-level push notifications. You will receive immediate alerts for incoming purchase orders and dispatch approvals even when working in other tabs.'
                       : browserPermission === 'denied'
                       ? 'Notifications are currently blocked by your browser settings. Desktop push banners will not appear until unblocked in your browser address bar. Check our troubleshooting guide below.'
                       : 'Enable desktop push notifications so sales managers and admins receive real-time alerts when new procurement orders are placed by sales executives.'}
@@ -865,135 +866,12 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* 2. Live Notification Mockup Preview */}
-          <div
-            className={`p-6 rounded-3xl border backdrop-blur-xl ${
-              isDark
-                ? 'bg-slate-900/50 border-white/10'
-                : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
-            }`}
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  <FiEye className="text-base" />
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                    Live Alert Previews
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Preview how alerts appear across your Operating System and the Admin Panel
-                  </p>
-                </div>
-              </div>
-
-              {/* Preview Mode Switcher */}
-              <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setPreviewTab('os')}
-                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                    previewTab === 'os'
-                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  Desktop OS Push
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewTab('toast')}
-                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                    previewTab === 'toast'
-                      ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-bold'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  In-App Floating Toast
-                </button>
-              </div>
-            </div>
-
-            {/* Mockup Display Box */}
-            <div className="p-5 sm:p-7 rounded-2xl bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200/60 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/80 border border-slate-200/70 dark:border-white/10 relative overflow-hidden flex items-center justify-center min-h-[170px]">
-              {previewTab === 'os' ? (
-                /* Windows / macOS Desktop Notification Card */
-                <div className="w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-2xl p-4 border border-slate-300 dark:border-white/15 shadow-2xl animate-in zoom-in-95 duration-150 text-left">
-                  {/* Top Bar */}
-                  <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2 border-b border-slate-100 dark:border-white/5 pb-2">
-                    <div className="flex items-center gap-2">
-                      <img src={appIconImg} alt="Auric" className="w-4 h-4 object-contain rounded-xs" />
-                      <span className="font-bold text-slate-700 dark:text-slate-300">Auric Admin Panel</span>
-                      <span>&bull;</span>
-                      <span>Google Chrome</span>
-                    </div>
-                    <span className="text-[10px]">Just now</span>
-                  </div>
-
-                  {/* Body */}
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20 shrink-0">
-                      <FiPackage />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                        New Purchase Order Received
-                      </h4>
-                      <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-snug line-clamp-2">
-                        Purchase Order PO-2026-000001 for B New Mobiles (₹1,122,543) submitted.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Mock Action Buttons */}
-                  <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/5 flex justify-end gap-2 text-xs">
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-semibold text-[11px]">
-                      Dismiss
-                    </span>
-                    <span className="px-3 py-1 rounded-lg bg-blue-600 text-white font-bold text-[11px] shadow-xs">
-                      View Order &rarr;
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                /* In-App Floating Toast Preview */
-                <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl p-4 border border-blue-500/40 shadow-2xl animate-in zoom-in-95 duration-150 text-left relative overflow-hidden">
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-base border border-emerald-500/20 shrink-0">
-                      <FiCheckCircle />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                          Order Approved
-                        </span>
-                        <span className="text-[10px] text-slate-400">2s ago</span>
-                      </div>
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-1">
-                        PO-2026-000003 Approved by Manager
-                      </h4>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        Dispatch quote finalized and sent to warehouse fulfillment.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Auto-Dismiss Timer Bar */}
-                  <div className="w-full bg-slate-100 dark:bg-white/5 h-1 rounded-full overflow-hidden mt-3">
-                    <div className="h-full bg-blue-600 w-3/4 rounded-full" />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* 3. Master Alert Channels */}
           <div
             className={`p-6 rounded-3xl border backdrop-blur-xl ${
               isDark
                 ? 'bg-slate-900/50 border-white/10'
-                : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
+                : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/50'
             }`}
           >
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
@@ -1145,7 +1023,7 @@ const Settings = () => {
               className={`p-6 rounded-3xl border backdrop-blur-xl flex flex-col justify-between ${
                 isDark
                   ? 'bg-slate-900/50 border-white/10'
-                  : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
+                  : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
               }`}
             >
               <div>
@@ -1241,7 +1119,7 @@ const Settings = () => {
               className={`p-6 rounded-3xl border backdrop-blur-xl flex flex-col justify-between ${
                 isDark
                   ? 'bg-slate-900/50 border-white/10'
-                  : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
+                  : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
               }`}
             >
               <div>
@@ -1340,7 +1218,7 @@ const Settings = () => {
             className={`p-6 rounded-3xl border backdrop-blur-xl ${
               isDark
                 ? 'bg-slate-900/50 border-white/10'
-                : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
+                : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
             }`}
           >
             <div className="flex items-center justify-between mb-4">
@@ -1354,7 +1232,7 @@ const Settings = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="max-w-md">
               {[
                 {
                   key: 'orders',
@@ -1362,41 +1240,6 @@ const Settings = () => {
                   desc: 'Real-time alerts when sales reps create POs or when dispatch approvals occur.',
                   icon: FiShoppingBag,
                   color: 'text-blue-500 bg-blue-500/10 border-blue-500/20'
-                },
-                {
-                  key: 'quotes',
-                  label: 'Price Quote Requests',
-                  desc: 'Notifications for buyer quotation bids and wholesale price inquiries.',
-                  icon: FiFileText,
-                  color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
-                },
-                {
-                  key: 'users',
-                  label: 'New User Registrations',
-                  desc: 'Staff account creations, sales rep onboarding, and purchasing firm KYC approvals.',
-                  icon: FiUsers,
-                  color: 'text-purple-500 bg-purple-500/10 border-purple-500/20'
-                },
-                {
-                  key: 'chat',
-                  label: 'Live Sales Support Chat',
-                  desc: 'Direct incoming customer conversations and buyer inquiries.',
-                  icon: FiMessageSquare,
-                  color: 'text-amber-500 bg-amber-500/10 border-amber-500/20'
-                },
-                {
-                  key: 'brokenImages',
-                  label: 'Product Catalog Health',
-                  desc: 'Automated background scans that flag missing or broken product image assets.',
-                  icon: FiImage,
-                  color: 'text-rose-500 bg-rose-500/10 border-rose-500/20'
-                },
-                {
-                  key: 'apiRequests',
-                  label: 'API & Telemetry Health',
-                  desc: 'Network heartbeat drops, database latency spikes, and cloud gateway telemetry.',
-                  icon: FiActivity,
-                  color: 'text-cyan-500 bg-cyan-500/10 border-cyan-500/20'
                 }
               ].map((cat) => {
                 const isEnabled = notificationConfig.categories?.[cat.key] !== false;
@@ -1449,17 +1292,20 @@ const Settings = () => {
                       <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                         Frequency:
                       </span>
-                      <select
-                        value={interval}
-                        disabled={!isEnabled}
-                        onChange={(e) => handleIntervalChange(cat.key, e.target.value)}
-                        className="text-xs font-bold py-1 px-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer disabled:opacity-40"
-                      >
-                        <option value={15}>15s (Realtime)</option>
-                        <option value={30}>30s (Default)</option>
-                        <option value={60}>60s (Standard)</option>
-                        <option value={120}>2 mins (Eco)</option>
-                      </select>
+                      <div className="w-[130px]">
+                        <CustomDropdown
+                          value={interval}
+                          disabled={!isEnabled}
+                          onChange={(val) => handleIntervalChange(cat.key, Number(val))}
+                          options={[
+                            { value: 15, label: '15s (Realtime)' },
+                            { value: 30, label: '30s (Default)' },
+                            { value: 60, label: '60s (Standard)' },
+                            { value: 120, label: '2 mins (Eco)' }
+                          ]}
+                          statusColor="!py-1 !px-2.5 text-xs font-bold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white"
+                        />
+                      </div>
                     </div>
                   </div>
                 );
@@ -1473,7 +1319,7 @@ const Settings = () => {
             className={`rounded-3xl border backdrop-blur-xl transition-all overflow-hidden ${
               isDark
                 ? 'bg-slate-900/60 border-white/10'
-                : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
+                : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
             }`}
           >
             {/* Guide Header Banner */}
@@ -1852,7 +1698,7 @@ const Settings = () => {
             className={`p-6 rounded-3xl border backdrop-blur-xl ${
               isDark
                 ? 'bg-slate-900/50 border-white/10'
-                : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
+                : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
             }`}
           >
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
@@ -1936,6 +1782,39 @@ const Settings = () => {
                   </button>
                 </div>
               </div>
+
+              {/* Default Table & List Rows Per Page */}
+              <div className="pt-4 border-t border-slate-200/80 dark:border-white/10">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-900 dark:text-white">
+                      Default Rows Per Page
+                    </label>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Sets the global pagination row limit across all data tables and lists
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {[10, 20, 50, 100].map((count) => {
+                      const isSelected = (displayPrefs.rowsPerPage || 10) === count;
+                      return (
+                        <button
+                          key={count}
+                          type="button"
+                          onClick={() => updateDisplayPref('rowsPerPage', count)}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                              : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
+                          }`}
+                        >
+                          {count} rows
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1951,7 +1830,7 @@ const Settings = () => {
             className={`p-6 rounded-3xl border backdrop-blur-xl ${
               isDark
                 ? 'bg-slate-900/50 border-white/10'
-                : 'bg-white/80 border-slate-200/80 shadow-md shadow-slate-900/5'
+                : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
             }`}
           >
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
@@ -1959,7 +1838,7 @@ const Settings = () => {
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-4 rounded-2xl bg-white/40 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10">
+              <div className="p-4 rounded-2xl bg-white/60 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10">
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   Panel Build
                 </p>
@@ -1971,7 +1850,7 @@ const Settings = () => {
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-white/40 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10">
+              <div className="p-4 rounded-2xl bg-white/60 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10">
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   Active Operator
                 </p>
@@ -1983,7 +1862,7 @@ const Settings = () => {
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-white/40 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10">
+              <div className="p-4 rounded-2xl bg-white/60 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10">
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   Framework Stack
                 </p>
@@ -1995,7 +1874,7 @@ const Settings = () => {
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-white/40 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10">
+              <div className="p-4 rounded-2xl bg-white/60 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10">
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   Client Cache Usage
                 </p>
@@ -2011,7 +1890,7 @@ const Settings = () => {
 
           {/* Reset Preferences Card */}
           <div
-            className={`p-6 rounded-3xl border border-rose-500/20 backdrop-blur-xl ${
+            className={`p-6 rounded-3xl border border-rose-500/20 backdrop-blur-xl shadow-xl ${
               isDark ? 'bg-rose-950/10' : 'bg-rose-50/40'
             }`}
           >

@@ -21,7 +21,8 @@ import {
   FiEye,
   FiEyeOff
 } from 'react-icons/fi';
-import darkThemeImg from '@/assets/auric_distribution_hub.png';
+import auricLoginDark from '@/assets/Auric_login_dark.png';
+import auricLoginLight from '@/assets/Auric_login_light.png';
 import auricLightLogo from '@/assets/auric_light.png';
 import auricDarkLogo from '@/assets/auric_dark.png';
 
@@ -153,7 +154,7 @@ const Login = () => {
       {/* Left Image Section */}
       <div className="hidden lg:flex lg:w-1/2 h-full items-center justify-center relative shrink-0 z-10">
         <img
-          src={darkThemeImg}
+          src={isDark ? auricLoginDark : auricLoginLight}
           alt="Auric Distribution Hub & Brand Ecosystem"
           className="max-h-full max-w-full object-contain select-none pointer-events-none drop-shadow-[0_20px_45px_rgba(30,58,138,0.18)] dark:drop-shadow-[0_0_45px_rgba(37,99,235,0.4)] transition-all duration-500"
           fetchPriority="high"

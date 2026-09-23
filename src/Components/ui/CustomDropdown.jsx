@@ -2,7 +2,18 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FiChevronDown } from 'react-icons/fi';
 
-const CustomDropdown = ({ value, onChange, options, statusColor, defaultLabel }) => {
+const CustomDropdown = ({
+  value,
+  onChange,
+  options = [],
+  statusColor,
+  defaultLabel,
+  placeholder,
+  disabled = false,
+  className,
+  containerClassName,
+  menuClassName
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({
     top: undefined,
@@ -32,7 +43,13 @@ const CustomDropdown = ({ value, onChange, options, statusColor, defaultLabel })
       const maxHeight = Math.max(120, Math.min(preferredMenuHeight, availableSpace));
 
       const minWidth = rect.width;
-      const estimatedMenuWidth = Math.max(minWidth, 240);
+      // Adapt minimum popup width based on longest option label
+      const maxOptionLength = options.reduce((max, opt) => {
+        const lbl = typeof opt === 'object' && opt !== null ? String(opt.label ?? '') : String(opt ?? '');
+        return Math.max(max, lbl.length);
+      }, 0);
+      const baseMinMenuWidth = maxOptionLength > 18 ? 220 : (maxOptionLength > 8 ? 140 : 80);
+      const estimatedMenuWidth = Math.max(minWidth, baseMinMenuWidth);
       let left = rect.left;
 
       if (left + estimatedMenuWidth > viewportWidth - 12) {
@@ -46,7 +63,7 @@ const CustomDropdown = ({ value, onChange, options, statusColor, defaultLabel })
         top: shouldOpenUp ? undefined : rect.bottom + 6,
         bottom: shouldOpenUp ? viewportHeight - rect.top + 6 : undefined,
         left,
-        minWidth,
+        minWidth: Math.max(minWidth, baseMinMenuWidth),
         maxHeight,
         openUp: shouldOpenUp
       });
@@ -54,6 +71,7 @@ const CustomDropdown = ({ value, onChange, options, statusColor, defaultLabel })
   };
 
   const toggleDropdown = () => {
+    if (disabled) return;
     if (!isOpen) {
       updatePosition();
     }
@@ -103,21 +121,32 @@ const CustomDropdown = ({ value, onChange, options, statusColor, defaultLabel })
   // Helper to determine display label and value
   const getOptionInfo = (option) => {
     if (typeof option === 'object' && option !== null) {
-      return { value: option.value, label: option.label };
+      return { value: option.value, label: option.label ?? option.value };
     }
-    return { value: option, label: option };
+    return { value: option, label: String(option) };
   };
 
-  const selectedOption = options.map(getOptionInfo).find(opt => opt.value === value) || { value, label: value };
+  const normalizedOptions = options.map(getOptionInfo);
+  const selectedOption = normalizedOptions.find(opt => 
+    opt.value === value || (value !== '' && value !== null && value !== undefined && String(opt.value) === String(value))
+  );
+
+  const fallbackPlaceholder = defaultLabel || placeholder;
+  const isValueEmpty = value === '' || value === null || value === undefined;
+  const displayLabel = selectedOption 
+    ? (isValueEmpty && fallbackPlaceholder ? fallbackPlaceholder : selectedOption.label)
+    : (fallbackPlaceholder || (isValueEmpty ? 'Select...' : String(value)));
 
   return (
-    <div className="relative w-full font-medium" ref={dropdownRef}>
+    <div className={containerClassName || "relative w-full font-medium"} ref={dropdownRef}>
       {/* Trigger Button */}
       <div
         onClick={toggleDropdown}
-        className={`w-full bg-transparent outline-none px-3 py-2.5 rounded-lg border cursor-pointer transition-all flex justify-between items-center select-none gap-2 ${statusColor}`}
+        className={`w-full bg-transparent outline-none px-3 py-2.5 rounded-lg border cursor-pointer transition-all flex justify-between items-center select-none gap-2 ${
+          disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+        } ${statusColor || ''} ${className || ''}`}
       >
-        <span className="truncate">{(!value && defaultLabel) ? defaultLabel : selectedOption.label}</span>
+        <span className="truncate">{displayLabel}</span>
         <FiChevronDown className={`shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''} text-current opacity-70`} />
       </div>
 
@@ -133,19 +162,18 @@ const CustomDropdown = ({ value, onChange, options, statusColor, defaultLabel })
             minWidth: `${coords.minWidth}px`,
             maxHeight: `${coords.maxHeight}px`
           }}
-          className={`w-max max-w-[280px] bg-white/95 dark:bg-slate-950/90 backdrop-blur-md border border-slate-200 dark:border-white/20 rounded-xl shadow-xl dark:shadow-2xl shadow-slate-900/10 dark:shadow-black/80 overflow-y-auto overflow-x-hidden custom-scrollbar z-[99999] ${
+          className={`w-max max-w-[340px] bg-white/40 dark:bg-slate-950/50 backdrop-blur-sm border border-slate-200 dark:border-white/20 rounded-xl shadow-xl dark:shadow-2xl shadow-slate-900/10 dark:shadow-black/80 overflow-y-auto overflow-x-hidden custom-scrollbar z-[99999] ${
             coords.openUp ? 'animate-dropdown-up' : 'animate-dropdown'
-          }`}
+          } ${menuClassName || ''}`}
         >
-          {options.map((option, idx) => {
-            const { value: optValue, label: optLabel } = getOptionInfo(option);
-            const isSelected = value === optValue;
+          {normalizedOptions.map((opt, idx) => {
+            const isSelected = opt.value === value || (value !== '' && value !== null && value !== undefined && String(opt.value) === String(value));
             return (
               <div
                 key={idx}
                 data-selected={isSelected}
                 onClick={() => {
-                  onChange(optValue);
+                  onChange(opt.value);
                   setIsOpen(false);
                 }}
                 className={`px-3 py-2.5 text-xs font-bold cursor-pointer transition-colors ${
@@ -154,7 +182,7 @@ const CustomDropdown = ({ value, onChange, options, statusColor, defaultLabel })
                     : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                {optLabel}
+                {opt.label}
               </div>
             );
           })}
@@ -165,4 +193,4 @@ const CustomDropdown = ({ value, onChange, options, statusColor, defaultLabel })
   );
 };
 
-export default CustomDropdown;
+export default CustomDropdown;

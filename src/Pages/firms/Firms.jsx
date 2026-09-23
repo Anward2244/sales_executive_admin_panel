@@ -12,6 +12,7 @@ import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import GmailLink from '@/components/ui/GmailLink';
+import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { TableRowSkeleton } from '@/components/ui/Skeleton';
 import {
   getFirmsApi,
@@ -82,7 +83,8 @@ const Firms = () => {
   const firmTab = searchParams.get('tab') || 'all';
 
   // Pagination limit
-  const [firmsPerPage] = useState(10);
+  const { preferences: displayPrefs } = useDisplayPreferences();
+  const firmsPerPage = displayPrefs.rowsPerPage || 10;
 
   // Sync local input with URL search param
   useEffect(() => {
@@ -1359,24 +1361,21 @@ const Firms = () => {
                       Parent Company <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
-                      <select
-                        name="companyId"
+                      <CustomDropdown
                         value={createFormData.companyId}
-                        onChange={(e) =>
-                          setCreateFormData((prev) => ({ ...prev, companyId: e.target.value }))
+                        onChange={(val) =>
+                          setCreateFormData((prev) => ({ ...prev, companyId: val }))
                         }
-                        required
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 cursor-pointer"
-                      >
-                        <option value="" disabled>
-                          -- Select Parent Enterprise --
-                        </option>
-                        {allCompanyOptions.map((comp) => (
-                          <option key={comp.id} value={comp.id}>
-                            {comp.name} {comp.code ? `(${comp.code})` : ''}
-                          </option>
-                        ))}
-                      </select>
+                        defaultLabel="-- Select Parent Enterprise --"
+                        options={[
+                          { value: '', label: '-- Select Parent Enterprise --' },
+                          ...allCompanyOptions.map((comp) => ({
+                            value: comp.id,
+                            label: `${comp.name} ${comp.code ? `(${comp.code})` : ''}`
+                          }))
+                        ]}
+                        statusColor="!px-3.5 !py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white"
+                      />
                     </div>
                     <p className="text-[11px] text-slate-400 mt-1">
                       The firm entity will be linked under this parent company's catalog and billing umbrella.
@@ -1672,24 +1671,21 @@ const Firms = () => {
                       Parent Company <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
-                      <select
-                        name="companyId"
+                      <CustomDropdown
                         value={editFormData.companyId}
-                        onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, companyId: e.target.value }))
+                        onChange={(val) =>
+                          setEditFormData((prev) => ({ ...prev, companyId: val }))
                         }
-                        required
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 cursor-pointer"
-                      >
-                        <option value="" disabled>
-                          -- Select Parent Enterprise --
-                        </option>
-                        {allCompanyOptions.map((comp) => (
-                          <option key={comp.id} value={comp.id}>
-                            {comp.name} {comp.code ? `(${comp.code})` : ''}
-                          </option>
-                        ))}
-                      </select>
+                        defaultLabel="-- Select Parent Enterprise --"
+                        options={[
+                          { value: '', label: '-- Select Parent Enterprise --' },
+                          ...allCompanyOptions.map((comp) => ({
+                            value: comp.id,
+                            label: `${comp.name} ${comp.code ? `(${comp.code})` : ''}`
+                          }))
+                        ]}
+                        statusColor="!px-3.5 !py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white"
+                      />
                     </div>
                   </div>
 

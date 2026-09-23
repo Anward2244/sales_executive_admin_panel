@@ -18,20 +18,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS = {
   quietHoursStart: '22:00',
   quietHoursEnd: '07:00',
   categories: {
-    orders: true,
-    quotes: true,
-    users: true,
-    chat: true,
-    brokenImages: true,
-    apiRequests: true
+    orders: true
   },
   pollingIntervals: {
-    orders: 30,         // seconds (Orders & Status)
-    quotes: 30,         // seconds (Quote Requests)
-    users: 30,          // seconds (User Accounts & Verifications)
-    chat: 15,           // seconds (Live Chat Messages)
-    brokenImages: 180,  // seconds (Broken Images & Catalog Health)
-    apiRequests: 30     // seconds (API Requests & Live Telemetry)
+    orders: 30         // seconds (Purchase Orders & Dispatch)
   }
 };
 

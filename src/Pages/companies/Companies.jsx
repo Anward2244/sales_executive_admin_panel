@@ -18,6 +18,7 @@ import {
   FiTrash2
 } from 'react-icons/fi';
 import { getCompaniesApi, createCompanyApi, deleteCompanyApi } from '@/api/axios';
+import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { useConfirm } from '@/Context/ConfirmationContext';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import PageHeader from '@/components/ui/PageHeader';
@@ -181,10 +182,11 @@ const Companies = () => {
   }, [companies, searchTerm, statusFilter]);
 
   // Sorting & Pagination State (with 3-state sorting: asc -> desc -> default)
+  const { preferences: displayPrefs } = useDisplayPreferences();
   const [sortKey, setSortKey] = useState('');
   const [sortOrder, setSortOrder] = useState(''); // '' (default) | 'asc' | 'desc'
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = displayPrefs.rowsPerPage || 10;
 
   const handleSortChange = (key) => {
     if (sortKey === key) {

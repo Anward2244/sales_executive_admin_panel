@@ -486,27 +486,29 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Visual Multi-Segment Pipeline Progress Bar */}
-        <div className="w-full h-2.5 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden flex">
+        {/* Visual Pipeline Accent Gradient Bar (25% per card status) */}
+        <div
+          className="w-full h-2.5 rounded-full overflow-hidden shadow-xs flex"
+          style={{
+            background:
+              'linear-gradient(90deg, #f59e0b 0%, #f59e0b 18%, #3b82f6 32%, #3b82f6 43%, #10b981 57%, #10b981 68%, #f43f5e 82%, #f43f5e 100%)'
+          }}
+        >
           <div
-            style={{ width: `${((statusBreakdown.PENDING?.count || 0) / totalStatusCount) * 100}%` }}
-            className="bg-amber-500 transition-all duration-500"
-            title={`Pending: ${statusBreakdown.PENDING?.count || 0}`}
+            className="w-1/4 h-full hover:bg-white/20 transition-colors cursor-pointer"
+            title={`Pending Approval: ${statusBreakdown.PENDING?.count || 0} orders (${totalStatusCount > 0 ? Math.round(((statusBreakdown.PENDING?.count || 0) / totalStatusCount) * 100) : 0}%)`}
           />
           <div
-            style={{ width: `${((statusBreakdown.APPROVED?.count || 0) / totalStatusCount) * 100}%` }}
-            className="bg-blue-500 transition-all duration-500"
-            title={`Approved: ${statusBreakdown.APPROVED?.count || 0}`}
+            className="w-1/4 h-full hover:bg-white/20 transition-colors cursor-pointer"
+            title={`Approved: ${statusBreakdown.APPROVED?.count || 0} orders (${totalStatusCount > 0 ? Math.round(((statusBreakdown.APPROVED?.count || 0) / totalStatusCount) * 100) : 0}%)`}
           />
           <div
-            style={{ width: `${((statusBreakdown.DISPATCHED?.count || 0) / totalStatusCount) * 100}%` }}
-            className="bg-emerald-500 transition-all duration-500"
-            title={`Dispatched: ${statusBreakdown.DISPATCHED?.count || 0}`}
+            className="w-1/4 h-full hover:bg-white/20 transition-colors cursor-pointer"
+            title={`Dispatched: ${statusBreakdown.DISPATCHED?.count || 0} orders (${totalStatusCount > 0 ? Math.round(((statusBreakdown.DISPATCHED?.count || 0) / totalStatusCount) * 100) : 0}%)`}
           />
           <div
-            style={{ width: `${((statusBreakdown.REJECTED?.count || 0) / totalStatusCount) * 100}%` }}
-            className="bg-rose-500 transition-all duration-500"
-            title={`Rejected: ${statusBreakdown.REJECTED?.count || 0}`}
+            className="w-1/4 h-full hover:bg-white/20 transition-colors cursor-pointer"
+            title={`Rejected: ${statusBreakdown.REJECTED?.count || 0} orders (${totalStatusCount > 0 ? Math.round(((statusBreakdown.REJECTED?.count || 0) / totalStatusCount) * 100) : 0}%)`}
           />
         </div>
       </div>
@@ -1013,7 +1015,7 @@ const Dashboard = () => {
           </div>
 
           {/* Interactive Status Breakdown List */}
-          <div className="space-y-2 pt-3 border-t border-slate-200/80 dark:border-white/10">
+          < div className="space-y-2 pt-3 border-t border-slate-200/80 dark:border-white/10">
             {[
               {
                 key: 'PENDING',

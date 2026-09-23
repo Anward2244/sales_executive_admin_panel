@@ -18,6 +18,7 @@ import {
   FiPackage
 } from 'react-icons/fi';
 import { createProductApi, bulkCreateProductsApi } from '@/api/axios';
+import CustomDropdown from '@/components/ui/CustomDropdown';
 
 // Standard measurement units
 const COMMON_UNITS = ['PCS', 'SET', 'BOX', 'PAIR', 'KG', 'MTR', 'PKT', 'ROLL'];
@@ -1047,18 +1048,16 @@ const BulkProductImportModal = ({
 
                           {/* Category Dropdown */}
                           <td className="py-2 px-3">
-                            <select
+                            <CustomDropdown
                               value={row.categoryId || ''}
-                              onChange={(e) => handleRowChange(row.id, 'categoryId', e.target.value)}
-                              className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-emerald-500 cursor-pointer"
-                            >
-                              <option value="">Unassigned</option>
-                              {categories.map((c) => (
-                                <option key={c._id} value={c._id}>
-                                  {c.name}
-                                </option>
-                              ))}
-                            </select>
+                              onChange={(val) => handleRowChange(row.id, 'categoryId', val)}
+                              defaultLabel="Unassigned"
+                              options={[
+                                { value: '', label: 'Unassigned' },
+                                ...categories.map((c) => ({ value: c._id, label: c.name }))
+                              ]}
+                              statusColor="!px-2 !py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+                            />
                             {row.rawCategory && !row.categoryId && (
                               <span className="text-[10px] text-amber-500 block truncate mt-0.5" title={row.rawCategory}>
                                 In sheet: "{row.rawCategory}"
@@ -1079,20 +1078,15 @@ const BulkProductImportModal = ({
 
                           {/* Unit */}
                           <td className="py-2 px-3">
-                            <select
+                            <CustomDropdown
                               value={row.unit}
-                              onChange={(e) => handleRowChange(row.id, 'unit', e.target.value)}
-                              className="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-emerald-500 cursor-pointer"
-                            >
-                              {COMMON_UNITS.map((u) => (
-                                <option key={u} value={u}>
-                                  {u}
-                                </option>
-                              ))}
-                              {!COMMON_UNITS.includes(row.unit) && (
-                                <option value={row.unit}>{row.unit}</option>
-                              )}
-                            </select>
+                              onChange={(val) => handleRowChange(row.id, 'unit', val)}
+                              options={[
+                                ...COMMON_UNITS.map((u) => ({ value: u, label: u })),
+                                ...(!COMMON_UNITS.includes(row.unit) && row.unit ? [{ value: row.unit, label: row.unit }] : [])
+                              ]}
+                              statusColor="!px-2 !py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+                            />
                           </td>
 
                           {/* Active Toggle */}

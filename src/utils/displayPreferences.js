@@ -12,7 +12,8 @@ export const DEFAULT_DISPLAY_PREFERENCES = {
   density: 'comfortable', // 'comfortable' | 'compact'
   ambientGlow: true,
   timeFormat: '12h',      // '12h' | '24h'
-  autoScrollToTop: true
+  autoScrollToTop: true,
+  rowsPerPage: 10         // Default pagination rows per page
 };
 
 /**

@@ -786,12 +786,7 @@ const Layout = () => {
     };
 
     fetchOrdersAndUsers();
-    const ordersInterval = Math.min(
-      getPollingInterval('orders', 30),
-      getPollingInterval('users', 30),
-      getPollingInterval('quotes', 30),
-      getPollingInterval('brokenImages', 180)
-    );
+    const ordersInterval = getPollingInterval('orders', 30);
     const intervalId = setInterval(fetchOrdersAndUsers, ordersInterval);
     return () => clearInterval(intervalId);
   }, [user, location.pathname, pollingConfigVersion]);
