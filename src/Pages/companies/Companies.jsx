@@ -23,6 +23,9 @@ import { useConfirm } from '@/Context/ConfirmationContext';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import PageHeader from '@/components/ui/PageHeader';
 import CopyButton from '@/components/ui/CopyButton';
+import { useDebounce } from '@/hooks/useDebounce';
+import { formatEntityCode } from '@/utils/formatters';
+import { validateEntityCode } from '@/utils/validators';
 
 const INITIAL_FORM = {
   name: '',
@@ -43,6 +46,7 @@ const Companies = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
   const [imageErrorMap, setImageErrorMap] = useState({});
 
@@ -163,14 +167,14 @@ const Companies = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isCreateModalOpen, submitting]);
 
-  // Derived filtered companies
+  // Derived filtered companies (debounced)
   const filteredCompanies = useMemo(() => {
     return companies.filter((company) => {
       const matchesSearch =
-        !searchTerm ||
-        company.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.description?.toLowerCase().includes(searchTerm.toLowerCase());
+        !debouncedSearchTerm ||
+        company.name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        company.code?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        company.description?.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
 
       const matchesStatus =
         statusFilter === 'all' ||
@@ -179,7 +183,7 @@ const Companies = () => {
 
       return matchesSearch && matchesStatus;
     });
-  }, [companies, searchTerm, statusFilter]);
+  }, [companies, debouncedSearchTerm, statusFilter]);
 
   // Sorting & Pagination State (with 3-state sorting: asc -> desc -> default)
   const { preferences: displayPrefs } = useDisplayPreferences();
@@ -250,7 +254,7 @@ const Companies = () => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : (name === 'code' ? value.toUpperCase() : value)
+      [name]: type === 'checkbox' ? checked : (name === 'code' ? formatEntityCode(value) : value)
     }));
     if (formError) setFormError(null);
   };
@@ -261,8 +265,9 @@ const Companies = () => {
       setFormError('Company name is required.');
       return;
     }
-    if (!formData.code.trim()) {
-      setFormError('Company code is required.');
+    const codeValidation = validateEntityCode(formData.code);
+    if (!codeValidation.isValid) {
+      setFormError(codeValidation.error);
       return;
     }
 
@@ -342,45 +347,6 @@ const Companies = () => {
           </div>
         }
       />
-
-      {/* KPI / Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Companies</p>
-            <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <FiBriefcase className="text-base" />
-            </span>
-          </div>
-          <p className="text-3xl font-black text-slate-900 dark:text-white mt-2 tracking-tight">
-            {loading ? '...' : totalCount}
-          </p>
-        </div>
-
-        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Entities</p>
-            <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <FiCheckCircle className="text-base" />
-            </span>
-          </div>
-          <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-2 tracking-tight">
-            {loading ? '...' : activeCount}
-          </p>
-        </div>
-
-        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Inactive</p>
-            <span className="p-2 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-400">
-              <FiXCircle className="text-base" />
-            </span>
-          </div>
-          <p className="text-3xl font-black text-slate-600 dark:text-slate-400 mt-2 tracking-tight">
-            {loading ? '...' : inactiveCount}
-          </p>
-        </div>
-      </div>
 
       {/* Filter and Action Bar */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-none p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-md">
@@ -596,8 +562,8 @@ const Companies = () => {
                           <td className="p-4 text-sm text-center">
                             <span
                               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${company.isActive
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25'
-                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                                ? 'bg-emerald-500/50 dark:bg-emerald-500/10 text-white dark:text-emerald-600 border-emerald-500/25'
+                                : 'bg-rose-500/50 dark:bg-rose-500/10 text-white dark:text-rose-600 border-rose-500/20'
                                 }`}
                             >
                               <span

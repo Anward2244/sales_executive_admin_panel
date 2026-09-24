@@ -52,3 +52,14 @@ export const formatYYYYMMDDToDDMMYYYY = (dateStr) => {
   }
   return dateStr;
 };
+
+/**
+ * Returns full day of the week (e.g. "Monday", "Tuesday", etc.)
+ */
+export const getDayName = (dateInput = new Date()) => {
+  if (!dateInput) return '';
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { weekday: 'long' });
+};
+

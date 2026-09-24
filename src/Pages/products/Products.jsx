@@ -43,6 +43,9 @@ import {
 } from '@/api/axios';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import { getImageUrl } from '@/utils/imageUtils';
+import { useDebounce } from '@/hooks/useDebounce';
+import { formatEntityCode } from '@/utils/formatters';
+import { validateEntityCode } from '@/utils/validators';
 
 // Helper to format currency in Indian Rupees (INR)
 const formatCurrency = (amount) => {
@@ -75,6 +78,7 @@ const Products = () => {
   const [error, setError] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
   const [selectedBrandFilter, setSelectedBrandFilter] = useState('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
@@ -193,8 +197,8 @@ const Products = () => {
         }
 
         // Search Query (name, sku, brand, description, category name)
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase().trim();
+        if (debouncedSearchQuery.trim()) {
+          const q = debouncedSearchQuery.toLowerCase().trim();
           const name = String(product.name || '').toLowerCase();
           const sku = String(product.sku || '').toLowerCase();
           const brand = String(product.brand || '').toLowerCase();
@@ -211,7 +215,7 @@ const Products = () => {
         // Default: newest
         return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
       });
-  }, [products, searchQuery, selectedCategoryFilter, selectedBrandFilter, selectedStatusFilter, sortBy]);
+  }, [products, debouncedSearchQuery, selectedCategoryFilter, selectedBrandFilter, selectedStatusFilter, sortBy]);
 
   // Product count statistics
   const { activeCount, inactiveCount } = useMemo(() => {
@@ -227,7 +231,7 @@ const Products = () => {
   // Reset pagination on filter, search, or itemsPerPage change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedCategoryFilter, selectedBrandFilter, selectedStatusFilter, sortBy, itemsPerPage]);
+  }, [debouncedSearchQuery, selectedCategoryFilter, selectedBrandFilter, selectedStatusFilter, sortBy, itemsPerPage]);
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
@@ -308,8 +312,9 @@ const Products = () => {
       setFormError('Product name is required.');
       return;
     }
-    if (!formData.sku.trim()) {
-      setFormError('Product SKU code is required.');
+    const skuVal = validateEntityCode(formData.sku);
+    if (!skuVal.isValid) {
+      setFormError(`Product SKU: ${skuVal.error}`);
       return;
     }
     if (!formData.categoryId) {
@@ -966,7 +971,7 @@ const Products = () => {
                   <input
                     type="text"
                     value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value, skuManual: true })}
+                    onChange={(e) => setFormData({ ...formData, sku: formatEntityCode(e.target.value), skuManual: true })}
                     placeholder="e.g. AURIC-SPK-010"
                     className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 uppercase"
                     required

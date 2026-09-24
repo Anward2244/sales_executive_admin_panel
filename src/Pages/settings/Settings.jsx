@@ -38,7 +38,11 @@ import {
   FiPackage,
   FiUsers,
   FiFileText,
-  FiImage
+  FiImage,
+  FiLock,
+  FiUnlock,
+  FiGlobe,
+  FiTerminal
 } from 'react-icons/fi';
 import { useTheme } from '@/Context/ThemeContext';
 import { useAuth } from '@/Context/AuthContext';
@@ -54,6 +58,7 @@ import {
   showBrowserNotification,
   playNotificationSound,
   isQuietHoursActive,
+  isSecureOrigin,
   DEFAULT_NOTIFICATION_SETTINGS
 } from '@/utils/browserNotifications';
 import {
@@ -97,8 +102,8 @@ const Settings = () => {
   const [notificationConfig, setNotificationConfig] = useState(() => getNotificationSettings());
   const [browserPermission, setBrowserPermission] = useState(() => getNotificationPermission());
   const [isRequestingPermission, setIsRequestingPermission] = useState(false);
-  const [guideBrowserTab, setGuideBrowserTab] = useState('chrome'); // 'chrome' | 'edge' | 'safari' | 'firefox' | 'windows'
-  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [guideBrowserTab, setGuideBrowserTab] = useState('chrome'); // 'chrome' | 'edge' | 'firefox' | 'localhost' | 'windows' | 'faq'
+  const [isGuideOpen, setIsGuideOpen] = useState(() => !isSecureOrigin() || getNotificationPermission() !== 'granted');
   const [previewTab, setPreviewTab] = useState('os'); // 'os' | 'toast'
 
   // Display Preferences State (Managed globally via useDisplayPreferences)
@@ -242,20 +247,26 @@ const Settings = () => {
     setNotificationConfig(saved);
   };
 
+  // Copy text helper with feedback
+  const handleCopyText = (text, label = 'Copied to clipboard!') => {
+    try {
+      navigator.clipboard.writeText(text);
+      triggerFeedback(label);
+    } catch {
+      triggerFeedback('Unable to copy automatically', 'error');
+    }
+  };
+
   // Copy site URL
   const handleCopySiteUrl = () => {
-    try {
-      navigator.clipboard.writeText(window.location.origin);
-      triggerFeedback('Site URL copied to clipboard!');
-    } catch {
-      triggerFeedback('Unable to copy URL automatically', 'error');
-    }
+    handleCopyText(window.location.origin, 'Site origin URL copied to clipboard!');
   };
 
   // Request native permission
   const handleRequestPermission = async () => {
     setIsRequestingPermission(true);
     try {
+      const isSec = isSecureOrigin();
       const granted = await requestBrowserNotificationPermission();
       const currentPerm = getNotificationPermission();
       setBrowserPermission(currentPerm);
@@ -266,8 +277,15 @@ const Settings = () => {
           body: 'Browser notifications are now authorized and ready to alert you on new orders and events.',
           tag: 'test-permission-granted'
         });
-      } else if (currentPerm === 'denied') {
-        triggerFeedback('Notifications were blocked in your browser settings.', 'error');
+      } else if (currentPerm === 'denied' || !isSec) {
+        setIsGuideOpen(true);
+        if (!isSec) {
+          triggerFeedback('Insecure HTTP origin detected ("Not Secure" browser). Check the guide below to enable the insecure origin flag.', 'error');
+        } else {
+          triggerFeedback('Notifications were blocked in your browser settings. See guide below.', 'error');
+        }
+        const el = document.getElementById('browser-notification-guide');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
       } else {
         triggerFeedback('Notification request was dismissed or unsupported.', 'info');
       }
@@ -828,6 +846,28 @@ const Settings = () => {
                       ? 'Notifications are currently blocked by your browser settings. Desktop push banners will not appear until unblocked in your browser address bar. Check our troubleshooting guide below.'
                       : 'Enable desktop push notifications so sales managers and admins receive real-time alerts when new procurement orders are placed by sales executives.'}
                   </p>
+
+                  {!isSecureOrigin() && (
+                    <div className="mt-3.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2.5 text-amber-700 dark:text-amber-300">
+                        <FiAlertTriangle className="text-amber-500 text-base shrink-0" />
+                        <span>
+                          <strong>"Not Secure" Browser Detected (HTTP):</strong> Chromium, Edge & Brave automatically suppress desktop notifications on non-HTTPS origins unless whitelisted.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsGuideOpen(true);
+                          const el = document.getElementById('browser-notification-guide');
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold whitespace-nowrap shadow-xs transition-colors shrink-0 cursor-pointer"
+                      >
+                        Open Not Secure Setup Guide &darr;
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1049,8 +1089,8 @@ const Settings = () => {
                         onClick={() => handleSoundTypeChange(t.key)}
                         className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                           isSelected
-                            ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30'
-                            : 'border-slate-200/80 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15'
+                            ? 'border-blue-500 bg-white dark:bg-blue-950/80'
+                            : 'border-slate-200/80 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15 bg-white/40 dark:bg-blue-400/5'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -1149,8 +1189,8 @@ const Settings = () => {
                         onClick={() => handleToastDurationChange(dur.ms)}
                         className={`p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                           notificationConfig.toastDuration === dur.ms
-                            ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shadow-xs'
-                            : 'border-slate-200/80 dark:border-white/5 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                            ? 'border-blue-600 bg-white dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 shadow-xs'
+                            : 'border-slate-200/80 dark:border-white/5 text-slate-600 dark:text-slate-400 hover:border-slate-300 bg-white/40 dark:bg-blue-400/5'
                         }`}
                       >
                         {dur.label}
@@ -1313,35 +1353,47 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* 6. Step-by-Step Browser Notification Setup & Troubleshooting Guide */}
+          {/* 6. Step-by-Step Browser Notification Setup & Troubleshooting Guide (Not Secure Browsers) */}
           <div
             id="browser-notification-guide"
             className={`rounded-3xl border backdrop-blur-xl transition-all overflow-hidden ${
               isDark
                 ? 'bg-slate-900/60 border-white/10'
-                : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
+                : 'bg-white/60 border-slate-200/80 shadow-lg shadow-slate-500/20'
             }`}
           >
             {/* Guide Header Banner */}
             <div
               onClick={() => setIsGuideOpen(!isGuideOpen)}
-              className="p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between cursor-pointer group"
+              className="p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between cursor-pointer group select-none"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20 shadow-xs">
-                  <FiCompass />
+                <div
+                  className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl border shadow-xs transition-colors ${
+                    !isSecureOrigin()
+                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                  }`}
+                >
+                  {!isSecureOrigin() ? <FiUnlock /> : <FiCompass />}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       Browser Setup & Troubleshooting Guide
                     </h3>
-                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                      Step-by-Step
+                    <span
+                      className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${
+                        !isSecureOrigin()
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                      }`}
+                    >
+                      {!isSecureOrigin() ? 'Action Required: Not Secure Browser' : 'HTTP & Not Secure Setup'}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Instructions for Chrome, Edge, Safari, Firefox & Windows OS Notification settings
+                    Step-by-step instructions to enable desktop notifications on "Not Secure" browsers, HTTP origins & local network IPs
                   </p>
                 </div>
               </div>
@@ -1359,14 +1411,87 @@ const Settings = () => {
             {/* Guide Body */}
             {isGuideOpen && (
               <div className="p-6 space-y-6 animate-in fade-in duration-200">
-                {/* Browser Selection Tabs */}
+                {/* 1. Context Explanation & Whitelist Helper Banner */}
+                <div
+                  className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                    !isSecureOrigin()
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
+                      : 'bg-blue-500/10 border-blue-500/20 text-slate-800 dark:text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0 text-base mt-0.5">
+                      <FiAlertTriangle />
+                    </div>
+                    <div className="space-y-2 flex-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h4 className="text-xs sm:text-sm font-extrabold tracking-tight">
+                          Why Modern Browsers Block Notifications on "Not Secure" (HTTP) Origins
+                        </h4>
+                        <span
+                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                            isSecureOrigin()
+                              ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                              : 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
+                          }`}
+                        >
+                          {isSecureOrigin() ? 'Secure Context Active' : 'Not Secure Connection'}
+                        </span>
+                      </div>
+                      <p className="text-xs leading-relaxed opacity-90">
+                        Modern Chromium browsers (Google Chrome, Microsoft Edge, Brave) and Mozilla Firefox enforce the{' '}
+                        <strong>W3C Secure Contexts standard</strong>. When opening an admin dashboard via plain HTTP (e.g.{' '}
+                        <code className="px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono text-[11px]">
+                          http://192.168.x.x
+                        </code>{' '}
+                        or unencrypted network domains), the browser shows a <strong className="underline">"Not secure"</strong> badge and permanently suppresses desktop notification prompts. Follow the instructions below to enable the browser flag or site permission.
+                      </p>
+
+                      {/* Origin Copy & Flag Shortcut Box */}
+                      <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-black/10 dark:border-white/10">
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="font-semibold text-slate-600 dark:text-slate-400">Current Dashboard Origin:</span>
+                          <code className="px-2 py-1 rounded-lg bg-black/10 dark:bg-white/10 font-mono text-[11px] font-bold select-all">
+                            {typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}
+                          </code>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleCopySiteUrl}
+                            className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                          >
+                            <FiCopy className="text-xs text-blue-500" />
+                            <span>Copy Origin URL</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopyText(
+                                'chrome://flags/#unsafely-treat-insecure-origin-as-secure',
+                                'Chrome flag URL copied! Paste into Chrome address bar.'
+                              )
+                            }
+                            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                          >
+                            <FiCompass className="text-xs" />
+                            <span>Copy Chrome Flag URL</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Browser Selection Tabs */}
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
                   {[
-                    { key: 'chrome', label: 'Chrome / Brave', icon: FiCompass },
-                    { key: 'edge', label: 'Microsoft Edge', icon: FiMonitor },
-                    { key: 'safari', label: 'Apple Safari', icon: FiCompass },
+                    { key: 'chrome', label: 'Chrome / Brave (Not Secure)', icon: FiCompass },
+                    { key: 'edge', label: 'Microsoft Edge (Not Secure)', icon: FiMonitor },
                     { key: 'firefox', label: 'Mozilla Firefox', icon: FiShield },
-                    { key: 'windows', label: 'Windows 11 / 10 OS', icon: FiSliders }
+                    { key: 'localhost', label: 'Localhost Workaround', icon: FiTerminal },
+                    { key: 'windows', label: 'Windows OS Alerts', icon: FiSliders },
+                    { key: 'faq', label: 'Not Secure FAQs', icon: FiHelpCircle }
                   ].map((tab) => {
                     const TabIcon = tab.icon;
                     const isActive = guideBrowserTab === tab.key;
@@ -1388,148 +1513,258 @@ const Settings = () => {
                   })}
                 </div>
 
-                {/* Tab Instructions Content */}
+                {/* 3. Tab Instructions Content */}
                 <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5">
+                  {/* TAB: CHROME / BRAVE */}
                   {guideBrowserTab === 'chrome' && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
-                          1
-                        </span>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Click the "Site Information" icon in the Address Bar
-                        </h4>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
-                        In Google Chrome or Brave, look at the address bar at the top of your screen. Click the{' '}
-                        <strong className="text-slate-900 dark:text-white">Tune / Sliders icon</strong> (or padlock) immediately to the left of the URL.
-                      </p>
+                    <div className="space-y-6">
+                      {/* Method 1: Insecure Flag */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[11px] font-extrabold uppercase">
+                            Method 1 (Recommended & 100% Reliable)
+                          </span>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                            Enable the "Insecure Origins Treated as Secure" Chrome Flag
+                          </h4>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                          This tells Google Chrome or Brave to whitelist this specific HTTP address as a secure origin, enabling native desktop push notifications permanently without requiring an SSL certificate.
+                        </p>
 
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
-                          2
-                        </span>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Toggle "Notifications" to Allow
-                        </h4>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
-                        In the popup menu that appears, locate <strong className="text-slate-900 dark:text-white">Notifications</strong> and switch the toggle to{' '}
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
-                          Allow
-                        </span>.
-                      </p>
+                        <div className="space-y-3 pl-2 sm:pl-4 border-l-2 border-blue-500/30">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                              <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px]">
+                                1
+                              </span>
+                              <span>Open Chrome's Insecure Origin Flag Page</span>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 pl-7 leading-relaxed">
+                              Open a new tab in Chrome, paste the following URL into the address bar, and press Enter:
+                            </p>
+                            <div className="pl-7 pt-1 flex items-center gap-2">
+                              <code className="px-2.5 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-mono text-[11px] font-bold select-all">
+                                chrome://flags/#unsafely-treat-insecure-origin-as-secure
+                              </code>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleCopyText(
+                                    'chrome://flags/#unsafely-treat-insecure-origin-as-secure',
+                                    'Chrome flag URL copied to clipboard!'
+                                  )
+                                }
+                                className="px-2.5 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                              >
+                                <FiCopy className="text-xs" />
+                                <span>Copy</span>
+                              </button>
+                            </div>
+                            <span className="text-[11px] text-slate-400 dark:text-slate-500 pl-7 block">
+                              (For Brave browser users, open: <code className="font-mono">brave://flags/#unsafely-treat-insecure-origin-as-secure</code>)
+                            </span>
+                          </div>
 
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
-                          3
-                        </span>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Resetting Blocked Settings in Chrome Settings
-                        </h4>
+                          <div className="space-y-1 pt-1">
+                            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                              <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px]">
+                                2
+                              </span>
+                              <span>Enable the Setting and Enter This Dashboard's URL</span>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 pl-7 leading-relaxed">
+                              Find the highlighted flag <strong>"Insecure origins treated as secure"</strong>. Switch its dropdown from <strong className="text-rose-500">Disabled</strong> to <strong className="text-emerald-500">Enabled</strong>.
+                            </p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 pl-7 leading-relaxed">
+                              In the text box that appears directly underneath, paste your exact site origin:
+                            </p>
+                            <div className="pl-7 pt-1 flex items-center gap-2">
+                              <code className="px-2.5 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 font-mono text-[11px] font-bold select-all">
+                                {typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}
+                              </code>
+                              <button
+                                type="button"
+                                onClick={handleCopySiteUrl}
+                                className="px-2.5 py-1 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                              >
+                                <FiCopy className="text-xs" />
+                                <span>Copy Origin</span>
+                              </button>
+                            </div>
+                            <span className="text-[11px] text-slate-400 dark:text-slate-500 pl-7 block">
+                              Tip: If you have multiple ports or test IPs, separate them with commas (e.g.{' '}
+                              <code className="font-mono">http://192.168.1.50:5173, http://192.168.1.50:3000</code>).
+                            </span>
+                          </div>
+
+                          <div className="space-y-1 pt-1">
+                            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                              <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px]">
+                                3
+                              </span>
+                              <span>Click "Relaunch" and Allow Notifications</span>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 pl-7 leading-relaxed">
+                              Click the blue <strong className="text-blue-600 dark:text-blue-400">Relaunch</strong> button at the bottom-right corner of Chrome. Once Chrome reopens, return to this tab, click{' '}
+                              <strong className="text-slate-900 dark:text-white">"Enable Desktop Alerts"</strong> at the top of this page, and click <strong className="text-emerald-500">Allow</strong> when prompted!
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
-                        If notifications remain blocked, open a new Chrome tab and navigate to:{' '}
-                        <code className="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-mono text-[11px]">
-                          chrome://settings/content/notifications
-                        </code>
-                        . Ensure your site URL is listed under "Allowed to send notifications".
-                      </p>
+
+                      {/* Method 2: Site Settings */}
+                      <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-white/10">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300 text-[11px] font-extrabold uppercase">
+                            Method 2 (Alternative)
+                          </span>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                            Address Bar "Not Secure" Site Settings
+                          </h4>
+                        </div>
+                        <div className="space-y-2 pl-2 sm:pl-4 text-xs text-slate-600 dark:text-slate-400">
+                          <p>
+                            1. Look at the address bar where it says <strong className="text-rose-500">"Not secure"</strong> or displays a sliders/tune icon next to the URL.
+                          </p>
+                          <p>
+                            2. Click on <strong className="text-slate-900 dark:text-white">"Not secure"</strong> &rarr; click <strong className="text-slate-900 dark:text-white">"Site settings"</strong>.
+                          </p>
+                          <p>
+                            3. Locate <strong className="text-slate-900 dark:text-white">Notifications</strong> &rarr; change the dropdown from "Block (default)" to{' '}
+                            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                              Allow
+                            </span>.
+                          </p>
+                          <p>
+                            4. Scroll down to <strong className="text-slate-900 dark:text-white">Insecure content</strong> &rarr; change from "Block" to{' '}
+                            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                              Allow
+                            </span>.
+                          </p>
+                          <p>
+                            5. Return to this dashboard tab and click the <strong className="text-blue-500">Reload</strong> banner or press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">Ctrl + R</kbd>.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   )}
 
+                  {/* TAB: MICROSOFT EDGE */}
                   {guideBrowserTab === 'edge' && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
-                          1
-                        </span>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Click the Padlock icon in Microsoft Edge
-                        </h4>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
-                        Click the <strong className="text-slate-900 dark:text-white">Lock icon 🔒</strong> on the left side of the address bar.
-                      </p>
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[11px] font-extrabold uppercase">
+                            Method 1 (Recommended)
+                          </span>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                            Enable the Insecure Origins Flag in Microsoft Edge
+                          </h4>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                          Microsoft Edge is built on Chromium and respects the same flag. Once enabled, Edge will treat this HTTP IP as secure.
+                        </p>
 
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
-                          2
-                        </span>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Select "Permissions for this site"
-                        </h4>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
-                        In the dropdown menu, locate <strong className="text-slate-900 dark:text-white">Notifications</strong> and select{' '}
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
-                          Allow
-                        </span>.
-                      </p>
+                        <div className="space-y-3 pl-2 sm:pl-4 border-l-2 border-blue-500/30">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                              <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px]">
+                                1
+                              </span>
+                              <span>Open Edge's Insecure Origins Flag</span>
+                            </div>
+                            <div className="pl-7 pt-1 flex items-center gap-2">
+                              <code className="px-2.5 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-mono text-[11px] font-bold select-all">
+                                edge://flags/#unsafely-treat-insecure-origin-as-secure
+                              </code>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleCopyText(
+                                    'edge://flags/#unsafely-treat-insecure-origin-as-secure',
+                                    'Edge flag URL copied to clipboard!'
+                                  )
+                                }
+                                className="px-2.5 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                              >
+                                <FiCopy className="text-xs" />
+                                <span>Copy</span>
+                              </button>
+                            </div>
+                          </div>
 
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
-                          3
-                        </span>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Edge Global Permission Manager
-                        </h4>
+                          <div className="space-y-1 pt-1">
+                            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                              <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px]">
+                                2
+                              </span>
+                              <span>Set to Enabled & Paste Portal Origin</span>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 pl-7 leading-relaxed">
+                              Switch the dropdown to <strong>Enabled</strong> and paste this portal origin:
+                            </p>
+                            <div className="pl-7 pt-1 flex items-center gap-2">
+                              <code className="px-2.5 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 font-mono text-[11px] font-bold select-all">
+                                {typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}
+                              </code>
+                              <button
+                                type="button"
+                                onClick={handleCopySiteUrl}
+                                className="px-2.5 py-1 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                              >
+                                <FiCopy className="text-xs" />
+                                <span>Copy Origin</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1 pt-1">
+                            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                              <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px]">
+                                3
+                              </span>
+                              <span>Restart Edge and Grant Permission</span>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 pl-7 leading-relaxed">
+                              Click the <strong className="text-blue-600 dark:text-blue-400">Restart</strong> button at the bottom-right corner of Edge. Return here and click <strong className="text-slate-900 dark:text-white">"Enable Desktop Alerts"</strong>.
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
-                        To inspect Edge global notification exceptions, navigate to{' '}
-                        <code className="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-mono text-[11px]">
-                          edge://settings/content/notifications
-                        </code>{' '}
-                        in a new tab.
-                      </p>
+
+                      {/* Edge Method 2 */}
+                      <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-white/10">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300 text-[11px] font-extrabold uppercase">
+                            Method 2 (Alternative)
+                          </span>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                            Edge Address Bar Permissions
+                          </h4>
+                        </div>
+                        <div className="space-y-2 pl-2 sm:pl-4 text-xs text-slate-600 dark:text-slate-400">
+                          <p>
+                            1. Click the <strong className="text-rose-500">"Not secure"</strong> badge or Lock icon in Edge address bar.
+                          </p>
+                          <p>
+                            2. Click <strong className="text-slate-900 dark:text-white">Permissions for this site</strong>.
+                          </p>
+                          <p>
+                            3. Locate <strong className="text-slate-900 dark:text-white">Notifications</strong> &rarr; choose{' '}
+                            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                              Allow
+                            </span>.
+                          </p>
+                          <p>
+                            4. Reload this page to apply changes.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   )}
 
-                  {guideBrowserTab === 'safari' && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
-                          1
-                        </span>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Open Safari Preferences / Settings
-                        </h4>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
-                        Click <strong className="text-slate-900 dark:text-white">Safari</strong> in the top macOS menu bar and choose{' '}
-                        <strong className="text-slate-900 dark:text-white">Settings</strong> (or press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">Cmd + ,</kbd>).
-                      </p>
-
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
-                          2
-                        </span>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Navigate to Websites &rarr; Notifications
-                        </h4>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
-                        Select the <strong className="text-slate-900 dark:text-white">Websites</strong> tab at the top, then choose{' '}
-                        <strong className="text-slate-900 dark:text-white">Notifications</strong> in the left sidebar. Locate this admin site and select{' '}
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
-                          Allow
-                        </span>.
-                      </p>
-
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
-                          3
-                        </span>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Verify macOS System Settings
-                        </h4>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
-                        Ensure <strong className="text-slate-900 dark:text-white">System Settings &rarr; Notifications &rarr; Safari</strong> has "Allow Notifications" turned on.
-                      </p>
-                    </div>
-                  )}
-
+                  {/* TAB: MOZILLA FIREFOX */}
                   {guideBrowserTab === 'firefox' && (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
@@ -1537,11 +1772,11 @@ const Settings = () => {
                           1
                         </span>
                         <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Click the Shield / Permissions Icon
+                          Open Firefox Advanced Config (about:config)
                         </h4>
                       </div>
                       <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
-                        Click the permission toggle icon to the left of the URL bar in Firefox.
+                        Open a new tab in Firefox and type <code className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px] font-bold">about:config</code> into the address bar. Click <strong className="text-slate-900 dark:text-white">"Accept the Risk and Continue"</strong>.
                       </p>
 
                       <div className="flex items-center gap-2">
@@ -1549,18 +1784,97 @@ const Settings = () => {
                           2
                         </span>
                         <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Clear "Blocked Temporarily" or Click Allow
+                          Permit Insecure Web Notifications
+                        </h4>
+                      </div>
+                      <div className="pl-8 space-y-2">
+                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                          In the search box at the top, paste the following preference:
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <code className="px-2.5 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-mono text-[11px] font-bold select-all">
+                            dom.webnotifications.allow_insecure
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopyText(
+                                'dom.webnotifications.allow_insecure',
+                                'Preference name copied!'
+                              )
+                            }
+                            className="px-2.5 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                          >
+                            <FiCopy className="text-xs" />
+                            <span>Copy</span>
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                          Double-click the row or click the toggle button on the right to set its value to{' '}
+                          <strong className="text-emerald-500 font-mono font-bold">true</strong>.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                          3
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Reload & Click the Shield / Permission Icon
                         </h4>
                       </div>
                       <p className="text-xs text-slate-600 dark:text-slate-300 pl-8 leading-relaxed">
-                        Remove any temporary block and toggle Notifications to{' '}
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
-                          Allowed
-                        </span>.
+                        Return to this dashboard, press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">F5</kbd>, and click <strong className="text-blue-600 dark:text-blue-400">"Enable Desktop Alerts"</strong>. Firefox will now display the native permission dialog. Select <strong className="text-emerald-500">Always Allow</strong>.
                       </p>
                     </div>
                   )}
 
+                  {/* TAB: LOCALHOST WORKAROUND */}
+                  {guideBrowserTab === 'localhost' && (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-slate-700 dark:text-slate-300 space-y-2">
+                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm">
+                          <FiZap className="text-base" />
+                          <span>Instant Localhost Workaround (Zero Browser Configuration)</span>
+                        </div>
+                        <p className="leading-relaxed">
+                          By web security design, all modern browsers treat <strong className="text-slate-900 dark:text-white font-mono">http://localhost</strong> and <strong className="text-slate-900 dark:text-white font-mono">http://127.0.0.1</strong> as <strong>intrinsically secure origins</strong>, even over plain HTTP!
+                        </p>
+                        <p className="leading-relaxed">
+                          If you are opening the browser on the same computer where this dashboard is hosted:
+                        </p>
+                        <div className="p-3 rounded-lg bg-black/10 dark:bg-white/5 font-mono text-xs text-slate-900 dark:text-white space-y-1">
+                          <div className="text-rose-500 line-through">
+                            http://192.168.x.x:5173 (Triggers "Not Secure" block)
+                          </div>
+                          <div className="text-emerald-500 font-bold flex items-center justify-between gap-2">
+                            <span>http://localhost:5173 (Recognized as Secure Context!)</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyText('http://localhost:5173', 'Localhost URL copied!')}
+                              className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold cursor-pointer"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Simply browse using localhost and you will be able to click "Enable Desktop Alerts" immediately without changing any browser flags!
+                        </p>
+                      </div>
+
+                      <div className="pt-2 space-y-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                          <FiCheckCircle className="text-emerald-500" /> In-App Sounds & Floating Toasts Always Work
+                        </h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                          Even if you cannot adjust browser flags or native push remains blocked on a remote HTTP browser, our <strong>In-App Floating Toasts</strong> and <strong>Web Audio Sound Chimes</strong> do not require HTTPS or browser permission. You will still receive realtime alerts for purchase orders as long as this admin tab is open.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB: WINDOWS OS SETTINGS */}
                   {guideBrowserTab === 'windows' && (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
@@ -1607,19 +1921,71 @@ const Settings = () => {
                       </p>
                     </div>
                   )}
+
+                  {/* TAB: NOT SECURE FAQS */}
+                  {guideBrowserTab === 'faq' && (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5 p-3.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <FiHelpCircle className="text-blue-500" /> Why does my browser show "Not Secure" next to the URL?
+                        </h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                          Your browser shows "Not Secure" because the portal is loaded over unencrypted HTTP rather than HTTPS with an SSL certificate. This is normal for local office networks, intranet IP addresses (e.g. 192.168.x.x), or internal staging servers.
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5 p-3.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <FiHelpCircle className="text-blue-500" /> Why doesn't the notification prompt appear when I click "Enable Desktop Alerts"?
+                        </h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                          Chromium browsers silently reject or suppress notification permission requests on non-HTTPS origins by default. Enabling the <code className="font-mono text-[11px] text-blue-500">#unsafely-treat-insecure-origin-as-secure</code> flag bypasses this restriction for this specific address.
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5 p-3.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <FiHelpCircle className="text-blue-500" /> Does whitelisting this origin compromise my computer security?
+                        </h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                          No. The flag only elevates permissions for the exact origin URL(s) you enter into the whitelist text box. All other internet browsing remains strictly guarded under standard security rules.
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5 p-3.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <FiHelpCircle className="text-blue-500" /> Can we enable SSL / HTTPS so employees don't need to configure flags?
+                        </h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                          Yes! For network-wide internal use without client-side flags, your IT administrator can install a trusted local SSL certificate using tools like <code className="font-mono text-[11px]">mkcert</code>, Let's Encrypt with internal DNS, or put the panel behind an Nginx/Caddy HTTPS reverse proxy.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* 7. Live System Diagnostics Table */}
+                {/* 4. Live System Diagnostics Table with Insecure Origin Status */}
                 <div className="pt-2">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-1.5">
-                    <FiShield className="text-emerald-500" /> Live Diagnostics Checklist
+                    <FiShield className="text-emerald-500" /> Live Connection & Diagnostics Checklist
                   </h4>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-                      <span className="text-[10px] text-slate-400 block font-medium">Notification API:</span>
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
-                        <FiCheckCircle className="text-xs" /> Supported
+                      <span className="text-[10px] text-slate-400 block font-medium">Security Context:</span>
+                      <span
+                        className={`text-xs font-bold flex items-center gap-1 mt-0.5 ${
+                          isSecureOrigin()
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-amber-600 dark:text-amber-400'
+                        }`}
+                      >
+                        {isSecureOrigin() ? (
+                          <FiCheckCircle className="text-xs" />
+                        ) : (
+                          <FiAlertTriangle className="text-xs" />
+                        )}
+                        {isSecureOrigin() ? 'Secure (HTTPS / Localhost)' : 'Not Secure (HTTP Origin)'}
                       </span>
                     </div>
 
@@ -1651,9 +2017,9 @@ const Settings = () => {
                     </div>
 
                     <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-                      <span className="text-[10px] text-slate-400 block font-medium">Local Preferences:</span>
+                      <span className="text-[10px] text-slate-400 block font-medium">In-App Floating Toasts:</span>
                       <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-0.5">
-                        <FiCheckCircle className="text-xs" /> Synced
+                        <FiCheckCircle className="text-xs" /> Always Active
                       </span>
                     </div>
                   </div>
@@ -1661,9 +2027,9 @@ const Settings = () => {
                   {/* Diagnostic Footer Quick Actions */}
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200/60 dark:border-white/5 text-xs">
                     <span className="text-slate-500 dark:text-slate-400">
-                      Need to copy this panel's origin URL for browser site settings?
+                      Current Site Origin: <code className="font-mono font-bold text-slate-700 dark:text-slate-300">{typeof window !== 'undefined' ? window.location.origin : ''}</code>
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         onClick={handleCopySiteUrl}
@@ -1671,6 +2037,19 @@ const Settings = () => {
                       >
                         <FiCopy className="text-xs" />
                         <span>Copy Origin URL</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopyText(
+                            'chrome://flags/#unsafely-treat-insecure-origin-as-secure',
+                            'Chrome Flag URL copied to clipboard!'
+                          )
+                        }
+                        className="px-3 py-1.5 rounded-lg bg-slate-200/70 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <FiCompass className="text-xs" />
+                        <span>Copy Chrome Flag</span>
                       </button>
                       <button
                         type="button"
@@ -1716,13 +2095,13 @@ const Settings = () => {
                     onClick={() => updateDisplayPref('density', 'comfortable')}
                     className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
                       displayPrefs.density === 'comfortable'
-                        ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/30'
-                        : 'border-slate-200 dark:border-white/10 hover:border-slate-300'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                        : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
                     }`}
                   >
                     <div>
-                      <p className="text-xs font-bold text-slate-900 dark:text-white">Comfortable</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <p className={`text-xs font-bold text-slate-900 dark:text-white ${displayPrefs.density === 'comfortable' ? 'text-white' : ''}`}>Comfortable</p>
+                      <p className={`text-[11px] text-slate-500 dark:text-slate-400 ${displayPrefs.density === 'comfortable' ? 'text-white' : ''}`}>
                         Generous padding for easier reading
                       </p>
                     </div>
@@ -1735,13 +2114,13 @@ const Settings = () => {
                     onClick={() => updateDisplayPref('density', 'compact')}
                     className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
                       displayPrefs.density === 'compact'
-                        ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/30'
-                        : 'border-slate-200 dark:border-white/10 hover:border-slate-300'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                        : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
                     }`}
                   >
                     <div>
-                      <p className="text-xs font-bold text-slate-900 dark:text-white">Compact</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <p className={`text-xs font-bold text-slate-900 dark:text-white ${displayPrefs.density === 'compact' ? 'text-white' : ''}`}>Compact</p>
+                      <p className={`text-[11px] text-slate-500 dark:text-slate-400 ${displayPrefs.density === 'compact' ? 'text-white' : ''}`}>
                         Dense rows for maximum data density
                       </p>
                     </div>

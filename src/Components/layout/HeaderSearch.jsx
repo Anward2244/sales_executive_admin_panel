@@ -3,10 +3,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/Context/AuthContext';
 import { useTheme } from '@/Context/ThemeContext';
 import { 
-  FiSearch, FiX, FiLoader, FiFileText, FiPackage, FiTag, FiGrid, FiUser, FiSend, FiShoppingBag
+  FiSearch, FiX, FiLoader, FiFileText, FiPackage, FiGrid, FiUser, FiBriefcase, FiServer
 } from 'react-icons/fi';
 import { getAccessibleMenus } from '@/config/menus';
-import { api } from '@/api/axios';
+import { getProductsApi, getCategoryApi, getUsersApi, getCompaniesApi, getFirmsApi } from '@/api/axios';
 
 const HeaderSearch = () => {
   const { user } = useAuth();
@@ -18,7 +18,7 @@ const HeaderSearch = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [searchData, setSearchData] = useState({ products: [], brands: [], categories: [], users: [], campaigns: [], orders: [] });
+  const [searchData, setSearchData] = useState({ products: [], categories: [], users: [], companies: [], firms: [] });
   const [dataFetched, setDataFetched] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const searchRef = useRef(null);
@@ -43,22 +43,27 @@ const HeaderSearch = () => {
     if (dataFetched || isLoadingData) return;
     setIsLoadingData(true);
     try {
-      const [prodRes, brandRes, catRes, userRes, campRes, orderRes] = await Promise.all([
-        api.get('/products/').catch(() => ({ data: [] })),
-        api.get('/brands/').catch(() => ({ data: [] })),
-        api.get('/categories/').catch(() => ({ data: [] })),
-        api.get('/admin/customers').catch(() => ({ data: [] })),
-        api.get('/admin/campaign-stats').catch(() => ({ data: [] })),
-        api.get('/orders/all').catch(() => ({ data: [] }))
+      const [prodRes, catRes, userRes, compRes, firmRes] = await Promise.all([
+        getProductsApi().catch(() => ({ data: [] })),
+        getCategoryApi().catch(() => ({ data: [] })),
+        getUsersApi().catch(() => ({ data: [] })),
+        getCompaniesApi().catch(() => ({ data: [] })),
+        getFirmsApi().catch(() => ({ data: [] }))
       ]);
+
+      const extractList = (res) => {
+        if (!res?.data) return [];
+        if (Array.isArray(res.data.data)) return res.data.data;
+        if (Array.isArray(res.data)) return res.data;
+        return [];
+      };
       
       setSearchData({
-        products: Array.isArray(prodRes.data) ? prodRes.data : [],
-        brands: Array.isArray(brandRes.data) ? brandRes.data : [],
-        categories: Array.isArray(catRes.data) ? catRes.data : [],
-        users: Array.isArray(userRes.data) ? userRes.data : [],
-        campaigns: Array.isArray(campRes.data) ? campRes.data : [],
-        orders: Array.isArray(orderRes.data) ? orderRes.data : (orderRes.data?.orders || [])
+        products: extractList(prodRes),
+        categories: extractList(catRes),
+        users: extractList(userRes),
+        companies: extractList(compRes),
+        firms: extractList(firmRes)
       });
       setDataFetched(true);
     } catch (err) {
@@ -121,84 +126,69 @@ const HeaderSearch = () => {
         })));
       }
 
-      // 2. Search Products (Name, Description, SKU, EAN, ID)
+      // 2. Search Companies
+      const matchedCompanies = searchData.companies.filter(c => {
+        const text = `${c.name || ''} ${c.code || ''} ${c.description || ''}`.toLowerCase();
+        return terms.every(term => text.includes(term));
+      });
+      results = results.concat(matchedCompanies.map(c => ({
+        _id: `comp-${c._id}`,
+        title: c.name,
+        subtitle: `Company • Code: ${c.code || 'N/A'}`,
+        type: 'Company',
+        url: `/companies`
+      })));
+
+      // 3. Search Firms
+      const matchedFirms = searchData.firms.filter(f => {
+        const text = `${f.firmName || ''} ${f.firmCode || ''} ${f.contactPerson || ''} ${f.city || ''} ${f.phone || ''}`.toLowerCase();
+        return terms.every(term => text.includes(term));
+      });
+      results = results.concat(matchedFirms.map(f => ({
+        _id: `firm-${f._id}`,
+        title: f.firmName,
+        subtitle: `Firm • Code: ${f.firmCode || 'N/A'}${f.city ? ` • ${f.city}` : ''}`,
+        type: 'Firm',
+        url: `/firms`
+      })));
+
+      // 4. Search Products (Name, SKU, Brand, Description)
       const matchedProducts = searchData.products.filter(product => {
-        const searchableText = `${product._id || ''} ${product.id || ''} ${product.name || ''} ${product.description || ''} ${product.eanNumber || ''} ${(product.variants || []).map(v => `${v.sku || ''} ${v._id || ''}`).join(' ')}`.toLowerCase();
-        return terms.every(term => searchableText.includes(term));
+        const text = `${product.name || ''} ${product.sku || ''} ${product.brand || ''} ${product.description || ''}`.toLowerCase();
+        return terms.every(term => text.includes(term));
       });
       results = results.concat(matchedProducts.map(p => ({
         _id: `prod-${p._id}`,
         title: p.name,
-        subtitle: `SKU: ${p.variants?.[0]?.sku || 'N/A'}${p._id ? ` • ID: ${p._id}` : ''}`,
+        subtitle: `Product • SKU: ${p.sku || 'N/A'}${p.brand ? ` • ${p.brand}` : ''}`,
         type: 'Product',
-        url: `/products/list?viewProductId=${p._id}`,
-        state: { viewProductId: p._id }
+        url: `/products`
       })));
 
-      // 3. Search Brands (Name, ID, Description)
-      const matchedBrands = searchData.brands.filter(b => {
-        const searchableText = `${b._id || ''} ${b.id || ''} ${b.name || ''} ${b.description || ''}`.toLowerCase();
-        return terms.every(term => searchableText.includes(term));
-      });
-      results = results.concat(matchedBrands.map(b => ({
-        _id: `brand-${b._id}`,
-        title: b.name,
-        subtitle: `Brand${b._id ? ` • ID: ${b._id}` : ''}`,
-        type: 'Brand',
-        url: `/products/brands`
-      })));
-
-      // 4. Search Categories (Name, ID, Description)
+      // 5. Search Categories
       const matchedCategories = searchData.categories.filter(c => {
-        const searchableText = `${c._id || ''} ${c.id || ''} ${c.name || ''} ${c.description || ''}`.toLowerCase();
-        return terms.every(term => searchableText.includes(term));
+        const text = `${c.name || ''} ${c.code || ''} ${c.description || ''}`.toLowerCase();
+        return terms.every(term => text.includes(term));
       });
       results = results.concat(matchedCategories.map(c => ({
         _id: `cat-${c._id}`,
         title: c.name,
-        subtitle: `Category${c._id ? ` • ID: ${c._id}` : ''}`,
+        subtitle: `Category • Code: ${c.code || 'N/A'}`,
         type: 'Category',
-        url: `/products/categories`
+        url: `/categories`
       })));
 
-      // 5. Search Users (Name, Email, Phone, ID, Company, GST)
+      // 6. Search Users
       const matchedUsers = searchData.users.filter(u => {
-        const searchableText = `${u._id || ''} ${u.id || ''} ${u.name || ''} ${u.email || ''} ${u.phone || ''} ${u.companyName || ''} ${u.gstNumber || ''}`.toLowerCase();
-        return terms.every(term => searchableText.includes(term));
+        const text = `${u.name || ''} ${u.firstName || ''} ${u.lastName || ''} ${u.email || ''} ${u.phone || ''} ${u.employeeCode || ''}`.toLowerCase();
+        return terms.every(term => text.includes(term));
       });
       results = results.concat(matchedUsers.map(u => ({
         _id: `user-${u._id}`,
-        title: u.name || 'No Name',
-        subtitle: `${u.email || 'No Email'}${u.phone ? ` • ${u.phone}` : ''}${u._id ? ` • ID: ${u._id}` : ''}`,
+        title: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.name || 'User',
+        subtitle: `${u.email || ''}${u.role ? ` • ${u.role}` : ''}`,
         type: 'User',
-        url: `/users/list/${u._id}`
-      })));
-
-      // 6. Search Campaigns (Title, Message, ID, CampaignID)
-      const matchedCampaigns = searchData.campaigns.filter(cmp => {
-        const searchableText = `${cmp._id || ''} ${cmp.id || ''} ${cmp.campaignId || ''} ${cmp.title || ''} ${cmp.message || ''}`.toLowerCase();
-        return terms.every(term => searchableText.includes(term));
-      });
-      results = results.concat(matchedCampaigns.map(cmp => ({
-        _id: `cmp-${cmp._id || cmp.campaignId}`,
-        title: cmp.title || 'Campaign',
-        subtitle: `Campaign${cmp.campaignId || cmp._id ? ` • ID: ${cmp.campaignId || cmp._id}` : ''}${cmp.message ? ` • ${cmp.message}` : ''}`,
-        type: 'Campaign',
-        url: `/campaign-stats/${cmp._id || cmp.campaignId}`
-      })));
-
-      // 7. Search Orders (Order ID, _ID, Customer Name, Email, Phone, AWB, Status)
-      const matchedOrders = searchData.orders.filter(o => {
-        const searchableText = `${o._id || ''} ${o.id || ''} ${o.orderId || ''} ${o.user?.name || ''} ${o.user?.email || ''} ${o.user?.phone || ''} ${o.shippingAddress?.fullName || ''} ${o.shippingAddress?.phone || ''} ${o.awbNumber || ''} ${o.orderStatus || ''}`.toLowerCase();
-        return terms.every(term => searchableText.includes(term));
-      });
-      results = results.concat(matchedOrders.map(o => ({
-        _id: `order-${o._id}`,
-        title: `Order #${o.orderId || (o._id ? o._id.slice(-8).toUpperCase() : 'N/A')}`,
-        subtitle: `${o.user?.name || o.shippingAddress?.fullName || 'Customer'} • ₹${o.totalAmount || 0} • ID: ${o._id || o.orderId}`,
-        type: 'Order',
-        url: `/orders/all?viewOrderId=${o._id}`,
-        state: { viewOrderId: o._id }
+        url: `/users`
       })));
 
       setSearchResults(results.slice(0, 10)); // Limit to top 10 results
@@ -228,7 +218,7 @@ const HeaderSearch = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onFocus={() => searchQuery.trim() && setShowSuggestions(true)}
-          placeholder="Search products, brands, categories, users, campaigns, orders..." 
+          placeholder="Search menus, companies, firms, products, categories, users..." 
           className={`w-full pl-10 pr-10 py-2 border rounded-xl focus:outline-none focus:ring-4 transition-all text-sm shadow-xs ${
             isDark 
               ? 'bg-transparent border-white/10 focus:border-blue-500/50 focus:bg-blue-950/10 focus:ring-blue-500/10 text-white placeholder-slate-400' 
@@ -263,11 +253,10 @@ const HeaderSearch = () => {
                 {searchResults.map((item) => {
                   let Icon = FiFileText;
                   if (item.type === 'Product') Icon = FiPackage;
-                  else if (item.type === 'Brand') Icon = FiTag;
+                  else if (item.type === 'Company') Icon = FiBriefcase;
+                  else if (item.type === 'Firm') Icon = FiServer;
                   else if (item.type === 'Category') Icon = FiGrid;
                   else if (item.type === 'User') Icon = FiUser;
-                  else if (item.type === 'Campaign') Icon = FiSend;
-                  else if (item.type === 'Order') Icon = FiShoppingBag;
 
                   return (
                     <li key={item._id}>

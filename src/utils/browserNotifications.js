@@ -100,6 +100,16 @@ export const isBrowserNotificationSupported = () => {
   return typeof window !== 'undefined' && 'Notification' in window;
 };
 
+export const isSecureOrigin = () => {
+  if (typeof window === 'undefined') return true;
+  if (window.isSecureContext !== undefined) return Boolean(window.isSecureContext);
+  return (
+    window.location.protocol === 'https:' ||
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1'
+  );
+};
+
 export const getNotificationPermission = () => {
   if (!isBrowserNotificationSupported()) return 'unsupported';
   return Notification.permission;
@@ -138,7 +148,7 @@ export const requestBrowserNotificationPermission = async () => {
       saveNotificationSettings({ browserAlertsEnabled: true });
       showBrowserNotification({
         title: 'Inizio Admin Notifications',
-        body: 'Browser notifications are now enabled! You will receive alerts for new orders, quotes, chats, and registrations.',
+        body: 'Browser notifications are now enabled! You will receive alerts for new orders, chats, and registrations.',
         path: '/'
       });
     }

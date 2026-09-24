@@ -14,6 +14,7 @@ import CustomDropdown from '@/components/ui/CustomDropdown';
 import GmailLink from '@/components/ui/GmailLink';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { TableRowSkeleton } from '@/components/ui/Skeleton';
+import PageHeader from '@/components/ui/PageHeader';
 import {
   getFirmsApi,
   createFirmApi,
@@ -22,6 +23,8 @@ import {
   getCompaniesApi
 } from '@/api/axios';
 import { useConfirm } from '@/Context/ConfirmationContext';
+import { formatEntityCode, formatPhone, formatGSTIN, formatPincode } from '@/utils/formatters';
+import { validateEntityCode, validatePhone, validateEmail, validateGSTIN, validatePincode } from '@/utils/validators';
 
 
 const INITIAL_FORM_STATE = {
@@ -486,6 +489,22 @@ const Firms = () => {
     if (!createFormData.pincode.trim()) return setCreateFormError('Pincode is required.');
     if (!createFormData.gstin.trim()) return setCreateFormError('GSTIN is required.');
 
+    // Real-time Format Validation Checks
+    const codeVal = validateEntityCode(createFormData.firmCode);
+    if (!codeVal.isValid) return setCreateFormError(codeVal.error);
+
+    const phoneVal = validatePhone(createFormData.phone);
+    if (!phoneVal.isValid) return setCreateFormError(phoneVal.error);
+
+    const emailVal = validateEmail(createFormData.email);
+    if (!emailVal.isValid) return setCreateFormError(emailVal.error);
+
+    const gstinVal = validateGSTIN(createFormData.gstin);
+    if (!gstinVal.isValid) return setCreateFormError(gstinVal.error);
+
+    const pinVal = validatePincode(createFormData.pincode);
+    if (!pinVal.isValid) return setCreateFormError(pinVal.error);
+
     const payload = {
       companyId: createFormData.companyId,
       firmName: createFormData.firmName.trim(),
@@ -572,6 +591,22 @@ const Firms = () => {
     if (!editFormData.state.trim()) return setEditFormError('State is required.');
     if (!editFormData.pincode.trim()) return setEditFormError('Pincode is required.');
     if (!editFormData.gstin.trim()) return setEditFormError('GSTIN is required.');
+
+    // Real-time Format Validation Checks
+    const editCodeVal = validateEntityCode(editFormData.firmCode);
+    if (!editCodeVal.isValid) return setEditFormError(editCodeVal.error);
+
+    const editPhoneVal = validatePhone(editFormData.phone);
+    if (!editPhoneVal.isValid) return setEditFormError(editPhoneVal.error);
+
+    const editEmailVal = validateEmail(editFormData.email);
+    if (!editEmailVal.isValid) return setEditFormError(editEmailVal.error);
+
+    const editGstinVal = validateGSTIN(editFormData.gstin);
+    if (!editGstinVal.isValid) return setEditFormError(editGstinVal.error);
+
+    const editPinVal = validatePincode(editFormData.pincode);
+    if (!editPinVal.isValid) return setEditFormError(editPinVal.error);
 
     const payload = {
       companyId: editFormData.companyId,
@@ -664,47 +699,43 @@ const Firms = () => {
       )}
 
       {/* Top Title & Header Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            Firms List
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
-            Manage business firms, regulatory profiles, GST compliance, and entity branches.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
-          <div className="relative w-full sm:w-80">
-            <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
-            <input
-              type="text"
-              placeholder="Search by name, code, contact, GSTIN, city..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all shadow-xs"
-            />
-            {searchInput && (
-              <button
-                type="button"
-                onClick={() => setSearchInput('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
-              >
-                <FiX className="w-3.5 h-3.5" />
-              </button>
-            )}
+      <PageHeader
+        title="Firms List"
+        icon={FiServer}
+        description="Manage business firms, regulatory profiles, GST compliance, and entity branches."
+        action={
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="relative w-full sm:w-80">
+              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+              <input
+                type="text"
+                placeholder="Search by name, code, contact, GSTIN, city..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all shadow-xs"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <FiX className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => fetchFirms(false)}
+              disabled={loading}
+              className="p-2.5 bg-white/80 dark:bg-slate-900/80 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs shrink-0 disabled:opacity-50"
+              title="Refresh Firms"
+            >
+              <FiRefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => fetchFirms(false)}
-            disabled={loading}
-            className="p-2.5 bg-white/80 dark:bg-slate-900/80 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs shrink-0 disabled:opacity-50"
-            title="Refresh Firms"
-          >
-            <FiRefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Unified Action & Filter Bar */}
       <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-md flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
@@ -1123,7 +1154,7 @@ const Firms = () => {
                         {/* GSTIN */}
                         <td className="p-4 text-sm text-center">
                           {firm.gstin ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-mono font-bold">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/80 dark:bg-amber-500/10 text-white dark:text-amber-600 border border-amber-500/20 text-xs font-mono font-bold">
                               {firm.gstin}
                               <CopyButton text={firm.gstin} />
                             </span>
@@ -1137,8 +1168,8 @@ const Firms = () => {
                           <span
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
                               firm.isActive
-                                ? 'bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400'
-                                : 'bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400'
+                                ? 'bg-emerald-500/50 dark:bg-emerald-500/10 border border-emerald-500/25 text-white dark:text-emerald-600'
+                                : 'bg-rose-500/50 dark:bg-rose-500/10 border border-rose-500/20 text-white dark:text-rose-600'
                             }`}
                           >
                             <span
@@ -1410,7 +1441,7 @@ const Firms = () => {
                         name="firmCode"
                         value={createFormData.firmCode}
                         onChange={(e) =>
-                          setCreateFormData((prev) => ({ ...prev, firmCode: e.target.value }))
+                          setCreateFormData((prev) => ({ ...prev, firmCode: formatEntityCode(e.target.value) }))
                         }
                         placeholder="e.g. METRO-DEL"
                         required
@@ -1447,7 +1478,7 @@ const Firms = () => {
                         name="phone"
                         value={createFormData.phone}
                         onChange={(e) =>
-                          setCreateFormData((prev) => ({ ...prev, phone: e.target.value }))
+                          setCreateFormData((prev) => ({ ...prev, phone: formatPhone(e.target.value) }))
                         }
                         placeholder="e.g. +919811001122"
                         required
@@ -1484,7 +1515,7 @@ const Firms = () => {
                         name="gstin"
                         value={createFormData.gstin}
                         onChange={(e) =>
-                          setCreateFormData((prev) => ({ ...prev, gstin: e.target.value }))
+                          setCreateFormData((prev) => ({ ...prev, gstin: formatGSTIN(e.target.value) }))
                         }
                         placeholder="e.g. 07AAAAA1111A1Z1"
                         required
@@ -1556,7 +1587,7 @@ const Firms = () => {
                         name="pincode"
                         value={createFormData.pincode}
                         onChange={(e) =>
-                          setCreateFormData((prev) => ({ ...prev, pincode: e.target.value }))
+                          setCreateFormData((prev) => ({ ...prev, pincode: formatPincode(e.target.value) }))
                         }
                         placeholder="e.g. 110019"
                         required
@@ -1717,7 +1748,7 @@ const Firms = () => {
                         name="firmCode"
                         value={editFormData.firmCode}
                         onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, firmCode: e.target.value }))
+                          setEditFormData((prev) => ({ ...prev, firmCode: formatEntityCode(e.target.value) }))
                         }
                         placeholder="e.g. METRO-DEL"
                         required
@@ -1754,7 +1785,7 @@ const Firms = () => {
                         name="phone"
                         value={editFormData.phone}
                         onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, phone: e.target.value }))
+                          setEditFormData((prev) => ({ ...prev, phone: formatPhone(e.target.value) }))
                         }
                         placeholder="e.g. +919811001122"
                         required
@@ -1791,7 +1822,7 @@ const Firms = () => {
                         name="gstin"
                         value={editFormData.gstin}
                         onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, gstin: e.target.value }))
+                          setEditFormData((prev) => ({ ...prev, gstin: formatGSTIN(e.target.value) }))
                         }
                         placeholder="e.g. 07AAAAA1111A1Z1"
                         required
@@ -1863,7 +1894,7 @@ const Firms = () => {
                         name="pincode"
                         value={editFormData.pincode}
                         onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, pincode: e.target.value }))
+                          setEditFormData((prev) => ({ ...prev, pincode: formatPincode(e.target.value) }))
                         }
                         placeholder="e.g. 110019"
                         required

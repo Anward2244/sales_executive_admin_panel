@@ -4,7 +4,7 @@ import {
   FiCheck, FiLoader, FiAlertCircle,
   FiSearch, FiUser, FiRefreshCcw, FiX,
   FiChevronDown, FiCopy, FiCalendar, FiClock, FiPhone,
-  FiMail, FiEye, FiExternalLink, FiHash, FiBriefcase, FiUsers, FiUserCheck, FiUserX
+  FiMail, FiEye, FiEyeOff, FiExternalLink, FiHash, FiBriefcase, FiUsers, FiUserCheck, FiUserX
 } from 'react-icons/fi';
 import { useOutletContext, useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
@@ -14,6 +14,8 @@ import CustomDropdown from '@/components/ui/CustomDropdown';
 import GmailLink from '@/components/ui/GmailLink';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { createPortal } from 'react-dom';
+import { formatPhone, formatEntityCode } from '@/utils/formatters';
+import { validateEmail, validatePhone, validateEntityCode } from '@/utils/validators';
 
 const getUserFullName = (user) => {
   if (!user) return '';
@@ -421,15 +423,23 @@ const UsersList = () => {
   const [formData,setFormData] = useState(initialFormstate);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (e) => {
-    const {name, value, type, checked} = e.target;
-    setFormData((prev)=>({
+    const { name, value, type, checked } = e.target;
+    let formattedValue = value;
+    if (name === 'phone') {
+      formattedValue = formatPhone(value);
+    } else if (name === 'employeeCode') {
+      formattedValue = formatEntityCode(value);
+    }
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox'? checked:value,
-    }))
-  }
+      [name]: type === 'checkbox' ? checked : formattedValue,
+    }));
+    if (formError) setFormError('');
+  };
 
     const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -439,14 +449,22 @@ const UsersList = () => {
     if (!formData.firstName.trim()) {
       return setFormError('First name is required.');
     }
-    if (!formData.email.trim()) {
-      return setFormError('Email address is required.');
+    const emailVal = validateEmail(formData.email);
+    if (!emailVal.isValid) {
+      return setFormError(emailVal.error);
     }
     if (!formData.password || formData.password.length < 6) {
       return setFormError('Password must be at least 6 characters.');
     }
-    if (!formData.phone.trim()) {
-      return setFormError('Phone number is required.');
+    const phoneVal = validatePhone(formData.phone);
+    if (!phoneVal.isValid) {
+      return setFormError(phoneVal.error);
+    }
+    if (formData.employeeCode?.trim()) {
+      const codeVal = validateEntityCode(formData.employeeCode);
+      if (!codeVal.isValid) {
+        return setFormError(`Employee Code: ${codeVal.error}`);
+      }
     }
 
     setSubmitting(true);
@@ -475,6 +493,7 @@ const UsersList = () => {
 
       // 4. Reset form & close modal
       setFormData(initialFormstate);
+      setShowPassword(false);
       setIsCreateModalOpen(false);
 
       // 5. Re-fetch table so the new user appears immediately
@@ -602,6 +621,7 @@ const UsersList = () => {
             onClick={() => {
               setFormError('');
               setFormData(initialFormstate);
+              setShowPassword(false);
               setIsCreateModalOpen(true);
             }}
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer shrink-0"
@@ -1199,15 +1219,26 @@ const UsersList = () => {
 
               <div>
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Password *</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Sales@123456"
-                  className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-blue-500/50 outline-none"
-                />
+                <div className="relative mt-1">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Sales@123456"
+                    className="w-full p-2.5 pr-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-blue-500/50 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors rounded-lg focus:outline-none cursor-pointer"
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <FiEyeOff size={15} /> : <FiEye size={15} />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 pt-1">

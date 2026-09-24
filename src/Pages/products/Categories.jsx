@@ -17,6 +17,9 @@ import { formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import CopyButton from '@/components/ui/CopyButton';
 import PageHeader from '@/components/ui/PageHeader';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
+import { useDebounce } from '@/hooks/useDebounce';
+import { formatEntityCode } from '@/utils/formatters';
+import { validateEntityCode } from '@/utils/validators';
 
 const INITIAL_FORM_STATE = {
   name: '',
@@ -43,6 +46,7 @@ const Categories = () => {
   // Filter & Pagination State
   const { preferences: displayPrefs } = useDisplayPreferences();
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = displayPrefs.rowsPerPage || 10;
@@ -132,7 +136,7 @@ const Categories = () => {
 
   const handleCodeChange = (e) => {
     setIsCodeManuallyEdited(true);
-    setFormData((prev) => ({ ...prev, code: e.target.value.toUpperCase().replace(/\s+/g, '_') }));
+    setFormData((prev) => ({ ...prev, code: formatEntityCode(e.target.value) }));
     if (formError) setFormError('');
   };
 
@@ -186,8 +190,9 @@ const Categories = () => {
       setFormError('Category name is required.');
       return;
     }
-    if (!trimmedCode) {
-      setFormError('Category code is required (e.g. SPEAKERS, CHARGERS).');
+    const codeVal = validateEntityCode(trimmedCode);
+    if (!codeVal.isValid) {
+      setFormError(codeVal.error);
       return;
     }
 
@@ -243,11 +248,11 @@ const Categories = () => {
   const filteredCategories = useMemo(() => {
     return categories.filter((category) => {
       const matchSearch =
-        searchTerm === '' ||
-        (category.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (category.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (category.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (category._id || '').toLowerCase().includes(searchTerm.toLowerCase());
+        debouncedSearchTerm === '' ||
+        (category.name || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (category.code || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (category.description || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (category._id || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase());
 
       const matchStatus =
         statusFilter === 'all' ||
@@ -256,7 +261,7 @@ const Categories = () => {
 
       return matchSearch && matchStatus;
     });
-  }, [categories, searchTerm, statusFilter]);
+  }, [categories, debouncedSearchTerm, statusFilter]);
 
   // Tab counts
   const countsByTab = useMemo(() => {

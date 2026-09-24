@@ -367,115 +367,28 @@ const Notifications = () => {
             : null
         }
         actions={
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
-            <div className="relative w-full sm:w-80">
-              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by title, message, ID..."
-                className="w-full pl-9 pr-7 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900 dark:text-white placeholder-slate-400 text-xs font-medium transition-all shadow-xs"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer text-xs"
-                >
-                  &times;
-                </button>
-              )}
+          <div className='flex flex-col items-end'>
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <div className="relative w-full sm:w-80">
+                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by title, message, ID..."
+                  className="w-full pl-9 pr-7 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900 dark:text-white placeholder-slate-400 text-xs font-medium transition-all shadow-xs"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer text-xs"
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => fetchNotifications(currentPage, true)}
-              disabled={refreshing || loading}
-              className="p-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:border-blue-500/40 transition-all cursor-pointer shadow-xs disabled:opacity-50 shrink-0"
-              title="Refresh notifications list"
-            >
-              <FiRefreshCw className={`text-base ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
-            </button>
-          </div>
-        }
-      />
-
-      {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-        {/* Total */}
-        <Card className="p-4 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              Total Notifications
-            </p>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-              {meta.total ?? notifications.length}
-            </h3>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Catalog activity log</p>
-          </div>
-          <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
-            <FiInbox className="text-xl" />
-          </div>
-        </Card>
-
-        {/* Unread */}
-        <Card className="p-4 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              Unread
-            </p>
-            <h3 className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
-              {unreadCount}
-            </h3>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Needs acknowledgment</p>
-          </div>
-          <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20">
-            <FiAlertCircle className="text-xl" />
-          </div>
-        </Card>
-
-        {/* Read */}
-        <Card className="p-4 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              Read
-            </p>
-            <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-              {readCount}
-            </h3>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Reviewed items</p>
-          </div>
-          <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
-            <FiCheckCircle className="text-xl" />
-          </div>
-        </Card>
-
-        {/* Purchase Orders */}
-        <Card className="p-4 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              Purchase Orders
-            </p>
-            <h3 className="text-2xl font-black text-cyan-600 dark:text-cyan-400 mt-1">
-              {poCount}
-            </h3>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">PO creation events</p>
-          </div>
-          <div className="w-11 h-11 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center border border-cyan-500/20">
-            <FiShoppingBag className="text-xl" />
-          </div>
-        </Card>
-
-        {/* Push Device Token Card */}
-        <Card className="p-4 flex items-center justify-between col-span-2 sm:col-span-1">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              Device Push
-            </p>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-1 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-              <span>FCM Ready</span>
-            </h3>
             <button
               type="button"
               onClick={() => {
@@ -489,11 +402,8 @@ const Notifications = () => {
               <FiArrowRight className="text-xs" />
             </button>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20">
-            <FiSmartphone className="text-xl" />
-          </div>
-        </Card>
-      </div>
+        }
+      />
 
       {/* Filter, Search & Density Controls */}
       <Card className="p-3.5 sm:p-4">

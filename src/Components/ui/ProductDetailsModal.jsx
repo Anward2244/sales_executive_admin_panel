@@ -4,7 +4,7 @@ import {
   FiPackage, FiX, FiChevronDown, FiChevronUp, FiLoader, FiAlertCircle, FiEdit2
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import { api, BASE_URL } from '@/api/axios';
+import { api, BASE_URL, getProductByIdApi, getCategoryApi } from '@/api/axios';
 import { formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import CopyButton from './CopyButton';
 import { getImageUrl, DEFAULT_FALLBACK_IMAGE } from '@/utils/imageUtils';
@@ -44,32 +44,16 @@ const ProductDetailsModal = ({
       setError('');
 
       try {
-        const requests = [
-          api.get('/brands/').catch(() => ({ data: [] })),
-          api.get('/categories/').catch(() => ({ data: [] }))
-        ];
-
-        if (currentId) {
-          requests.unshift(api.get(`/products/${currentId}`));
-        }
-
-        const responses = await Promise.all(requests);
+        const [prodRes, catRes] = await Promise.all([
+          currentId ? getProductByIdApi(currentId).catch(() => ({ data: initialProduct })) : Promise.resolve({ data: initialProduct }),
+          getCategoryApi().catch(() => ({ data: [] }))
+        ]);
 
         if (!isMounted) return;
 
-        if (currentId) {
-          const prodRes = responses[0];
-          const brandRes = responses[1];
-          const catRes = responses[2];
-
-          setProduct(prodRes.data || initialProduct);
-          setBrands(brandRes.data || []);
-          setCategories(catRes.data || []);
-        } else {
-          setProduct(initialProduct);
-          setBrands(responses[0].data || []);
-          setCategories(responses[1].data || []);
-        }
+        setProduct(prodRes.data?.data || prodRes.data || initialProduct);
+        setBrands([]);
+        setCategories(Array.isArray(catRes.data?.data) ? catRes.data.data : (Array.isArray(catRes.data) ? catRes.data : []));
       } catch (err) {
         console.error('Failed to load product details:', err);
         if (isMounted) {

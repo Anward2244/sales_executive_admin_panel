@@ -157,7 +157,6 @@ const Layout = () => {
   const [usersUnreadCount, setUsersUnreadCount] = useState(0);
   const [usersVerifyUnreadCount, setUsersVerifyUnreadCount] = useState(0);
   const [usersDeletionUnreadCount, setUsersDeletionUnreadCount] = useState(0);
-  const [quotesUnreadCount, setQuotesUnreadCount] = useState(0);
   const [brokenImagesUnreadCount, setBrokenImagesUnreadCount] = useState(0);
   const [inAppNotifications, setInAppNotifications] = useState([]);
   const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
@@ -217,7 +216,6 @@ const Layout = () => {
   const prevUsersRef = useRef(null);
   const prevPendingRef = useRef(null);
   const prevDeletionRef = useRef(null);
-  const prevQuotesRef = useRef(null);
   const prevBrokenImagesRef = useRef(null);
   const isInitialDataLoad = useRef(true);
   const [toasts, setToasts] = useState([]);
@@ -292,9 +290,9 @@ const Layout = () => {
 
   const handleTestBrowserNotification = () => {
     showBrowserNotification({
-      title: 'Inizio Admin Test Alert',
-      body: 'Browser notifications are working perfectly! You will be alerted when new orders or requests arrive.',
-      path: '/orders/all',
+      title: 'Auric Admin Test Alert',
+      body: 'Browser notifications are working perfectly! You will receive live alerts for system notifications and updates.',
+      path: '/notifications',
       tag: `test-alert-${Date.now()}`,
       navigate: navigation
     });
@@ -312,7 +310,6 @@ const Layout = () => {
     if (id === 'verify') setUsersVerifyUnreadCount(0);
     if (id === 'deletion') setUsersDeletionUnreadCount(0);
     if (id === 'users') setUsersUnreadCount(0);
-    if (id === 'quotes') setQuotesUnreadCount(0);
     if (id === 'broken-images') setBrokenImagesUnreadCount(0);
     if (id === 'image-errors') setFailedImageProductNames([]);
     if (typeof id === 'string' && id.startsWith('inapp-')) {
@@ -330,7 +327,6 @@ const Layout = () => {
     setUsersVerifyUnreadCount(0);
     setUsersDeletionUnreadCount(0);
     setUsersUnreadCount(0);
-    setQuotesUnreadCount(0);
     setBrokenImagesUnreadCount(0);
     setFailedImageProductNames([]);
     markAllNotificationsAsReadApi().catch(() => {});
@@ -400,76 +396,14 @@ const Layout = () => {
         color: 'text-blue-400 bg-blue-500/10'
       });
     }
-    if (ordersUnreadCount > 0) {
-      list.push({
-        id: 'orders',
-        title: 'New Orders Received',
-        description: `You have ${ordersUnreadCount} new order${ordersUnreadCount > 1 ? 's' : ''} to process.`,
-        path: '/orders/all',
-        icon: <FiPackage />,
-        color: 'text-emerald-400 bg-emerald-500/10'
-      });
-    }
-    if (usersVerifyUnreadCount > 0) {
-      list.push({
-        id: 'verify',
-        title: 'Pending Verifications',
-        description: `${usersVerifyUnreadCount} user${usersVerifyUnreadCount > 1 ? 's are' : ' is'} pending verification.`,
-        path: '/users/list?tab=pending',
-        icon: <FiClock />,
-        color: 'text-amber-400 bg-amber-500/10'
-      });
-    }
-    if (usersDeletionUnreadCount > 0) {
-      list.push({
-        id: 'deletion',
-        title: 'Deletion Requests',
-        description: `${usersDeletionUnreadCount} account deletion request${usersDeletionUnreadCount > 1 ? 's' : ''} pending.`,
-        path: '/users/list?tab=deleted',
-        icon: <FiAlertTriangle />,
-        color: 'text-red-400 bg-red-500/10'
-      });
-    }
     if (usersUnreadCount > 0) {
       list.push({
         id: 'users',
         title: 'New User Registrations',
         description: `${usersUnreadCount} new user${usersUnreadCount > 1 ? 's' : ''} registered recently.`,
-        path: '/users/list',
+        path: '/users',
         icon: <FiUserPlus />,
         color: 'text-indigo-400 bg-indigo-500/10'
-      });
-    }
-    if (quotesUnreadCount > 0) {
-      list.push({
-        id: 'quotes',
-        title: 'New Quote Requests',
-        description: `You have ${quotesUnreadCount} new quote request${quotesUnreadCount > 1 ? 's' : ''} to review.`,
-        path: '/quotes',
-        icon: <FiFileText />,
-        color: 'text-blue-400 bg-blue-500/10'
-      });
-    }
-    if (brokenImagesUnreadCount > 0) {
-      list.push({
-        id: 'broken-images',
-        title: 'Broken Images Detected',
-        description: `${brokenImagesUnreadCount} broken image${brokenImagesUnreadCount > 1 ? 's' : ''} reported by the app.`,
-        path: '/products/broken-images',
-        icon: <FiAlertTriangle />,
-        color: 'text-rose-400 bg-rose-500/10'
-      });
-    }
-    if (failedImageProductNames.length > 0) {
-      const namesPreview = failedImageProductNames.slice(0, 2).join(', ');
-      const totalFailed = failedImageProductNames.length;
-      list.push({
-        id: 'image-errors',
-        title: 'Image Load Failure',
-        description: `Failed to load ${totalFailed} product image${totalFailed > 1 ? 's' : ''} (${namesPreview}${totalFailed > 2 ? '...' : ''}). Check WordPress library access.`,
-        path: '/products/broken-images',
-        icon: <FiAlertTriangle />,
-        color: 'text-rose-400 bg-rose-500/10'
       });
     }
 
@@ -497,14 +431,8 @@ const Layout = () => {
   const notificationsList = getNotificationsList();
   const totalUnreadCount =
     chatUnreadCount +
-    ordersUnreadCount +
     usersUnreadCount +
-    usersVerifyUnreadCount +
-    usersDeletionUnreadCount +
-    quotesUnreadCount +
-    brokenImagesUnreadCount +
-    notificationsUnreadCount +
-    (failedImageProductNames.length > 0 ? 1 : 0);
+    notificationsUnreadCount;
 
   // Request Browser Notification Permission on load / show banner
   useEffect(() => {
@@ -604,202 +532,20 @@ const Layout = () => {
 
   // Clear counts when visiting the page
   useEffect(() => {
-    if (location.pathname.startsWith('/orders')) {
-      setOrdersUnreadCount(0);
+    if (location.pathname === '/users' || location.pathname === '/users/list') {
+      setUsersUnreadCount(0);
     }
-    if (location.pathname === '/users/list') {
-      const searchParams = new URLSearchParams(location.search);
-      const tab = searchParams.get('tab') || 'approved';
-      if (tab === 'pending') {
-        setUsersVerifyUnreadCount(0);
-      } else if (tab === 'deleted') {
-        setUsersDeletionUnreadCount(0);
-      } else {
-        setUsersUnreadCount(0);
-      }
-    }
-    if (location.pathname === '/quotes') {
-      setQuotesUnreadCount(0);
-    }
-    if (location.pathname === '/products/broken-images') {
-      setBrokenImagesUnreadCount(0);
-    }
-  }, [location.pathname, location.search]);
-
-  // Poll orders, users, and broken images
-  useEffect(() => {
-    const fetchOrdersAndUsers = async () => {
-      if (!user) return;
-      try {
-        const token = sessionStorage.getItem('accessToken');
-        const headers = { Authorization: `Bearer ${token}` };
-
-        const [ordersRes, usersRes, pendingRes, deletionRes, quotesRes, brokenImagesRes] = await Promise.all([
-          api.get('/orders/all', { headers }).catch(() => ({ data: [] })),
-          api.get('/admin/customers', { headers }).catch(() => ({ data: [] })),
-          api.get('/admin/pending', { headers }).catch(() => ({ data: [] })),
-          api.get('/admin/deletion-requests', { headers }).catch(() => ({ data: [] })),
-          api.get('/quotes/admin/all', { headers }).catch(() => ({ data: [] })),
-          api.get('/analytics/admin/broken-images?status=PENDING', { headers }).catch(() => ({ data: [] }))
-        ]);
-
-        const orders = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data?.orders || [];
-        const users = Array.isArray(usersRes.data) ? usersRes.data : [];
-        const pendingUsers = Array.isArray(pendingRes.data)
-          ? pendingRes.data
-          : pendingRes.data?.pending || pendingRes.data?.users || pendingRes.data?.data || [];
-
-        const deletionsData = deletionRes.data;
-        let deletionUsers = [];
-        if (Array.isArray(deletionsData)) {
-          deletionUsers = deletionsData;
-        } else if (deletionsData && typeof deletionsData === 'object') {
-          deletionUsers = deletionsData.users || deletionsData.data || [];
-        }
-
-        const quotesData = quotesRes.data;
-        let quotes = [];
-        if (Array.isArray(quotesData)) {
-          quotes = quotesData;
-        } else if (quotesData && typeof quotesData === 'object') {
-          quotes = quotesData.quotes || quotesData.data || [];
-        }
-
-        const brokenData = brokenImagesRes.data;
-        let pendingBrokenLogs = [];
-        if (Array.isArray(brokenData?.logs)) {
-          pendingBrokenLogs = brokenData.logs.filter(i => (i.status || 'PENDING').toUpperCase() === 'PENDING');
-        } else if (Array.isArray(brokenData)) {
-          pendingBrokenLogs = brokenData.filter(i => (i.status || 'PENDING').toUpperCase() === 'PENDING');
-        } else if (Array.isArray(brokenData?.brokenImages)) {
-          pendingBrokenLogs = brokenData.brokenImages.filter(i => (i.status || 'PENDING').toUpperCase() === 'PENDING');
-        }
-
-        if (location.pathname !== '/products/broken-images') {
-          setBrokenImagesUnreadCount(pendingBrokenLogs.length);
-        }
-
-        if (!isInitialDataLoad.current) {
-          const prevOrdersCount = prevOrdersRef.current?.length || 0;
-          const currentOrdersCount = orders.length;
-          if (currentOrdersCount > prevOrdersCount && !location.pathname.startsWith('/orders')) {
-            const countDiff = currentOrdersCount - prevOrdersCount;
-            setOrdersUnreadCount(prev => prev + countDiff);
-            addToast(
-              `New Order Received`,
-              `You have received ${countDiff} new order${countDiff > 1 ? 's' : ''} to process.`,
-              '/orders/all',
-              FiPackage,
-              'orders',
-              'orders'
-            );
-          }
-
-          const prevUsersCount = prevUsersRef.current?.length || 0;
-          const currentUsersCount = users.length;
-          if (currentUsersCount > prevUsersCount && location.pathname !== '/users/list') {
-            const countDiff = currentUsersCount - prevUsersCount;
-            setUsersUnreadCount(prev => prev + countDiff);
-            addToast(
-              `New Registration`,
-              `${countDiff} new user${countDiff > 1 ? 's' : ''} registered recently.`,
-              '/users/list',
-              FiUserPlus,
-              'users',
-              'users'
-            );
-          }
-
-          const prevPendingCount = prevPendingRef.current?.length || 0;
-          const currentPendingCount = pendingUsers.length;
-          const isAtPendingTab = location.pathname === '/users/list' && new URLSearchParams(location.search).get('tab') === 'pending';
-          if (currentPendingCount > prevPendingCount && !isAtPendingTab) {
-            const countDiff = currentPendingCount - prevPendingCount;
-            setUsersVerifyUnreadCount(prev => prev + countDiff);
-            addToast(
-              `Pending Verification`,
-              `${countDiff} user${countDiff > 1 ? 's' : ''} pending verification.`,
-              '/users/list?tab=pending',
-              FiClock,
-              'verify',
-              'users'
-            );
-          }
-
-          const prevDeletionCount = prevDeletionRef.current?.length || 0;
-          const currentDeletionCount = deletionUsers.length;
-          const isAtDeletionTab = location.pathname === '/users/list' && new URLSearchParams(location.search).get('tab') === 'deleted';
-          if (currentDeletionCount > prevDeletionCount && !isAtDeletionTab) {
-            const countDiff = currentDeletionCount - prevDeletionCount;
-            setUsersDeletionUnreadCount(prev => prev + countDiff);
-            addToast(
-              `Account Deletion Request`,
-              `${countDiff} account deletion request${countDiff > 1 ? 's' : ''} pending.`,
-              '/users/list?tab=deleted',
-              FiAlertTriangle,
-              'deletion',
-              'users'
-            );
-          }
-
-          const prevQuotesCount = prevQuotesRef.current?.length || 0;
-          const currentQuotesCount = quotes.length;
-          if (currentQuotesCount > prevQuotesCount && location.pathname !== '/quotes') {
-            const countDiff = currentQuotesCount - prevQuotesCount;
-            setQuotesUnreadCount(prev => prev + countDiff);
-            addToast(
-              `New Quote Request`,
-              `You have received ${countDiff} new quote request${countDiff > 1 ? 's' : ''} to review.`,
-              '/quotes',
-              FiFileText,
-              'quotes',
-              'quotes'
-            );
-          }
-
-          const prevBrokenCount = prevBrokenImagesRef.current?.length || 0;
-          const currentBrokenCount = pendingBrokenLogs.length;
-          if (currentBrokenCount > prevBrokenCount && location.pathname !== '/products/broken-images') {
-            const countDiff = currentBrokenCount - prevBrokenCount;
-            addToast(
-              `Broken Image Alert`,
-              `${countDiff} new broken image${countDiff > 1 ? 's' : ''} reported by the app.`,
-              '/products/list',
-              FiAlertTriangle,
-              'broken-images',
-              'brokenImages'
-            );
-          }
-        }
-
-        prevOrdersRef.current = orders;
-        prevUsersRef.current = users;
-        prevPendingRef.current = pendingUsers;
-        prevDeletionRef.current = deletionUsers;
-        prevQuotesRef.current = quotes;
-        prevBrokenImagesRef.current = pendingBrokenLogs;
-        isInitialDataLoad.current = false;
-
-      } catch (error) {
-        console.error("Failed to fetch orders or users", error);
-      }
-    };
-
-    fetchOrdersAndUsers();
-    const ordersInterval = getPollingInterval('orders', 30);
-    const intervalId = setInterval(fetchOrdersAndUsers, ordersInterval);
-    return () => clearInterval(intervalId);
-  }, [user, location.pathname, pollingConfigVersion]);
+  }, [location.pathname]);
 
   // Update browser tab title with total unread notification counts
   useEffect(() => {
-    const totalNotifications = chatUnreadCount + ordersUnreadCount + usersUnreadCount + usersVerifyUnreadCount + usersDeletionUnreadCount + quotesUnreadCount + brokenImagesUnreadCount + (failedImageProductNames.length > 0 ? 1 : 0);
+    const totalNotifications = chatUnreadCount + usersUnreadCount + notificationsUnreadCount;
     if (totalNotifications > 0) {
       document.title = `(${totalNotifications}) Auric`;
     } else {
       document.title = 'Auric';
     }
-  }, [chatUnreadCount, ordersUnreadCount, usersUnreadCount, usersVerifyUnreadCount, usersDeletionUnreadCount, quotesUnreadCount, brokenImagesUnreadCount, failedImageProductNames]);
+  }, [chatUnreadCount, usersUnreadCount, notificationsUnreadCount]);
 
   // Global event listener for image load failures
   useEffect(() => {
@@ -828,170 +574,9 @@ const Layout = () => {
     return `${BASE_URL}${cleanPath.startsWith('/') ? '' : '/'}${cleanPath}`;
   };
 
-  // Poll product images every 30 seconds to check for loading failures proactively
-  useEffect(() => {
-    let isMounted = true;
-    let timeoutId;
-    let intervalId;
-
-    const checkProductImages = async () => {
-      if (!user) return;
-      try {
-        const token = sessionStorage.getItem('accessToken');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const response = await axios.get(`${BASE_URL}/api/products/?t=${Date.now()}`, { headers });
-        const products = Array.isArray(response.data) ? response.data : (response.data?.data || []);
-        if (!products.length) return;
-
-        const activeProducts = products.filter(p => p.isActive !== false);
-        const failedProducts = [];
-
-        // Collect all images from main product or variants
-        const imagesToTest = [];
-        activeProducts.forEach(product => {
-          const prodName = product.name || 'Product';
-
-          // 1. Main product images
-          if (Array.isArray(product.images) && product.images.length > 0) {
-            product.images.forEach(img => {
-              if (typeof img === 'string' && img.trim()) {
-                imagesToTest.push({ productName: prodName, url: formatImageUrl(img.trim()) });
-              }
-            });
-          } else if (typeof product.images === 'string' && product.images.trim()) {
-            product.images.split(',').forEach(img => {
-              if (img.trim()) {
-                imagesToTest.push({ productName: prodName, url: formatImageUrl(img.trim()) });
-              }
-            });
-          }
-
-          // 2. Variant images
-          if (Array.isArray(product.variants)) {
-            product.variants.forEach(v => {
-              if (Array.isArray(v.images)) {
-                v.images.forEach(img => {
-                  if (typeof img === 'string' && img.trim()) {
-                    imagesToTest.push({ productName: prodName, url: formatImageUrl(img.trim()) });
-                  }
-                });
-              } else if (typeof v.images === 'string' && v.images.trim()) {
-                v.images.split(',').forEach(img => {
-                  if (img.trim()) {
-                    imagesToTest.push({ productName: prodName, url: formatImageUrl(img.trim()) });
-                  }
-                });
-              }
-            });
-          }
-        });
-
-        // Deduplicate URLs so each unique image URL is tested once
-        const uniqueImageMap = new Map();
-        imagesToTest.forEach(item => {
-          if (item.url && !uniqueImageMap.has(item.url)) {
-            uniqueImageMap.set(item.url, item.productName);
-          }
-        });
-
-        const uniqueItems = Array.from(uniqueImageMap.entries()).map(([url, productName]) => ({ url, productName }));
-        if (uniqueItems.length === 0) return;
-
-        // Test in parallel batches of 15 to avoid browser network connection saturation
-        const BATCH_SIZE = 15;
-        for (let i = 0; i < uniqueItems.length; i += BATCH_SIZE) {
-          if (!isMounted) return;
-          const batch = uniqueItems.slice(i, i + BATCH_SIZE);
-          const results = await Promise.all(
-            batch.map(({ productName, url }) => {
-              return new Promise((resolve) => {
-                const img = new Image();
-                let hasResolved = false;
-
-                // Generous 20s timeout so slow or large WordPress images have ample time to load
-                const timer = setTimeout(() => {
-                  if (!hasResolved) {
-                    hasResolved = true;
-                    img.src = '';
-                    resolve({ failed: true, productName });
-                  }
-                }, 30000);
-
-                img.onload = () => {
-                  if (!hasResolved) {
-                    hasResolved = true;
-                    clearTimeout(timer);
-                    resolve({ failed: false, productName });
-                  }
-                };
-
-                img.onerror = () => {
-                  if (!hasResolved) {
-                    hasResolved = true;
-                    clearTimeout(timer);
-                    resolve({ failed: true, productName });
-                  }
-                };
-
-                img.src = url;
-              });
-            })
-          );
-
-          results.forEach(res => {
-            if (res.failed) {
-              failedProducts.push(res.productName);
-            }
-          });
-        }
-
-        if (isMounted) {
-          const uniqueFailed = Array.from(new Set(failedProducts));
-          const prevSet = prevFailedImagesRef.current;
-          const newlyAdded = uniqueFailed.filter(name => !prevSet.has(name));
-
-          // Only trigger toast if there are newly discovered broken images
-          if (newlyAdded.length > 0) {
-            newlyAdded.forEach(name => prevSet.add(name));
-            const namesPreview = newlyAdded.slice(0, 2).join(', ');
-            const totalFailed = newlyAdded.length;
-            addToast(
-              "Image Load Alert",
-              `Failed to load ${totalFailed} product image(s) (${namesPreview}${totalFailed > 2 ? '...' : ''}). Check your WordPress library access.`,
-              "/products/list",
-              FiAlertTriangle
-            );
-          }
-
-          setFailedImageProductNames(uniqueFailed);
-        }
-      } catch (error) {
-        console.error("Failed to poll product images status", error);
-      }
-    };
-
-    // Run first check after 2s, then recurring according to brokenImages polling interval
-    timeoutId = setTimeout(checkProductImages, 2000);
-    const imgInterval = getPollingInterval('brokenImages', 180);
-    intervalId = setInterval(checkProductImages, imgInterval);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timeoutId);
-      clearInterval(intervalId);
-    };
-  }, [user, pollingConfigVersion]);
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
   const getBadgeCount = (path) => {
     if (path === '/chat') return chatUnreadCount;
-    if (path === '/orders' || path === '/orders/all') return ordersUnreadCount;
-    if (path === '/users/list') return usersUnreadCount + usersVerifyUnreadCount + usersDeletionUnreadCount;
-    if (path === '/quotes') return quotesUnreadCount;
-    if (path === '/products/broken-images') return brokenImagesUnreadCount + (failedImageProductNames.length > 0 ? 1 : 0);
+    if (path === '/users') return usersUnreadCount;
     if (path === '/notifications') return notificationsUnreadCount;
     return 0;
   };
@@ -1041,8 +626,7 @@ const Layout = () => {
                   (t.path === '/users/list' || t.path.includes('tab=approved')) ? 'border-l-indigo-500 shadow-indigo-500/10' :
                     t.path.includes('tab=pending') ? 'border-l-amber-500 shadow-amber-500/10' :
                       t.path.includes('tab=deleted') ? 'border-l-rose-500 shadow-rose-500/10' :
-                        t.path === '/quotes' ? 'border-l-cyan-500 shadow-cyan-500/10' :
-                          'border-l-blue-500 shadow-blue-500/10'
+                        'border-l-blue-500 shadow-blue-500/10'
               }`}
           >
             <div className={`p-1 rounded-xl shrink-0 group-hover:scale-110 transition-transform ${
@@ -1052,8 +636,7 @@ const Layout = () => {
                   (t.path === '/users/list' || t.path.includes('tab=approved')) ? 'text-indigo-500' :
                     t.path.includes('tab=pending') ? 'text-amber-500' :
                       t.path.includes('tab=deleted') ? 'text-rose-500' :
-                        t.path === '/quotes' ? 'text-cyan-500' :
-                          'text-blue-500'
+                        'text-blue-500'
               }`}>
               <t.IconComponent size={20} />
             </div>
@@ -1370,7 +953,7 @@ const Layout = () => {
       {/* MOBILE OVERLAY */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity"
+          className="fixed inset-0 dark:bg-black/60 backdrop-blur-lg z-40 lg:hidden transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -1751,7 +1334,7 @@ const Layout = () => {
                         </div>
                         <div>
                           <p className={`text-xs font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>Desktop Push Alerts</p>
-                          <p className="text-[10px] text-slate-500">Get notified for orders & quotes even when tab is in background.</p>
+                          <p className="text-[10px] text-slate-500">Get notified for orders even when tab is in background.</p>
                         </div>
                       </div>
                       <button
@@ -1938,7 +1521,7 @@ const Layout = () => {
                 <FiBell size={16} />
               </div>
               <p className="text-xs font-semibold">
-                <span className="font-extrabold">Stay updated in real-time:</span> Enable desktop browser notifications to receive instant alerts for new orders, quotes, registrations, and messages.
+                <span className="font-extrabold">Stay updated in real-time:</span> Enable desktop browser notifications to receive instant alerts for new orders, registrations, and messages.
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -1962,7 +1545,7 @@ const Layout = () => {
         {/* DYNAMIC PAGE CONTENT */}
         <main ref={mainRef} onScroll={checkScrollState} className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
           <div className="w-full mx-auto p-1 sm:p-2 lg:p-4 min-h-full">
-            <Outlet context={{ setChatUnreadCount, setOrdersUnreadCount, setUsersUnreadCount, setUsersVerifyUnreadCount, setUsersDeletionUnreadCount, setQuotesUnreadCount }} />
+            <Outlet context={{ setChatUnreadCount, setOrdersUnreadCount, setUsersUnreadCount, setUsersVerifyUnreadCount, setUsersDeletionUnreadCount }} />
           </div>
         </main>
 
