@@ -25,14 +25,17 @@ import {
   FiChevronDown,
   FiFileText,
   FiShoppingBag,
-  FiUploadCloud
+  FiUploadCloud,
+  FiPercent
 } from 'react-icons/fi';
+import * as XLSX from 'xlsx';
 import BulkProductImportModal, { downloadProductExcelTemplate } from './BulkProductImportModal';
 import { BiRupee } from 'react-icons/bi';
 import PageHeader from '@/components/ui/PageHeader';
 import Skeleton from '@/components/ui/Skeleton';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
+import { BulkActionBar, BatchProgressModal } from '@/components/ui';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import {
   getProductsApi,
@@ -103,6 +106,14 @@ const Products = () => {
   const [detailsProduct, setDetailsProduct] = useState(null);
   const [deleteConfirmProduct, setDeleteConfirmProduct] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Bulk Operations State
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
+  const [isBulkCategoryModalOpen, setIsBulkCategoryModalOpen] = useState(false);
+  const [bulkTargetCategoryId, setBulkTargetCategoryId] = useState('');
+  const [batchProgress, setBatchProgress] = useState(null);
+  const abortBatchRef = useRef(false);
 
   // Toast State
   const [toast, setToast] = useState(null);
@@ -419,6 +430,190 @@ const Products = () => {
     document.body.removeChild(link);
   };
 
+  // Bulk Selection Helpers
+  const toggleSelectProduct = (productId) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    if (selectedProductIds.length === filteredProducts.length) {
+      setSelectedProductIds([]);
+    } else {
+      setSelectedProductIds(filteredProducts.map((p) => p._id));
+    }
+  };
+
+  const handleBulkStatusChange = async (targetActive) => {
+    if (selectedProductIds.length === 0) return;
+    const actionLabel = targetActive ? 'Activating' : 'Deactivating';
+    abortBatchRef.current = false;
+    setBatchProgress({
+      isOpen: true,
+      title: `Bulk ${targetActive ? 'Activate' : 'Deactivate'} Products`,
+      current: 0,
+      total: selectedProductIds.length,
+      percentage: 0,
+      status: 'processing',
+      logs: [`Starting bulk ${actionLabel.toLowerCase()} for ${selectedProductIds.length} products...`]
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < selectedProductIds.length; i++) {
+      if (abortBatchRef.current) {
+        setBatchProgress((prev) => ({
+          ...prev,
+          status: 'error',
+          logs: [...prev.logs, 'Batch execution aborted by user.']
+        }));
+        break;
+      }
+
+      const prodId = selectedProductIds[i];
+      const prod = products.find((p) => p._id === prodId);
+      const name = prod ? prod.name : prodId;
+
+      try {
+        await updateProductApi(prodId, { isActive: targetActive });
+        successCount++;
+        setBatchProgress((prev) => {
+          const current = i + 1;
+          return {
+            ...prev,
+            current,
+            percentage: Math.round((current / prev.total) * 100),
+            logs: [...prev.logs, `✓ Product "${name}" updated to ${targetActive ? 'Active' : 'Inactive'}`]
+          };
+        });
+      } catch (err) {
+        failCount++;
+        setBatchProgress((prev) => {
+          const current = i + 1;
+          return {
+            ...prev,
+            current,
+            percentage: Math.round((current / prev.total) * 100),
+            logs: [...prev.logs, `✗ Failed to update "${name}": ${err?.response?.data?.message || err.message}`]
+          };
+        });
+      }
+    }
+
+    setBatchProgress((prev) => ({
+      ...prev,
+      status: prev.status === 'error' ? 'error' : 'completed',
+      logs: [
+        ...prev.logs,
+        `Finished! Success: ${successCount}, Failed: ${failCount}`
+      ]
+    }));
+
+    await fetchData(true);
+    showToast(`Bulk update complete: ${successCount} updated, ${failCount} failed`);
+  };
+
+  const handleBulkMoveCategory = async () => {
+    if (!bulkTargetCategoryId || selectedProductIds.length === 0) return;
+    const targetCat = categories.find((c) => c._id === bulkTargetCategoryId);
+    const catName = targetCat ? targetCat.name : 'Selected Category';
+
+    setIsBulkCategoryModalOpen(false);
+    abortBatchRef.current = false;
+    setBatchProgress({
+      isOpen: true,
+      title: `Bulk Move Products to "${catName}"`,
+      current: 0,
+      total: selectedProductIds.length,
+      percentage: 0,
+      status: 'processing',
+      logs: [`Starting category reassignment to "${catName}" for ${selectedProductIds.length} products...`]
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < selectedProductIds.length; i++) {
+      if (abortBatchRef.current) {
+        setBatchProgress((prev) => ({
+          ...prev,
+          status: 'error',
+          logs: [...prev.logs, 'Batch execution aborted by user.']
+        }));
+        break;
+      }
+
+      const prodId = selectedProductIds[i];
+      const prod = products.find((p) => p._id === prodId);
+      const name = prod ? prod.name : prodId;
+
+      try {
+        await updateProductApi(prodId, { categoryId: bulkTargetCategoryId });
+        successCount++;
+        setBatchProgress((prev) => {
+          const current = i + 1;
+          return {
+            ...prev,
+            current,
+            percentage: Math.round((current / prev.total) * 100),
+            logs: [...prev.logs, `✓ Product "${name}" moved to "${catName}"`]
+          };
+        });
+      } catch (err) {
+        failCount++;
+        setBatchProgress((prev) => {
+          const current = i + 1;
+          return {
+            ...prev,
+            current,
+            percentage: Math.round((current / prev.total) * 100),
+            logs: [...prev.logs, `✗ Failed to move "${name}": ${err?.response?.data?.message || err.message}`]
+          };
+        });
+      }
+    }
+
+    setBatchProgress((prev) => ({
+      ...prev,
+      status: prev.status === 'error' ? 'error' : 'completed',
+      logs: [
+        ...prev.logs,
+        `Finished! Success: ${successCount}, Failed: ${failCount}`
+      ]
+    }));
+
+    await fetchData(true);
+    showToast(`Moved ${successCount} products to ${catName}`);
+  };
+
+  const handleBulkExportProducts = () => {
+    const selectedProds = products.filter((p) => selectedProductIds.includes(p._id));
+    if (selectedProds.length === 0) return;
+
+    const exportRows = selectedProds.map((prod, idx) => {
+      const catName = typeof prod.categoryId === 'object' ? prod.categoryId?.name : '';
+      return {
+        'S.No.': idx + 1,
+        'SKU': prod.sku || '',
+        'Product Name': prod.name || '',
+        'Brand': prod.brand || 'Whatnot',
+        'Category': catName || '',
+        'Unit': prod.unit || 'PCS',
+        'Status': prod.isActive ? 'Active' : 'Inactive',
+        'Description': prod.description || '',
+        'Created At': prod.createdAt ? formatDateDDMMYYYY(prod.createdAt) : ''
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
+    XLSX.writeFile(workbook, `Products_Bulk_Export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    showToast(`Exported ${selectedProds.length} products to Excel.`);
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
       {/* Toast Notification */}
@@ -587,6 +782,28 @@ const Products = () => {
             <FiPlus className="text-base" />
             <span>Add Product</span>
           </button>
+
+          {/* Bulk Operations Toggle Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsBulkMode((prev) => !prev);
+              if (isBulkMode) setSelectedProductIds([]);
+            }}
+            className={`flex items-center gap-2 px-3.5 py-2.5 border text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 ${
+              isBulkMode
+                ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20 shadow-md'
+                : 'bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200'
+            }`}
+          >
+            <FiLayers className={`text-sm ${isBulkMode ? 'text-white' : 'text-blue-500'}`} />
+            <span>Bulk Operations</span>
+            {selectedProductIds.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 bg-blue-700 text-white text-[10px] rounded-full font-bold">
+                {selectedProductIds.length}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Filter Dropdowns */}
@@ -734,6 +951,16 @@ const Products = () => {
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5">
                 <tr>
+                  {isBulkMode && (
+                    <th className="py-3 px-3 text-center w-12">
+                      <input
+                        type="checkbox"
+                        checked={filteredProducts.length > 0 && selectedProductIds.length === filteredProducts.length}
+                        onChange={handleSelectAllFiltered}
+                        className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                      />
+                    </th>
+                  )}
                   <th className="py-3 px-4 text-center w-16">S.No.</th>
                   <th className="py-3 px-4">Product Details</th>
                   <th className="py-3 px-4">Brand</th>
@@ -748,13 +975,28 @@ const Products = () => {
                 {paginatedProducts.map((product, idx) => {
                   const catName = typeof product.categoryId === 'object' ? product.categoryId?.name : '';
                   const serialNumber = indexOfFirstItem + idx + 1;
+                  const isSelected = selectedProductIds.includes(product._id);
 
                   return (
                     <tr
                       key={product._id}
                       onClick={() => setDetailsProduct(product)}
-                      className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      className={`hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer ${
+                        isBulkMode && isSelected
+                          ? 'bg-blue-50/60 dark:bg-blue-900/10'
+                          : ''
+                      }`}
                     >
+                      {isBulkMode && (
+                        <td className="py-3.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectProduct(product._id)}
+                            className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                          />
+                        </td>
+                      )}
                       {/* S.No. */}
                       <td className="py-3.5 px-4 text-center font-mono text-xs font-semibold text-slate-500 dark:text-slate-400">
                         {serialNumber}
@@ -1252,6 +1494,123 @@ const Products = () => {
         existingProducts={products}
         onImportComplete={handleImportComplete}
       />
+
+      {/* Floating Bulk Action Bar */}
+      {isBulkMode && (
+        <BulkActionBar
+          selectedCount={selectedProductIds.length}
+          totalCount={filteredProducts.length}
+          onClearSelection={() => setSelectedProductIds([])}
+          onSelectAll={handleSelectAllFiltered}
+          isAllSelected={selectedProductIds.length > 0 && selectedProductIds.length === filteredProducts.length}
+          onExitBulkMode={() => {
+            setIsBulkMode(false);
+            setSelectedProductIds([]);
+          }}
+          actions={[
+            {
+              id: 'activate',
+              label: 'Set Active',
+              icon: FiCheckCircle,
+              variant: 'primary',
+              disabled: selectedProductIds.length === 0,
+              onClick: () => handleBulkStatusChange(true)
+            },
+            {
+              id: 'deactivate',
+              label: 'Set Inactive',
+              icon: FiAlertCircle,
+              variant: 'danger',
+              disabled: selectedProductIds.length === 0,
+              onClick: () => handleBulkStatusChange(false)
+            },
+            {
+              id: 'move-cat',
+              label: 'Move Category',
+              icon: FiLayers,
+              variant: 'warning',
+              disabled: selectedProductIds.length === 0,
+              onClick: () => {
+                setBulkTargetCategoryId(categories[0]?._id || '');
+                setIsBulkCategoryModalOpen(true);
+              }
+            },
+            {
+              id: 'export',
+              label: 'Export Excel',
+              icon: FiDownload,
+              variant: 'secondary',
+              disabled: selectedProductIds.length === 0,
+              onClick: handleBulkExportProducts
+            }
+          ]}
+        />
+      )}
+
+      {/* ================= BULK CATEGORY MODAL ================= */}
+      {isBulkCategoryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-2xl mb-4">
+              <FiLayers />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Move Products to Category</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Reassign <span className="font-bold text-slate-800 dark:text-slate-200">{selectedProductIds.length}</span> selected products to the following category:
+            </p>
+
+            <div className="mt-4">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                Target Category
+              </label>
+              <select
+                value={bulkTargetCategoryId}
+                onChange={(e) => setBulkTargetCategoryId(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+              >
+                {categories.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsBulkCategoryModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkMoveCategory}
+                disabled={!bulkTargetCategoryId}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-600/25 cursor-pointer disabled:opacity-50"
+              >
+                Apply Reassignment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Progress Modal */}
+      {batchProgress && (
+        <BatchProgressModal
+          isOpen={batchProgress.isOpen}
+          title={batchProgress.title}
+          current={batchProgress.current}
+          total={batchProgress.total}
+          percentage={batchProgress.percentage}
+          status={batchProgress.status}
+          logs={batchProgress.logs}
+          onAbort={() => { abortBatchRef.current = true; }}
+          onClose={() => setBatchProgress(null)}
+        />
+      )}
     </div>
   );
 };

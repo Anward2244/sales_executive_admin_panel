@@ -27,12 +27,21 @@ import {
   FiLoader,
   FiPieChart,
   FiActivity,
-  FiFilter
+  FiFilter,
+  FiGrid,
+  FiShare2
 } from 'react-icons/fi';
 import VisxTrendChart from '@/components/dashboard/VisxTrendChart';
 import VisxPipelineDonut from '@/components/dashboard/VisxPipelineDonut';
+import VisxTreemapChart from '@/components/dashboard/VisxTreemapChart';
 import { useTheme } from '@/Context/ThemeContext';
-import { getDashboardMetricsApi, getReportsApi } from '@/api/axios';
+import {
+  getDashboardMetricsApi,
+  getReportsApi,
+  getPurchaseOrdersApi,
+  getCompaniesApi,
+  getFirmsApi
+} from '@/api/axios';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import CopyButton from '@/components/ui/CopyButton';
@@ -44,6 +53,9 @@ const Dashboard = () => {
   const { isDark } = useTheme();
   const [dashboardData, setDashboardData] = useState(null);
   const [reportsData, setReportsData] = useState(null);
+  const [allPurchaseOrders, setAllPurchaseOrders] = useState([]);
+  const [allCompanies, setAllCompanies] = useState([]);
+  const [allFirms, setAllFirms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -51,7 +63,10 @@ const Dashboard = () => {
 
   // Chart 1 controls - Mixed Chart series toggles & range
   const [visibleSeries, setVisibleSeries] = useState({ revenue: true, orders: true });
-  const [trendRange, setTrendRange] = useState('30d'); // '7d' | '30d' | 'all'
+  const [trendRange, setTrendRange] = useState('1w'); // '1w' | '1m' | '1y'
+
+  // Tree controls - Revenue vs PO Volume
+  const [treemapMetric, setTreemapMetric] = useState('revenue'); // 'revenue' | 'orders'
 
   const toggleSeries = (key) => {
     setVisibleSeries((prev) => {
@@ -73,9 +88,12 @@ const Dashboard = () => {
     setError(null);
 
     try {
-      const [dashRes, repRes] = await Promise.allSettled([
+      const [dashRes, repRes, poRes, compRes, firmRes] = await Promise.allSettled([
         getDashboardMetricsApi(),
-        getReportsApi({ limit: 30 })
+        getReportsApi({ limit: 30 }),
+        getPurchaseOrdersApi({ limit: 100 }),
+        getCompaniesApi(),
+        getFirmsApi()
       ]);
 
       if (dashRes.status === 'fulfilled') {
@@ -88,6 +106,21 @@ const Dashboard = () => {
       if (repRes.status === 'fulfilled') {
         const repData = repRes.value?.data?.data || repRes.value?.data || {};
         setReportsData(repData);
+      }
+
+      if (poRes.status === 'fulfilled') {
+        const poData = poRes.value?.data?.data?.purchaseOrders || poRes.value?.data?.data || poRes.value?.data || [];
+        setAllPurchaseOrders(Array.isArray(poData) ? poData : []);
+      }
+
+      if (compRes.status === 'fulfilled') {
+        const compData = compRes.value?.data?.data || compRes.value?.data || [];
+        setAllCompanies(Array.isArray(compData) ? compData : []);
+      }
+
+      if (firmRes.status === 'fulfilled') {
+        const firmData = firmRes.value?.data?.data || firmRes.value?.data || [];
+        setAllFirms(Array.isArray(firmData) ? firmData : []);
       }
     } catch (err) {
       console.error('Failed to load dashboard metrics:', err);
@@ -112,8 +145,11 @@ const Dashboard = () => {
   // Derived Summary & Active Entities Metrics
   const summary = dashboardData?.summary || {};
   const activeEntities = summary.activeEntities || {};
-  const totalOrders = summary.totalOrders ?? 0;
-  const totalOrderValue = summary.totalOrderValue ?? 0;
+  const totalOrders = Math.max(Number(summary.totalOrders) || 0, allPurchaseOrders.length);
+  const totalOrderValue = Math.max(
+    Number(summary.totalOrderValue) || 0,
+    allPurchaseOrders.reduce((sum, o) => sum + Number(o.totalAmount || o.totalValue || 0), 0)
+  );
 
   const totalUsers = activeEntities.users ?? 0;
   const totalCompanies = activeEntities.companies ?? 0;
@@ -147,49 +183,110 @@ const Dashboard = () => {
     ? dashboardData.recentOrders
     : [];
 
-  // Process daily trend data for Chart 1
+  // Process daily trend data for Chart 1 based on trendRange ('1w' | '1m' | '1y')
   const processedTrendData = useMemo(() => {
-    let rawTrend = [];
-    if (Array.isArray(reportsData?.dailyTrend) && reportsData.dailyTrend.length > 0) {
-      rawTrend = reportsData.dailyTrend.map((d) => ({
-        date: d._id || d.date,
-        revenue: Number(d.totalAmount) || 0,
-        orders: Number(d.orderCount) || 0
-      }));
-    } else if (Array.isArray(recentOrders) && recentOrders.length > 0) {
-      const dateMap = {};
-      recentOrders.forEach((o) => {
-        if (!o.createdAt) return;
-        const d = new Date(o.createdAt).toISOString().split('T')[0];
-        if (!dateMap[d]) {
-          dateMap[d] = { date: d, revenue: 0, orders: 0 };
+    // 1. Gather all purchase orders and strictly deduplicate by _id
+    const rawOrders = Array.isArray(allPurchaseOrders) && allPurchaseOrders.length > 0
+      ? allPurchaseOrders
+      : (Array.isArray(recentOrders) ? recentOrders : []);
+
+    const seenOrderIds = new Set();
+    const uniqueOrders = rawOrders.filter((o) => {
+      if (!o || !o._id) return true;
+      if (seenOrderIds.has(o._id)) return false;
+      seenOrderIds.add(o._id);
+      return true;
+    });
+
+    // 2. Build map of day-level totals (Never double count reportsData with uniqueOrders)
+    const dateMap = {};
+
+    if (uniqueOrders.length > 0) {
+      // Calculate exclusively from real purchase orders
+      uniqueOrders.forEach((o) => {
+        const dateVal = o.createdAt || o.orderDate || o.date;
+        if (!dateVal) return;
+        const key = new Date(dateVal).toISOString().split('T')[0];
+        if (!dateMap[key]) {
+          dateMap[key] = { date: key, revenue: 0, orders: 0 };
         }
-        dateMap[d].revenue += Number(o.totalAmount || o.totalValue || 0);
-        dateMap[d].orders += 1;
+        dateMap[key].revenue += Number(o.totalAmount || o.totalValue || 0);
+        dateMap[key].orders += 1;
       });
-      rawTrend = Object.values(dateMap).sort((a, b) => a.date.localeCompare(b.date));
+    } else if (Array.isArray(reportsData?.dailyTrend)) {
+      // Fallback only if no individual purchase orders are loaded
+      reportsData.dailyTrend.forEach((d) => {
+        const key = d._id || d.date;
+        if (!key) return;
+        dateMap[key] = {
+          date: key,
+          revenue: Number(d.totalAmount) || 0,
+          orders: Number(d.orderCount) || 0
+        };
+      });
     }
 
-    if (rawTrend.length === 0) {
-      const today = new Date();
+    const today = new Date();
+
+    if (trendRange === '1w' || trendRange === '7d') {
+      // 1 Week: Exactly last 7 consecutive calendar days (Today - 6 to Today)
+      const result = [];
       for (let i = 6; i >= 0; i--) {
         const d = new Date(today);
         d.setDate(today.getDate() - i);
-        rawTrend.push({
-          date: d.toISOString().split('T')[0],
-          revenue: 0,
-          orders: 0
-        });
+        const key = d.toISOString().split('T')[0];
+        result.push(dateMap[key] || { date: key, revenue: 0, orders: 0 });
       }
+      return result;
     }
 
-    if (trendRange === '7d') {
-      return rawTrend.slice(-7);
-    } else if (trendRange === '30d') {
-      return rawTrend.slice(-30);
+    if (trendRange === '1m' || trendRange === '30d') {
+      // 1 Month: Exactly last 30 consecutive calendar days (Today - 29 to Today)
+      const result = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        result.push(dateMap[key] || { date: key, revenue: 0, orders: 0 });
+      }
+      return result;
     }
-    return rawTrend;
-  }, [reportsData, recentOrders, trendRange]);
+
+    if (trendRange === '1y') {
+      // 1 Year: Past 12 months aggregated by month (1st of each month)
+      const result = [];
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        let monthRev = 0;
+        let monthOrd = 0;
+
+        Object.keys(dateMap).forEach((dateKey) => {
+          if (dateKey.startsWith(yearMonth)) {
+            monthRev += dateMap[dateKey].revenue;
+            monthOrd += dateMap[dateKey].orders;
+          }
+        });
+
+        result.push({
+          date: `${yearMonth}-01`,
+          revenue: monthRev,
+          orders: monthOrd
+        });
+      }
+      return result;
+    }
+
+    // Default 1w fallback
+    const fallback = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      fallback.push({ date: key, revenue: 0, orders: 0 });
+    }
+    return fallback;
+  }, [allPurchaseOrders, recentOrders, reportsData, trendRange]);
 
   // Aggregate metrics for Chart 1 stat footer
   const trendSummary = useMemo(() => {
@@ -200,6 +297,208 @@ const Dashboard = () => {
     const avgOrderValue = totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0;
     return { totalRev, totalOrd, peakRev, avgRev, avgOrderValue };
   }, [processedTrendData]);
+
+  // Construct hierarchical B2B Tree data for all 5 companies:
+  // Root -> Companies -> Linked Firms -> POs -> Products
+  const treemapData = useMemo(() => {
+    // 5 registered companies in the Auric ecosystem
+    const KNOWN_5_COMPANIES = [
+      { _id: '6aae75249308c15135f4855f', name: 'Vantiq Retail LLP', code: 'VANTIQ', isActive: false },
+      { _id: '6aae73f39308c15135f48532', name: 'Whatnot Retail LLP', code: 'WHATNOT-RETAIL', isActive: false },
+      { _id: '6aae68f39308c15135f48405', name: 'Inizio Lifestyle Private Limited', code: 'INIZIO', isActive: true },
+      { _id: '6aae685a9308c15135f483fe', name: 'Auric Lifestyle Private Limited', code: 'AURIC', isActive: true },
+      { _id: '6aae67329308c15135f483f2', name: 'Whatnot India Private Limited', code: 'WHATNOT', isActive: true }
+    ];
+
+    // Combine fetched companies from API with KNOWN_5_COMPANIES to ensure ALL 5 are present
+    const combinedCompaniesMap = {};
+    KNOWN_5_COMPANIES.forEach((c) => {
+      combinedCompaniesMap[c.name] = { ...c };
+    });
+    if (Array.isArray(allCompanies) && allCompanies.length > 0) {
+      allCompanies.forEach((c) => {
+        if (c && c.name) {
+          combinedCompaniesMap[c.name] = {
+            ...combinedCompaniesMap[c.name],
+            ...c,
+            code: c.code || combinedCompaniesMap[c.name]?.code || '',
+            isActive: c.isActive !== undefined ? c.isActive : combinedCompaniesMap[c.name]?.isActive
+          };
+        }
+      });
+    }
+
+    const targetCompanies = Object.values(combinedCompaniesMap);
+
+    // Pool of all orders
+    const sourceOrders = Array.isArray(allPurchaseOrders) && allPurchaseOrders.length > 0
+      ? allPurchaseOrders
+      : recentOrders;
+
+    const companyChildren = targetCompanies.map((company) => {
+      const compId = company._id;
+      const compName = company.name;
+      const compCode = company.code || '';
+      const compIsActive = company.isActive !== undefined ? company.isActive : true;
+
+      // 1. Find all firms linked to this company
+      const matchedFirms = (Array.isArray(allFirms) ? allFirms : []).filter((f) => {
+        const fCompId = typeof f.companyId === 'object' ? f.companyId?._id : f.companyId;
+        const fCompName = typeof f.companyId === 'object' ? f.companyId?.name : '';
+        return (compId && fCompId === compId) || (fCompName && fCompName === compName);
+      });
+
+      // 2. Find all orders linked to this company
+      const matchedCompanyOrders = sourceOrders.filter((o) => {
+        const oCompId = typeof o.companyId === 'object' ? o.companyId?._id : o.companyId;
+        const oCompName = typeof o.companyId === 'object' ? o.companyId?.name : (typeof o.companyId === 'string' ? o.companyId : '');
+        return (compId && oCompId === compId) || (oCompName && oCompName.toLowerCase() === compName.toLowerCase());
+      });
+
+      // Group orders by firm
+      const firmMap = {};
+
+      // Seed with registered firms from allFirms
+      matchedFirms.forEach((f) => {
+        const fName = f.firmName || f.name || 'Branch';
+        firmMap[fName] = {
+          _id: f._id,
+          name: fName,
+          city: f.city || '',
+          companyName: compName,
+          nodeType: 'firm',
+          pos: []
+        };
+      });
+
+      // Seed with firms found in orders
+      matchedCompanyOrders.forEach((o) => {
+        const fName = o.firmId?.firmName || (typeof o.firmId === 'string' ? o.firmId : null);
+        if (!fName) return;
+
+        if (!firmMap[fName]) {
+          firmMap[fName] = {
+            _id: o.firmId?._id || o.firmId,
+            name: fName,
+            city: o.firmId?.city || '',
+            companyName: compName,
+            nodeType: 'firm',
+            pos: []
+          };
+        }
+
+        // Build PO node from order
+        const poNum = o.poNumber || o.orderNumber || (`PO-${o._id ? o._id.slice(-6) : '000001'}`);
+        const poAmt = Number(o.totalAmount || o.totalValue || o.subtotal || 0);
+
+        // Build product children ONLY from actual line items
+        const productChildren = [];
+        if (Array.isArray(o.items) && o.items.length > 0) {
+          o.items.forEach((item, idx) => {
+            const pName = item.productNameSnapshot || item.productId?.name || item.name;
+            if (!pName) return;
+            const qty = Number(item.quantity || 1);
+            const uPrice = Number(item.unitPrice || 0);
+            const lineTotal = Number(item.totalPrice || (qty * uPrice) || 0);
+
+            productChildren.push({
+              name: pName,
+              sku: item.skuSnapshot || item.productId?.sku || '',
+              category: item.category || '',
+              quantity: qty,
+              unitPrice: uPrice,
+              revenue: lineTotal > 0 ? lineTotal : poAmt,
+              poNumber: poNum,
+              poStatus: o.status || 'PENDING',
+              firmName: fName,
+              companyName: compName,
+              nodeType: 'product'
+            });
+          });
+        }
+
+        firmMap[fName].pos.push({
+          name: poNum,
+          poNumber: poNum,
+          status: o.status || 'PENDING',
+          date: o.createdAt,
+          totalAmount: poAmt,
+          revenue: poAmt,
+          firmName: fName,
+          companyName: compName,
+          nodeType: 'po',
+          children: productChildren.length > 0 ? productChildren : null
+        });
+      });
+
+      // Format firm children ONLY if actual firms exist in database/orders
+      // If company has no firms in DB, firmChildren is null (no fake data)
+      const firmChildren = Object.keys(firmMap).length > 0
+        ? Object.values(firmMap).map((firm) => {
+            const poChildren = firm.pos.length > 0 ? firm.pos : null;
+            const firmRevenue = poChildren ? poChildren.reduce((s, p) => s + (p.revenue || 0), 0) : 0;
+            const firmOrders = poChildren ? poChildren.length : 0;
+
+            return {
+              ...firm,
+              revenue: firmRevenue,
+              orders: firmOrders,
+              children: poChildren
+            };
+          })
+        : null;
+
+      const companyRevenue = firmChildren ? firmChildren.reduce((s, f) => s + (f.revenue || 0), 0) : 0;
+      const companyOrders = firmChildren ? firmChildren.reduce((s, f) => s + (f.orders || 0), 0) : 0;
+
+      return {
+        _id: compId,
+        name: compName,
+        code: compCode,
+        isActive: compIsActive,
+        nodeType: 'company',
+        revenue: companyRevenue,
+        orders: companyOrders,
+        firmCount: firmChildren ? firmChildren.length : 0,
+        children: firmChildren
+      };
+    });
+
+    return {
+      name: 'Auric B2B Network',
+      nodeType: 'root',
+      children: companyChildren
+    };
+  }, [allCompanies, allFirms, allPurchaseOrders, recentOrders]);
+
+  // Derived treemap statistics
+  const treemapSummary = useMemo(() => {
+    let totalRev = 0;
+    let totalOrd = 0;
+    let entityCount = 0;
+    let topEntity = { name: '—', value: 0 };
+
+    if (treemapData?.children) {
+      treemapData.children.forEach((comp) => {
+        let compTotal = 0;
+        if (comp.children) {
+          comp.children.forEach((f) => {
+            const rev = Number(f.revenue || 0);
+            const ord = Number(f.orders || 0);
+            totalRev += rev;
+            totalOrd += ord;
+            entityCount += 1;
+            compTotal += treemapMetric === 'revenue' ? rev : ord;
+          });
+        }
+        if (compTotal > topEntity.value) {
+          topEntity = { name: comp.name, value: compTotal };
+        }
+      });
+    }
+
+    return { totalRev, totalOrd, entityCount, topEntity };
+  }, [treemapData, treemapMetric]);
 
 
   // Top Metric Cards Config
@@ -395,121 +694,8 @@ const Dashboard = () => {
             <FiArrowUpRight size={13} />
           </button>
         </div>
-
-        {/* 4 Status Breakdown Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* PENDING */}
-          <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-amber-500/20 dark:border-amber-500/20 shadow-xs relative overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
-                <FiClock className="text-xs" /> Pending Approval
-              </span>
-              <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
-                {totalStatusCount > 0
-                  ? `${Math.round(((statusBreakdown.PENDING?.count || 0) / totalStatusCount) * 100)}%`
-                  : '0%'}
-              </span>
-            </div>
-            <p className="text-2xl font-black text-slate-900 dark:text-white">
-              {statusBreakdown.PENDING?.count || 0} <span className="text-xs font-normal text-slate-400">orders</span>
-            </p>
-            <p className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400 mt-1">
-              ₹{(statusBreakdown.PENDING?.value || 0).toLocaleString('en-IN')}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-1">Awaiting managerial review</p>
-          </div>
-
-          {/* APPROVED */}
-          <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-blue-500/20 dark:border-blue-500/20 shadow-xs relative overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center gap-1">
-                <FiCheckCircle className="text-xs" /> Approved
-              </span>
-              <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
-                {totalStatusCount > 0
-                  ? `${Math.round(((statusBreakdown.APPROVED?.count || 0) / totalStatusCount) * 100)}%`
-                  : '0%'}
-              </span>
-            </div>
-            <p className="text-2xl font-black text-slate-900 dark:text-white">
-              {statusBreakdown.APPROVED?.count || 0} <span className="text-xs font-normal text-slate-400">orders</span>
-            </p>
-            <p className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 mt-1">
-              ₹{(statusBreakdown.APPROVED?.value || 0).toLocaleString('en-IN')}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-1">Ready for fulfillment & dispatch</p>
-          </div>
-
-          {/* DISPATCHED */}
-          <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-emerald-500/20 dark:border-emerald-500/20 shadow-xs relative overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                <FiTruck className="text-xs" /> Dispatched
-              </span>
-              <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                {totalStatusCount > 0
-                  ? `${Math.round(((statusBreakdown.DISPATCHED?.count || 0) / totalStatusCount) * 100)}%`
-                  : '0%'}
-              </span>
-            </div>
-            <p className="text-2xl font-black text-slate-900 dark:text-white">
-              {statusBreakdown.DISPATCHED?.count || 0} <span className="text-xs font-normal text-slate-400">orders</span>
-            </p>
-            <p className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-              ₹{(statusBreakdown.DISPATCHED?.value || 0).toLocaleString('en-IN')}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-1">In transit to destination firms</p>
-          </div>
-
-          {/* REJECTED */}
-          <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-rose-500/20 dark:border-rose-500/20 shadow-xs relative overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1">
-                <FiXCircle className="text-xs" /> Rejected
-              </span>
-              <span className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400">
-                {totalStatusCount > 0
-                  ? `${Math.round(((statusBreakdown.REJECTED?.count || 0) / totalStatusCount) * 100)}%`
-                  : '0%'}
-              </span>
-            </div>
-            <p className="text-2xl font-black text-slate-900 dark:text-white">
-              {statusBreakdown.REJECTED?.count || 0} <span className="text-xs font-normal text-slate-400">orders</span>
-            </p>
-            <p className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400 mt-1">
-              ₹{(statusBreakdown.REJECTED?.value || 0).toLocaleString('en-IN')}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-1">Cancelled or declined requests</p>
-          </div>
-        </div>
-
-        {/* Visual Pipeline Accent Gradient Bar (25% per card status) */}
-        <div
-          className="w-full h-2.5 rounded-full overflow-hidden shadow-xs flex"
-          style={{
-            background:
-              'linear-gradient(90deg, #f59e0b 0%, #f59e0b 18%, #3b82f6 32%, #3b82f6 43%, #10b981 57%, #10b981 68%, #f43f5e 82%, #f43f5e 100%)'
-          }}
-        >
-          <div
-            className="w-1/4 h-full hover:bg-white/20 transition-colors cursor-pointer"
-            title={`Pending Approval: ${statusBreakdown.PENDING?.count || 0} orders (${totalStatusCount > 0 ? Math.round(((statusBreakdown.PENDING?.count || 0) / totalStatusCount) * 100) : 0}%)`}
-          />
-          <div
-            className="w-1/4 h-full hover:bg-white/20 transition-colors cursor-pointer"
-            title={`Approved: ${statusBreakdown.APPROVED?.count || 0} orders (${totalStatusCount > 0 ? Math.round(((statusBreakdown.APPROVED?.count || 0) / totalStatusCount) * 100) : 0}%)`}
-          />
-          <div
-            className="w-1/4 h-full hover:bg-white/20 transition-colors cursor-pointer"
-            title={`Dispatched: ${statusBreakdown.DISPATCHED?.count || 0} orders (${totalStatusCount > 0 ? Math.round(((statusBreakdown.DISPATCHED?.count || 0) / totalStatusCount) * 100) : 0}%)`}
-          />
-          <div
-            className="w-1/4 h-full hover:bg-white/20 transition-colors cursor-pointer"
-            title={`Rejected: ${statusBreakdown.REJECTED?.count || 0} orders (${totalStatusCount > 0 ? Math.round(((statusBreakdown.REJECTED?.count || 0) / totalStatusCount) * 100) : 0}%)`}
-          />
-        </div>
       </div>
-
+      
       {/* 3. Two-Column Analytics: Company Breakdown & Top Sales Executives */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Company Breakdown Card */}
@@ -668,7 +854,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 4. Full-Width Recent Orders Stream Table */}
+      {/* 5. Full-Width Recent Orders Stream Table */}
       <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
         <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -841,11 +1027,8 @@ const Dashboard = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                      Revenue & Orders Mix
+                      Revenue & Orders
                     </h2>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      Mixed Chart
-                    </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Dual-axis view of gross revenue (₹) and daily order count
@@ -895,18 +1078,22 @@ const Dashboard = () => {
 
                 {/* Range Filter */}
                 <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold">
-                  {['7d', '30d', 'all'].map((rng) => (
+                  {[
+                    { id: '1w', label: '1W' },
+                    { id: '1m', label: '1M' },
+                    { id: '1y', label: '1Y' }
+                  ].map((rng) => (
                     <button
-                      key={rng}
+                      key={rng.id}
                       type="button"
-                      onClick={() => setTrendRange(rng)}
-                      className={`px-2.5 py-1 rounded-lg transition-all uppercase text-[11px] cursor-pointer ${
-                        trendRange === rng
-                          ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-bold'
+                      onClick={() => setTrendRange(rng.id)}
+                      className={`px-3 py-1 rounded-lg transition-all uppercase text-[11px] font-bold cursor-pointer ${
+                        trendRange === rng.id
+                          ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
                           : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
-                      {rng === 'all' ? 'All' : rng}
+                      {rng.label}
                     </button>
                   ))}
                 </div>
@@ -1082,6 +1269,112 @@ const Dashboard = () => {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </div>
+      
+
+      {/* 4. B2B Enterprise Hierarchy Tree (All 5 Companies) */}
+      <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col justify-between">
+        <div className="absolute -top-12 -right-12 w-64 h-64 bg-cyan-500/10 dark:bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div>
+          {/* Header with Title and Metric Switcher */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-lg border border-cyan-500/20 shadow-xs">
+                <FiShare2 className="rotate-90" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                    B2B Enterprise Hierarchy Tree
+                  </h2>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                    5 Companies
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Full procurement network: Trading Companies → Linked Purchasing Firms → Purchase Orders → Ordered Products
+                </p>
+              </div>
+            </div>
+
+            {/* Metric Switcher: Revenue vs Orders */}
+            <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold gap-1 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setTreemapMetric('revenue')}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  treemapMetric === 'revenue'
+                    ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>Revenue (₹)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTreemapMetric('orders')}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  treemapMetric === 'orders'
+                    ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>PO Volume</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Hierarchy Tree Visualization Canvas */}
+          <div className="pt-4 min-h-[560px]">
+            {loading ? (
+              <div className="h-[560px] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2 text-slate-400">
+                  <FiLoader className="text-2xl animate-spin text-blue-500" />
+                  <span className="text-xs font-semibold">Generating 5-company hierarchy tree...</span>
+                </div>
+              </div>
+            ) : (
+              <VisxTreemapChart
+                data={treemapData}
+                metric={treemapMetric}
+                height={560}
+                isDark={isDark}
+                onNodeClick={() => navigate('/purchase-orders')}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Treemap Stat Highlights Footer */}
+        <div className="pt-4 mt-3 border-t border-slate-200/80 dark:border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center sm:text-left">
+          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Total Volume</span>
+            <span className="text-sm sm:text-base font-extrabold text-blue-600 dark:text-blue-400 font-mono">
+              {treemapMetric === 'revenue'
+                ? `₹${treemapSummary.totalRev.toLocaleString('en-IN')}`
+                : `${treemapSummary.totalOrd} Orders`}
+            </span>
+          </div>
+          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Market Leader</span>
+            <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate block" title={treemapSummary.topEntity.name}>
+              {treemapSummary.topEntity.name}
+            </span>
+          </div>
+          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Active B2B Nodes</span>
+            <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
+              {treemapSummary.entityCount} Purchasing Entities
+            </span>
+          </div>
+          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Avg Value / Firm</span>
+            <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+              ₹{treemapSummary.entityCount > 0 ? Math.round(treemapSummary.totalRev / treemapSummary.entityCount).toLocaleString('en-IN') : 0}
+            </span>
           </div>
         </div>
       </div>

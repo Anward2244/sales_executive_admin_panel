@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { getUsersApi, createUserApi, updateUserStatusApi } from '@/api/axios';
+import * as XLSX from 'xlsx';
+import { getUsersApi, createUserApi, updateUserStatusApi, updateUserApi } from '@/api/axios';
 import {
   FiCheck, FiLoader, FiAlertCircle,
   FiSearch, FiUser, FiRefreshCcw, FiX,
   FiChevronDown, FiCopy, FiCalendar, FiClock, FiPhone,
-  FiMail, FiEye, FiEyeOff, FiExternalLink, FiHash, FiBriefcase, FiUsers, FiUserCheck, FiUserX
+  FiMail, FiEye, FiEyeOff, FiExternalLink, FiHash, FiBriefcase,
+  FiLayers, FiUserCheck, FiUserX, FiShield, FiDownload, FiCheckCircle, FiXCircle
 } from 'react-icons/fi';
 import { useOutletContext, useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
@@ -12,6 +14,7 @@ import { useConfirm } from '@/Context/ConfirmationContext';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import GmailLink from '@/components/ui/GmailLink';
+import { BulkActionBar, BatchProgressModal } from '@/components/ui';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { createPortal } from 'react-dom';
 import { formatPhone, formatEntityCode } from '@/utils/formatters';
@@ -27,17 +30,17 @@ const getUserFullName = (user) => {
 const getRoleBadgeClass = (role) => {
   switch ((role || '').toUpperCase()) {
     case 'ADMIN':
-      return 'bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/20';
+      return 'bg-purple-500/60 dark:bg-purple-500/10 text-white dark:text-purple-600 border-purple-500/20';
     case 'SALES_EXECUTIVE':
-      return 'bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/20';
+      return 'bg-blue-500/60 dark:bg-blue-500/10 text-white dark:text-blue-600 border-blue-500/20';
     case 'SALES_HEAD':
-      return 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/20';
+      return 'bg-indigo-500/60 dark:bg-indigo-500/10 text-white dark:text-indigo-600 border-indigo-500/20';
     case 'WAREHOUSE':
-      return 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20';
+      return 'bg-amber-500/60 dark:bg-amber-500/10 text-white dark:text-amber-600 border-amber-500/20';
     case 'BILLING':
-      return 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+      return 'bg-emerald-500/60 dark:bg-emerald-500/10 text-white dark:text-emerald-600 border-emerald-500/20';
     default:
-      return 'bg-slate-500/20 text-slate-600 dark:text-slate-400 border-slate-500/20';
+      return 'bg-slate-500/60 dark:bg-slate-500/10 text-white dark:text-slate-600 border-slate-500/20';
   }
 };
 
@@ -131,18 +134,6 @@ const UsersList = () => {
       } else {
         prev.set('sortKey', key);
         prev.set('sortOrder', 'asc');
-      }
-      prev.set('page', '1');
-      return prev;
-    });
-  };
-
-  const handleTabChange = (tabName) => {
-    setSearchParams(prev => {
-      if (tabName === 'all') {
-        prev.delete('tab');
-      } else {
-        prev.set('tab', tabName);
       }
       prev.set('page', '1');
       return prev;
@@ -244,37 +235,6 @@ const UsersList = () => {
   }, []);
 
 
-  // Counts for tabs
-  const tabCounts = useMemo(() => {
-    let activeCount = 0;
-    let inactiveCount = 0;
-    let salesCount = 0;
-    let adminCount = 0;
-    let assignedCompaniesCount = 0;
-
-    users.forEach(u => {
-      if (u.isActive) activeCount++;
-      else inactiveCount++;
-
-      const role = (u.role || '').toUpperCase();
-      if (role === 'SALES_EXECUTIVE') salesCount++;
-      if (role === 'ADMIN') adminCount++;
-
-      if (Array.isArray(u.assignedCompanyIds) && u.assignedCompanyIds.length > 0) {
-        assignedCompaniesCount++;
-      }
-    });
-
-    return {
-      all: users.length,
-      active: activeCount,
-      inactive: inactiveCount,
-      sales: salesCount,
-      admin: adminCount,
-      assignedCompanies: assignedCompaniesCount
-    };
-  }, [users]);
-
   // Tab Filtering
   const tabFilteredUsers = useMemo(() => {
     switch (userTab) {
@@ -304,7 +264,7 @@ const UsersList = () => {
       }
 
       // Status Filter
-      if (selectedStatus) {
+      if (selectedStatus && selectedStatus !== 'all') {
         const isActiveStr = user.isActive ? 'active' : 'inactive';
         if (isActiveStr !== selectedStatus.toLowerCase()) {
           return false;
@@ -388,12 +348,16 @@ const UsersList = () => {
     ];
   }, [users, selectedRole]);
 
-  // Status dropdown options
-  const statusOptions = [
-    { value: '', label: selectedStatus ? `Status: ${selectedStatus.toUpperCase()}` : 'All Status' },
-    { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' }
-  ];
+  // Status counts for segmented filter
+  const { activeCount, inactiveCount } = useMemo(() => {
+    let active = 0;
+    let inactive = 0;
+    users.forEach((u) => {
+      if (u.isActive) active++;
+      else inactive++;
+    });
+    return { activeCount: active, inactiveCount: inactive };
+  }, [users]);
 
   // Pagination logic
   const totalPages = Math.ceil(sortedUsers.length / usersPerPage) || 1;
@@ -529,6 +493,197 @@ const UsersList = () => {
     }
   };
 
+  // Bulk Operations State
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState(new Set());
+  const [bulkRoleModalOpen, setBulkRoleModalOpen] = useState(false);
+  const [bulkSelectedRole, setBulkSelectedRole] = useState('TSM');
+  const [batchProgress, setBatchProgress] = useState({
+    isOpen: false,
+    taskTitle: '',
+    total: 0,
+    current: 0,
+    successCount: 0,
+    failureCount: 0,
+    logs: [],
+    isFinished: false
+  });
+  const abortBatchRef = useRef(false);
+
+  const toggleSelectUser = (id) => {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllCurrentPageUsers = () => {
+    const pageIds = currentUsers.map((u) => u._id);
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedUserIds.has(id));
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        pageIds.forEach((id) => next.delete(id));
+      } else {
+        pageIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const selectAllInactiveUsers = () => {
+    const inactiveIds = sortedUsers.filter((u) => u.isActive === false).map((u) => u._id);
+    setSelectedUserIds(new Set(inactiveIds));
+  };
+
+  const selectAllPageUsers = () => {
+    setSelectedUserIds(new Set(currentUsers.map((u) => u._id)));
+  };
+
+  const runBatchTask = async ({ taskTitle, items, processItemFn }) => {
+    abortBatchRef.current = false;
+    setBatchProgress({
+      isOpen: true,
+      taskTitle,
+      total: items.length,
+      current: 0,
+      successCount: 0,
+      failureCount: 0,
+      logs: [
+        {
+          time: new Date().toLocaleTimeString(),
+          text: `Starting "${taskTitle}" on ${items.length} users...`,
+          type: 'info'
+        }
+      ],
+      isFinished: false
+    });
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (let i = 0; i < items.length; i++) {
+      if (abortBatchRef.current) {
+        setBatchProgress((p) => ({
+          ...p,
+          logs: [
+            ...p.logs,
+            { time: new Date().toLocaleTimeString(), text: 'Batch execution halted by user.', type: 'error' }
+          ]
+        }));
+        break;
+      }
+
+      const item = items[i];
+      try {
+        await processItemFn(item, i);
+        successCount++;
+        setBatchProgress((p) => ({
+          ...p,
+          current: i + 1,
+          successCount,
+          logs: [
+            ...p.logs,
+            {
+              time: new Date().toLocaleTimeString(),
+              text: `Success: ${getUserFullName(item)}`,
+              type: 'success'
+            }
+          ]
+        }));
+      } catch (err) {
+        failureCount++;
+        setBatchProgress((p) => ({
+          ...p,
+          current: i + 1,
+          failureCount,
+          logs: [
+            ...p.logs,
+            {
+              time: new Date().toLocaleTimeString(),
+              text: `Error on ${getUserFullName(item)}: ${err.response?.data?.message || err.message}`,
+              type: 'error'
+            }
+          ]
+        }));
+      }
+      await new Promise((r) => setTimeout(r, 40));
+    }
+
+    setBatchProgress((p) => ({ ...p, isFinished: true }));
+    await fetchUsers(false);
+    setSelectedUserIds(new Set());
+  };
+
+  const handleBulkActivate = async () => {
+    const selectedUsers = users.filter((u) => selectedUserIds.has(u._id));
+    const isConfirmed = await confirm(`Are you sure you want to ACTIVATE ${selectedUsers.length} selected user account(s)?`);
+    if (!isConfirmed) return;
+
+    await runBatchTask({
+      taskTitle: `Bulk Activate ${selectedUsers.length} Users`,
+      items: selectedUsers,
+      processItemFn: async (userItem) => {
+        await updateUserStatusApi(userItem._id, true);
+      }
+    });
+  };
+
+  const handleBulkDeactivate = async () => {
+    const selectedUsers = users.filter((u) => selectedUserIds.has(u._id));
+    const isConfirmed = await confirm(`Are you sure you want to DEACTIVATE ${selectedUsers.length} selected user account(s)?`);
+    if (!isConfirmed) return;
+
+    await runBatchTask({
+      taskTitle: `Bulk Deactivate ${selectedUsers.length} Users`,
+      items: selectedUsers,
+      processItemFn: async (userItem) => {
+        await updateUserStatusApi(userItem._id, false);
+      }
+    });
+  };
+
+  const handleBulkChangeRole = async () => {
+    const selectedUsers = users.filter((u) => selectedUserIds.has(u._id));
+    setBulkRoleModalOpen(false);
+
+    await runBatchTask({
+      taskTitle: `Bulk Reassign Role (${bulkSelectedRole}) to ${selectedUsers.length} Users`,
+      items: selectedUsers,
+      processItemFn: async (userItem) => {
+        await updateUserApi(userItem._id, { role: bulkSelectedRole });
+      }
+    });
+  };
+
+  const handleBulkExport = () => {
+    const listToExport =
+      selectedUserIds.size > 0 ? users.filter((u) => selectedUserIds.has(u._id)) : sortedUsers;
+    if (listToExport.length === 0) {
+      alert('No users available to export.');
+      return;
+    }
+
+    const rows = listToExport.map((u, idx) => ({
+      'S.No': idx + 1,
+      Name: getUserFullName(u),
+      'Employee Code': u.employeeCode || u.employeeId || '-',
+      Email: u.email || '-',
+      Phone: u.phone || u.mobile || '-',
+      Role: formatRoleName(u.role),
+      Status: u.isActive !== false ? 'ACTIVE' : 'INACTIVE',
+      'Assigned Companies': Array.isArray(u.assignedCompanies) ? u.assignedCompanies.map((c) => c.name || c).join(', ') : '-',
+      'Joined Date': formatDateDDMMYYYY(u.createdAt)
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Users');
+    XLSX.writeFile(wb, `Auric_Users_Export_${Date.now()}.xlsx`);
+  };
+
   return (
     <div className="relative space-y-4 min-h-full z-0 isolate w-full">
 
@@ -576,8 +731,8 @@ const UsersList = () => {
         </div>
       </div>
 
-      {/* Metrics & Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-semibold text-slate-600 dark:text-slate-400 px-1 py-1">
+      {/* Users Count, Filters & Action Bar */}
+      <div className="relative z-20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 bg-white/40 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-2xl backdrop-blur-xl shadow-md shadow-slate-500/30 dark:shadow-none text-xs font-semibold text-slate-600 dark:text-slate-400">
         <div className="flex flex-wrap items-center gap-2">
           <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-full shadow-xs dark:shadow-none text-slate-600 dark:text-slate-400">
             Total Users: <strong className="text-slate-900 dark:text-white">{users.length}</strong>
@@ -589,8 +744,46 @@ const UsersList = () => {
           )}
         </div>
 
-        {/* Dropdown Filters */}
-        <div className="flex items-center gap-2">
+        {/* Status Segmented Filter, Role Filter & Actions */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* Segmented Status Pill Filter */}
+          <div className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10">
+            {[
+              { id: 'all', label: 'All', count: users.length },
+              { id: 'active', label: 'Active', count: activeCount },
+              { id: 'inactive', label: 'Inactive', count: inactiveCount }
+            ].map((tab) => {
+              const isSelected = (!selectedStatus && tab.id === 'all') || selectedStatus === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleFilterChange('status', tab.id === 'all' ? '' : tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                      isSelected
+                        ? 'bg-white/20 text-white'
+                        : tab.id === 'active'
+                        ? 'bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                        : tab.id === 'inactive'
+                        ? 'bg-rose-500/15 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'
+                        : 'bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="min-w-[130px]">
             <CustomDropdown
               value=""
@@ -599,15 +792,7 @@ const UsersList = () => {
               statusColor={`!px-3 !py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 font-bold ${selectedRole ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}
             />
           </div>
-          <div className="min-w-[120px]">
-            <CustomDropdown
-              value=""
-              onChange={(val) => handleFilterChange('status', val)}
-              options={statusOptions}
-              statusColor={`!px-3 !py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 font-bold ${selectedStatus ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}
-            />
-          </div>
-          {(searchTerm || selectedRole || selectedStatus || userTab !== 'all') && (
+          {(searchTerm || selectedRole || (selectedStatus && selectedStatus !== 'all') || userTab !== 'all') && (
             <button
               onClick={handleClearFilters}
               className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 hover:text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:hover:text-white text-xs font-bold rounded-xl border border-slate-300 dark:border-white/10 transition-all cursor-pointer"
@@ -619,121 +804,36 @@ const UsersList = () => {
           <button
             type="button"
             onClick={() => {
+              setIsBulkMode((prev) => !prev);
+              if (isBulkMode) setSelectedUserIds(new Set());
+            }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer shrink-0 ${
+              isBulkMode
+                ? 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400'
+                : 'bg-white dark:bg-white/5 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-blue-500/40'
+            }`}
+          >
+            <FiLayers className="text-sm" />
+            <span>{isBulkMode ? 'Exit Bulk' : 'Bulk Operations'}</span>
+            {isBulkMode && selectedUserIds.size > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500 text-white font-mono">
+                {selectedUserIds.size}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setFormError('');
               setFormData(initialFormstate);
               setShowPassword(false);
               setIsCreateModalOpen(true);
             }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer shrink-0"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer shrink-0"
           >
             <span>Add User</span>
           </button>
         </div>
-      </div>
-
-      {/* Role / Status Tabs Switcher */}
-      <div className="relative z-20 flex flex-wrap items-center gap-2 p-2 bg-white/40 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-2xl backdrop-blur-xl shadow-md shadow-slate-500/30 dark:shadow-none">
-        <button
-          onClick={() => handleTabChange('all')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            userTab === 'all'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-          }`}
-        >
-          <FiUsers className="text-sm shrink-0" />
-          <span>All Users</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
-            userTab === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300'
-          }`}>
-            {tabCounts.all}
-          </span>
-        </button>
-
-        <button
-          onClick={() => handleTabChange('SALES_EXECUTIVE')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            userTab === 'SALES_EXECUTIVE'
-              ? 'bg-sky-600 text-white shadow-md shadow-sky-600/30'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-          }`}
-        >
-          <FiBriefcase className="text-sm shrink-0" />
-          <span>Sales Executives</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
-            userTab === 'SALES_EXECUTIVE' ? 'bg-white/20 text-white' : 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
-          }`}>
-            {tabCounts.sales}
-          </span>
-        </button>
-
-        <button
-          onClick={() => handleTabChange('ADMIN')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            userTab === 'ADMIN'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-          }`}
-        >
-          <FiUser className="text-sm shrink-0" />
-          <span>Admins</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
-            userTab === 'ADMIN' ? 'bg-white/20 text-white' : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
-          }`}>
-            {tabCounts.admin}
-          </span>
-        </button>
-
-        <button
-          onClick={() => handleTabChange('active')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            userTab === 'active'
-              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-          }`}
-        >
-          <FiUserCheck className="text-sm shrink-0" />
-          <span>Active</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
-            userTab === 'active' ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-          }`}>
-            {tabCounts.active}
-          </span>
-        </button>
-
-        <button
-          onClick={() => handleTabChange('inactive')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            userTab === 'inactive'
-              ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-          }`}
-        >
-          <FiUserX className="text-sm shrink-0" />
-          <span>Inactive</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
-            userTab === 'inactive' ? 'bg-white/20 text-white' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-          }`}>
-            {tabCounts.inactive}
-          </span>
-        </button>
-
-        <button
-          onClick={() => handleTabChange('assigned')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            userTab === 'assigned'
-              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-          }`}
-        >
-          <FiBriefcase className="text-sm shrink-0" />
-          <span>With Companies</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
-            userTab === 'assigned' ? 'bg-white/20 text-white' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-          }`}>
-            {tabCounts.assignedCompanies}
-          </span>
-        </button>
       </div>
 
       {/* Content Area */}
@@ -761,6 +861,16 @@ const UsersList = () => {
             <table className="w-full text-left border-collapse whitespace-nowrap min-w-200">
               <thead className="sticky top-0 z-20 bg-white/60 dark:bg-slate-900/80 backdrop-blur-md shadow-xs dark:shadow-md border-b border-slate-200/80 dark:border-white/10">
                 <tr className="border-b border-slate-200/80 dark:border-white/10 text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                  {isBulkMode && (
+                    <th className="p-3 pl-4 text-center w-10">
+                      <input
+                        type="checkbox"
+                        checked={currentUsers.length > 0 && currentUsers.every((u) => selectedUserIds.has(u._id))}
+                        onChange={toggleSelectAllCurrentPageUsers}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </th>
+                  )}
                   <th className="p-3 font-bold text-center w-14">S.No</th>
                   
                   {/* Name Sort */}
@@ -861,8 +971,20 @@ const UsersList = () => {
                     return (
                       <tr 
                         key={user._id} 
-                        className="hover:bg-slate-100/60 dark:hover:bg-white/[0.03] transition-colors group"
+                        className={`hover:bg-slate-100/60 dark:hover:bg-white/[0.03] transition-colors group ${
+                          selectedUserIds.has(user._id) ? 'bg-blue-500/[0.06] dark:bg-blue-500/10' : ''
+                        }`}
                       >
+                        {isBulkMode && (
+                          <td className="p-3 pl-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedUserIds.has(user._id)}
+                              onChange={() => toggleSelectUser(user._id)}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            />
+                          </td>
+                        )}
                         <td className="p-3 text-sm text-slate-500 dark:text-slate-400 text-center font-medium">
                           {indexOfFirstUser + index + 1}
                         </td>
@@ -931,7 +1053,7 @@ const UsersList = () => {
                         <td className="p-4 text-sm text-center">
                           {Array.isArray(user.assignedCompanyIds) && user.assignedCompanyIds.length > 0 ? (
                             <span 
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-blue-500/60 dark:bg-blue-500/10 text-white dark:text-blue-400 border border-blue-500/20"
                               title={`${user.assignedCompanyIds.length} Assigned ${user.assignedCompanyIds.length === 1 ? 'Company' : 'Companies'}: ${user.assignedCompanyIds.join(', ')}`}
                             >
                               <FiBriefcase className="text-xs" />
@@ -950,8 +1072,8 @@ const UsersList = () => {
                             disabled={actionLoadingId === user._id}
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer hover:scale-105 active:scale-95 disabled:opacity-50 ${
                               user.isActive
-                                ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400'
-                                : 'bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-600 dark:text-rose-400'
+                                ? 'bg-emerald-500/60 dark:bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-white dark:text-emerald-600'
+                                : 'bg-rose-500/60 dark:bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-white dark:text-rose-600'
                             }`}
                             title={`Click to ${user.isActive ? 'deactivate' : 'activate'} user`}
                           >
@@ -1278,6 +1400,131 @@ const UsersList = () => {
           </div>
         </div>, document.body
       )}
+      {/* ================= BULK ACTION BAR ================= */}
+      {isBulkMode && (
+        <BulkActionBar
+          selectedCount={selectedUserIds.size}
+          totalCount={currentUsers.length}
+          onClear={() => setSelectedUserIds(new Set())}
+          onExit={() => {
+            setIsBulkMode(false);
+            setSelectedUserIds(new Set());
+          }}
+          quickSelectors={[
+            {
+              label: `Select Inactive (${inactiveCount})`,
+              onClick: selectAllInactiveUsers
+            },
+            {
+              label: 'Select Page',
+              onClick: selectAllPageUsers
+            }
+          ]}
+          actions={[
+            {
+              label: 'Activate Selected',
+              icon: FiUserCheck,
+              variant: 'success',
+              onClick: handleBulkActivate
+            },
+            {
+              label: 'Deactivate Selected',
+              icon: FiUserX,
+              variant: 'danger',
+              onClick: handleBulkDeactivate
+            },
+            {
+              label: 'Change Role',
+              icon: FiShield,
+              variant: 'info',
+              onClick: () => {
+                if (selectedUserIds.size === 0) return;
+                setBulkRoleModalOpen(true);
+              }
+            },
+            {
+              label: 'Export to Excel',
+              icon: FiDownload,
+              variant: 'secondary',
+              onClick: handleBulkExport
+            }
+          ]}
+        />
+      )}
+
+      {/* ================= BATCH PROGRESS MODAL ================= */}
+      <BatchProgressModal
+        isOpen={batchProgress.isOpen}
+        taskTitle={batchProgress.taskTitle}
+        total={batchProgress.total}
+        current={batchProgress.current}
+        successCount={batchProgress.successCount}
+        failureCount={batchProgress.failureCount}
+        logs={batchProgress.logs}
+        isFinished={batchProgress.isFinished}
+        onAbort={() => {
+          abortBatchRef.current = true;
+        }}
+        onClose={() => setBatchProgress((p) => ({ ...p, isOpen: false }))}
+      />
+
+      {/* ================= BULK ROLE MODAL ================= */}
+      {bulkRoleModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+                <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400 font-bold">
+                  <FiShield size={18} />
+                  <span className="text-sm">Bulk Change User Role</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBulkRoleModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <FiX size={16} />
+                </button>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Select the target role to batch assign to <span className="font-bold font-mono text-sky-600">{selectedUserIds.size}</span> selected user(s).
+              </p>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Target Role
+                </label>
+                <select
+                  value={bulkSelectedRole}
+                  onChange={(e) => setBulkSelectedRole(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                >
+                  <option value="tsm">Territory Sales Manager (TSM)</option>
+                  <option value="sales_head">Sales Head</option>
+                  <option value="billing">Billing Officer</option>
+                  <option value="warehouse">Warehouse Manager</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setBulkRoleModalOpen(false)}
+                  className="flex-1 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkChangeRole}
+                  className="flex-1 py-2 text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white rounded-xl shadow-md transition-all cursor-pointer"
+                >
+                  Apply Role
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

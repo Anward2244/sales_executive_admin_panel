@@ -6,8 +6,10 @@ import {
   FiRefreshCcw, FiX, FiCopy, FiCalendar, FiClock, FiPhone,
   FiMail, FiEye, FiExternalLink, FiHash, FiBriefcase,
   FiUsers, FiUserCheck, FiUserX, FiMapPin, FiFileText,
-  FiPlus, FiUser, FiCheckCircle, FiEdit2, FiTrash2
+  FiPlus, FiUser, FiCheckCircle, FiEdit2, FiTrash2,
+  FiLayers, FiDownload
 } from 'react-icons/fi';
+import * as XLSX from 'xlsx';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
@@ -15,6 +17,7 @@ import GmailLink from '@/components/ui/GmailLink';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { TableRowSkeleton } from '@/components/ui/Skeleton';
 import PageHeader from '@/components/ui/PageHeader';
+import { BulkActionBar, BatchProgressModal } from '@/components/ui';
 import {
   getFirmsApi,
   createFirmApi,
@@ -70,6 +73,14 @@ const Firms = () => {
 
   // Global Toast
   const [successToast, setSuccessToast] = useState('');
+
+  // Bulk Operations State
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [selectedFirmIds, setSelectedFirmIds] = useState([]);
+  const [isBulkCompanyModalOpen, setIsBulkCompanyModalOpen] = useState(false);
+  const [bulkTargetCompanyId, setBulkTargetCompanyId] = useState('');
+  const [batchProgress, setBatchProgress] = useState(null);
+  const abortBatchRef = useRef(false);
 
   // URL Search & Filter Params (matching Users.jsx)
   const [searchParams, setSearchParams] = useSearchParams();
@@ -688,6 +699,198 @@ const Firms = () => {
     }
   };
 
+  // Bulk Selection Helpers
+  const toggleSelectFirm = (firmId) => {
+    setSelectedFirmIds((prev) =>
+      prev.includes(firmId) ? prev.filter((id) => id !== firmId) : [...prev, firmId]
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    if (selectedFirmIds.length === filteredFirms.length) {
+      setSelectedFirmIds([]);
+    } else {
+      setSelectedFirmIds(filteredFirms.map((f) => f._id));
+    }
+  };
+
+  const handleBulkStatusChange = async (targetActive) => {
+    if (selectedFirmIds.length === 0) return;
+    const actionLabel = targetActive ? 'Activating' : 'Deactivating';
+    abortBatchRef.current = false;
+    setBatchProgress({
+      isOpen: true,
+      title: `Bulk ${targetActive ? 'Activate' : 'Deactivate'} Firms`,
+      current: 0,
+      total: selectedFirmIds.length,
+      percentage: 0,
+      status: 'processing',
+      logs: [`Starting bulk ${actionLabel.toLowerCase()} for ${selectedFirmIds.length} firms...`]
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < selectedFirmIds.length; i++) {
+      if (abortBatchRef.current) {
+        setBatchProgress((prev) => ({
+          ...prev,
+          status: 'error',
+          logs: [...prev.logs, 'Batch execution aborted by user.']
+        }));
+        break;
+      }
+
+      const fId = selectedFirmIds[i];
+      const firm = firms.find((f) => f._id === fId);
+      const name = firm ? firm.firmName : fId;
+
+      try {
+        await updateFirmApi(fId, { isActive: targetActive });
+        successCount++;
+        setBatchProgress((prev) => {
+          const current = i + 1;
+          return {
+            ...prev,
+            current,
+            percentage: Math.round((current / prev.total) * 100),
+            logs: [...prev.logs, `✓ Firm "${name}" set to ${targetActive ? 'Active' : 'Inactive'}`]
+          };
+        });
+      } catch (err) {
+        failCount++;
+        setBatchProgress((prev) => {
+          const current = i + 1;
+          return {
+            ...prev,
+            current,
+            percentage: Math.round((current / prev.total) * 100),
+            logs: [...prev.logs, `✗ Failed to update "${name}": ${err?.response?.data?.message || err.message}`]
+          };
+        });
+      }
+    }
+
+    setBatchProgress((prev) => ({
+      ...prev,
+      status: prev.status === 'error' ? 'error' : 'completed',
+      logs: [
+        ...prev.logs,
+        `Finished! Success: ${successCount}, Failed: ${failCount}`
+      ]
+    }));
+
+    await fetchFirms(true);
+    setSuccessToast(`Bulk status updated: ${successCount} succeeded, ${failCount} failed`);
+    setTimeout(() => setSuccessToast(''), 4000);
+  };
+
+  const handleBulkReassignCompany = async () => {
+    if (!bulkTargetCompanyId || selectedFirmIds.length === 0) return;
+    const targetComp = allCompanyOptions.find((c) => c.id === bulkTargetCompanyId);
+    const compName = targetComp ? targetComp.name : 'Selected Company';
+
+    setIsBulkCompanyModalOpen(false);
+    abortBatchRef.current = false;
+    setBatchProgress({
+      isOpen: true,
+      title: `Bulk Reassign Firms to "${compName}"`,
+      current: 0,
+      total: selectedFirmIds.length,
+      percentage: 0,
+      status: 'processing',
+      logs: [`Starting company reassignment to "${compName}" for ${selectedFirmIds.length} firms...`]
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < selectedFirmIds.length; i++) {
+      if (abortBatchRef.current) {
+        setBatchProgress((prev) => ({
+          ...prev,
+          status: 'error',
+          logs: [...prev.logs, 'Batch execution aborted by user.']
+        }));
+        break;
+      }
+
+      const fId = selectedFirmIds[i];
+      const firm = firms.find((f) => f._id === fId);
+      const name = firm ? firm.firmName : fId;
+
+      try {
+        await updateFirmApi(fId, { companyId: bulkTargetCompanyId });
+        successCount++;
+        setBatchProgress((prev) => {
+          const current = i + 1;
+          return {
+            ...prev,
+            current,
+            percentage: Math.round((current / prev.total) * 100),
+            logs: [...prev.logs, `✓ Firm "${name}" moved to "${compName}"`]
+          };
+        });
+      } catch (err) {
+        failCount++;
+        setBatchProgress((prev) => {
+          const current = i + 1;
+          return {
+            ...prev,
+            current,
+            percentage: Math.round((current / prev.total) * 100),
+            logs: [...prev.logs, `✗ Failed to reassign "${name}": ${err?.response?.data?.message || err.message}`]
+          };
+        });
+      }
+    }
+
+    setBatchProgress((prev) => ({
+      ...prev,
+      status: prev.status === 'error' ? 'error' : 'completed',
+      logs: [
+        ...prev.logs,
+        `Finished! Success: ${successCount}, Failed: ${failCount}`
+      ]
+    }));
+
+    await fetchFirms(true);
+    setSuccessToast(`Reassigned ${successCount} firms to ${compName}`);
+    setTimeout(() => setSuccessToast(''), 4000);
+  };
+
+  const handleBulkExportFirms = () => {
+    const selectedFirmsList = firms.filter((f) => selectedFirmIds.includes(f._id));
+    if (selectedFirmsList.length === 0) return;
+
+    const exportRows = selectedFirmsList.map((f, idx) => {
+      const compName = f.companyId?.name || f.companyId?.code || 'N/A';
+      return {
+        'S.No.': idx + 1,
+        'Firm Name': f.firmName || '',
+        'Firm Code': f.firmCode || '',
+        'Parent Company': compName,
+        'Contact Person': f.contactPerson || '',
+        'Phone': f.phone || '',
+        'Email': f.email || '',
+        'Address': f.address || '',
+        'City': f.city || '',
+        'State': f.state || '',
+        'Pincode': f.pincode || '',
+        'GSTIN': f.gstin || '',
+        'Status': f.isActive ? 'Active' : 'Inactive',
+        'Created At': f.createdAt ? formatDateDDMMYYYY(f.createdAt) : ''
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Firms');
+    XLSX.writeFile(workbook, `Firms_Bulk_Export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    setSuccessToast(`Exported ${selectedFirmsList.length} firms to Excel.`);
+    setTimeout(() => setSuccessToast(''), 4000);
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
       {/* Toast Notification */}
@@ -752,6 +955,28 @@ const Firms = () => {
           >
             <FiPlus className="w-3.5 h-3.5" />
             <span>Add Firm</span>
+          </button>
+
+          {/* Bulk Operations Toggle Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsBulkMode((prev) => !prev);
+              if (isBulkMode) setSelectedFirmIds([]);
+            }}
+            className={`flex items-center gap-2 px-3.5 py-2.5 border text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 ${
+              isBulkMode
+                ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20 shadow-md'
+                : 'bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200'
+            }`}
+          >
+            <FiLayers className={`text-sm ${isBulkMode ? 'text-white' : 'text-blue-500'}`} />
+            <span>Bulk Operations</span>
+            {selectedFirmIds.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 bg-blue-700 text-white text-[10px] rounded-full font-bold">
+                {selectedFirmIds.length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -892,6 +1117,16 @@ const Firms = () => {
             <table className="w-full text-left border-collapse whitespace-nowrap min-w-200">
               <thead className="sticky top-0 z-20 bg-white/60 dark:bg-slate-900/80 backdrop-blur-md shadow-xs dark:shadow-md border-b border-slate-200/80 dark:border-white/10">
                 <tr className="border-b border-slate-200/80 dark:border-white/10 text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                  {isBulkMode && (
+                    <th className="p-3 text-center w-12">
+                      <input
+                        type="checkbox"
+                        checked={filteredFirms.length > 0 && selectedFirmIds.length === filteredFirms.length}
+                        onChange={handleSelectAllFiltered}
+                        className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                      />
+                    </th>
+                  )}
                   <th className="p-3 font-bold text-center w-14">S.No</th>
 
                   {/* Firm Name Sort */}
@@ -1025,11 +1260,27 @@ const Firms = () => {
                     const company = firm.companyId || {};
                     const hasCompanyLogo = company.logo && !imageErrors[company._id];
 
+                    const isSelected = selectedFirmIds.includes(firm._id);
+
                     return (
                       <tr
                         key={firm._id}
-                        className="hover:bg-slate-100/60 dark:hover:bg-white/[0.03] transition-colors group"
+                        className={`hover:bg-slate-100/60 dark:hover:bg-white/[0.03] transition-colors group ${
+                          isBulkMode && isSelected
+                            ? 'bg-blue-50/60 dark:bg-blue-900/10'
+                            : ''
+                        }`}
                       >
+                        {isBulkMode && (
+                          <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectFirm(firm._id)}
+                              className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                            />
+                          </td>
+                        )}
                         {/* S.No */}
                         <td className="p-3 text-sm text-slate-500 dark:text-slate-400 text-center font-medium">
                           {indexOfFirstFirm + index + 1}
@@ -2160,6 +2411,123 @@ const Firms = () => {
           </div>,
           document.body
         )}
+
+      {/* Floating Bulk Action Bar */}
+      {isBulkMode && (
+        <BulkActionBar
+          selectedCount={selectedFirmIds.length}
+          totalCount={filteredFirms.length}
+          onClearSelection={() => setSelectedFirmIds([])}
+          onSelectAll={handleSelectAllFiltered}
+          isAllSelected={selectedFirmIds.length > 0 && selectedFirmIds.length === filteredFirms.length}
+          onExitBulkMode={() => {
+            setIsBulkMode(false);
+            setSelectedFirmIds([]);
+          }}
+          actions={[
+            {
+              id: 'activate',
+              label: 'Activate',
+              icon: FiUserCheck,
+              variant: 'primary',
+              disabled: selectedFirmIds.length === 0,
+              onClick: () => handleBulkStatusChange(true)
+            },
+            {
+              id: 'deactivate',
+              label: 'Deactivate',
+              icon: FiUserX,
+              variant: 'danger',
+              disabled: selectedFirmIds.length === 0,
+              onClick: () => handleBulkStatusChange(false)
+            },
+            {
+              id: 'reassign-company',
+              label: 'Reassign Company',
+              icon: FiBriefcase,
+              variant: 'warning',
+              disabled: selectedFirmIds.length === 0,
+              onClick: () => {
+                setBulkTargetCompanyId(allCompanyOptions[0]?.id || '');
+                setIsBulkCompanyModalOpen(true);
+              }
+            },
+            {
+              id: 'export',
+              label: 'Export Excel',
+              icon: FiDownload,
+              variant: 'secondary',
+              disabled: selectedFirmIds.length === 0,
+              onClick: handleBulkExportFirms
+            }
+          ]}
+        />
+      )}
+
+      {/* Bulk Company Reassignment Modal */}
+      {isBulkCompanyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-2xl mb-4">
+              <FiBriefcase />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Reassign Parent Company</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Reassign <span className="font-bold text-slate-800 dark:text-slate-200">{selectedFirmIds.length}</span> selected firms to the following parent company:
+            </p>
+
+            <div className="mt-4">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                Target Company
+              </label>
+              <select
+                value={bulkTargetCompanyId}
+                onChange={(e) => setBulkTargetCompanyId(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+              >
+                {allCompanyOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.code ? `(${c.code})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsBulkCompanyModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkReassignCompany}
+                disabled={!bulkTargetCompanyId}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-600/25 cursor-pointer disabled:opacity-50"
+              >
+                Apply Reassignment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Progress Modal */}
+      {batchProgress && (
+        <BatchProgressModal
+          isOpen={batchProgress.isOpen}
+          title={batchProgress.title}
+          current={batchProgress.current}
+          total={batchProgress.total}
+          percentage={batchProgress.percentage}
+          status={batchProgress.status}
+          logs={batchProgress.logs}
+          onAbort={() => { abortBatchRef.current = true; }}
+          onClose={() => setBatchProgress(null)}
+        />
+      )}
     </div>
   );
 };

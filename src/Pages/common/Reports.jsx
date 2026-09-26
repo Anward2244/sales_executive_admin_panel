@@ -117,14 +117,14 @@ const Reports = () => {
   const [error, setError] = useState(null);
 
   // Filters & State
-  const [selectedRange, setSelectedRange] = useState('all');
+  const [selectedRange, setSelectedRange] = useState('1w'); // '1w' | '1m' | '1y' | 'all'
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
-  // Fetch report data
-  const fetchReportData = useCallback(async (isSilent = false) => {
+  // Fetch report data (supports server-side range param if provided by backend)
+  const fetchReportData = useCallback(async (isSilent = false, rangeParam = selectedRange) => {
     if (isSilent) {
       setRefreshing(true);
     } else {
@@ -133,7 +133,11 @@ const Reports = () => {
     setError(null);
 
     try {
-      const response = await getReportsApi();
+      const params = {};
+      if (rangeParam && rangeParam !== 'all') {
+        params.range = rangeParam;
+      }
+      const response = await getReportsApi(params);
       const resData = response?.data?.data || response?.data || {};
       setReportData(resData);
     } catch (err) {
@@ -143,34 +147,190 @@ const Reports = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedRange]);
 
   useEffect(() => {
     fetchReportData();
   }, [fetchReportData]);
 
-  // Derived summaries
-  const summary = reportData?.summary || {
-    totalOrders: 0,
-    totalRevenue: 0,
-    avgOrderValue: 0,
+  const handleRangeChange = (newRange) => {
+    setSelectedRange(newRange);
+    fetchReportData(true, newRange);
   };
 
+  // Base raw orders strictly deduplicated by _id to avoid any false inflated counts
+  const rawOrders = useMemo(() => {
+    const list = Array.isArray(reportData?.orders) ? reportData.orders : [];
+    const seen = new Set();
+    return list.filter((o) => {
+      if (!o || !o._id) return true;
+      if (seen.has(o._id)) return false;
+      seen.add(o._id);
+      return true;
+    });
+  }, [reportData?.orders]);
+
+  // Dynamic filter by Selected Reporting Window
+  const rangeFilteredOrders = useMemo(() => {
+    if (selectedRange === 'all') return rawOrders;
+
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    let start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+
+    if (selectedRange === '1w' || selectedRange === 'week' || selectedRange === '7d') {
+      // 1 Week: past 7 days (today - 6 to today)
+      start.setDate(now.getDate() - 6);
+    } else if (selectedRange === '1m' || selectedRange === 'month' || selectedRange === '30d') {
+      // 1 Month: past 30 days (today - 29 to today)
+      start.setDate(now.getDate() - 29);
+    } else if (selectedRange === '1y') {
+      // 1 Year: past 365 days
+      start = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    }
+
+    return rawOrders.filter((order) => {
+      const dateVal = order.createdAt || order.orderDate || order.date;
+      if (!dateVal) return false;
+      const d = new Date(dateVal);
+      return d >= start && d <= end;
+    });
+  }, [rawOrders, selectedRange]);
+
+  // Derived KPI Summaries dynamically and accurately calculated for the active range
+  const summary = useMemo(() => {
+    const totalOrders = rangeFilteredOrders.length;
+    const totalRevenue = rangeFilteredOrders.reduce(
+      (sum, o) => sum + (Number(o.totalAmount || o.totalValue || 0)),
+      0
+    );
+    const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+    return { totalOrders, totalRevenue, avgOrderValue };
+  }, [rangeFilteredOrders]);
+
+  // Derived Status Breakdown for the active range
   const statusBreakdown = useMemo(() => {
-    return Array.isArray(reportData?.statusBreakdown) ? reportData.statusBreakdown : [];
-  }, [reportData]);
+    const map = {};
+    rangeFilteredOrders.forEach((o) => {
+      const st = (o.status || 'PENDING').toUpperCase();
+      if (!map[st]) map[st] = { _id: st, count: 0, totalAmount: 0 };
+      map[st].count += 1;
+      map[st].totalAmount += Number(o.totalAmount || o.totalValue || 0);
+    });
+    const list = Object.values(map);
+    if (list.length > 0) return list;
+    if (selectedRange === 'all' && Array.isArray(reportData?.statusBreakdown)) {
+      return reportData.statusBreakdown;
+    }
+    return [];
+  }, [rangeFilteredOrders, selectedRange, reportData?.statusBreakdown]);
 
+  // Derived Daily Velocity & Trend for the active range
   const dailyTrend = useMemo(() => {
+    const dateMap = {};
+    rangeFilteredOrders.forEach((o) => {
+      const dateVal = o.createdAt || o.orderDate || o.date;
+      if (!dateVal) return;
+      const key = new Date(dateVal).toISOString().split('T')[0];
+      if (!dateMap[key]) dateMap[key] = { _id: key, date: key, totalAmount: 0, orderCount: 0 };
+      dateMap[key].totalAmount += Number(o.totalAmount || o.totalValue || 0);
+      dateMap[key].orderCount += 1;
+    });
+
+    const today = new Date();
+
+    if (selectedRange === '1w' || selectedRange === 'week' || selectedRange === '7d') {
+      const res = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        res.push(dateMap[key] || { _id: key, date: key, totalAmount: 0, orderCount: 0 });
+      }
+      return res;
+    }
+
+    if (selectedRange === '1m' || selectedRange === 'month' || selectedRange === '30d') {
+      const res = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        if (dateMap[key] || i < 7) {
+          res.push(dateMap[key] || { _id: key, date: key, totalAmount: 0, orderCount: 0 });
+        }
+      }
+      return res;
+    }
+
+    if (selectedRange === '1y') {
+      const res = [];
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        let monthRev = 0;
+        let monthOrd = 0;
+        Object.keys(dateMap).forEach((dateKey) => {
+          if (dateKey.startsWith(yearMonth)) {
+            monthRev += dateMap[dateKey].totalAmount;
+            monthOrd += dateMap[dateKey].orderCount;
+          }
+        });
+        res.push({
+          _id: `${yearMonth}-01`,
+          date: `${yearMonth}-01`,
+          totalAmount: monthRev,
+          orderCount: monthOrd
+        });
+      }
+      return res;
+    }
+
+    // 'all'
+    if (Object.keys(dateMap).length > 0) {
+      return Object.values(dateMap).sort((a, b) => a._id.localeCompare(b._id));
+    }
+
     return Array.isArray(reportData?.dailyTrend) ? reportData.dailyTrend : [];
-  }, [reportData]);
+  }, [rangeFilteredOrders, selectedRange, reportData?.dailyTrend]);
 
+  // Derived Product Performance for the active range
   const productPerformance = useMemo(() => {
-    return Array.isArray(reportData?.productPerformance) ? reportData.productPerformance : [];
-  }, [reportData]);
+    if (selectedRange === 'all' && Array.isArray(reportData?.productPerformance) && reportData.productPerformance.length > 0) {
+      return reportData.productPerformance;
+    }
 
-  const orders = useMemo(() => {
-    return Array.isArray(reportData?.orders) ? reportData.orders : [];
-  }, [reportData]);
+    const prodMap = {};
+    rangeFilteredOrders.forEach((o) => {
+      if (Array.isArray(o.items)) {
+        o.items.forEach((item) => {
+          const pId = item.productId?._id || item.productId || item.name || 'item';
+          const pName = item.productNameSnapshot || item.productId?.name || item.name || 'Catalog Product';
+          const sku = item.skuSnapshot || item.productId?.sku || item.sku || 'N/A';
+          const qty = Number(item.quantity || 1);
+          const uPrice = Number(item.unitPrice || 0);
+          const rev = Number(item.totalPrice || (qty * uPrice) || 0);
+
+          if (!prodMap[pId]) {
+            prodMap[pId] = {
+              _id: pId,
+              productName: pName,
+              sku,
+              totalQuantity: 0,
+              totalRevenue: 0
+            };
+          }
+          prodMap[pId].totalQuantity += qty;
+          prodMap[pId].totalRevenue += rev;
+        });
+      }
+    });
+
+    const list = Object.values(prodMap).sort((a, b) => b.totalRevenue - a.totalRevenue);
+    if (list.length > 0) return list;
+    if (selectedRange === 'all') return reportData?.productPerformance || [];
+    return [];
+  }, [rangeFilteredOrders, selectedRange, reportData?.productPerformance]);
 
   // Total quantity sold across all products
   const totalUnitsSold = useMemo(() => {
@@ -183,9 +343,9 @@ const Reports = () => {
     return Math.max(...dailyTrend.map((d) => Number(d.totalAmount) || 0), 1);
   }, [dailyTrend]);
 
-  // Filtered orders
+  // Filtered orders (filtered by range, status, and search query)
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
+    return rangeFilteredOrders.filter((order) => {
       const matchesStatus =
         statusFilter === 'ALL' || String(order.status || '').toUpperCase() === statusFilter;
 
@@ -212,7 +372,7 @@ const Reports = () => {
         execCode.includes(q)
       );
     });
-  }, [orders, searchQuery, statusFilter]);
+  }, [rangeFilteredOrders, searchQuery, statusFilter]);
 
   // CSV Export Generators
   const exportToCSV = (filename, rows) => {
@@ -238,7 +398,8 @@ const Reports = () => {
   };
 
   const handleExportOrdersCSV = () => {
-    if (!orders.length) return;
+    const targetOrders = filteredOrders.length > 0 ? filteredOrders : rangeFilteredOrders;
+    if (!targetOrders.length) return;
     const headers = [
       'PO Number',
       'Status',
@@ -255,7 +416,7 @@ const Reports = () => {
       'Order Date',
     ];
     const rows = [headers];
-    orders.forEach((o) => {
+    targetOrders.forEach((o) => {
       const itemsCount = (o.items || []).reduce((acc, i) => acc + (i.quantity || 0), 0);
       const salesRep = `${o.salesExecutiveId?.firstName || ''} ${o.salesExecutiveId?.lastName || ''}`.trim();
       rows.push([
@@ -404,19 +565,24 @@ const Reports = () => {
         <div className="flex items-center gap-2">
           <FiCalendar className="text-blue-500 text-sm" />
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Reporting Window:</span>
+          {selectedRange !== 'all' && (
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              {rangeFilteredOrders.length} {rangeFilteredOrders.length === 1 ? 'order' : 'orders'} in period
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {[
-            { id: 'all', label: 'All Recorded Data' },
-            { id: 'today', label: 'Today' },
-            { id: 'week', label: 'Last 7 Days' },
-            { id: 'month', label: 'This Month' },
+            { id: '1w', label: '1W' },
+            { id: '1m', label: '1M' },
+            { id: '1y', label: '1Y' },
+            { id: 'all', label: 'All' }
           ].map((item) => (
             <button
               key={item.id}
               type="button"
-              onClick={() => setSelectedRange(item.id)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              onClick={() => handleRangeChange(item.id)}
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                 selectedRange === item.id
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
