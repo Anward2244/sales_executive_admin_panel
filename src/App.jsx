@@ -17,6 +17,7 @@ const CompanyDetails = lazy(() => import('@/pages/companies/CompanyDetails'));
 const Firms = lazy(() => import('@/pages/firms/Firms'));
 const FirmOnboarding = lazy(() => import('@/pages/firms/FirmOnboarding'));
 const Notifications = lazy(() => import('@/pages/notifications/Notifications'));
+const EmailNotifications = lazy(() => import('@/pages/notifications/EmailNotifications'));
 const Products = lazy(() => import('@/pages/products/Products'));
 const PurchaseOrders = lazy(() => import('@/pages/orders/PurchaseOrders'));
 const Reports = lazy(() => import('@/pages/common/Reports'));
@@ -91,6 +92,10 @@ function App() {
                     <Route path="/firms/onboarding-requests" element={<Navigate to="/firms/onboarding" replace />} />
                     <Route path="/firms/list" element={<Navigate to="/firms" replace />} />
                     <Route path="/notifications" element={<Notifications />} />
+                    <Route path="/notifications/emails" element={<EmailNotifications />} />
+                    <Route path="/emails" element={<Navigate to="/notifications/emails" replace />} />
+                    <Route path="/emails/logs" element={<Navigate to="/notifications/emails" replace />} />
+                    <Route path="/emails/recipients" element={<Navigate to="/notifications/emails" replace />} />
                     <Route path="/products" element={<Products />} />
                     <Route path="/purchase-orders" element={<PurchaseOrders />} />
                     <Route path="/purchaseOrders" element={<Navigate to="/purchase-orders" replace />} />

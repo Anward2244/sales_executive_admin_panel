@@ -118,15 +118,72 @@ export const getReportsApi = async (params = {}) => {
   }
 };
 
-export const getCompaniesApi = async (params = {}) => {
+// Generic helper to fetch all paginated table data across pages
+const fetchAllPages = async (primaryEndpoint, fallbackEndpoint, params = {}) => {
+  const requestParams = { limit: 1000, ...params };
+  let initialRes;
+  let activeEndpoint = primaryEndpoint;
+
   try {
-    return await api.get('/v1/companies', { params });
+    initialRes = await api.get(activeEndpoint, { params: requestParams });
   } catch (err) {
-    if (err.response?.status === 404) {
-      return await api.get('/companies', { params });
+    if (fallbackEndpoint && err.response?.status === 404) {
+      activeEndpoint = fallbackEndpoint;
+      initialRes = await api.get(activeEndpoint, { params: requestParams });
+    } else {
+      throw err;
     }
-    throw err;
   }
+
+  const resData = initialRes?.data;
+  const firstPageItems = Array.isArray(resData?.data)
+    ? resData.data
+    : (Array.isArray(resData) ? resData : []);
+  const meta = resData?.meta;
+
+  // If backend returned paginated meta with multiple pages and caller did not restrict to a specific page
+  if (meta && meta.totalPages > 1 && (!params.page || params.page === 1)) {
+    try {
+      const pagePromises = [];
+      for (let p = 2; p <= meta.totalPages; p++) {
+        pagePromises.push(
+          api.get(activeEndpoint, { params: { ...requestParams, page: p } }).catch(() => null)
+        );
+      }
+      const pageResponses = await Promise.all(pagePromises);
+      const remainingItems = pageResponses
+        .filter(Boolean)
+        .flatMap((r) => (Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : [])));
+
+      const allItems = [...firstPageItems, ...remainingItems];
+
+      return {
+        ...initialRes,
+        data: Array.isArray(resData)
+          ? allItems
+          : {
+              ...resData,
+              data: allItems,
+              meta: {
+                total: allItems.length,
+                page: 1,
+                limit: allItems.length,
+                totalPages: 1,
+                hasNextPage: false,
+                hasPrevPage: false
+              }
+            }
+      };
+    } catch (e) {
+      console.warn(`Failed to fetch all pages for ${activeEndpoint}:`, e);
+    }
+  }
+
+  return initialRes;
+};
+
+export const getCompaniesApi = async (params = {}) => {
+  return fetchAllPages('/v1/companies', '/companies', params);
 };
 
 export const createCompanyApi = async (companyData) => {
@@ -175,14 +232,7 @@ export const deleteCompanyApi = async (id) => {
 
 
 export const getFirmsApi = async (params = {}) => {
-  try {
-    return await api.get('/v1/firms', { params });
-  } catch (err) {
-    if (err.response?.status === 404) {
-      return await api.get('/firms', { params });
-    }
-    throw err;
-  }
+  return fetchAllPages('/v1/firms', '/firms', params);
 };
 
 export const getFirmByIdApi = async (id) => {
@@ -230,14 +280,7 @@ export const deleteFirmApi = async (id) => {
 };
 
 export const getFirmOnboardingRequestsApi = async (params = {}) => {
-  try {
-    return await api.get('/firms/onboarding-requests', { params });
-  } catch (err) {
-    if (err.response?.status === 404) {
-      return await api.get('/v1/firms/onboarding-requests', { params });
-    }
-    throw err;
-  }
+  return fetchAllPages('/firms/onboarding-requests', '/v1/firms/onboarding-requests', params);
 };
 export const getOnboardingRequestsApi = getFirmOnboardingRequestsApi;
 
@@ -280,14 +323,7 @@ export const rejectFirmOnboardingApi = async (id, rejectionReason = '') => {
 
 
 export const getUsersApi = async (params = {}) => {
-  try {
-    return await api.get('/v1/users', { params });
-  } catch (err) {
-    if (err.response?.status === 404) {
-      return await api.get('/users', { params });
-    }
-    throw err;
-  }
+  return fetchAllPages('/v1/users', '/users', params);
 };
 
 export const getUserByIdApi = async (id) => {
@@ -335,14 +371,7 @@ export const updateUserStatusApi = async (id, isActive) => {
 };
 
 export const getCategoryApi = async (params = {}) => {
-  try {
-    return await api.get('/v1/categories', { params });
-  } catch (err) {
-    if (err.response?.status === 404) {
-      return await api.get('/categories', { params });
-    }
-    throw err;
-  }
+  return fetchAllPages('/v1/categories', '/categories', params);
 };
 
 export const createCategoryApi = async (categoryData) => {
@@ -390,14 +419,7 @@ export const deleteCategoryApi = async (id) => {
 };
 
 export const getProductsApi = async (params = {}) => {
-  try {
-    return await api.get('/v1/products', { params });
-  } catch (err) {
-    if (err.response?.status === 404) {
-      return await api.get('/products', { params });
-    }
-    throw err;
-  }
+  return fetchAllPages('/v1/products', '/products', params);
 };
 
 export const createProductApi = async (productData) => {
@@ -464,14 +486,7 @@ export const deleteProductApi = async (id) => {
 
 // Purchase Orders APIs
 export const getPurchaseOrdersApi = async (params = {}) => {
-  try {
-    return await api.get('/v1/purchase-orders', { params });
-  } catch (err) {
-    if (err.response?.status === 404) {
-      return await api.get('/purchase-orders', { params });
-    }
-    throw err;
-  }
+  return fetchAllPages('/v1/purchase-orders', '/purchase-orders', params);
 };
 
 export const createPurchaseOrderApi = async (orderData) => {
@@ -532,14 +547,7 @@ export const dispatchPurchaseOrderApi = async (id, data = {}) => {
 
 // In-App Notification APIs
 export const getNotificationsApi = async (params = {}) => {
-  try {
-    return await api.get('/v1/notifications', { params });
-  } catch (err) {
-    if (err.response?.status === 404) {
-      return await api.get('/notifications', { params });
-    }
-    throw err;
-  }
+  return fetchAllPages('/v1/notifications', '/notifications', params);
 };
 
 export const markNotificationAsReadApi = async (id) => {
@@ -570,6 +578,48 @@ export const registerDeviceTokenApi = async (tokenData) => {
   } catch (err) {
     if (err.response?.status === 404) {
       return await api.post('/notifications/device-token', tokenData);
+    }
+    throw err;
+  }
+};
+
+// Email Notification & Delivery Logs APIs
+export const getEmailLogsApi = async (params = {}) => {
+  return fetchAllPages('/emails/logs', '/v1/emails/logs', params);
+};
+
+export const resendEmailApi = async (id, customRecipients = []) => {
+  const payload =
+    Array.isArray(customRecipients) && customRecipients.length > 0
+      ? { customRecipients }
+      : {};
+  try {
+    return await api.post(`/emails/resend/${id}`, payload);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.post(`/v1/emails/resend/${id}`, payload);
+    }
+    throw err;
+  }
+};
+
+export const getEmailRecipientsApi = async () => {
+  try {
+    return await api.get('/emails/recipients');
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.get('/v1/emails/recipients');
+    }
+    throw err;
+  }
+};
+
+export const updateEmailRecipientsApi = async (recipients = []) => {
+  try {
+    return await api.put('/emails/recipients', { recipients });
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.put('/v1/emails/recipients', { recipients });
     }
     throw err;
   }

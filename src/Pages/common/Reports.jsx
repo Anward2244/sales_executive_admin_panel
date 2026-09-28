@@ -24,6 +24,8 @@ import {
   FiShoppingBag,
   FiBarChart2,
   FiHash,
+  FiMail,
+  FiSend,
 } from 'react-icons/fi';
 import PageHeader from '@/components/ui/PageHeader';
 import Skeleton from '@/components/ui/Skeleton';
@@ -108,6 +110,35 @@ const getStatusBadge = (status) => {
         barColor: 'bg-amber-500',
       };
   }
+};
+
+// Helper for Email Notification status badge styling
+const getEmailStatusBadge = (emailStatus) => {
+  const isSent = emailStatus?.isSent;
+  const status = (emailStatus?.status || (isSent ? 'SENT' : 'PENDING')).toUpperCase();
+
+  if (status === 'SENT') {
+    return {
+      label: 'Sent',
+      icon: FiMail,
+      className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
+      dot: 'bg-emerald-500',
+    };
+  }
+  if (status === 'FAILED') {
+    return {
+      label: 'Failed',
+      icon: FiAlertCircle,
+      className: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25',
+      dot: 'bg-rose-500',
+    };
+  }
+  return {
+    label: 'Pending',
+    icon: FiClock,
+    className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
+    dot: 'bg-amber-500',
+  };
 };
 
 const Reports = () => {
@@ -199,6 +230,13 @@ const Reports = () => {
 
   // Derived KPI Summaries dynamically and accurately calculated for the active range
   const summary = useMemo(() => {
+    if ((selectedRange === 'all' || rangeFilteredOrders.length === rawOrders.length) && reportData?.summary) {
+      return {
+        totalOrders: Number(reportData.summary.totalOrders ?? rawOrders.length),
+        totalRevenue: Number(reportData.summary.totalRevenue ?? 0),
+        avgOrderValue: Number(reportData.summary.avgOrderValue ?? 0),
+      };
+    }
     const totalOrders = rangeFilteredOrders.length;
     const totalRevenue = rangeFilteredOrders.reduce(
       (sum, o) => sum + (Number(o.totalAmount || o.totalValue || 0)),
@@ -206,10 +244,13 @@ const Reports = () => {
     );
     const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
     return { totalOrders, totalRevenue, avgOrderValue };
-  }, [rangeFilteredOrders]);
+  }, [rangeFilteredOrders, selectedRange, reportData?.summary, rawOrders.length]);
 
   // Derived Status Breakdown for the active range
   const statusBreakdown = useMemo(() => {
+    if ((selectedRange === 'all' || rangeFilteredOrders.length === rawOrders.length) && Array.isArray(reportData?.statusBreakdown) && reportData.statusBreakdown.length > 0) {
+      return reportData.statusBreakdown;
+    }
     const map = {};
     rangeFilteredOrders.forEach((o) => {
       const st = (o.status || 'PENDING').toUpperCase();
@@ -219,14 +260,18 @@ const Reports = () => {
     });
     const list = Object.values(map);
     if (list.length > 0) return list;
-    if (selectedRange === 'all' && Array.isArray(reportData?.statusBreakdown)) {
+    if (Array.isArray(reportData?.statusBreakdown)) {
       return reportData.statusBreakdown;
     }
     return [];
-  }, [rangeFilteredOrders, selectedRange, reportData?.statusBreakdown]);
+  }, [rangeFilteredOrders, selectedRange, reportData?.statusBreakdown, rawOrders.length]);
 
   // Derived Daily Velocity & Trend for the active range
   const dailyTrend = useMemo(() => {
+    if (selectedRange === 'all' && Array.isArray(reportData?.dailyTrend) && reportData.dailyTrend.length > 0) {
+      return reportData.dailyTrend;
+    }
+
     const dateMap = {};
     rangeFilteredOrders.forEach((o) => {
       const dateVal = o.createdAt || o.orderDate || o.date;
@@ -296,7 +341,7 @@ const Reports = () => {
 
   // Derived Product Performance for the active range
   const productPerformance = useMemo(() => {
-    if (selectedRange === 'all' && Array.isArray(reportData?.productPerformance) && reportData.productPerformance.length > 0) {
+    if ((selectedRange === 'all' || rangeFilteredOrders.length === rawOrders.length) && Array.isArray(reportData?.productPerformance) && reportData.productPerformance.length > 0) {
       return reportData.productPerformance;
     }
 
@@ -328,9 +373,8 @@ const Reports = () => {
 
     const list = Object.values(prodMap).sort((a, b) => b.totalRevenue - a.totalRevenue);
     if (list.length > 0) return list;
-    if (selectedRange === 'all') return reportData?.productPerformance || [];
-    return [];
-  }, [rangeFilteredOrders, selectedRange, reportData?.productPerformance]);
+    return reportData?.productPerformance || [];
+  }, [rangeFilteredOrders, selectedRange, reportData?.productPerformance, rawOrders.length]);
 
   // Total quantity sold across all products
   const totalUnitsSold = useMemo(() => {
@@ -358,18 +402,22 @@ const Reports = () => {
       const compName = String(order.companyId?.name || '').toLowerCase();
       const compCode = String(order.companyId?.code || '').toLowerCase();
       const firmName = String(order.firmId?.firmName || '').toLowerCase();
+      const firmCode = String(order.firmId?.firmCode || '').toLowerCase();
       const firmCity = String(order.firmId?.city || '').toLowerCase();
       const execName = `${order.salesExecutiveId?.firstName || ''} ${order.salesExecutiveId?.lastName || ''}`.toLowerCase();
       const execCode = String(order.salesExecutiveId?.employeeCode || '').toLowerCase();
+      const execEmail = String(order.salesExecutiveId?.email || '').toLowerCase();
 
       return (
         poNum.includes(q) ||
         compName.includes(q) ||
         compCode.includes(q) ||
         firmName.includes(q) ||
+        firmCode.includes(q) ||
         firmCity.includes(q) ||
         execName.includes(q) ||
-        execCode.includes(q)
+        execCode.includes(q) ||
+        execEmail.includes(q)
       );
     });
   }, [rangeFilteredOrders, searchQuery, statusFilter]);
@@ -403,9 +451,12 @@ const Reports = () => {
     const headers = [
       'PO Number',
       'Status',
+      'Email Status',
+      'Email Recipients',
       'Company Name',
       'Company Code',
       'Firm Name',
+      'Firm Code',
       'City',
       'Sales Executive',
       'Employee Code',
@@ -414,17 +465,23 @@ const Reports = () => {
       'Total Amount (INR)',
       'Notes',
       'Order Date',
+      'Approved At',
     ];
     const rows = [headers];
     targetOrders.forEach((o) => {
       const itemsCount = (o.items || []).reduce((acc, i) => acc + (i.quantity || 0), 0);
       const salesRep = `${o.salesExecutiveId?.firstName || ''} ${o.salesExecutiveId?.lastName || ''}`.trim();
+      const emailStatus = o.emailStatus?.status || (o.emailStatus?.isSent ? 'SENT' : 'PENDING');
+      const recipients = Array.isArray(o.emailStatus?.recipients) ? o.emailStatus.recipients.join('; ') : '';
       rows.push([
         o.poNumber || '',
         o.status || '',
+        emailStatus,
+        recipients,
         o.companyId?.name || '',
         o.companyId?.code || '',
         o.firmId?.firmName || '',
+        o.firmId?.firmCode || '',
         o.firmId?.city || '',
         salesRep,
         o.salesExecutiveId?.employeeCode || '',
@@ -433,6 +490,7 @@ const Reports = () => {
         o.totalAmount || 0,
         o.notes || '',
         o.createdAt ? new Date(o.createdAt).toLocaleString('en-IN') : '',
+        o.approvedAt ? new Date(o.approvedAt).toLocaleString('en-IN') : '',
       ]);
     });
     exportToCSV('orders_report', rows);
@@ -909,8 +967,8 @@ const Reports = () => {
             No product performance records found.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-sm whitespace-nowrap min-w-[700px]">
               <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5">
                 <tr>
                   <th className="py-3 px-4 w-12 text-center">Rank</th>
@@ -1069,23 +1127,31 @@ const Reports = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-sm whitespace-nowrap min-w-[1100px]">
               <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5">
                 <tr>
-                  <th className="py-3 px-4">PO Number & Date</th>
-                  <th className="py-3 px-4">Client Company & Firm</th>
-                  <th className="py-3 px-4">Sales Executive</th>
-                  <th className="py-3 px-4 text-center">Items Ordered</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Total Amount</th>
-                  <th className="py-3 px-4 text-center">Action</th>
+                  <th className="py-3.5 px-4 font-mono">PO Number</th>
+                  <th className="py-3.5 px-4">Trading Company</th>
+                  <th className="py-3.5 px-4">Purchasing Firm</th>
+                  <th className="py-3.5 px-4">Sales Executive</th>
+                  <th className="py-3.5 px-4 text-center">Items</th>
+                  <th className="py-3.5 px-4 text-center">Status</th>
+                  <th className="py-3.5 px-4 text-center">Email</th>
+                  <th className="py-3.5 px-4 text-right">Total Amount</th>
+                  <th className="py-3.5 px-4">Date Created</th>
+                  <th className="py-3.5 px-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
                 {filteredOrders.map((order) => {
                   const badge = getStatusBadge(order.status);
                   const StatusIcon = badge.icon;
+                  const emailBadge = getEmailStatusBadge(order.emailStatus);
+                  const EmailBadgeIcon = emailBadge.icon;
+                  const emailRecipientsCount = Array.isArray(order.emailStatus?.recipients)
+                    ? order.emailStatus.recipients.length
+                    : 0;
                   const totalUnits = (order.items || []).reduce((acc, i) => acc + (i.quantity || 0), 0);
                   const execName = `${order.salesExecutiveId?.firstName || ''} ${
                     order.salesExecutiveId?.lastName || ''
@@ -1096,80 +1162,127 @@ const Reports = () => {
                       key={order._id}
                       className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors"
                     >
-                      {/* PO Number & Date */}
+                      {/* PO Number */}
                       <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900 dark:text-white font-mono text-xs">
-                            {order.poNumber || 'N/A'}
-                          </span>
+                        <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900 dark:text-white text-xs">
+                          <span>{order.poNumber || 'N/A'}</span>
                           {order.poNumber && <CopyButton text={order.poNumber} />}
-                        </div>
-                        <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
-                          <FiCalendar className="text-[10px]" />
-                          <span>{formatDate(order.createdAt)}</span>
                         </div>
                       </td>
 
-                      {/* Company & Firm */}
+                      {/* Trading Company */}
                       <td className="py-4 px-4">
-                        <div className="font-bold text-slate-900 dark:text-white text-xs">
-                          {order.companyId?.name || 'Unknown Company'}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                          <span className="font-medium text-slate-700 dark:text-slate-300">
-                            {order.firmId?.firmName || 'N/A'}
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-900 dark:text-white text-xs">
+                            {order.companyId?.name || 'Unknown Company'}
                           </span>
-                          {order.firmId?.city && (
-                            <>
-                              <span>•</span>
-                              <span className="flex items-center gap-0.5 text-slate-400">
-                                <FiMapPin className="text-[10px]" />
-                                {order.firmId.city}
-                              </span>
-                            </>
+                          {order.companyId?.code && (
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 shrink-0">
+                              {order.companyId.code}
+                            </span>
                           )}
                         </div>
                       </td>
 
+                      {/* Purchasing Firm */}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-900 dark:text-white text-xs">
+                            {order.firmId?.firmName || 'N/A'}
+                          </span>
+                          {order.firmId?.firmCode && (
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 shrink-0">
+                              {order.firmId.firmCode}
+                            </span>
+                          )}
+                        </div>
+                        {order.firmId?.city && (
+                          <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                            <FiMapPin className="text-[10px]" />
+                            <span>{order.firmId.city}</span>
+                          </div>
+                        )}
+                      </td>
+
                       {/* Sales Executive */}
                       <td className="py-4 px-4">
-                        <div className="font-medium text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
-                          <FiUser className="text-slate-400 text-xs" />
-                          <span>{execName}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                            {execName}
+                          </span>
+                          {order.salesExecutiveId?.employeeCode && (
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                              {order.salesExecutiveId.employeeCode}
+                            </span>
+                          )}
                         </div>
-                        {order.salesExecutiveId?.employeeCode && (
-                          <div className="text-[11px] text-slate-400 font-mono">
-                            {order.salesExecutiveId.employeeCode}
+                        {order.salesExecutiveId?.email && (
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            {order.salesExecutiveId.email}
                           </div>
                         )}
                       </td>
 
                       {/* Items */}
                       <td className="py-4 px-4 text-center">
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                          <FiBox className="text-slate-400 text-xs" />
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 shrink-0">
+                          <FiBox className="text-blue-500 text-xs" />
                           <span>
-                            {(order.items || []).length} SKUs ({totalUnits} pcs)
+                            {(order.items || []).length} SKU{((order.items || []).length !== 1 ? 's' : '')} ({totalUnits} pcs)
                           </span>
                         </span>
                       </td>
 
                       {/* Status */}
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-4 text-center">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border ${badge.bg}`}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border shrink-0 ${badge.bg}`}
                         >
                           <StatusIcon className="text-xs" />
                           <span>{badge.label}</span>
                         </span>
                       </td>
 
+                      {/* Email Status */}
+                      <td className="py-4 px-4 text-center">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold border shrink-0 ${emailBadge.className}`}
+                          title={
+                            order.emailStatus?.isSent
+                              ? `Email Sent (${emailRecipientsCount} recipients)`
+                              : `Email: ${emailBadge.label}`
+                          }
+                        >
+                          <EmailBadgeIcon className="text-xs" />
+                          <span>{emailBadge.label}</span>
+                          {emailRecipientsCount > 0 && (
+                            <span className="font-mono text-[10px] opacity-80">
+                              ({emailRecipientsCount})
+                            </span>
+                          )}
+                        </span>
+                      </td>
+
                       {/* Total Amount */}
-                      <td className="py-4 px-4 text-right">
-                        <div className="font-extrabold text-slate-900 dark:text-white">
+                      <td className="py-4 px-4 text-right font-mono">
+                        <div className="font-extrabold text-slate-900 dark:text-white text-sm">
                           {formatCurrency(order.totalAmount || order.subtotal || 0)}
                         </div>
-                        <div className="text-[11px] text-slate-400">GST Inclusive</div>
+                        {order.subtotal !== undefined &&
+                          order.totalAmount !== undefined &&
+                          Number(order.subtotal) !== Number(order.totalAmount) && (
+                            <div className="text-[10px] text-slate-400">
+                              Subtotal: {formatCurrency(order.subtotal)}
+                            </div>
+                          )}
+                      </td>
+
+                      {/* Date Created */}
+                      <td className="py-4 px-4 text-xs text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center gap-1.5">
+                          <FiCalendar className="text-[11px] text-slate-400" />
+                          <span>{formatDate(order.createdAt)}</span>
+                        </div>
                       </td>
 
                       {/* Action */}
@@ -1231,26 +1344,128 @@ const Reports = () => {
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     Company & Client
                   </span>
-                  <div className="font-bold text-slate-900 dark:text-white text-sm mt-0.5">
-                    {selectedOrder.companyId?.name || 'N/A'}
+                  <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">
+                      {selectedOrder.companyId?.name || 'N/A'}
+                    </span>
+                    {selectedOrder.companyId?.code && (
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                        {selectedOrder.companyId.code}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {selectedOrder.firmId?.firmName} • {selectedOrder.firmId?.city}
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                      {selectedOrder.firmId?.firmName || 'Retailer Firm'}
+                    </span>
+                    {selectedOrder.firmId?.firmCode && (
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
+                        {selectedOrder.firmId.firmCode}
+                      </span>
+                    )}
+                    {selectedOrder.firmId?.city && (
+                      <span>• {selectedOrder.firmId.city}</span>
+                    )}
                   </div>
                 </div>
                 <div>
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     Sales Executive
                   </span>
-                  <div className="font-bold text-slate-900 dark:text-white text-sm mt-0.5">
-                    {`${selectedOrder.salesExecutiveId?.firstName || ''} ${
-                      selectedOrder.salesExecutiveId?.lastName || ''
-                    }`.trim() || 'N/A'}
+                  <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">
+                      {`${selectedOrder.salesExecutiveId?.firstName || ''} ${
+                        selectedOrder.salesExecutiveId?.lastName || ''
+                      }`.trim() || 'N/A'}
+                    </span>
+                    {selectedOrder.salesExecutiveId?.employeeCode && (
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                        {selectedOrder.salesExecutiveId.employeeCode}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {selectedOrder.salesExecutiveId?.email}
+                  {selectedOrder.salesExecutiveId?.email && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {selectedOrder.salesExecutiveId.email}
+                    </div>
+                  )}
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    {(() => {
+                      const badge = getStatusBadge(selectedOrder.status);
+                      const BadgeIcon = badge.icon;
+                      return (
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${badge.bg}`}>
+                          <BadgeIcon className="text-[10px]" />
+                          <span>{badge.label}</span>
+                        </span>
+                      );
+                    })()}
+                    {selectedOrder.approvedAt && (
+                      <span className="text-[10px] font-mono text-slate-400">
+                        Approved: {formatDateTime(selectedOrder.approvedAt)}
+                      </span>
+                    )}
                   </div>
                 </div>
+              </div>
+
+              {/* Email Dispatch Details Card */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-white/10">
+                <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-200/60 dark:border-white/10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm border border-blue-500/20">
+                      <FiMail />
+                    </div>
+                    <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                      Notification Email Delivery
+                    </span>
+                  </div>
+                  {(() => {
+                    const eb = getEmailStatusBadge(selectedOrder.emailStatus);
+                    const EbIcon = eb.icon;
+                    return (
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${eb.className}`}>
+                        <EbIcon className="text-[10px]" />
+                        <span>{eb.label}</span>
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold block">Sent Timestamp</span>
+                    <span className="font-mono text-slate-800 dark:text-slate-200">
+                      {selectedOrder.emailStatus?.lastSentAt
+                        ? formatDateTime(selectedOrder.emailStatus.lastSentAt)
+                        : 'Not Dispatched Yet'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold block">Message ID</span>
+                    <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate block max-w-full" title={selectedOrder.emailStatus?.messageId}>
+                      {selectedOrder.emailStatus?.messageId || '-'}
+                    </span>
+                  </div>
+                </div>
+                {Array.isArray(selectedOrder.emailStatus?.recipients) && selectedOrder.emailStatus.recipients.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
+                    <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1.5">
+                      Recipients ({selectedOrder.emailStatus.recipients.length})
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedOrder.emailStatus.recipients.map((rec, rIdx) => (
+                        <span
+                          key={rIdx}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-700 dark:text-slate-300"
+                        >
+                          <FiMail className="text-slate-400 text-[10px]" />
+                          <span>{rec}</span>
+                          <CopyButton text={rec} />
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Order Items Table */}
@@ -1305,16 +1520,20 @@ const Reports = () => {
 
               {/* Total Summary */}
               <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200/60 dark:border-white/5 space-y-2 text-xs">
-                <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                  <span>Subtotal</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">
-                    {formatCurrency(selectedOrder.subtotal || selectedOrder.totalAmount)}
-                  </span>
-                </div>
+                {selectedOrder.subtotal !== undefined &&
+                  selectedOrder.totalAmount !== undefined &&
+                  Number(selectedOrder.subtotal) !== Number(selectedOrder.totalAmount) && (
+                    <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                      <span>Subtotal</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                        {formatCurrency(selectedOrder.subtotal)}
+                      </span>
+                    </div>
+                  )}
                 <div className="flex justify-between text-slate-900 dark:text-white font-extrabold text-sm pt-2 border-t border-slate-200 dark:border-white/10">
                   <span>Grand Total</span>
-                  <span className="text-blue-600 dark:text-blue-400">
-                    {formatCurrency(selectedOrder.totalAmount)}
+                  <span className="text-blue-600 dark:text-blue-400 font-mono">
+                    {formatCurrency(selectedOrder.totalAmount || selectedOrder.subtotal || 0)}
                   </span>
                 </div>
               </div>

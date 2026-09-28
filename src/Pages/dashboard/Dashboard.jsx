@@ -29,7 +29,9 @@ import {
   FiActivity,
   FiFilter,
   FiGrid,
-  FiShare2
+  FiShare2,
+  FiMail,
+  FiSend
 } from 'react-icons/fi';
 import VisxTrendChart from '@/components/dashboard/VisxTrendChart';
 import VisxPipelineDonut from '@/components/dashboard/VisxPipelineDonut';
@@ -145,11 +147,12 @@ const Dashboard = () => {
   // Derived Summary & Active Entities Metrics
   const summary = dashboardData?.summary || {};
   const activeEntities = summary.activeEntities || {};
-  const totalOrders = Math.max(Number(summary.totalOrders) || 0, allPurchaseOrders.length);
-  const totalOrderValue = Math.max(
-    Number(summary.totalOrderValue) || 0,
-    allPurchaseOrders.reduce((sum, o) => sum + Number(o.totalAmount || o.totalValue || 0), 0)
-  );
+  const totalOrders = summary.totalOrders !== undefined
+    ? Number(summary.totalOrders)
+    : allPurchaseOrders.length;
+  const totalOrderValue = summary.totalOrderValue !== undefined
+    ? Number(summary.totalOrderValue)
+    : allPurchaseOrders.reduce((sum, o) => sum + Number(o.totalAmount || o.totalValue || 0), 0);
 
   const totalUsers = activeEntities.users ?? 0;
   const totalCompanies = activeEntities.companies ?? 0;
@@ -597,6 +600,35 @@ const Dashboard = () => {
     }
   };
 
+  // Helper for Email Notification Status Badge styling
+  const getEmailStatusBadge = (emailStatus) => {
+    const isSent = emailStatus?.isSent;
+    const status = (emailStatus?.status || (isSent ? 'SENT' : 'PENDING')).toUpperCase();
+
+    if (status === 'SENT') {
+      return {
+        label: 'Sent',
+        icon: FiMail,
+        className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
+        dot: 'bg-emerald-500'
+      };
+    }
+    if (status === 'FAILED') {
+      return {
+        label: 'Failed',
+        icon: FiAlertCircle,
+        className: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25',
+        dot: 'bg-rose-500'
+      };
+    }
+    return {
+      label: 'Pending',
+      icon: FiClock,
+      className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
+      dot: 'bg-amber-500'
+    };
+  };
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
       {/* Top Header */}
@@ -891,6 +923,7 @@ const Dashboard = () => {
                 <th className="px-4 py-3.5 text-center">Items</th>
                 <th className="px-4 py-3.5 text-right">Total Amount</th>
                 <th className="px-4 py-3.5 text-center">Status</th>
+                <th className="px-4 py-3.5 text-center">Email</th>
                 <th className="px-5 py-3.5">Date Created</th>
                 <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
@@ -902,6 +935,7 @@ const Dashboard = () => {
                   const companyTitle = order.companyId?.name || 'Company';
                   const companyCode = order.companyId?.code;
                   const firmTitle = order.firmId?.firmName || 'Firm Buyer';
+                  const firmCode = order.firmId?.firmCode;
                   const firmCity = order.firmId?.city;
                   const repName = order.salesExecutiveId
                     ? `${order.salesExecutiveId.firstName || ''} ${order.salesExecutiveId.lastName || ''}`.trim() || order.salesExecutiveId.name || 'Sales Rep'
@@ -911,6 +945,11 @@ const Dashboard = () => {
                   const totalUnits = Array.isArray(order.items) ? order.items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0) : 0;
                   const badge = getStatusBadge(order.status);
                   const BadgeIcon = badge.icon;
+                  const emailBadge = getEmailStatusBadge(order.emailStatus);
+                  const EmailBadgeIcon = emailBadge.icon;
+                  const emailRecipientsCount = Array.isArray(order.emailStatus?.recipients)
+                    ? order.emailStatus.recipients.length
+                    : 0;
 
                   return (
                     <tr key={order._id || idx} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors">
@@ -937,7 +976,14 @@ const Dashboard = () => {
                       {/* Purchasing Firm */}
                       <td className="px-5 py-3.5">
                         <div className="flex flex-col">
-                          <span className="font-semibold text-slate-900 dark:text-white">{firmTitle}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-900 dark:text-white">{firmTitle}</span>
+                            {firmCode && (
+                              <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
+                                {firmCode}
+                              </span>
+                            )}
+                          </div>
                           {firmCity && (
                             <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
                               <FiMapPin className="text-[10px]" /> {firmCity}
@@ -975,6 +1021,26 @@ const Dashboard = () => {
                         </span>
                       </td>
 
+                      {/* Email Status */}
+                      <td className="px-4 py-3.5 text-center">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${emailBadge.className}`}
+                          title={
+                            order.emailStatus?.isSent
+                              ? `Email Sent (${emailRecipientsCount} recipients)`
+                              : `Email: ${emailBadge.label}`
+                          }
+                        >
+                          <EmailBadgeIcon className="text-[10px]" />
+                          <span>{emailBadge.label}</span>
+                          {emailRecipientsCount > 0 && (
+                            <span className="font-mono text-[9px] opacity-80">
+                              ({emailRecipientsCount})
+                            </span>
+                          )}
+                        </span>
+                      </td>
+
                       {/* Date Created */}
                       <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 text-xs">
                         {formatDateTimeDDMMYYYY(order.createdAt)}
@@ -997,7 +1063,7 @@ const Dashboard = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="9" className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan="10" className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                     <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3 text-slate-400">
                       <FiPackage className="text-xl" />
                     </div>
@@ -1432,11 +1498,18 @@ const Dashboard = () => {
                 <span className="font-bold text-slate-900 dark:text-white text-sm">
                   {selectedOrder.firmId?.firmName || 'Retailer Firm'}
                 </span>
-                {selectedOrder.firmId?.city && (
-                  <span className="text-[10px] text-slate-400 block">
-                    City: {selectedOrder.firmId.city}
-                  </span>
-                )}
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  {selectedOrder.firmId?.firmCode && (
+                    <span className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                      Code: {selectedOrder.firmId.firmCode}
+                    </span>
+                  )}
+                  {selectedOrder.firmId?.city && (
+                    <span className="text-[10px] text-slate-400">
+                      {selectedOrder.firmId?.firmCode ? '• ' : ''}City: {selectedOrder.firmId.city}
+                    </span>
+                  )}
+                </div>
               </div>
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Sales Executive</span>
@@ -1453,7 +1526,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Current Status</span>
-                <div className="mt-1">
+                <div className="mt-1 flex items-center gap-2 flex-wrap">
                   {(() => {
                     const badge = getStatusBadge(selectedOrder.status);
                     const BadgeIcon = badge.icon;
@@ -1464,8 +1537,72 @@ const Dashboard = () => {
                       </span>
                     );
                   })()}
+                  {selectedOrder.approvedAt && (
+                    <span className="text-[10px] font-mono text-slate-400">
+                      Approved: {formatDateTimeDDMMYYYY(selectedOrder.approvedAt)}
+                    </span>
+                  )}
                 </div>
               </div>
+            </div>
+
+            {/* Email Dispatch Details Card */}
+            <div className="mb-5 p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10">
+              <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-200/60 dark:border-white/10">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm border border-blue-500/20">
+                    <FiMail />
+                  </div>
+                  <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                    Notification Email Delivery
+                  </span>
+                </div>
+                {(() => {
+                  const eb = getEmailStatusBadge(selectedOrder.emailStatus);
+                  const EbIcon = eb.icon;
+                  return (
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${eb.className}`}>
+                      <EbIcon className="text-[10px]" />
+                      <span>{eb.label}</span>
+                    </span>
+                  );
+                })()}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Sent Timestamp</span>
+                  <span className="font-mono text-slate-800 dark:text-slate-200">
+                    {selectedOrder.emailStatus?.lastSentAt
+                      ? formatDateTimeDDMMYYYY(selectedOrder.emailStatus.lastSentAt)
+                      : 'Not Dispatched Yet'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Message ID</span>
+                  <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate block max-w-full" title={selectedOrder.emailStatus?.messageId}>
+                    {selectedOrder.emailStatus?.messageId || '-'}
+                  </span>
+                </div>
+              </div>
+              {Array.isArray(selectedOrder.emailStatus?.recipients) && selectedOrder.emailStatus.recipients.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
+                  <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1.5">
+                    Recipients ({selectedOrder.emailStatus.recipients.length})
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedOrder.emailStatus.recipients.map((rec, rIdx) => (
+                      <span
+                        key={rIdx}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-700 dark:text-slate-300"
+                      >
+                        <FiMail className="text-slate-400 text-[10px]" />
+                        <span>{rec}</span>
+                        <CopyButton text={rec} />
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Delivery Notes */}
@@ -1517,11 +1654,23 @@ const Dashboard = () => {
             </div>
 
             {/* Financial Summary */}
-            <div className="flex justify-between items-center p-4 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Total Order Amount</span>
-              <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
-                ₹{(selectedOrder.totalAmount || selectedOrder.totalValue || selectedOrder.subtotal || 0).toLocaleString('en-IN')}
-              </span>
+            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-2">
+              {selectedOrder.subtotal !== undefined &&
+                selectedOrder.totalAmount !== undefined &&
+                Number(selectedOrder.subtotal) !== Number(selectedOrder.totalAmount) && (
+                  <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
+                    <span className="font-semibold uppercase tracking-wider text-[11px]">Subtotal</span>
+                    <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                      ₹{Number(selectedOrder.subtotal).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                )}
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Total Order Amount</span>
+                <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  ₹{(selectedOrder.totalAmount || selectedOrder.totalValue || selectedOrder.subtotal || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
             </div>
 
             {/* Modal Actions */}

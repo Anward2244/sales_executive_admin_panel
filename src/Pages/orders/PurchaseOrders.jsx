@@ -27,7 +27,11 @@ import {
   FiTag,
   FiBox,
   FiLayers,
-  FiDownload
+  FiDownload,
+  FiMail,
+  FiPhone,
+  FiHash,
+  FiShield
 } from 'react-icons/fi';
 import {
   getPurchaseOrdersApi,
@@ -63,15 +67,15 @@ const getStatusBadge = (status) => {
       return {
         label: 'Approved',
         icon: FiCheckCircle,
-        className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-        dot: 'bg-blue-500'
+        className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+        dot: 'bg-emerald-500'
       };
     case 'DISPATCHED':
       return {
         label: 'Dispatched',
         icon: FiTruck,
-        className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-        dot: 'bg-emerald-500'
+        className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+        dot: 'bg-blue-500'
       };
     case 'REJECTED':
       return {
@@ -88,6 +92,34 @@ const getStatusBadge = (status) => {
         dot: 'bg-amber-500 animate-pulse'
       };
   }
+};
+
+const getEmailStatusBadge = (emailStatus) => {
+  const isSent = emailStatus?.isSent;
+  const status = (emailStatus?.status || (isSent ? 'SENT' : 'PENDING')).toUpperCase();
+
+  if (status === 'SENT') {
+    return {
+      label: 'Sent',
+      icon: FiMail,
+      className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
+      dot: 'bg-emerald-500'
+    };
+  }
+  if (status === 'FAILED') {
+    return {
+      label: 'Failed',
+      icon: FiAlertCircle,
+      className: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25',
+      dot: 'bg-rose-500'
+    };
+  }
+  return {
+    label: 'Pending',
+    icon: FiClock,
+    className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
+    dot: 'bg-amber-500'
+  };
 };
 
 const SAMPLE_PO_BODY = {
@@ -525,19 +557,33 @@ const PurchaseOrders = () => {
 
       const poNum = (o.poNumber || o.orderNumber || o._id || '').toLowerCase();
       const compName = (o.companyId?.name || '').toLowerCase();
+      const compCode = (o.companyId?.code || '').toLowerCase();
       const firmName = (o.firmId?.firmName || '').toLowerCase();
+      const firmCode = (o.firmId?.firmCode || '').toLowerCase();
+      const contactPerson = (o.firmId?.contactPerson || '').toLowerCase();
+      const city = (o.firmId?.city || '').toLowerCase();
       const repName = (
         o.salesExecutiveId?.name ||
         `${o.salesExecutiveId?.firstName || ''} ${o.salesExecutiveId?.lastName || ''}`
       ).toLowerCase();
+      const repEmpCode = (o.salesExecutiveId?.employeeCode || '').toLowerCase();
+      const repEmail = (o.salesExecutiveId?.email || '').toLowerCase();
+      const emailStatus = (o.emailStatus?.status || '').toLowerCase();
 
       const term = searchTerm.toLowerCase();
       const searchMatch =
         !term ||
         poNum.includes(term) ||
         compName.includes(term) ||
+        compCode.includes(term) ||
         firmName.includes(term) ||
-        repName.includes(term);
+        firmCode.includes(term) ||
+        contactPerson.includes(term) ||
+        city.includes(term) ||
+        repName.includes(term) ||
+        repEmpCode.includes(term) ||
+        repEmail.includes(term) ||
+        emailStatus.includes(term);
 
       return statusMatch && companyMatch && searchMatch;
     });
@@ -795,11 +841,24 @@ const PurchaseOrders = () => {
       'PO Number': o.poNumber || o.orderNumber || o._id,
       'Order Date': formatDateDDMMYYYY(o.createdAt || o.orderDate),
       'Company Name': o.companyId?.name || o.companyName || '-',
+      'Company Code': o.companyId?.code || '-',
       'Buyer Firm': o.firmId?.firmName || o.firmName || '-',
-      'Sales Executive': o.salesExecutiveId ? `${o.salesExecutiveId.firstName || ''} ${o.salesExecutiveId.lastName || ''}`.trim() : '-',
+      'Firm Code': o.firmId?.firmCode || '-',
+      'Firm Contact': o.firmId?.contactPerson || '-',
+      'Firm City': o.firmId?.city || '-',
+      'Sales Executive': o.salesExecutiveId
+        ? `${o.salesExecutiveId.firstName || ''} ${o.salesExecutiveId.lastName || ''}`.trim()
+        : '-',
+      'Sales Rep Code': o.salesExecutiveId?.employeeCode || '-',
+      'Sales Rep Email': o.salesExecutiveId?.email || '-',
       'Items Count': Array.isArray(o.items) ? o.items.length : 0,
       'Total Amount (INR)': Number(o.totalAmount || o.orderTotal || 0),
-      Status: (o.status || 'PENDING').toUpperCase()
+      Status: (o.status || 'PENDING').toUpperCase(),
+      'Approved By': o.approvedBy ? `${o.approvedBy.firstName || ''} ${o.approvedBy.lastName || ''}`.trim() : '-',
+      'Approved At': o.approvedAt ? formatDateTimeDDMMYYYY(o.approvedAt) : '-',
+      'Email Status': o.emailStatus?.status || (o.emailStatus?.isSent ? 'SENT' : 'PENDING'),
+      'Email Last Sent': o.emailStatus?.lastSentAt ? formatDateTimeDDMMYYYY(o.emailStatus.lastSentAt) : '-',
+      'Email Recipients': Array.isArray(o.emailStatus?.recipients) ? o.emailStatus.recipients.join(', ') : '-'
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -1067,6 +1126,7 @@ const PurchaseOrders = () => {
                     <th className="px-4 py-3.5 text-center">Items</th>
                     <th className="px-4 py-3.5 text-right">Total Amount</th>
                     <th className="px-4 py-3.5 text-center">Status</th>
+                    <th className="px-4 py-3.5 text-center">Email</th>
                     <th className="px-5 py-3.5 text-center">Date</th>
                     <th className="px-5 py-3.5 text-center">Actions</th>
                   </tr>
@@ -1079,13 +1139,17 @@ const PurchaseOrders = () => {
                         order.poNumber || order.orderNumber || order.orderId || `#ORD-${order._id?.slice(-6) || idx + 1}`;
                       const companyName = order.companyId?.name || 'Company';
                       const companyCode = order.companyId?.code;
+                      const companyLogo = order.companyId?.logo;
                       const firmName = order.firmId?.firmName || 'Firm Buyer';
+                      const firmCode = order.firmId?.firmCode;
                       const firmCity = order.firmId?.city;
+                      const contactPerson = order.firmId?.contactPerson;
                       const repName = order.salesExecutiveId
                         ? `${order.salesExecutiveId.firstName || ''} ${order.salesExecutiveId.lastName || ''}`.trim() ||
                           order.salesExecutiveId.name ||
                           'Sales Rep'
                         : 'N/A';
+                      const repEmpCode = order.salesExecutiveId?.employeeCode;
                       const repEmail = order.salesExecutiveId?.email;
                       const itemCount = Array.isArray(order.items) ? order.items.length : 0;
                       const totalUnits = Array.isArray(order.items)
@@ -1130,39 +1194,68 @@ const PurchaseOrders = () => {
 
                           {/* Company */}
                           <td className="px-5 py-3.5">
-                            <div className="flex items-center gap-1.5">
-                              <FiBriefcase className="text-slate-400 text-xs shrink-0" />
-                              <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                {companyName}
-                              </span>
-                              {companyCode && (
-                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                                  {companyCode}
-                                </span>
+                            <div className="flex items-center gap-2">
+                              {companyLogo ? (
+                                <img
+                                  src={companyLogo}
+                                  alt={companyName}
+                                  className="w-6 h-6 rounded-md object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-white/10 shrink-0"
+                                />
+                              ) : (
+                                <FiBriefcase className="text-slate-400 text-xs shrink-0" />
                               )}
+                              <div>
+                                <span className="font-semibold text-slate-800 dark:text-slate-200 block">
+                                  {companyName}
+                                </span>
+                                {companyCode && (
+                                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                                    {companyCode}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </td>
 
                           {/* Purchasing Firm */}
                           <td className="px-5 py-3.5">
                             <div className="flex flex-col">
-                              <span className="font-semibold text-slate-900 dark:text-white">
-                                {firmName}
-                              </span>
-                              {firmCity && (
-                                <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-                                  <FiMapPin className="text-[10px]" /> {firmCity}
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-900 dark:text-white">
+                                  {firmName}
                                 </span>
-                              )}
+                                {firmCode && (
+                                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                                    {firmCode}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                                {firmCity && (
+                                  <span className="flex items-center gap-0.5">
+                                    <FiMapPin className="text-[10px]" /> {firmCity}
+                                  </span>
+                                )}
+                                {contactPerson && (
+                                  <span className="truncate max-w-[120px]">• {contactPerson}</span>
+                                )}
+                              </div>
                             </div>
                           </td>
 
                           {/* Sales Executive */}
                           <td className="px-4 py-3.5">
                             <div className="flex flex-col">
-                              <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                {repName}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                  {repName}
+                                </span>
+                                {repEmpCode && (
+                                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                    {repEmpCode}
+                                  </span>
+                                )}
+                              </div>
                               {repEmail && (
                                 <span className="text-[10px] text-slate-400 truncate max-w-[140px]" title={repEmail}>
                                   {repEmail}
@@ -1188,13 +1281,49 @@ const PurchaseOrders = () => {
 
                           {/* Status */}
                           <td className="px-4 py-3.5 text-center">
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${badge.className}`}
-                            >
-                              <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                              <BadgeIcon className="text-[11px]" />
-                              <span>{badge.label}</span>
-                            </span>
+                            <div className="flex flex-col items-center">
+                              <span
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${badge.className}`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                                <BadgeIcon className="text-[11px]" />
+                                <span>{badge.label}</span>
+                              </span>
+                              {order.approvedBy && (
+                                <span className="text-[9px] text-slate-400 mt-0.5 truncate max-w-[110px]" title={`Approved by ${order.approvedBy.firstName || ''} ${order.approvedBy.lastName || ''}`}>
+                                  by {order.approvedBy.firstName}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Email Status */}
+                          <td className="px-4 py-3.5 text-center">
+                            {(() => {
+                              const eb = getEmailStatusBadge(order.emailStatus);
+                              const EbIcon = eb.icon;
+                              const recCount = order.emailStatus?.recipients?.length || 0;
+                              return (
+                                <div className="flex flex-col items-center">
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${eb.className}`}
+                                    title={
+                                      order.emailStatus?.lastSentAt
+                                        ? `Last sent: ${formatDateTimeDDMMYYYY(order.emailStatus.lastSentAt)} (${recCount} recipients)`
+                                        : `Email ${eb.label}`
+                                    }
+                                  >
+                                    <EbIcon className="text-[10px]" />
+                                    <span>{eb.label}</span>
+                                  </span>
+                                  {recCount > 0 && (
+                                    <span className="text-[9px] text-slate-400 font-mono mt-0.5">
+                                      {recCount} recipient{recCount === 1 ? '' : 's'}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
 
                           {/* Date */}
@@ -1269,7 +1398,7 @@ const PurchaseOrders = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan="9" className="p-16 text-center text-slate-500 dark:text-slate-400">
+                      <td colSpan={isBulkMode ? 11 : 10} className="p-16 text-center text-slate-500 dark:text-slate-400">
                         <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-4">
                           <FiShoppingCart className="text-2xl" />
                         </div>
@@ -1389,48 +1518,110 @@ const PurchaseOrders = () => {
 
               {/* Order Overview Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs">
+                {/* Trading Company */}
                 <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Trading Company</span>
-                  <span className="font-bold text-slate-900 dark:text-white text-sm">
-                    {selectedOrder.companyId?.name || 'Company Entity'}
-                  </span>
-                  {selectedOrder.companyId?.code && (
-                    <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 block">
-                      Code: {selectedOrder.companyId.code}
-                    </span>
-                  )}
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Trading Company</span>
+                  <div className="flex items-center gap-2">
+                    {selectedOrder.companyId?.logo ? (
+                      <img
+                        src={selectedOrder.companyId.logo}
+                        alt={selectedOrder.companyId?.name || 'Company'}
+                        className="w-8 h-8 rounded-lg object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-white/10 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
+                        <FiBriefcase className="text-sm" />
+                      </div>
+                    )}
+                    <div>
+                      <span className="font-bold text-slate-900 dark:text-white text-sm block">
+                        {selectedOrder.companyId?.name || 'Company Entity'}
+                      </span>
+                      {selectedOrder.companyId?.code && (
+                        <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 font-bold">
+                          Code: {selectedOrder.companyId.code}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
+                {/* Purchasing Firm */}
                 <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Purchasing Firm</span>
-                  <span className="font-bold text-slate-900 dark:text-white text-sm">
-                    {selectedOrder.firmId?.firmName || 'Retailer Firm'}
-                  </span>
-                  {selectedOrder.firmId?.city && (
-                    <span className="text-[10px] text-slate-400 block">
-                      City: {selectedOrder.firmId.city}
-                    </span>
-                  )}
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Purchasing Firm</span>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-slate-900 dark:text-white text-sm">
+                        {selectedOrder.firmId?.firmName || 'Retailer Firm'}
+                      </span>
+                      {selectedOrder.firmId?.firmCode && (
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-slate-300">
+                          {selectedOrder.firmId.firmCode}
+                        </span>
+                      )}
+                    </div>
+                    {selectedOrder.firmId?.contactPerson && (
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 flex items-center gap-1.5">
+                        <FiUser className="text-[10px] text-slate-400" />
+                        <span>{selectedOrder.firmId.contactPerson}</span>
+                        {selectedOrder.firmId.phone && (
+                          <a href={`tel:${selectedOrder.firmId.phone}`} className="font-mono text-blue-600 dark:text-blue-400 hover:underline">
+                            ({selectedOrder.firmId.phone})
+                          </a>
+                        )}
+                      </p>
+                    )}
+                    {(selectedOrder.firmId?.address || selectedOrder.firmId?.city) && (
+                      <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                        <FiMapPin className="text-[10px] text-rose-500 shrink-0" />
+                        <span>
+                          {[selectedOrder.firmId.address, selectedOrder.firmId.city, selectedOrder.firmId.state].filter(Boolean).join(', ')}
+                        </span>
+                      </p>
+                    )}
+                    {selectedOrder.firmId?.gstin && (
+                      <div className="flex items-center gap-1 mt-1 text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
+                        <span>GSTIN: {selectedOrder.firmId.gstin}</span>
+                        <CopyButton text={selectedOrder.firmId.gstin} />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
+                {/* Sales Executive */}
                 <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Sales Executive</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">
-                    {selectedOrder.salesExecutiveId
-                      ? `${selectedOrder.salesExecutiveId.firstName || ''} ${selectedOrder.salesExecutiveId.lastName || ''}`.trim() ||
-                        selectedOrder.salesExecutiveId.name
-                      : 'Self / System Generated'}
-                  </span>
-                  {selectedOrder.salesExecutiveId?.email && (
-                    <span className="text-[10px] text-slate-400 block">
-                      {selectedOrder.salesExecutiveId.email}
-                    </span>
-                  )}
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Sales Executive</span>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-slate-900 dark:text-white text-xs">
+                        {selectedOrder.salesExecutiveId
+                          ? `${selectedOrder.salesExecutiveId.firstName || ''} ${selectedOrder.salesExecutiveId.lastName || ''}`.trim() ||
+                            selectedOrder.salesExecutiveId.name
+                          : 'Self / System Generated'}
+                      </span>
+                      {selectedOrder.salesExecutiveId?.employeeCode && (
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                          {selectedOrder.salesExecutiveId.employeeCode}
+                        </span>
+                      )}
+                    </div>
+                    {selectedOrder.salesExecutiveId?.email && (
+                      <a href={`mailto:${selectedOrder.salesExecutiveId.email}`} className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline block mt-0.5">
+                        {selectedOrder.salesExecutiveId.email}
+                      </a>
+                    )}
+                    {selectedOrder.salesExecutiveId?.phone && (
+                      <a href={`tel:${selectedOrder.salesExecutiveId.phone}`} className="text-[10px] font-mono text-slate-500 dark:text-slate-400 block">
+                        {selectedOrder.salesExecutiveId.phone}
+                      </a>
+                    )}
+                  </div>
                 </div>
 
+                {/* Current Status & Approval Audit */}
                 <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Current Status</span>
-                  <div className="mt-1">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Current Lifecycle Status</span>
+                  <div>
                     {(() => {
                       const badge = getStatusBadge(selectedOrder.status);
                       const BadgeIcon = badge.icon;
@@ -1443,8 +1634,75 @@ const PurchaseOrders = () => {
                         </span>
                       );
                     })()}
+                    {selectedOrder.approvedBy && (
+                      <div className="mt-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+                        <span className="text-slate-400">Approved By: </span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {selectedOrder.approvedBy.firstName || ''} {selectedOrder.approvedBy.lastName || ''}
+                        </span>
+                        {selectedOrder.approvedAt && (
+                          <span className="block text-[10px] font-mono text-slate-400">
+                            {formatDateTimeDDMMYYYY(selectedOrder.approvedAt)}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
+              </div>
+
+              {/* Notification Email Status Card */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs mb-5">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <FiMail className="text-blue-500" /> Delivery Email Dispatch
+                  </span>
+                  {(() => {
+                    const eb = getEmailStatusBadge(selectedOrder.emailStatus);
+                    const EbIcon = eb.icon;
+                    return (
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${eb.className}`}>
+                        <EbIcon className="text-[10px]" />
+                        <span>{eb.label}</span>
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold block">Sent Timestamp</span>
+                    <span className="font-mono text-slate-800 dark:text-slate-200">
+                      {selectedOrder.emailStatus?.lastSentAt
+                        ? formatDateTimeDDMMYYYY(selectedOrder.emailStatus.lastSentAt)
+                        : 'Not Dispatched Yet'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold block">Message ID</span>
+                    <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate block max-w-full" title={selectedOrder.emailStatus?.messageId}>
+                      {selectedOrder.emailStatus?.messageId || '-'}
+                    </span>
+                  </div>
+                </div>
+                {Array.isArray(selectedOrder.emailStatus?.recipients) && selectedOrder.emailStatus.recipients.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
+                    <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1.5">
+                      Recipients ({selectedOrder.emailStatus.recipients.length})
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedOrder.emailStatus.recipients.map((rec, rIdx) => (
+                        <span
+                          key={rIdx}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-700 dark:text-slate-300"
+                        >
+                          <FiMail className="text-slate-400 text-[10px]" />
+                          <span>{rec}</span>
+                          <CopyButton text={rec} />
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Order Notes / Rejection Reason */}
@@ -1531,8 +1789,18 @@ const PurchaseOrders = () => {
                 {Array.isArray(selectedOrder.statusHistory) && selectedOrder.statusHistory.length > 0 ? (
                   <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-white/10">
                     {selectedOrder.statusHistory.map((historyItem, hIdx) => {
-                      const badge = getStatusBadge(historyItem.status);
+                      const st = historyItem.newStatus || historyItem.status || 'PENDING';
+                      const badge = getStatusBadge(st);
                       const BadgeIcon = badge.icon;
+                      const changer = historyItem.changedBy;
+                      const changerName = changer
+                        ? typeof changer === 'object'
+                          ? `${changer.firstName || ''} ${changer.lastName || ''}`.trim() || changer.name || changer.email
+                          : changer
+                        : 'System';
+                      const changerRole = typeof changer === 'object' ? changer.role : null;
+                      const changerEmail = typeof changer === 'object' ? changer.email : null;
+
                       return (
                         <div key={hIdx} className="relative">
                           <span
@@ -1544,25 +1812,34 @@ const PurchaseOrders = () => {
                                 className={`inline-flex items-center gap-1 px-2 py-0.2 rounded-full font-bold uppercase text-[9px] border ${badge.className}`}
                               >
                                 <BadgeIcon className="text-[10px]" />
-                                {historyItem.status}
+                                {st}
                               </span>
                               <span className="text-[11px] text-slate-400 font-mono">
-                                {formatDateTimeDDMMYYYY(historyItem.timestamp || historyItem.createdAt || historyItem.date)}
+                                {formatDateTimeDDMMYYYY(historyItem.createdAt || historyItem.timestamp || historyItem.date)}
                               </span>
                             </div>
-                            {historyItem.changedBy && (
+                            {changer && (
                               <p className="text-slate-600 dark:text-slate-300 mt-1">
                                 Action by:{' '}
                                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                  {typeof historyItem.changedBy === 'object'
-                                    ? historyItem.changedBy.name || historyItem.changedBy.email
-                                    : historyItem.changedBy}
+                                  {changerName}
                                 </span>
+                                {changerRole && (
+                                  <span className="ml-1 text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-400">
+                                    {changerRole}
+                                  </span>
+                                )}
+                                {changerEmail && changerEmail !== changerName && (
+                                  <span className="text-[10px] text-slate-400 ml-1">
+                                    ({changerEmail})
+                                  </span>
+                                )}
                               </p>
                             )}
                             {historyItem.reason && (
-                              <p className="text-rose-600 dark:text-rose-400 mt-0.5 italic">
-                                Reason: "{historyItem.reason}"
+                              <p className="text-slate-700 dark:text-slate-300 mt-0.5">
+                                <span className="font-semibold text-slate-500">Reason: </span>
+                                <span className="italic font-medium">"{historyItem.reason}"</span>
                               </p>
                             )}
                             {historyItem.notes && (

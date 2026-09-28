@@ -1,7 +1,7 @@
 import { 
   FiHome, FiGrid, FiBriefcase, FiServer, 
   FiBell, FiBox, FiShoppingCart, FiPieChart, FiUsers, FiSettings,
-  FiUserCheck, FiList
+  FiUserCheck, FiList, FiMail
 } from 'react-icons/fi';
 import { filterAccessibleMenus } from '../utils/rbac';
 
@@ -21,7 +21,15 @@ const PAGES = {
   CATEGORIES: { path: '/categories', name: 'Categories', icon: FiGrid },
   PRODUCTS: { path: '/products', name: 'Products', icon: FiBox },
   PURCHASE_ORDERS: { path: '/purchase-orders', name: 'Purchase Orders', icon: FiShoppingCart },
-  NOTIFICATIONS: { path: '/notifications', name: 'Notifications', icon: FiBell },
+  NOTIFICATIONS: {
+    path: '/notifications',
+    name: 'Notifications',
+    icon: FiBell,
+    subMenus: [
+      { path: '/notifications', name: 'In-App Alerts', icon: FiBell },
+      { path: '/notifications/emails', name: 'Email Delivery Logs', icon: FiMail },
+    ]
+  },
   REPORTS: { path: '/reports', name: 'Reports', icon: FiPieChart },
   SETTINGS: { path: '/settings', name: 'Settings', icon: FiSettings },
 };

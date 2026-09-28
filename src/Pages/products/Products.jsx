@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import {
   FiPlus,
   FiEdit2,
@@ -15,22 +14,17 @@ import {
   FiDownload,
   FiTag,
   FiLayers,
-  FiDollarSign,
-  FiImage,
-  FiCopy,
-  FiCheck,
   FiFilter,
-  FiArrowUpRight,
-  FiChevronRight,
   FiChevronDown,
   FiFileText,
-  FiShoppingBag,
   FiUploadCloud,
-  FiPercent
+  FiBriefcase,
+  FiMapPin,
+  FiGlobe
 } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 import BulkProductImportModal, { downloadProductExcelTemplate } from './BulkProductImportModal';
-import { BiRupee } from 'react-icons/bi';
+import ProductDetailsModal from '@/components/ui/ProductDetailsModal';
 import PageHeader from '@/components/ui/PageHeader';
 import Skeleton from '@/components/ui/Skeleton';
 import CopyButton from '@/components/ui/CopyButton';
@@ -42,30 +36,37 @@ import {
   createProductApi,
   updateProductApi,
   deleteProductApi,
-  getCategoryApi
+  getCompaniesApi
 } from '@/api/axios';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
-import { getImageUrl } from '@/utils/imageUtils';
 import { useDebounce } from '@/hooks/useDebounce';
 import { formatEntityCode } from '@/utils/formatters';
 import { validateEntityCode } from '@/utils/validators';
 
-// Helper to format currency in Indian Rupees (INR)
-const formatCurrency = (amount) => {
-  const num = Number(amount) || 0;
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0
-  }).format(num);
-};
+// Popular Indian states for quick-tag selection
+const POPULAR_STATES = [
+  'Andhra Pradesh',
+  'Telangana',
+  'Delhi',
+  'Haryana',
+  'Karnataka',
+  'Maharashtra',
+  'Tamil Nadu',
+  'Uttar Pradesh',
+  'Gujarat',
+  'West Bengal',
+  'Kerala',
+  'Punjab',
+  'Rajasthan'
+];
 
-// Initial form state for Add/Edit product
+// Initial form state for Add/Edit product according to new schema
 const INITIAL_PRODUCT_FORM = {
   name: '',
   sku: '',
-  categoryId: '',
-  brand: 'Whatnot',
+  brand: 'Realme',
+  companyId: '',
+  locations: [],
   unit: 'PCS',
   description: '',
   isActive: true
@@ -74,15 +75,16 @@ const INITIAL_PRODUCT_FORM = {
 const Products = () => {
   // Data States
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [meta, setMeta] = useState(null);
+  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
+  // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
+  const [selectedCompanyFilter, setSelectedCompanyFilter] = useState('ALL');
+  const [selectedLocationFilter, setSelectedLocationFilter] = useState('ALL');
   const [selectedBrandFilter, setSelectedBrandFilter] = useState('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'name-asc'
@@ -99,6 +101,7 @@ const Products = () => {
   const actionsDropdownRef = useRef(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState(INITIAL_PRODUCT_FORM);
+  const [customLocationInput, setCustomLocationInput] = useState('');
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -110,8 +113,8 @@ const Products = () => {
   // Bulk Operations State
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
-  const [isBulkCategoryModalOpen, setIsBulkCategoryModalOpen] = useState(false);
-  const [bulkTargetCategoryId, setBulkTargetCategoryId] = useState('');
+  const [isBulkCompanyModalOpen, setIsBulkCompanyModalOpen] = useState(false);
+  const [bulkTargetCompanyId, setBulkTargetCompanyId] = useState('');
   const [batchProgress, setBatchProgress] = useState(null);
   const abortBatchRef = useRef(false);
 
@@ -142,7 +145,7 @@ const Products = () => {
     };
   }, [isActionsOpen]);
 
-  // Fetch products & categories
+  // Fetch products & companies
   const fetchData = useCallback(async (isSilent = false) => {
     if (isSilent) {
       setRefreshing(true);
@@ -152,18 +155,16 @@ const Products = () => {
     setError(null);
 
     try {
-      const [prodRes, catRes] = await Promise.all([
+      const [prodRes, compRes] = await Promise.all([
         getProductsApi(),
-        getCategoryApi().catch(() => ({ data: [] }))
+        getCompaniesApi().catch(() => ({ data: [] }))
       ]);
 
       const prodData = prodRes?.data?.data || (Array.isArray(prodRes?.data) ? prodRes?.data : []);
-      const prodMeta = prodRes?.data?.meta || null;
-      const catData = catRes?.data?.data || (Array.isArray(catRes?.data) ? catRes?.data : []);
+      const compData = compRes?.data?.data || (Array.isArray(compRes?.data) ? compRes?.data : []);
 
       setProducts(prodData);
-      setMeta(prodMeta);
-      setCategories(catData);
+      setCompanies(compData);
     } catch (err) {
       console.error('Failed to load products:', err);
       setError(err.response?.data?.message || 'Failed to fetch catalog products. Please check network connectivity.');
@@ -188,6 +189,21 @@ const Products = () => {
     return Array.from(brandsSet).sort();
   }, [products]);
 
+  // Derive unique locations
+  const uniqueLocations = useMemo(() => {
+    const locSet = new Set();
+    products.forEach((p) => {
+      if (Array.isArray(p.locations)) {
+        p.locations.forEach((loc) => {
+          if (loc && typeof loc === 'string') {
+            locSet.add(loc.trim());
+          }
+        });
+      }
+    });
+    return Array.from(locSet).sort();
+  }, [products]);
+
   // Filtered and sorted products
   const filteredProducts = useMemo(() => {
     return products
@@ -196,10 +212,17 @@ const Products = () => {
         if (selectedStatusFilter === 'ACTIVE' && !product.isActive) return false;
         if (selectedStatusFilter === 'INACTIVE' && product.isActive) return false;
 
-        // Category Filter
-        if (selectedCategoryFilter !== 'ALL') {
-          const pCatId = typeof product.categoryId === 'object' ? product.categoryId?._id : product.categoryId;
-          if (pCatId !== selectedCategoryFilter) return false;
+        // Company Filter
+        if (selectedCompanyFilter !== 'ALL') {
+          const pCompId = typeof product.companyId === 'object' ? product.companyId?._id : product.companyId;
+          if (pCompId !== selectedCompanyFilter) return false;
+        }
+
+        // Location Filter
+        if (selectedLocationFilter !== 'ALL') {
+          if (!Array.isArray(product.locations) || !product.locations.includes(selectedLocationFilter)) {
+            return false;
+          }
         }
 
         // Brand Filter
@@ -207,15 +230,26 @@ const Products = () => {
           if (product.brand !== selectedBrandFilter) return false;
         }
 
-        // Search Query (name, sku, brand, description, category name)
+        // Search Query (name, sku, brand, description, company name, company code, locations)
         if (debouncedSearchQuery.trim()) {
           const q = debouncedSearchQuery.toLowerCase().trim();
           const name = String(product.name || '').toLowerCase();
           const sku = String(product.sku || '').toLowerCase();
           const brand = String(product.brand || '').toLowerCase();
           const desc = String(product.description || '').toLowerCase();
-          const catName = typeof product.categoryId === 'object' ? String(product.categoryId?.name || '').toLowerCase() : '';
-          return name.includes(q) || sku.includes(q) || brand.includes(q) || desc.includes(q) || catName.includes(q);
+          const compName = typeof product.companyId === 'object' ? String(product.companyId?.name || '').toLowerCase() : '';
+          const compCode = typeof product.companyId === 'object' ? String(product.companyId?.code || '').toLowerCase() : '';
+          const locsStr = Array.isArray(product.locations) ? product.locations.join(' ').toLowerCase() : '';
+
+          return (
+            name.includes(q) ||
+            sku.includes(q) ||
+            brand.includes(q) ||
+            desc.includes(q) ||
+            compName.includes(q) ||
+            compCode.includes(q) ||
+            locsStr.includes(q)
+          );
         }
 
         return true;
@@ -223,10 +257,9 @@ const Products = () => {
       .sort((a, b) => {
         if (sortBy === 'name-asc') return String(a.name || '').localeCompare(String(b.name || ''));
         if (sortBy === 'oldest') return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
-        // Default: newest
         return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
       });
-  }, [products, debouncedSearchQuery, selectedCategoryFilter, selectedBrandFilter, selectedStatusFilter, sortBy]);
+  }, [products, debouncedSearchQuery, selectedCompanyFilter, selectedLocationFilter, selectedBrandFilter, selectedStatusFilter, sortBy]);
 
   // Product count statistics
   const { activeCount, inactiveCount } = useMemo(() => {
@@ -239,10 +272,10 @@ const Products = () => {
     return { activeCount: active, inactiveCount: inactive };
   }, [products]);
 
-  // Reset pagination on filter, search, or itemsPerPage change
+  // Reset pagination on filter or search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchQuery, selectedCategoryFilter, selectedBrandFilter, selectedStatusFilter, sortBy, itemsPerPage]);
+  }, [debouncedSearchQuery, selectedCompanyFilter, selectedLocationFilter, selectedBrandFilter, selectedStatusFilter, sortBy, itemsPerPage]);
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
@@ -270,8 +303,9 @@ const Products = () => {
     setEditingProduct(null);
     setFormData({
       ...INITIAL_PRODUCT_FORM,
-      categoryId: categories.length > 0 ? categories[0]._id : ''
+      companyId: companies.length > 0 ? companies[0]._id : ''
     });
+    setCustomLocationInput('');
     setFormError('');
     setIsModalOpen(true);
   };
@@ -280,16 +314,18 @@ const Products = () => {
   const handleOpenEdit = (product, e) => {
     if (e) e.stopPropagation();
     setEditingProduct(product);
-    const catId = typeof product.categoryId === 'object' ? product.categoryId?._id : (product.categoryId || '');
+    const compId = typeof product.companyId === 'object' ? product.companyId?._id : (product.companyId || '');
     setFormData({
       name: product.name || '',
       sku: product.sku || '',
-      categoryId: catId,
-      brand: product.brand || 'Whatnot',
+      brand: product.brand || 'Realme',
+      companyId: compId || (companies.length > 0 ? companies[0]._id : ''),
+      locations: Array.isArray(product.locations) ? [...product.locations] : [],
       unit: product.unit || 'PCS',
       description: product.description || '',
       isActive: product.isActive !== undefined ? Boolean(product.isActive) : true
     });
+    setCustomLocationInput('');
     setFormError('');
     setIsModalOpen(true);
   };
@@ -298,8 +334,7 @@ const Products = () => {
   const handleNameChange = (nameVal) => {
     const updated = { ...formData, name: nameVal };
     if (!editingProduct && !formData.skuManual) {
-      // Auto slugify SKU: e.g. "Whatnot NitroCharge 65W" -> "WNOT-NITRO-001"
-      const prefix = (formData.brand || 'WNOT').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+      const prefix = (formData.brand || 'PRD').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
       const namePart = nameVal
         .toUpperCase()
         .replace(/[^A-Z0-9\s]/g, '')
@@ -308,10 +343,46 @@ const Products = () => {
         .slice(0, 2)
         .join('-');
       if (namePart) {
-        updated.sku = `${prefix}-${namePart}`.slice(0, 15);
+        updated.sku = `${prefix}-${namePart}`.slice(0, 18);
       }
     }
     setFormData(updated);
+  };
+
+  // Location Tag Management
+  const handleToggleLocation = (loc) => {
+    const currentLocs = formData.locations || [];
+    if (currentLocs.includes(loc)) {
+      setFormData({
+        ...formData,
+        locations: currentLocs.filter((l) => l !== loc)
+      });
+    } else {
+      setFormData({
+        ...formData,
+        locations: [...currentLocs, loc]
+      });
+    }
+  };
+
+  const handleAddCustomLocation = () => {
+    const trimmed = customLocationInput.trim();
+    if (!trimmed) return;
+    const currentLocs = formData.locations || [];
+    if (!currentLocs.includes(trimmed)) {
+      setFormData({
+        ...formData,
+        locations: [...currentLocs, trimmed]
+      });
+    }
+    setCustomLocationInput('');
+  };
+
+  const handleRemoveLocation = (loc) => {
+    setFormData({
+      ...formData,
+      locations: (formData.locations || []).filter((l) => l !== loc)
+    });
   };
 
   // Save Product (Create or Update)
@@ -328,8 +399,12 @@ const Products = () => {
       setFormError(`Product SKU: ${skuVal.error}`);
       return;
     }
-    if (!formData.categoryId) {
-      setFormError('Please select a category.');
+    if (!formData.brand.trim()) {
+      setFormError('Brand name is required.');
+      return;
+    }
+    if (!formData.companyId) {
+      setFormError('Please select a trading company.');
       return;
     }
 
@@ -338,16 +413,22 @@ const Products = () => {
       const payload = {
         name: formData.name.trim(),
         sku: formData.sku.trim().toUpperCase(),
-        categoryId: formData.categoryId,
-        description: formData.description.trim(),
-        brand: formData.brand.trim() || 'Whatnot',
+        brand: formData.brand.trim(),
+        companyId: formData.companyId,
+        locations: formData.locations || [],
         unit: formData.unit.trim() || 'PCS',
+        description: formData.description.trim(),
         isActive: Boolean(formData.isActive)
       };
 
       if (editingProduct) {
         const res = await updateProductApi(editingProduct._id, payload);
         const updated = res.data?.data || res.data || { ...editingProduct, ...payload };
+        // Populate companyId object if available from companies list
+        const matchedComp = companies.find((c) => c._id === payload.companyId);
+        if (matchedComp && typeof updated.companyId !== 'object') {
+          updated.companyId = matchedComp;
+        }
         setProducts((prev) =>
           prev.map((p) => (p._id === editingProduct._id ? { ...p, ...updated } : p))
         );
@@ -356,6 +437,10 @@ const Products = () => {
         const res = await createProductApi(payload);
         const created = res.data?.data || res.data;
         if (created) {
+          const matchedComp = companies.find((c) => c._id === payload.companyId);
+          if (matchedComp && typeof created.companyId !== 'object') {
+            created.companyId = matchedComp;
+          }
           setProducts((prev) => [created, ...prev]);
         } else {
           await fetchData(true);
@@ -371,7 +456,6 @@ const Products = () => {
       setSubmitting(false);
     }
   };
-
 
   // Delete Product
   const handleDeleteProduct = async () => {
@@ -396,15 +480,19 @@ const Products = () => {
   // Export to CSV
   const handleExportCSV = () => {
     if (!filteredProducts.length) return;
-    const headers = ['Product Name', 'SKU', 'Brand', 'Category', 'Unit', 'Status', 'Date Added'];
+    const headers = ['Product Name', 'SKU', 'Brand', 'Company Name', 'Company Code', 'Covered Locations', 'Unit', 'Status', 'Date Added'];
     const rows = [headers];
     filteredProducts.forEach((p) => {
-      const catName = typeof p.categoryId === 'object' ? p.categoryId?.name : '';
+      const compName = typeof p.companyId === 'object' ? p.companyId?.name : '';
+      const compCode = typeof p.companyId === 'object' ? p.companyId?.code : '';
+      const locStr = Array.isArray(p.locations) ? p.locations.join('; ') : '';
       rows.push([
         p.name || '',
         p.sku || '',
         p.brand || '',
-        catName || '',
+        compName || '',
+        compCode || '',
+        locStr || '',
         p.unit || 'PCS',
         p.isActive ? 'Active' : 'Inactive',
         p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN') : ''
@@ -485,7 +573,7 @@ const Products = () => {
             ...prev,
             current,
             percentage: Math.round((current / prev.total) * 100),
-            logs: [...prev.logs, `✓ Product "${name}" updated to ${targetActive ? 'Active' : 'Inactive'}`]
+            logs: [...prev.logs, `✓ Product "${name}" set to ${targetActive ? 'Active' : 'Inactive'}`]
           };
         });
       } catch (err) {
@@ -505,31 +593,28 @@ const Products = () => {
     setBatchProgress((prev) => ({
       ...prev,
       status: prev.status === 'error' ? 'error' : 'completed',
-      logs: [
-        ...prev.logs,
-        `Finished! Success: ${successCount}, Failed: ${failCount}`
-      ]
+      logs: [...prev.logs, `Finished! Success: ${successCount}, Failed: ${failCount}`]
     }));
 
     await fetchData(true);
     showToast(`Bulk update complete: ${successCount} updated, ${failCount} failed`);
   };
 
-  const handleBulkMoveCategory = async () => {
-    if (!bulkTargetCategoryId || selectedProductIds.length === 0) return;
-    const targetCat = categories.find((c) => c._id === bulkTargetCategoryId);
-    const catName = targetCat ? targetCat.name : 'Selected Category';
+  const handleBulkMoveCompany = async () => {
+    if (!bulkTargetCompanyId || selectedProductIds.length === 0) return;
+    const targetComp = companies.find((c) => c._id === bulkTargetCompanyId);
+    const compName = targetComp ? targetComp.name : 'Selected Company';
 
-    setIsBulkCategoryModalOpen(false);
+    setIsBulkCompanyModalOpen(false);
     abortBatchRef.current = false;
     setBatchProgress({
       isOpen: true,
-      title: `Bulk Move Products to "${catName}"`,
+      title: `Bulk Reassign Company to "${compName}"`,
       current: 0,
       total: selectedProductIds.length,
       percentage: 0,
       status: 'processing',
-      logs: [`Starting category reassignment to "${catName}" for ${selectedProductIds.length} products...`]
+      logs: [`Starting company reassignment to "${compName}" for ${selectedProductIds.length} products...`]
     });
 
     let successCount = 0;
@@ -550,7 +635,7 @@ const Products = () => {
       const name = prod ? prod.name : prodId;
 
       try {
-        await updateProductApi(prodId, { categoryId: bulkTargetCategoryId });
+        await updateProductApi(prodId, { companyId: bulkTargetCompanyId });
         successCount++;
         setBatchProgress((prev) => {
           const current = i + 1;
@@ -558,7 +643,7 @@ const Products = () => {
             ...prev,
             current,
             percentage: Math.round((current / prev.total) * 100),
-            logs: [...prev.logs, `✓ Product "${name}" moved to "${catName}"`]
+            logs: [...prev.logs, `✓ Product "${name}" mapped to "${compName}"`]
           };
         });
       } catch (err) {
@@ -569,7 +654,7 @@ const Products = () => {
             ...prev,
             current,
             percentage: Math.round((current / prev.total) * 100),
-            logs: [...prev.logs, `✗ Failed to move "${name}": ${err?.response?.data?.message || err.message}`]
+            logs: [...prev.logs, `✗ Failed to reassign "${name}": ${err?.response?.data?.message || err.message}`]
           };
         });
       }
@@ -578,14 +663,11 @@ const Products = () => {
     setBatchProgress((prev) => ({
       ...prev,
       status: prev.status === 'error' ? 'error' : 'completed',
-      logs: [
-        ...prev.logs,
-        `Finished! Success: ${successCount}, Failed: ${failCount}`
-      ]
+      logs: [...prev.logs, `Finished! Success: ${successCount}, Failed: ${failCount}`]
     }));
 
     await fetchData(true);
-    showToast(`Moved ${successCount} products to ${catName}`);
+    showToast(`Reassigned ${successCount} products to ${compName}`);
   };
 
   const handleBulkExportProducts = () => {
@@ -593,13 +675,17 @@ const Products = () => {
     if (selectedProds.length === 0) return;
 
     const exportRows = selectedProds.map((prod, idx) => {
-      const catName = typeof prod.categoryId === 'object' ? prod.categoryId?.name : '';
+      const compName = typeof prod.companyId === 'object' ? prod.companyId?.name : '';
+      const compCode = typeof prod.companyId === 'object' ? prod.companyId?.code : '';
+      const locStr = Array.isArray(prod.locations) ? prod.locations.join(', ') : '';
       return {
         'S.No.': idx + 1,
         'SKU': prod.sku || '',
         'Product Name': prod.name || '',
-        'Brand': prod.brand || 'Whatnot',
-        'Category': catName || '',
+        'Brand': prod.brand || 'Realme',
+        'Company Name': compName || '',
+        'Company Code': compCode || '',
+        'Covered Locations': locStr || '',
         'Unit': prod.unit || 'PCS',
         'Status': prod.isActive ? 'Active' : 'Inactive',
         'Description': prod.description || '',
@@ -627,7 +713,7 @@ const Products = () => {
       {/* Header */}
       <PageHeader
         title="Products Catalog"
-        subtitle="Manage hardware inventory, pricing tiers, SKU configurations, and brand collections."
+        subtitle="Manage product portfolio, SKU inventory, brand collections, and distribution territories."
         badgeText={`${products.length} Products`}
         badgeIcon={FiPackage}
         actions={
@@ -638,7 +724,7 @@ const Products = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name, SKU, or brand..."
+                placeholder="Search name, SKU, brand, company, location..."
                 className="w-full pl-9 pr-8 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 transition-all shadow-xs"
               />
               {searchQuery && (
@@ -699,7 +785,7 @@ const Products = () => {
             </button>
 
             {isActionsOpen && (
-              <div className="absolute left-0 mt-2 w-64 bg-white/40 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute left-0 mt-2 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-from-top-2 duration-150">
                 {/* Option 1: Import Products via Excel */}
                 <button
                   type="button"
@@ -727,7 +813,7 @@ const Products = () => {
                   type="button"
                   onClick={() => {
                     setIsActionsOpen(false);
-                    downloadProductExcelTemplate(categories);
+                    downloadProductExcelTemplate(companies);
                     showToast('Sample Excel template downloaded.');
                   }}
                   className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-blue-50/80 dark:hover:bg-blue-950/30 text-left transition-colors cursor-pointer group"
@@ -740,7 +826,7 @@ const Products = () => {
                       Download Sample File
                     </div>
                     <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
-                      Pre-formatted .xlsx with categories
+                      Pre-formatted .xlsx with companies
                     </div>
                   </div>
                 </button>
@@ -808,22 +894,40 @@ const Products = () => {
 
         {/* Filter Dropdowns */}
         <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
-          {/* Category Filter */}
+          {/* Company Filter */}
           <div className="min-w-[140px]">
             <CustomDropdown
-              value={selectedCategoryFilter}
-              onChange={(val) => setSelectedCategoryFilter(val)}
+              value={selectedCompanyFilter}
+              onChange={(val) => setSelectedCompanyFilter(val)}
               options={[
-                { value: 'ALL', label: 'All Categories' },
-                ...categories.map((c) => ({ value: c._id, label: c.name }))
+                { value: 'ALL', label: 'All Companies' },
+                ...companies.map((c) => ({
+                  value: c._id,
+                  label: c.code ? `${c.code} - ${c.name}` : c.name
+                }))
               ]}
               statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
             />
           </div>
 
+          {/* Location Filter */}
+          {uniqueLocations.length > 0 && (
+            <div className="min-w-[130px]">
+              <CustomDropdown
+                value={selectedLocationFilter}
+                onChange={(val) => setSelectedLocationFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Locations' },
+                  ...uniqueLocations.map((loc) => ({ value: loc, label: loc }))
+                ]}
+                statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+              />
+            </div>
+          )}
+
           {/* Brand Filter */}
           {uniqueBrands.length > 0 && (
-            <div className="min-w-[130px]">
+            <div className="min-w-[120px]">
               <CustomDropdown
                 value={selectedBrandFilter}
                 onChange={(val) => setSelectedBrandFilter(val)}
@@ -837,7 +941,7 @@ const Products = () => {
           )}
 
           {/* Status Filter */}
-          <div className="min-w-[130px]">
+          <div className="min-w-[120px]">
             <CustomDropdown
               value={selectedStatusFilter}
               onChange={(val) => setSelectedStatusFilter(val)}
@@ -851,7 +955,7 @@ const Products = () => {
           </div>
 
           {/* Sort By */}
-          <div className="min-w-[135px]">
+          <div className="min-w-[130px]">
             <CustomDropdown
               value={sortBy}
               onChange={(val) => setSortBy(val)}
@@ -865,12 +969,13 @@ const Products = () => {
           </div>
 
           {/* Reset Filters */}
-          {(searchQuery || selectedCategoryFilter !== 'ALL' || selectedBrandFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || sortBy !== 'newest') && (
+          {(searchQuery || selectedCompanyFilter !== 'ALL' || selectedLocationFilter !== 'ALL' || selectedBrandFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || sortBy !== 'newest') && (
             <button
               type="button"
               onClick={() => {
                 setSearchQuery('');
-                setSelectedCategoryFilter('ALL');
+                setSelectedCompanyFilter('ALL');
+                setSelectedLocationFilter('ALL');
                 setSelectedBrandFilter('ALL');
                 setSelectedStatusFilter('ALL');
                 setSortBy('newest');
@@ -910,10 +1015,9 @@ const Products = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="bg-white/40 dark:bg-slate-900/60 rounded-2xl p-4 border border-slate-200/80 dark:border-white/10 space-y-3">
-              <Skeleton className="h-44 w-full rounded-xl" />
+              <Skeleton className="h-32 w-full rounded-xl" />
               <Skeleton className="h-4 w-3/4 rounded-lg" />
               <Skeleton className="h-3 w-1/2 rounded-lg" />
-              <Skeleton className="h-6 w-1/3 rounded-lg" />
             </div>
           ))}
         </div>
@@ -922,7 +1026,7 @@ const Products = () => {
           <FiPackage className="text-4xl text-slate-300 dark:text-slate-600 mx-auto mb-3" />
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">No products found</h3>
           <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-            {searchQuery || selectedCategoryFilter !== 'ALL' || selectedBrandFilter !== 'ALL' || selectedStatusFilter !== 'ALL'
+            {searchQuery || selectedCompanyFilter !== 'ALL' || selectedLocationFilter !== 'ALL' || selectedBrandFilter !== 'ALL' || selectedStatusFilter !== 'ALL'
               ? 'No products match your current search filters. Try clearing some filters.'
               : 'There are currently no products registered in your catalog.'}
           </p>
@@ -946,13 +1050,13 @@ const Products = () => {
           </div>
         </div>
       ) : (
-        <div className="bg-white/20 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5">
+        <div className="bg-white/40 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-sm whitespace-nowrap min-w-[1200px]">
+              <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5 select-none">
                 <tr>
                   {isBulkMode && (
-                    <th className="py-3 px-3 text-center w-12">
+                    <th className="py-4 px-3 text-center w-12 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={filteredProducts.length > 0 && selectedProductIds.length === filteredProducts.length}
@@ -961,21 +1065,24 @@ const Products = () => {
                       />
                     </th>
                   )}
-                  <th className="py-3 px-4 text-center w-16">S.No.</th>
-                  <th className="py-3 px-4">Product Details</th>
-                  <th className="py-3 px-4">Brand</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4 text-center">Unit</th>
-                  <th className="py-3 px-4">Description</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-4 px-5 text-center w-16 whitespace-nowrap">S.No.</th>
+                  <th className="py-4 px-5 whitespace-nowrap">Product Details</th>
+                  <th className="py-4 px-5 whitespace-nowrap">Brand</th>
+                  <th className="py-4 px-5 whitespace-nowrap">Partner Company</th>
+                  <th className="py-4 px-5 whitespace-nowrap">Covered Locations</th>
+                  <th className="py-4 px-5 text-center whitespace-nowrap">Unit</th>
+                  <th className="py-4 px-5 whitespace-nowrap">Description</th>
+                  <th className="py-4 px-5 text-center whitespace-nowrap">Status</th>
+                  <th className="py-4 px-5 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
                 {paginatedProducts.map((product, idx) => {
-                  const catName = typeof product.categoryId === 'object' ? product.categoryId?.name : '';
+                  const compName = typeof product.companyId === 'object' ? product.companyId?.name : '';
+                  const compCode = typeof product.companyId === 'object' ? product.companyId?.code : '';
                   const serialNumber = indexOfFirstItem + idx + 1;
                   const isSelected = selectedProductIds.includes(product._id);
+                  const locations = Array.isArray(product.locations) ? product.locations : [];
 
                   return (
                     <tr
@@ -988,7 +1095,7 @@ const Products = () => {
                       }`}
                     >
                       {isBulkMode && (
-                        <td className="py-3.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td className="py-4 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -998,60 +1105,98 @@ const Products = () => {
                         </td>
                       )}
                       {/* S.No. */}
-                      <td className="py-3.5 px-4 text-center font-mono text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      <td className="py-4 px-5 text-center font-mono text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         {serialNumber}
                       </td>
 
                       {/* Product Name & SKU */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-4 px-5">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20">
                             <FiPackage className="text-base" />
                           </div>
                           <div>
-                            <div className="font-bold text-slate-900 dark:text-white text-xs max-w-sm line-clamp-1">
+                            <div className="font-bold text-slate-900 dark:text-white text-xs whitespace-nowrap">
                               {product.name}
                             </div>
                             <div className="flex items-center gap-1.5 mt-0.5" onClick={(e) => e.stopPropagation()}>
                               <span className="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400">
                                 {product.sku}
                               </span>
-                              <CopyButton text={product.sku} />
+                              <CopyButton text={product.sku} size={10} />
                             </div>
                           </div>
                         </div>
                       </td>
 
                       {/* Brand */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-4 px-5 whitespace-nowrap">
                         <span className="font-semibold text-slate-700 dark:text-slate-300 text-xs">
                           {product.brand || 'N/A'}
                         </span>
                       </td>
 
-                      {/* Category */}
-                      <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                          {catName || 'Unassigned'}
-                        </span>
+                      {/* Partner Company */}
+                      <td className="py-4 px-5 whitespace-nowrap">
+                        {compName ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                              {compName}
+                            </span>
+                            {compCode && (
+                              <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                {compCode}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">Unassigned</span>
+                        )}
+                      </td>
+
+                      {/* Covered Locations */}
+                      <td className="py-4 px-5 whitespace-nowrap">
+                        {locations.length > 0 ? (
+                          <div className="flex items-center gap-1.5">
+                            {locations.slice(0, 3).map((loc, i) => (
+                              <span
+                                key={i}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 whitespace-nowrap"
+                              >
+                                <FiMapPin className="text-[10px] text-blue-500 shrink-0" />
+                                <span>{loc}</span>
+                              </span>
+                            ))}
+                            {locations.length > 3 && (
+                              <span
+                                className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 cursor-help whitespace-nowrap"
+                                title={locations.join(', ')}
+                              >
+                                +{locations.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">All Territories</span>
+                        )}
                       </td>
 
                       {/* Unit */}
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="font-mono text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
+                      <td className="py-4 px-5 text-center whitespace-nowrap">
+                        <span className="font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
                           {product.unit || 'PCS'}
                         </span>
                       </td>
 
                       {/* Description */}
-                      <td className="py-3.5 px-4 max-w-xs">
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      <td className="py-4 px-5 max-w-[220px]">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[220px]" title={product.description}>
                           {product.description || '—'}
                         </p>
                       </td>
 
                       {/* Status */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-4 px-5 text-center whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
                             product.isActive
@@ -1064,7 +1209,7 @@ const Products = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-4 px-5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
@@ -1098,53 +1243,51 @@ const Products = () => {
 
       {/* ================= PAGINATION CONTROLS ================= */}
       {!loading && filteredProducts.length > 0 && (
-        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-4 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
-            Showing <strong className="text-slate-900 dark:text-white font-bold">{indexOfFirstItem + 1}</strong> to{' '}
-            <strong className="text-slate-900 dark:text-white font-bold">{Math.min(indexOfLastItem, filteredProducts.length)}</strong> of{' '}
-            <strong className="text-slate-900 dark:text-white font-bold">{filteredProducts.length}</strong> products
-            {filteredProducts.length !== products.length && (
-              <span className="ml-1 text-slate-400">(Filtered from {products.length} total)</span>
-            )}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            Showing <strong className="text-slate-800 dark:text-slate-200">{indexOfFirstItem + 1}</strong> to{' '}
+            <strong className="text-slate-800 dark:text-slate-200">
+              {Math.min(indexOfLastItem, filteredProducts.length)}
+            </strong>{' '}
+            of <strong className="text-slate-800 dark:text-slate-200">{filteredProducts.length}</strong> products
           </div>
 
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage === 1}
-              className="px-3.5 py-2 rounded-xl border border-slate-200/80 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-white/5 transition-all cursor-pointer"
             >
               Previous
             </button>
 
-            <div className="flex gap-1 items-center">
-              {paginationPages.map((page, index) => (
+            {paginationPages.map((page, idx) =>
+              page === '...' ? (
+                <span key={idx} className="px-2 py-1 text-slate-400 text-xs">
+                  ...
+                </span>
+              ) : (
                 <button
-                  key={index}
+                  key={idx}
                   type="button"
-                  onClick={() => {
-                    if (page !== '...') setCurrentPage(page);
-                  }}
-                  disabled={page === '...'}
-                  className={`min-w-8 h-8 px-2 flex items-center justify-center rounded-xl text-xs font-bold transition-all ${
-                    page === currentPage
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                      : page === '...'
-                      ? 'bg-transparent text-slate-400 dark:text-slate-500 cursor-default'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white cursor-pointer border border-transparent hover:border-slate-200/80 dark:hover:border-white/10'
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    currentPage === page
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                      : 'border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'
                   }`}
                 >
                   {page}
                 </button>
-              ))}
-            </div>
+              )
+            )}
 
             <button
               type="button"
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className="px-3.5 py-2 rounded-xl border border-slate-200/80 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-white/5 transition-all cursor-pointer"
             >
               Next
             </button>
@@ -1154,20 +1297,22 @@ const Products = () => {
 
       {/* ================= ADD / EDIT PRODUCT MODAL ================= */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in duration-200">
-          <div className="bg-white/60 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl">
-                  {editingProduct ? <FiEdit2 className="text-xl" /> : <FiPlus className="text-xl" />}
-                </div>
+                <span className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl">
+                  <FiPackage className="text-xl" />
+                </span>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                    {editingProduct ? 'Edit Catalog Product' : 'Add New Product'}
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                    {editingProduct ? 'Edit Catalog Product' : 'Add New Catalog Product'}
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {editingProduct ? 'Update product specifications and pricing.' : 'Register a new hardware item into the catalog.'}
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {editingProduct
+                      ? 'Update specifications, company mapping, or distribution territory.'
+                      : 'Configure new hardware product with trading company and locations.'}
                   </p>
                 </div>
               </div>
@@ -1180,11 +1325,11 @@ const Products = () => {
               </button>
             </div>
 
-            {/* Modal Form */}
-            <form onSubmit={handleSaveProduct} className="flex-1 overflow-y-auto p-6 space-y-4">
+            {/* Modal Body */}
+            <form onSubmit={handleSaveProduct} className="p-6 overflow-y-auto space-y-4">
               {formError && (
-                <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs flex items-center gap-2">
-                  <FiAlertCircle className="text-base shrink-0" />
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
+                  <FiAlertCircle className="shrink-0 text-sm" />
                   <span>{formError}</span>
                 </div>
               )}
@@ -1198,7 +1343,7 @@ const Products = () => {
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="e.g. Auric BoomBox IPX7 Waterproof Portable Speaker"
+                  placeholder="e.g. Realme Buds Wireless 3"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
                   required
                 />
@@ -1214,7 +1359,7 @@ const Products = () => {
                     type="text"
                     value={formData.sku}
                     onChange={(e) => setFormData({ ...formData, sku: formatEntityCode(e.target.value), skuManual: true })}
-                    placeholder="e.g. AURIC-SPK-010"
+                    placeholder="e.g. REALME-BW3-YLW"
                     className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 uppercase"
                     required
                   />
@@ -1228,24 +1373,24 @@ const Products = () => {
                     type="text"
                     value={formData.brand}
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    placeholder="e.g. Auric or Whatnot"
+                    placeholder="e.g. Realme"
                     className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
                     required
                   />
                 </div>
               </div>
 
-              {/* Category & Unit Grid */}
+              {/* Company & Unit Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Category *
+                    Partner Company *
                   </label>
                   <CustomDropdown
-                    value={formData.categoryId}
-                    onChange={(val) => setFormData({ ...formData, categoryId: val })}
-                    defaultLabel="Select Category"
-                    options={categories.map((c) => ({
+                    value={formData.companyId}
+                    onChange={(val) => setFormData({ ...formData, companyId: val })}
+                    defaultLabel="Select Partner Company"
+                    options={companies.map((c) => ({
                       value: c._id,
                       label: `${c.name} ${c.code ? `(${c.code})` : ''}`
                     }))}
@@ -1268,6 +1413,84 @@ const Products = () => {
                 </div>
               </div>
 
+              {/* Covered Locations / Distribution Territories */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Distribution Locations / States
+                </label>
+                <p className="text-[11px] text-slate-400 mb-2">
+                  Select covered states or type custom cities/regions and press Enter.
+                </p>
+
+                {/* Selected Location Chips */}
+                {formData.locations && formData.locations.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2.5 p-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
+                    {formData.locations.map((loc, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold border border-blue-500/20"
+                      >
+                        <FiMapPin className="text-[10px]" />
+                        <span>{loc}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveLocation(loc)}
+                          className="hover:text-rose-500 ml-0.5 cursor-pointer"
+                        >
+                          <FiX size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Quick Toggle Popular States */}
+                <div className="flex flex-wrap gap-1.5 mb-2.5">
+                  {POPULAR_STATES.map((state) => {
+                    const isSelected = formData.locations?.includes(state);
+                    return (
+                      <button
+                        key={state}
+                        type="button"
+                        onClick={() => handleToggleLocation(state)}
+                        className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
+                        }`}
+                      >
+                        {isSelected ? '✓ ' : '+ '}{state}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Location Entry */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={customLocationInput}
+                    onChange={(e) => setCustomLocationInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCustomLocation();
+                      }
+                    }}
+                    placeholder="Type custom location and press Enter (e.g. Goa, Noida)..."
+                    className="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomLocation}
+                    disabled={!customLocationInput.trim()}
+                    className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
               {/* Description */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -1277,7 +1500,7 @@ const Products = () => {
                   rows={3}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="e.g. Ultra-compact 65W GaN adapter"
+                  placeholder="e.g. 30dB Active Noise Cancellation Neckband"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden resize-none"
                 />
               </div>
@@ -1287,7 +1510,7 @@ const Products = () => {
                 <div>
                   <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Catalog Active Status</div>
                   <div className="text-[11px] text-slate-400">
-                    Active products appear in company sales executive order forms.
+                    Active products appear in sales order booking screens.
                   </div>
                 </div>
                 <button
@@ -1331,131 +1554,22 @@ const Products = () => {
 
       {/* ================= PRODUCT DETAILS MODAL ================= */}
       {detailsProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in duration-200">
-          <div className="bg-white/60 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl">
-                  <FiPackage className="text-xl" />
-                </span>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white line-clamp-1">
-                    {detailsProduct.name}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="font-mono text-xs text-slate-400">{detailsProduct.sku}</span>
-                    <CopyButton text={detailsProduct.sku} />
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDetailsProduct(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
-              >
-                <FiX className="text-lg" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Grid Specifications */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-white/5">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Brand</span>
-                  <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                    {detailsProduct.brand || 'Whatnot'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Category</span>
-                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                    {typeof detailsProduct.categoryId === 'object'
-                      ? detailsProduct.categoryId?.name
-                      : 'Unassigned'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Unit</span>
-                  <span className="text-sm font-mono font-bold text-slate-800 dark:text-slate-200">
-                    {detailsProduct.unit || 'PCS'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Status</span>
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold mt-0.5 ${
-                      detailsProduct.isActive
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {detailsProduct.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Description</h4>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-200/60 dark:border-white/5">
-                  {detailsProduct.description || 'No detailed description provided for this catalog product.'}
-                </p>
-              </div>
-
-              {/* Metadata */}
-              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-200 dark:border-white/10">
-                <span>Added: {formatDateTimeDDMMYYYY(detailsProduct.createdAt)}</span>
-                <span>Last Updated: {formatDateTimeDDMMYYYY(detailsProduct.updatedAt)}</span>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  const toDelete = detailsProduct;
-                  setDetailsProduct(null);
-                  setDeleteConfirmProduct(toDelete);
-                }}
-                className="flex items-center gap-1.5 px-3 py-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-xs font-bold rounded-xl transition-all cursor-pointer"
-              >
-                <FiTrash2 />
-                <span>Delete</span>
-              </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDetailsProduct(null)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const toEdit = detailsProduct;
-                    setDetailsProduct(null);
-                    handleOpenEdit(toEdit);
-                  }}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer"
-                >
-                  <FiEdit2 />
-                  <span>Edit</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ProductDetailsModal
+          isOpen={Boolean(detailsProduct)}
+          onClose={() => setDetailsProduct(null)}
+          product={detailsProduct}
+          showEditButton
+          onEdit={(prod) => {
+            setDetailsProduct(null);
+            handleOpenEdit(prod);
+          }}
+        />
       )}
 
       {/* ================= DELETE CONFIRM MODAL ================= */}
       {deleteConfirmProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in duration-200">
-          <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center text-2xl mb-4">
               <FiTrash2 />
             </div>
@@ -1490,7 +1604,7 @@ const Products = () => {
       <BulkProductImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        categories={categories}
+        companies={companies}
         existingProducts={products}
         onImportComplete={handleImportComplete}
       />
@@ -1525,14 +1639,14 @@ const Products = () => {
               onClick: () => handleBulkStatusChange(false)
             },
             {
-              id: 'move-cat',
-              label: 'Move Category',
-              icon: FiLayers,
+              id: 'move-comp',
+              label: 'Reassign Company',
+              icon: FiBriefcase,
               variant: 'warning',
               disabled: selectedProductIds.length === 0,
               onClick: () => {
-                setBulkTargetCategoryId(categories[0]?._id || '');
-                setIsBulkCategoryModalOpen(true);
+                setBulkTargetCompanyId(companies[0]?._id || '');
+                setIsBulkCompanyModalOpen(true);
               }
             },
             {
@@ -1547,30 +1661,30 @@ const Products = () => {
         />
       )}
 
-      {/* ================= BULK CATEGORY MODAL ================= */}
-      {isBulkCategoryModalOpen && (
+      {/* ================= BULK COMPANY MODAL ================= */}
+      {isBulkCompanyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-2xl mb-4">
-              <FiLayers />
+              <FiBriefcase />
             </div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">Move Products to Category</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Reassign Products to Company</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-              Reassign <span className="font-bold text-slate-800 dark:text-slate-200">{selectedProductIds.length}</span> selected products to the following category:
+              Reassign <span className="font-bold text-slate-800 dark:text-slate-200">{selectedProductIds.length}</span> selected products to the following partner company:
             </p>
 
             <div className="mt-4">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                Target Category
+                Target Partner Company
               </label>
               <select
-                value={bulkTargetCategoryId}
-                onChange={(e) => setBulkTargetCategoryId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                value={bulkTargetCompanyId}
+                onChange={(e) => setBulkTargetCompanyId(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500/30"
               >
-                {categories.map((c) => (
+                {companies.map((c) => (
                   <option key={c._id} value={c._id}>
-                    {c.name}
+                    {c.name} {c.code ? `(${c.code})` : ''}
                   </option>
                 ))}
               </select>
@@ -1579,15 +1693,15 @@ const Products = () => {
             <div className="mt-6 flex items-center justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setIsBulkCategoryModalOpen(false)}
+                onClick={() => setIsBulkCompanyModalOpen(false)}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleBulkMoveCategory}
-                disabled={!bulkTargetCategoryId}
+                onClick={handleBulkMoveCompany}
+                disabled={!bulkTargetCompanyId}
                 className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-600/25 cursor-pointer disabled:opacity-50"
               >
                 Apply Reassignment

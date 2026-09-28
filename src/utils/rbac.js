@@ -59,6 +59,10 @@ export const isRouteAllowed = (path, userMenus = [], userRole = '') => {
     checkPath = '/firms/onboarding';
   } else if (path.startsWith('/firms')) {
     checkPath = '/firms';
+  } else if (path.startsWith('/notifications/emails') || path.startsWith('/emails')) {
+    checkPath = '/notifications/emails';
+  } else if (path.startsWith('/notifications')) {
+    checkPath = '/notifications';
   }
 
   return userMenus.some(menu => {

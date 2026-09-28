@@ -856,18 +856,18 @@ const FirmOnboarding = () => {
 
       {/* Clean Table (No sorting noise, spacious columns) */}
       <div className="rounded-2xl bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1150px] text-left border-collapse">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full min-w-[1350px] text-left border-collapse whitespace-nowrap">
             <thead className="bg-slate-50/80 dark:bg-white/[0.03] border-b border-slate-200/80 dark:border-white/10 select-none">
               <tr className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                <th className="px-5 py-3.5 whitespace-nowrap">Firm & Code</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Company</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Contact Person</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Location & GSTIN</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Credit Terms</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Submitted By</th>
-                <th className="px-5 py-3.5 whitespace-nowrap text-center">Status</th>
-                <th className="px-5 py-3.5 whitespace-nowrap text-right">Actions</th>
+                <th className="px-5 py-4 whitespace-nowrap">Firm & Code</th>
+                <th className="px-5 py-4 whitespace-nowrap">Company</th>
+                <th className="px-5 py-4 whitespace-nowrap">Contact Person</th>
+                <th className="px-5 py-4 whitespace-nowrap">Location & GSTIN</th>
+                <th className="px-5 py-4 whitespace-nowrap">Credit Terms</th>
+                <th className="px-5 py-4 whitespace-nowrap">Submitted By</th>
+                <th className="px-5 py-4 whitespace-nowrap text-center">Status</th>
+                <th className="px-5 py-4 whitespace-nowrap text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/60 dark:divide-white/5 text-xs">
@@ -916,7 +916,7 @@ const FirmOnboarding = () => {
                       className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group"
                     >
                       {/* Firm & Code */}
-                      <td className="px-5 py-3.5 align-middle">
+                      <td className="px-5 py-4 align-middle">
                         <div className="space-y-1">
                           <p className="font-bold text-slate-900 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {item.firmName}
@@ -931,7 +931,7 @@ const FirmOnboarding = () => {
                       </td>
 
                       {/* Company */}
-                      <td className="px-5 py-3.5 align-middle">
+                      <td className="px-5 py-4 align-middle">
                         <div className="flex items-center gap-2.5">
                           {item.companyId?.logo && !imageErrors[item.companyId._id] ? (
                             <img
@@ -950,9 +950,9 @@ const FirmOnboarding = () => {
                               {(item.companyId?.name || item.companyId?.code || 'C').charAt(0).toUpperCase()}
                             </div>
                           )}
-                          <div className="min-w-0">
+                          <div>
                             <p
-                              className="font-semibold text-slate-800 dark:text-slate-200 text-xs truncate max-w-[150px]"
+                              className="font-semibold text-slate-800 dark:text-slate-200 text-xs"
                               title={item.companyId?.name}
                             >
                               {item.companyId?.name || item.companyId?.code || '-'}
@@ -967,7 +967,7 @@ const FirmOnboarding = () => {
                       </td>
 
                       {/* Contact Person */}
-                      <td className="px-5 py-3.5 align-middle">
+                      <td className="px-5 py-4 align-middle">
                         <div className="space-y-0.5">
                           <p className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
                             {item.contactPerson || '-'}
@@ -980,7 +980,7 @@ const FirmOnboarding = () => {
                             </div>
                           )}
                           {item.email && (
-                            <div className="flex items-center gap-1 text-[11px] text-slate-400 whitespace-nowrap truncate max-w-[150px]">
+                            <div className="flex items-center gap-1 text-[11px] text-slate-400 whitespace-nowrap">
                               <GmailLink email={item.email} />
                             </div>
                           )}
@@ -988,7 +988,7 @@ const FirmOnboarding = () => {
                       </td>
 
                       {/* Location & GSTIN */}
-                      <td className="px-5 py-3.5 align-middle">
+                      <td className="px-5 py-4 align-middle">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
                             <FiMapPin size={12} className="text-slate-400 shrink-0" />
@@ -1008,7 +1008,7 @@ const FirmOnboarding = () => {
                       </td>
 
                       {/* Credit Terms */}
-                      <td className="px-5 py-3.5 align-middle whitespace-nowrap">
+                      <td className="px-5 py-4 align-middle whitespace-nowrap">
                         <div>
                           <p className="font-bold text-sm text-slate-900 dark:text-white">
                             ₹{(item.creditLimit ?? 0).toLocaleString('en-IN')}
@@ -1020,10 +1020,10 @@ const FirmOnboarding = () => {
                       </td>
 
                       {/* Submitted By */}
-                      <td className="px-5 py-3.5 align-middle">
+                      <td className="px-5 py-4 align-middle">
                         <div className="space-y-1">
                           <p
-                            className="font-medium text-slate-700 dark:text-slate-300 text-xs truncate max-w-[150px]"
+                            className="font-medium text-slate-700 dark:text-slate-300 text-xs"
                             title={item.submittedBy?.email || item.submittedBy?.phone}
                           >
                             {item.submittedBy?.email || item.submittedBy?.phone || 'Sales Team'}
@@ -1042,11 +1042,11 @@ const FirmOnboarding = () => {
                       </td>
 
                       {/* Status */}
-                      <td className="px-5 py-3.5 align-middle text-center whitespace-nowrap">
+                      <td className="px-5 py-4 align-middle text-center whitespace-nowrap">
                         {getStatusBadge(item.approvalStatus)}
                         {item.rejectionReason && status === 'REJECTED' && (
                           <p
-                            className="text-[10px] text-rose-500 mt-1 max-w-[130px] truncate mx-auto"
+                            className="text-[10px] text-rose-500 mt-1 max-w-xs whitespace-normal mx-auto leading-tight"
                             title={item.rejectionReason}
                           >
                             {item.rejectionReason}
@@ -1055,7 +1055,7 @@ const FirmOnboarding = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="px-5 py-3.5 align-middle text-right whitespace-nowrap">
+                      <td className="px-5 py-4 align-middle text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           {isPending ? (
                             <>

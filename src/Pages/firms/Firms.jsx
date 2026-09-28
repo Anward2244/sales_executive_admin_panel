@@ -7,7 +7,7 @@ import {
   FiMail, FiEye, FiExternalLink, FiHash, FiBriefcase,
   FiUsers, FiUserCheck, FiUserX, FiMapPin, FiFileText,
   FiPlus, FiUser, FiCheckCircle, FiEdit2, FiTrash2,
-  FiLayers, FiDownload
+  FiLayers, FiDownload, FiCreditCard
 } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
@@ -337,6 +337,8 @@ const Firms = () => {
   const tabCounts = useMemo(() => {
     let activeCount = 0;
     let inactiveCount = 0;
+    let approvedCount = 0;
+    let pendingCount = 0;
 
     const baseList = selectedCompany
       ? firms.filter((f) => f.companyId?._id === selectedCompany)
@@ -345,12 +347,18 @@ const Firms = () => {
     baseList.forEach((f) => {
       if (f.isActive) activeCount++;
       else inactiveCount++;
+
+      const appStatus = (f.approvalStatus || 'APPROVED').toUpperCase();
+      if (appStatus === 'PENDING') pendingCount++;
+      else if (appStatus === 'APPROVED') approvedCount++;
     });
 
     return {
       all: baseList.length,
       active: activeCount,
-      inactive: inactiveCount
+      inactive: inactiveCount,
+      approved: approvedCount,
+      pending: pendingCount
     };
   }, [firms, selectedCompany]);
 
@@ -361,6 +369,10 @@ const Firms = () => {
         return firms.filter((f) => f.isActive === true);
       case 'inactive':
         return firms.filter((f) => f.isActive === false);
+      case 'approved':
+        return firms.filter((f) => (f.approvalStatus || 'APPROVED').toUpperCase() === 'APPROVED');
+      case 'pending':
+        return firms.filter((f) => (f.approvalStatus || '').toUpperCase() === 'PENDING');
       default:
         if (firmTab !== 'all') {
           return firms.filter((f) => f.companyId?._id === firmTab);
@@ -398,6 +410,9 @@ const Firms = () => {
         const companyName = (firm.companyId?.name || '').toLowerCase();
         const companyCode = (firm.companyId?.code || '').toLowerCase();
         const statusText = firm.isActive ? 'active' : 'inactive';
+        const approvalText = (firm.approvalStatus || 'APPROVED').toLowerCase();
+        const submitterEmail = (firm.submittedBy?.email || '').toLowerCase();
+        const creditLimitStr = firm.creditLimit ? String(firm.creditLimit) : '';
         const createdAtStr = firm.createdAt ? formatDateDDMMYYYY(firm.createdAt).toLowerCase() : '';
 
         const matches =
@@ -413,6 +428,9 @@ const Firms = () => {
           companyName.includes(term) ||
           companyCode.includes(term) ||
           statusText.includes(term) ||
+          approvalText.includes(term) ||
+          submitterEmail.includes(term) ||
+          creditLimitStr.includes(term) ||
           createdAtStr.includes(term);
 
         if (!matches) return false;
@@ -443,6 +461,12 @@ const Firms = () => {
       } else if (sortKey === 'city') {
         aVal = (a.city || '').toLowerCase();
         bVal = (b.city || '').toLowerCase();
+      } else if (sortKey === 'creditLimit') {
+        aVal = a.creditLimit ?? 0;
+        bVal = b.creditLimit ?? 0;
+      } else if (sortKey === 'approvalStatus') {
+        aVal = (a.approvalStatus || 'APPROVED').toLowerCase();
+        bVal = (b.approvalStatus || 'APPROVED').toLowerCase();
       } else if (sortKey === 'createdAt' || sortKey === 'updatedAt') {
         aVal = aVal ? new Date(aVal).getTime() : 0;
         bVal = bVal ? new Date(bVal).getTime() : 0;
@@ -546,6 +570,9 @@ const Firms = () => {
           code: matchedComp?.code || '',
           logo: matchedComp?.logo || ''
         },
+        creditDays: resData.creditDays ?? 30,
+        creditLimit: resData.creditLimit ?? 0,
+        approvalStatus: resData.approvalStatus || 'APPROVED',
         createdAt: resData.createdAt || new Date().toISOString(),
         updatedAt: resData.updatedAt || new Date().toISOString()
       };
@@ -694,6 +721,31 @@ const Firms = () => {
     } catch (err) {
       console.error('Delete firm error:', err);
       alert(err.response?.data?.message || 'Failed to delete firm.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Toggle single firm active status
+  const handleToggleFirmStatus = async (firm) => {
+    if (!firm) return;
+    const targetId = firm._id;
+    const nextActive = !firm.isActive;
+    setActionLoadingId(targetId);
+    try {
+      const res = await updateFirmApi(targetId, { isActive: nextActive });
+      const updated = res.data?.data || res.data || { ...firm, isActive: nextActive };
+      setFirms((prev) =>
+        prev.map((f) => (f._id === targetId ? { ...f, ...updated, isActive: nextActive } : f))
+      );
+      if (selectedFirm?._id === targetId) {
+        setSelectedFirm((prev) => ({ ...prev, ...updated, isActive: nextActive }));
+      }
+      setSuccessToast(`Firm "${firm.firmName}" marked as ${nextActive ? 'Active' : 'Inactive'}!`);
+      setTimeout(() => setSuccessToast(''), 3000);
+    } catch (err) {
+      console.error('Failed to toggle firm status:', err);
+      alert(err.response?.data?.message || 'Failed to update firm status.');
     } finally {
       setActionLoadingId(null);
     }
@@ -870,6 +922,9 @@ const Firms = () => {
         'Firm Name': f.firmName || '',
         'Firm Code': f.firmCode || '',
         'Parent Company': compName,
+        'Approval Status': f.approvalStatus || 'APPROVED',
+        'Credit Limit (₹)': f.creditLimit ?? 0,
+        'Credit Days': f.creditDays ?? 30,
         'Contact Person': f.contactPerson || '',
         'Phone': f.phone || '',
         'Email': f.email || '',
@@ -878,6 +933,7 @@ const Firms = () => {
         'State': f.state || '',
         'Pincode': f.pincode || '',
         'GSTIN': f.gstin || '',
+        'Submitted By': f.submittedBy?.email || f.submittedBy?.phone || '',
         'Status': f.isActive ? 'Active' : 'Inactive',
         'Created At': f.createdAt ? formatDateDDMMYYYY(f.createdAt) : ''
       };
@@ -1023,6 +1079,48 @@ const Firms = () => {
                 }`}
               >
                 {tabCounts.active}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('approved')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                firmTab === 'approved'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+              }`}
+            >
+              <span>Approved</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-extrabold ${
+                  firmTab === 'approved'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                {tabCounts.approved}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('pending')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                firmTab === 'pending'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+              }`}
+            >
+              <span>Pending</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-extrabold ${
+                  firmTab === 'pending'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                }`}
+              >
+                {tabCounts.pending}
               </span>
             </button>
 
@@ -1225,8 +1323,47 @@ const Firms = () => {
                   {/* GSTIN */}
                   <th className="p-4 font-bold text-center">GSTIN</th>
 
-                  {/* Status */}
-                  <th className="p-4 font-bold text-center">Status</th>
+                  {/* Credit Terms Sort */}
+                  <th
+                    onClick={() => handleSortChange('creditLimit')}
+                    className="p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className={sortKey === 'creditLimit' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
+                        Credit Terms
+                      </span>
+                      {sortKey === 'creditLimit' ? (
+                        sortOrder === 'asc' ? (
+                          <span className="text-blue-600 dark:text-blue-400">▲</span>
+                        ) : (
+                          <span className="text-blue-600 dark:text-blue-400">▼</span>
+                        )
+                      ) : (
+                        <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                      )}
+                    </div>
+                  </th>
+
+                  {/* Status & Approval */}
+                  <th
+                    onClick={() => handleSortChange('approvalStatus')}
+                    className="p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className={sortKey === 'approvalStatus' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
+                        Status & Approval
+                      </span>
+                      {sortKey === 'approvalStatus' ? (
+                        sortOrder === 'asc' ? (
+                          <span className="text-blue-600 dark:text-blue-400">▲</span>
+                        ) : (
+                          <span className="text-blue-600 dark:text-blue-400">▼</span>
+                        )
+                      ) : (
+                        <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                      )}
+                    </div>
+                  </th>
 
                   {/* Created At Sort */}
                   <th
@@ -1414,22 +1551,59 @@ const Firms = () => {
                           )}
                         </td>
 
-                        {/* Status Toggle / Pill */}
+                        {/* Credit Terms */}
                         <td className="p-4 text-sm text-center">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
-                              firm.isActive
-                                ? 'bg-emerald-500/50 dark:bg-emerald-500/10 border border-emerald-500/25 text-white dark:text-emerald-600'
-                                : 'bg-rose-500/50 dark:bg-rose-500/10 border border-rose-500/20 text-white dark:text-rose-600'
-                            }`}
-                          >
+                          <div className="flex flex-col items-center">
+                            <span className="font-bold text-slate-800 dark:text-slate-200">
+                              ₹{(firm.creditLimit ?? 0).toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {firm.creditDays ?? 30} days
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Status & Approval */}
+                        <td className="p-4 text-sm text-center">
+                          <div className="flex flex-col items-center gap-1.5">
+                            {(() => {
+                              const appStatus = (firm.approvalStatus || 'APPROVED').toUpperCase();
+                              if (appStatus === 'PENDING') {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                    PENDING
+                                  </span>
+                                );
+                              }
+                              if (appStatus === 'REJECTED') {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25">
+                                    <FiUserX size={11} />
+                                    REJECTED
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                                  <FiCheckCircle size={11} />
+                                  APPROVED
+                                </span>
+                              );
+                            })()}
                             <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                firm.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                              onClick={() => handleToggleFirmStatus(firm)}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                                firm.isActive
+                                  ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/30'
+                                  : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-300'
                               }`}
-                            />
-                            <span>{firm.isActive ? 'Active' : 'Inactive'}</span>
-                          </span>
+                              title={`Click to ${firm.isActive ? 'deactivate' : 'activate'}`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${firm.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                              <span>{firm.isActive ? 'Active' : 'Inactive'}</span>
+                            </span>
+                          </div>
                         </td>
 
                         {/* Created At */}
@@ -1496,7 +1670,7 @@ const Firms = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="12" className="p-12 text-center text-slate-500 dark:text-slate-400">
+                    <td colSpan={isBulkMode ? 14 : 13} className="p-12 text-center text-slate-500 dark:text-slate-400">
                       <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3 text-slate-400">
                         <FiServer className="text-xl" />
                       </div>
@@ -2273,20 +2447,62 @@ const Firms = () => {
                     </div>
                   </div>
 
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
-                      selectedFirm.isActive
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25'
-                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                    }`}
-                  >
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(() => {
+                      const appStatus = (selectedFirm.approvalStatus || 'APPROVED').toUpperCase();
+                      if (appStatus === 'PENDING') {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25">
+                              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                              Approval: PENDING
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedFirm(null);
+                                navigate('/firms/onboarding');
+                              }}
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer"
+                              title="Go to customer onboarding requests"
+                            >
+                              <FiExternalLink className="text-xs" />
+                              <span>Review</span>
+                            </button>
+                          </div>
+                        );
+                      }
+                      if (appStatus === 'REJECTED') {
+                        return (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25">
+                            <FiUserX className="text-xs" />
+                            Approval: REJECTED
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                          <FiCheckCircle className="text-xs" />
+                          Approval: APPROVED
+                        </span>
+                      );
+                    })()}
+
                     <span
-                      className={`w-2 h-2 rounded-full ${
-                        selectedFirm.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                        selectedFirm.isActive
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25'
+                          : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                       }`}
-                    />
-                    {selectedFirm.isActive ? 'Active Operational Entity' : 'Inactive'}
-                  </span>
+                    >
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          selectedFirm.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                        }`}
+                      />
+                      {selectedFirm.isActive ? 'Active Operational' : 'Inactive'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Grid Info Cards */}
@@ -2366,6 +2582,66 @@ const Firms = () => {
                         <span className="text-slate-400">Last Modified:</span>
                         <span className="font-medium text-slate-700 dark:text-slate-300">
                           {formatDateTimeDDMMYYYY(selectedFirm.updatedAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Credit Terms & Limit */}
+                  <div className="p-4 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                      <FiCreditCard className="text-emerald-500" />
+                      <span>Credit Terms & Limit</span>
+                    </p>
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-slate-400">Credit Limit:</span>
+                        <span className="text-sm font-extrabold text-slate-900 dark:text-white font-mono">
+                          ₹{(selectedFirm.creditLimit ?? 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-slate-400">Credit Window:</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-300 font-mono">
+                          {selectedFirm.creditDays ?? 30} Days
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Submission & Review Audit */}
+                  <div className="p-4 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                      <FiUserCheck className="text-blue-500" />
+                      <span>Submission & Review Audit</span>
+                    </p>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">Submitted By:</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={selectedFirm.submittedBy?.email}>
+                          {selectedFirm.submittedBy?.email || 'System / Admin'}
+                        </span>
+                      </div>
+                      {selectedFirm.submittedBy?.role && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">Submitter Role:</span>
+                          <span className="font-semibold text-slate-600 dark:text-slate-400">
+                            {selectedFirm.submittedBy.role}
+                          </span>
+                        </div>
+                      )}
+                      {selectedFirm.submittedBy?.phone && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">Submitter Phone:</span>
+                          <span className="font-mono text-slate-600 dark:text-slate-400">
+                            {selectedFirm.submittedBy.phone}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">Reviewed By:</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={selectedFirm.reviewedBy?.email}>
+                          {selectedFirm.reviewedBy?.email || (selectedFirm.approvalStatus === 'PENDING' ? 'Pending Approval' : 'Auto / Admin')}
                         </span>
                       </div>
                     </div>
