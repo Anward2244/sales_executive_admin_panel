@@ -618,6 +618,9 @@ const FirmOnboarding = () => {
       {/* Page Header */}
       <PageHeader
         title="Customer / Firm Onboarding"
+        icon={FiUserCheck}
+        badgeIcon={FiUserCheck}
+        badgeText={`${sortedRequests.length} Requests`}
         subtitle="Review, approve, and initiate customer onboarding requests across enterprise companies"
         actions={
           <div className="flex items-center flex-wrap gap-2.5">
@@ -656,18 +659,17 @@ const FirmOnboarding = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         <div className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Requests</span>
+            <span className="text-xs font-semibold text-blue-400">Total Requests</span>
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <FiLayers size={18} />
             </div>
           </div>
-          <p className="text-2xl font-bold mt-2 text-slate-800 dark:text-white">{stats.total}</p>
+          <p className="text-2xl font-bold mt-2 text-blue-600">{stats.total}</p>
           <p className="text-[11px] text-slate-400 mt-0.5">All customer submissions</p>
         </div>
 
         <div
-          onClick={() => handleStatusFilter('PENDING')}
-          className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-amber-500/30 shadow-xs cursor-pointer hover:border-amber-500/60 transition-all group"
+          className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-amber-500/30 shadow-xs hover:border-amber-500/60 transition-all group"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
@@ -683,8 +685,7 @@ const FirmOnboarding = () => {
         </div>
 
         <div
-          onClick={() => handleStatusFilter('APPROVED')}
-          className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-emerald-500/30 shadow-xs cursor-pointer hover:border-emerald-500/60 transition-all group"
+          className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-emerald-500/30 shadow-xs hover:border-emerald-500/60 transition-all group"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Approved Firms</span>
@@ -697,8 +698,7 @@ const FirmOnboarding = () => {
         </div>
 
         <div
-          onClick={() => handleStatusFilter('REJECTED')}
-          className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-rose-500/30 shadow-xs cursor-pointer hover:border-rose-500/60 transition-all group"
+          className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-rose-500/30 shadow-xs hover:border-rose-500/60 transition-all group"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">Rejected Requests</span>
@@ -712,12 +712,12 @@ const FirmOnboarding = () => {
 
         <div className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Credit Demand</span>
+            <span className="text-xs font-semibold text-indigo-400">Credit Demand</span>
             <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
               <FiDollarSign size={18} />
             </div>
           </div>
-          <p className="text-xl font-bold mt-2 text-slate-800 dark:text-white truncate">
+          <p className="text-xl font-bold mt-2 text-indigo-600 truncate">
             ₹{stats.totalCredit.toLocaleString('en-IN')}
           </p>
           <p className="text-[11px] text-slate-400 mt-0.5">Total requested credit</p>
@@ -917,15 +917,20 @@ const FirmOnboarding = () => {
                     >
                       {/* Firm & Code */}
                       <td className="px-5 py-4 align-middle">
-                        <div className="space-y-1">
-                          <p className="font-bold text-slate-900 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            {item.firmName}
-                          </p>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 px-2 py-0.5 rounded-md whitespace-nowrap">
-                              {item.firmCode || '-'}
-                            </span>
-                            {item.firmCode && <CopyButton text={item.firmCode} />}
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-xs font-black shrink-0 shadow-xs">
+                            {(item.firmName || 'F').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="space-y-1">
+                            <p className="font-bold text-slate-900 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                              {item.firmName}
+                            </p>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 px-2 py-0.5 rounded-md whitespace-nowrap">
+                                {item.firmCode || '-'}
+                              </span>
+                              {item.firmCode && <CopyButton text={item.firmCode} />}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -1162,20 +1167,20 @@ const FirmOnboarding = () => {
       {/* DETAIL MODAL / SLIDE-OVER */}
       {selectedRequest &&
         createPortal(
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md animate-in fade-in overflow-y-auto">
-            <div className="relative w-full max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in zoom-in-95">
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in overflow-y-auto">
+            <div className="relative w-full max-w-2xl bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in zoom-in-95">
               {/* Modal Header */}
-              <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/10 to-indigo-600/10">
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/40 to-indigo-600/40">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl">
-                    <FiServer size={22} />
+                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
+                    <FiServer size={20} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+                    <h3 className="text-base sm:text-lg font-bold text-white">
                       {selectedRequest.firmName}
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="font-mono text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded">
+                      <span className="font-mono text-xs text-slate-900 dark:text-slate-300 bg-white/20 dark:bg-white/10 px-2 py-0.5 rounded backdrop-blur-xs font-semibold">
                         {selectedRequest.firmCode || '-'}
                       </span>
                       {getStatusBadge(selectedRequest.approvalStatus)}
@@ -1184,14 +1189,14 @@ const FirmOnboarding = () => {
                 </div>
                 <button
                   onClick={() => setSelectedRequest(null)}
-                  className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                  className="p-2 text-white hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <FiX size={18} />
                 </button>
               </div>
 
               {/* Modal Body */}
-              <div className="p-6 overflow-y-auto space-y-6 text-xs text-slate-600 dark:text-slate-300">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 text-xs text-slate-600 dark:text-slate-300 custom-scrollbar">
                 {/* Rejection Alert if Rejected */}
                 {(selectedRequest.approvalStatus || '').toUpperCase() === 'REJECTED' &&
                   selectedRequest.rejectionReason && (
@@ -1344,7 +1349,7 @@ const FirmOnboarding = () => {
               </div>
 
               {/* Modal Footer */}
-              <div className="p-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-between shrink-0 bg-slate-50 dark:bg-white/[0.02]">
+              <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-slate-50/80 dark:bg-white/[0.02]">
                 <div className="text-[11px] text-slate-400 font-mono">
                   ID: {selectedRequest._id}
                 </div>
@@ -1377,7 +1382,7 @@ const FirmOnboarding = () => {
                   )}
                   <button
                     onClick={() => setSelectedRequest(null)}
-                    className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                    className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                   >
                     Close
                   </button>
@@ -1391,33 +1396,33 @@ const FirmOnboarding = () => {
       {/* NEW ONBOARDING REQUEST MODAL (POST /firms/onboard) */}
       {isOnboardModalOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md animate-in fade-in overflow-y-auto">
-            <div className="relative w-full max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in zoom-in-95">
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in overflow-y-auto">
+            <div className="relative w-full max-w-2xl bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in zoom-in-95">
               {/* Header */}
-              <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/10 to-indigo-600/10">
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/40 to-indigo-600/40">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-md shadow-blue-500/30">
+                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
                     <FiPlus size={20} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+                    <h3 className="text-base sm:text-lg font-bold text-white">
                       New Customer Onboarding Request
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Submits request to <code className="font-mono text-blue-600 dark:text-blue-400">POST /firms/onboard</code>
+                    <p className="text-[11px] font-mono text-slate-950 dark:text-slate-300 mt-0.5">
+                      POST /firms/onboard
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => !onboardSubmitting && setIsOnboardModalOpen(false)}
-                  className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                  className="p-2 text-white hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <FiX size={18} />
                 </button>
               </div>
 
               {/* Form Content */}
-              <form onSubmit={handleSubmitOnboard} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+              <form onSubmit={handleSubmitOnboard} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 text-xs custom-scrollbar">
                 {onboardFormError && (
                   <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-2">
                     <FiAlertCircle size={16} className="shrink-0" />
@@ -1459,7 +1464,7 @@ const FirmOnboarding = () => {
                       onChange={(e) =>
                         setOnboardFormData((prev) => ({ ...prev, firmName: e.target.value }))
                       }
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -1478,7 +1483,7 @@ const FirmOnboarding = () => {
                           firmCode: formatEntityCode(e.target.value)
                         }))
                       }
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white font-mono uppercase focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white font-mono uppercase focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -1497,7 +1502,7 @@ const FirmOnboarding = () => {
                       onChange={(e) =>
                         setOnboardFormData((prev) => ({ ...prev, contactPerson: e.target.value }))
                       }
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -1516,7 +1521,7 @@ const FirmOnboarding = () => {
                           phone: formatPhone(e.target.value)
                         }))
                       }
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -1535,7 +1540,7 @@ const FirmOnboarding = () => {
                       onChange={(e) =>
                         setOnboardFormData((prev) => ({ ...prev, email: e.target.value }))
                       }
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -1554,7 +1559,7 @@ const FirmOnboarding = () => {
                           gstin: formatGSTIN(e.target.value)
                         }))
                       }
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white font-mono uppercase focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white font-mono uppercase focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -1572,7 +1577,7 @@ const FirmOnboarding = () => {
                     onChange={(e) =>
                       setOnboardFormData((prev) => ({ ...prev, address: e.target.value }))
                     }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -1590,7 +1595,7 @@ const FirmOnboarding = () => {
                       onChange={(e) =>
                         setOnboardFormData((prev) => ({ ...prev, city: e.target.value }))
                       }
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -1606,7 +1611,7 @@ const FirmOnboarding = () => {
                       onChange={(e) =>
                         setOnboardFormData((prev) => ({ ...prev, state: e.target.value }))
                       }
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -1625,7 +1630,7 @@ const FirmOnboarding = () => {
                           pincode: formatPincode(e.target.value)
                         }))
                       }
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white font-mono focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white font-mono focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -1645,7 +1650,7 @@ const FirmOnboarding = () => {
                       onChange={(e) =>
                         setOnboardFormData((prev) => ({ ...prev, creditDays: e.target.value }))
                       }
-                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-black/20 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Standard credit period (e.g. 30 days)</p>
                   </div>
@@ -1663,14 +1668,14 @@ const FirmOnboarding = () => {
                       onChange={(e) =>
                         setOnboardFormData((prev) => ({ ...prev, creditLimit: e.target.value }))
                       }
-                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-black/20 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Maximum allowed credit balance</p>
                   </div>
                 </div>
 
                 {/* Submit Buttons */}
-                <div className="pt-2 flex items-center justify-end gap-3">
+                <div className="pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-end gap-3 shrink-0">
                   <button
                     type="button"
                     disabled={onboardSubmitting}
@@ -1707,22 +1712,22 @@ const FirmOnboarding = () => {
       {reviewModalState.isOpen &&
         reviewModalState.item &&
         createPortal(
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 dark:bg-slate-950/60 backdrop-blur-lg animate-in fade-in overflow-y-auto">
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in overflow-y-auto">
             <div className="relative w-full max-w-lg bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in zoom-in-95">
               {/* Header */}
               <div
                 className={`p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 ${
                   reviewModalState.action === 'APPROVED'
-                    ? 'bg-emerald-500/10'
-                    : 'bg-rose-500/10'
+                    ? 'bg-gradient-to-r from-emerald-600/40 to-teal-600/40'
+                    : 'bg-gradient-to-r from-rose-600/40 to-red-600/40'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`p-2.5 sm:p-3 rounded-2xl ${
+                    className={`p-2.5 rounded-2xl text-white shadow-md ${
                       reviewModalState.action === 'APPROVED'
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30'
-                        : 'bg-rose-600 text-white shadow-md shadow-rose-500/30'
+                        ? 'bg-emerald-600 shadow-emerald-500/20'
+                        : 'bg-rose-600 shadow-rose-500/20'
                     }`}
                   >
                     {reviewModalState.action === 'APPROVED' ? (
@@ -1732,12 +1737,12 @@ const FirmOnboarding = () => {
                     )}
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white">
+                    <h3 className="text-base sm:text-lg font-bold text-white">
                       {reviewModalState.action === 'APPROVED'
                         ? 'Approve Onboarding Request'
                         : 'Reject Onboarding Request'}
                     </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                    <p className="text-[11px] text-slate-950 dark:text-slate-300 mt-0.5 font-mono">
                       PATCH /firms/{reviewModalState.item._id}/review
                     </p>
                   </div>
@@ -1748,7 +1753,7 @@ const FirmOnboarding = () => {
                     !reviewModalState.submitting &&
                     setReviewModalState((prev) => ({ ...prev, isOpen: false }))
                   }
-                  className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                  className="p-2 text-white hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <FiX size={18} />
                 </button>

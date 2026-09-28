@@ -132,12 +132,12 @@ const ProductDetailsModal = ({
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
+        className="absolute inset-0 dark:bg-slate-950/50 backdrop-blur-md"
         onClick={onClose}
       />
 
       {/* Modal Container */}
-      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200 text-left">
+      <div className="relative bg-white/40 dark:bg-slate-950/25 border border-slate-200 dark:border-white/10 rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200 text-left">
         {/* Floating Close Button */}
         <button
           type="button"

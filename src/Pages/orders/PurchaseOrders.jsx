@@ -937,23 +937,23 @@ const PurchaseOrders = () => {
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Total POs */}
-        <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xl">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xl">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total POs</p>
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Total POs</p>
             <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <FiShoppingCart className="text-base" />
             </span>
           </div>
-          <p className="text-2xl font-black text-slate-900 dark:text-white mt-2 font-mono">
+          <p className="text-2xl font-black text-blue-600 mt-2 font-mono">
             {stats.total}
           </p>
           <p className="text-[11px] text-slate-400 mt-1">All recorded procurement orders</p>
         </div>
 
         {/* Pending Review */}
-        <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-amber-500/20 dark:border-amber-500/20 shadow-xl">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-amber-500/20 dark:border-amber-500/20 shadow-xl">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending</p>
+            <p className="text-xs font-bold text-amber-400 uppercase tracking-wider">Pending</p>
             <span className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
               <FiClock className="text-base" />
             </span>
@@ -965,9 +965,9 @@ const PurchaseOrders = () => {
         </div>
 
         {/* Approved */}
-        <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-blue-500/20 dark:border-blue-500/20 shadow-xl">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-blue-500/20 dark:border-blue-500/20 shadow-xl">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Approved</p>
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Approved</p>
             <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <FiCheckCircle className="text-base" />
             </span>
@@ -979,9 +979,9 @@ const PurchaseOrders = () => {
         </div>
 
         {/* Dispatched */}
-        <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-emerald-500/20 dark:border-emerald-500/20 shadow-xl">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-emerald-500/20 dark:border-emerald-500/20 shadow-xl">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Dispatched</p>
+            <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Dispatched</p>
             <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <FiTruck className="text-base" />
             </span>
@@ -993,14 +993,14 @@ const PurchaseOrders = () => {
         </div>
 
         {/* Total PO Value */}
-        <div className="col-span-2 sm:col-span-1 lg:col-span-1 bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xl">
+        <div className="col-span-2 sm:col-span-1 lg:col-span-1 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xl">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Value</p>
+            <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Total Value</p>
             <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <FiActivity className="text-base" />
             </span>
           </div>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-2 font-mono truncate">
+          <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-2 font-mono truncate">
             ₹{stats.totalValue.toLocaleString('en-IN')}
           </p>
           <p className="text-[11px] text-slate-400 mt-1">Total procurement volume</p>

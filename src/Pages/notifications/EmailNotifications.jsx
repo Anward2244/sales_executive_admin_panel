@@ -97,30 +97,9 @@ const EmailNotifications = () => {
     setError(null);
 
     try {
-      const params = {
-        page: currentPage,
-        limit: limitPerPage
-      };
-      if (statusFilter && statusFilter !== 'ALL') {
-        params.status = statusFilter;
-      }
-      if (searchQuery.trim()) {
-        params.search = searchQuery.trim();
-      }
-
-      const res = await getEmailLogsApi(params);
+      const res = await getEmailLogsApi();
       const data = res.data?.data || (Array.isArray(res.data) ? res.data : []);
-      const paginationMeta = res.data?.meta || {
-        total: data.length,
-        page: currentPage,
-        limit: limitPerPage,
-        totalPages: Math.max(1, Math.ceil(data.length / limitPerPage)),
-        hasNextPage: false,
-        hasPrevPage: false
-      };
-
       setLogs(data);
-      setMeta(paginationMeta);
     } catch (err) {
       console.error('Fetch email logs error:', err);
       setError(err.response?.data?.message || err.message || 'Failed to retrieve email logs.');
@@ -128,7 +107,7 @@ const EmailNotifications = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [currentPage, limitPerPage, statusFilter, searchQuery]);
+  }, []);
 
   // Fetch Active Recipients (GET /emails/recipients)
   const fetchActiveRecipients = useCallback(async () => {
@@ -182,14 +161,32 @@ const EmailNotifications = () => {
     return result;
   }, [logs, statusFilter, searchQuery]);
 
+  // Client-side pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / limitPerPage));
+  const indexOfLastLog = currentPage * limitPerPage;
+  const indexOfFirstLog = indexOfLastLog - limitPerPage;
+  const currentLogs = filteredLogs.slice(indexOfFirstLog, indexOfLastLog);
+
+  // Reset to page 1 whenever search or status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  // Ensure current page does not exceed total pages
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   // Status Metrics
   const metrics = useMemo(() => {
-    const total = meta.total || logs.length;
+    const total = logs.length;
     const sent = logs.filter((l) => (l.status || '').toUpperCase() === 'SENT').length;
     const failed = logs.filter((l) => (l.status || '').toUpperCase() === 'FAILED').length;
     const queued = logs.filter((l) => (l.status || '').toUpperCase() === 'QUEUED').length;
     return { total, sent, failed, queued };
-  }, [logs, meta]);
+  }, [logs]);
 
   // Manage Recipients Handlers
   const handleOpenRecipientsModal = () => {
@@ -365,6 +362,9 @@ const EmailNotifications = () => {
       {/* Page Header */}
       <PageHeader
         title="Email Notifications & Delivery Logs"
+        icon={FiMail}
+        badgeIcon={FiMail}
+        badgeText={`${filteredLogs.length} Total Logs`}
         description="Monitor automated Purchase Order email dispatches, delivery status, resend notices, and manage active notification recipients."
       >
         <div className="flex items-center gap-2">
@@ -558,7 +558,7 @@ const EmailNotifications = () => {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50/80 dark:bg-white/[0.02] border-b border-slate-200/80 dark:border-white/10 text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                <th className="py-3.5 px-4">#</th>
+                <th className="py-3.5 px-4">S.No</th>
                 <th className="py-3.5 px-4">PO Number</th>
                 <th className="py-3.5 px-4">Subject</th>
                 <th className="py-3.5 px-4">Sender</th>
@@ -588,7 +588,7 @@ const EmailNotifications = () => {
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((logItem, index) => {
+                currentLogs.map((logItem, index) => {
                   const recipientsList = Array.isArray(logItem.recipients) ? logItem.recipients : [];
                   return (
                     <tr
@@ -596,31 +596,36 @@ const EmailNotifications = () => {
                       className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors"
                     >
                       {/* S.No */}
-                      <td className="py-3 px-4 font-mono text-[11px] text-slate-400">
-                        {(currentPage - 1) * limitPerPage + index + 1}
+                      <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400">
+                        {indexOfFirstLog + index + 1}
                       </td>
 
                       {/* PO Number */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
-                          {logItem.purchaseOrderId ? (
-                            <Link
-                              to={`/purchase-orders`}
-                              className="font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline"
-                            >
-                              {logItem.poNumber || 'N/A'}
-                            </Link>
-                          ) : (
-                            <span className="font-mono font-bold text-slate-800 dark:text-white">
-                              {logItem.poNumber || 'N/A'}
-                            </span>
-                          )}
-                          {logItem.poNumber && <CopyButton text={logItem.poNumber} />}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
+                            <FiMail size={14} />
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            {logItem.purchaseOrderId ? (
+                              <Link
+                                to={`/purchase-orders`}
+                                className="font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                              >
+                                {logItem.poNumber || 'N/A'}
+                              </Link>
+                            ) : (
+                              <span className="font-mono font-bold text-slate-800 dark:text-white">
+                                {logItem.poNumber || 'N/A'}
+                              </span>
+                            )}
+                            {logItem.poNumber && <CopyButton text={logItem.poNumber} />}
+                          </div>
                         </div>
                       </td>
 
                       {/* Subject */}
-                      <td className="py-3 px-4 max-w-xs">
+                      <td className="py-3.5 px-4 max-w-xs">
                         <div
                           className="font-semibold text-slate-800 dark:text-slate-200 truncate cursor-pointer hover:text-blue-600 transition-colors"
                           title={logItem.subject}
@@ -639,19 +644,26 @@ const EmailNotifications = () => {
                       </td>
 
                       {/* Sender */}
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-slate-800 dark:text-slate-200">
-                          {logItem.sender?.name || 'Automated System'}
-                        </div>
-                        {logItem.sender?.email && (
-                          <div className="text-[11px] text-slate-400">
-                            <GmailLink email={logItem.sender.email} />
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-[10px] shrink-0 border border-blue-500/20">
+                            {(logItem.sender?.name || logItem.sender?.email || 'S').charAt(0).toUpperCase()}
                           </div>
-                        )}
+                          <div>
+                            <div className="font-medium text-slate-800 dark:text-slate-200">
+                              {logItem.sender?.name || 'Automated System'}
+                            </div>
+                            {logItem.sender?.email && (
+                              <div className="text-[11px] text-slate-400">
+                                <GmailLink email={logItem.sender.email} />
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </td>
 
                       {/* Recipients */}
-                      <td className="py-3 px-4 max-w-[200px]">
+                      <td className="py-3.5 px-4 max-w-[200px]">
                         <div className="flex flex-wrap items-center gap-1">
                           {recipientsList.slice(0, 2).map((rec, rIdx) => (
                             <span
@@ -675,12 +687,12 @@ const EmailNotifications = () => {
                       </td>
 
                       {/* Status */}
-                      <td className="py-3 px-4">
+                      <td className="py-3.5 px-4">
                         {getStatusBadge(logItem.status)}
                       </td>
 
                       {/* Attempts & Date */}
-                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400">
+                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400">
                         <div className="font-semibold text-slate-700 dark:text-slate-300">
                           {logItem.createdAt ? formatDateTimeDDMMYYYY(logItem.createdAt) : '-'}
                         </div>
@@ -693,7 +705,7 @@ const EmailNotifications = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
@@ -724,35 +736,60 @@ const EmailNotifications = () => {
         </div>
 
         {/* Pagination Bar */}
-        {!loading && meta.totalPages > 1 && (
-          <div className="p-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-xs text-slate-500">
+        {totalPages > 1 && (
+          <div className="p-3.5 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
             <div>
               Showing{' '}
               <strong className="text-slate-800 dark:text-white">
-                {(currentPage - 1) * limitPerPage + 1}
+                {filteredLogs.length === 0 ? 0 : indexOfFirstLog + 1}
               </strong>{' '}
               to{' '}
               <strong className="text-slate-800 dark:text-white">
-                {Math.min(currentPage * limitPerPage, meta.total || filteredLogs.length)}
+                {Math.min(indexOfLastLog, filteredLogs.length)}
               </strong>{' '}
-              of <strong className="text-slate-800 dark:text-white">{meta.total}</strong> logs
+              of <strong className="text-slate-800 dark:text-white">{filteredLogs.length}</strong> logs
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <button
+                type="button"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage <= 1}
-                className="px-3 py-1 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-bold"
+                className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-semibold"
               >
                 Previous
               </button>
-              <span className="px-2 font-bold text-slate-700 dark:text-slate-300">
-                Page {currentPage} of {meta.totalPages}
-              </span>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => {
+                if (
+                  pg === 1 ||
+                  pg === totalPages ||
+                  (pg >= currentPage - 1 && pg <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={pg}
+                      type="button"
+                      onClick={() => setCurrentPage(pg)}
+                      className={`px-3 py-1 rounded-lg font-bold transition-colors cursor-pointer ${
+                        currentPage === pg
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
+                      }`}
+                    >
+                      {pg}
+                    </button>
+                  );
+                }
+                if (pg === currentPage - 2 || pg === currentPage + 2) {
+                  return <span key={pg} className="px-1 text-slate-400">...</span>;
+                }
+                return null;
+              })}
               <button
-                onClick={() => setCurrentPage((p) => Math.min(meta.totalPages, p + 1))}
-                disabled={currentPage >= meta.totalPages}
-                className="px-3 py-1 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-bold"
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-semibold"
               >
                 Next
               </button>
