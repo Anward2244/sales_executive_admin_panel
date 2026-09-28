@@ -1,13 +1,22 @@
 import { 
   FiHome, FiGrid, FiBriefcase, FiServer, 
-  FiBell, FiBox, FiShoppingCart, FiPieChart, FiUsers, FiSettings 
+  FiBell, FiBox, FiShoppingCart, FiPieChart, FiUsers, FiSettings,
+  FiUserCheck, FiList
 } from 'react-icons/fi';
 import { filterAccessibleMenus } from '../utils/rbac';
 
 const PAGES = {
   DASHBOARD: { path: '/', name: 'Dashboard', icon: FiHome },
   USERS: { path: '/users', name: 'Users', icon: FiUsers },
-  FIRMS: { path: '/firms', name: 'Firms', icon: FiServer },
+  FIRMS: {
+    path: '/firms',
+    name: 'Firms',
+    icon: FiServer,
+    subMenus: [
+      { path: '/firms', name: 'All Firms', icon: FiList },
+      { path: '/firms/onboarding', name: 'Onboarding Requests', icon: FiUserCheck },
+    ]
+  },
   COMPANIES: { path: '/companies', name: 'Companies', icon: FiBriefcase },
   CATEGORIES: { path: '/categories', name: 'Categories', icon: FiGrid },
   PRODUCTS: { path: '/products', name: 'Products', icon: FiBox },

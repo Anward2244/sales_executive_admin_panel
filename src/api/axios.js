@@ -87,10 +87,10 @@ export const getProfileApi = async () => {
 
 export const updateProfileApi = async (data) => {
   try {
-    return await api.put('/v1/auth/me', data);
+    return await api.patch('/v1/auth/me', data);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.put('/auth/me', data);
+      return await api.patch('/auth/me', data);
     }
     throw err;
   }
@@ -229,12 +229,62 @@ export const deleteFirmApi = async (id) => {
   }
 };
 
-export const getUsersApi = async (params = {}) => {
+export const getFirmOnboardingRequestsApi = async (params = {}) => {
   try {
-    return await api.get('/users', { params });
+    return await api.get('/firms/onboarding-requests', { params });
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.get('/v1/users', { params });
+      return await api.get('/v1/firms/onboarding-requests', { params });
+    }
+    throw err;
+  }
+};
+export const getOnboardingRequestsApi = getFirmOnboardingRequestsApi;
+
+export const onboardFirmApi = async (firmData) => {
+  try {
+    return await api.post('/firms/onboard', firmData);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.post('/v1/firms/onboard', firmData);
+    }
+    throw err;
+  }
+};
+export const createFirmOnboardApi = onboardFirmApi;
+export const createFirmOnboardingApi = onboardFirmApi;
+
+export const reviewFirmApi = async (id, reviewData) => {
+  const payload = typeof reviewData === 'string'
+    ? { approvalStatus: reviewData }
+    : reviewData;
+
+  try {
+    return await api.patch(`/firms/${id}/review`, payload);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.patch(`/v1/firms/${id}/review`, payload);
+    }
+    throw err;
+  }
+};
+export const reviewFirmOnboardingApi = reviewFirmApi;
+
+export const approveFirmOnboardingApi = async (id, extraData = {}) => {
+  return reviewFirmApi(id, { approvalStatus: 'APPROVED', ...extraData });
+};
+
+export const rejectFirmOnboardingApi = async (id, rejectionReason = '') => {
+  return reviewFirmApi(id, { approvalStatus: 'REJECTED', rejectionReason });
+};
+
+
+export const getUsersApi = async (params = {}) => {
+  try {
+    return await api.get('/v1/users', { params });
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.get('/users', { params });
     }
     throw err;
   }
@@ -242,10 +292,10 @@ export const getUsersApi = async (params = {}) => {
 
 export const getUserByIdApi = async (id) => {
   try {
-    return await api.get(`/users/${id}`);
+    return await api.get(`/v1/users/${id}`);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.get(`/v1/users/${id}`);
+      return await api.get(`/users/${id}`);
     }
     throw err;
   }
@@ -253,10 +303,10 @@ export const getUserByIdApi = async (id) => {
 
 export const createUserApi = async (userData) => {
   try {
-    return await api.post('/users', userData);
+    return await api.post('/v1/users', userData);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.post('/v1/users', userData);
+      return await api.post('/users', userData);
     }
     throw err;
   }
@@ -264,10 +314,10 @@ export const createUserApi = async (userData) => {
 
 export const updateUserApi = async (id, userData) => {
   try {
-    return await api.patch(`/users/${id}`, userData);
+    return await api.patch(`/v1/users/${id}`, userData);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.patch(`/v1/users/${id}`, userData);
+      return await api.patch(`/users/${id}`, userData);
     }
     throw err;
   }
@@ -275,10 +325,10 @@ export const updateUserApi = async (id, userData) => {
 
 export const updateUserStatusApi = async (id, isActive) => {
   try {
-    return await api.patch(`/users/${id}/status`, { isActive });
+    return await api.patch(`/v1/users/${id}/status`, { isActive });
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.patch(`/v1/users/${id}/status`, { isActive });
+      return await api.patch(`/users/${id}/status`, { isActive });
     }
     throw err;
   }

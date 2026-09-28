@@ -1030,9 +1030,9 @@ const Layout = () => {
 
             // IF THIS MENU HAS SUB-MENUS (Dropdown Logic)
             if (menu.subMenus) {
-              const isOpen = openMenus[menu.name];
               // Check if any sub-menu is the currently active page so we can highlight the parent
               const isChildActive = menu.subMenus.some(sub => location.pathname === sub.path);
+              const isOpen = openMenus[menu.name] !== undefined ? openMenus[menu.name] : isChildActive;
               const parentBadgeCount = menu.subMenus.reduce((sum, sub) => sum + getBadgeCount(sub.path), 0);
 
               return (

@@ -15,6 +15,7 @@ const Categories = lazy(() => import('@/pages/products/Categories'));
 const Companies = lazy(() => import('@/pages/companies/Companies'));
 const CompanyDetails = lazy(() => import('@/pages/companies/CompanyDetails'));
 const Firms = lazy(() => import('@/pages/firms/Firms'));
+const FirmOnboarding = lazy(() => import('@/pages/firms/FirmOnboarding'));
 const Notifications = lazy(() => import('@/pages/notifications/Notifications'));
 const Products = lazy(() => import('@/pages/products/Products'));
 const PurchaseOrders = lazy(() => import('@/pages/orders/PurchaseOrders'));
@@ -86,6 +87,9 @@ function App() {
                     <Route path="/companies" element={<Companies />} />
                     <Route path="/companies/:id" element={<CompanyDetails />} />
                     <Route path="/firms" element={<Firms />} />
+                    <Route path="/firms/onboarding" element={<FirmOnboarding />} />
+                    <Route path="/firms/onboarding-requests" element={<Navigate to="/firms/onboarding" replace />} />
+                    <Route path="/firms/list" element={<Navigate to="/firms" replace />} />
                     <Route path="/notifications" element={<Notifications />} />
                     <Route path="/products" element={<Products />} />
                     <Route path="/purchase-orders" element={<PurchaseOrders />} />
