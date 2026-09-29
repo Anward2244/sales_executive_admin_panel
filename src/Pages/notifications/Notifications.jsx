@@ -46,18 +46,16 @@ const Notifications = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  // Pagination metadata from API
-  const [meta, setMeta] = useState({
-    total: 0,
-    page: 1,
-    limit: 20,
-    totalPages: 1,
-    hasNextPage: false,
-    hasPrevPage: false
-  });
+  // Pagination state
   const { preferences: displayPrefs } = useDisplayPreferences();
   const [currentPage, setCurrentPage] = useState(1);
-  const limitPerPage = displayPrefs.rowsPerPage || 10;
+  const [limitPerPage, setLimitPerPage] = useState(displayPrefs.rowsPerPage || 10);
+
+  useEffect(() => {
+    if (displayPrefs.rowsPerPage) {
+      setLimitPerPage(displayPrefs.rowsPerPage);
+    }
+  }, [displayPrefs.rowsPerPage]);
 
   // Filters & Search
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'unread' | 'read'
@@ -150,13 +148,13 @@ const Notifications = () => {
   };
 
   // Fetch Notifications
-  const fetchNotifications = async (page = 1, isManual = false, isSilent = false) => {
+  const fetchNotifications = async (isManual = false, isSilent = false) => {
     if (isManual) setRefreshing(true);
     else if (!isSilent) setLoading(true);
     setError(null);
 
     try {
-      const response = await getNotificationsApi({ page, limit: limitPerPage });
+      const response = await getNotificationsApi({ limit: 1000 });
       const resData = response.data || {};
       const list = Array.isArray(resData.data)
         ? resData.data
@@ -167,20 +165,6 @@ const Notifications = () => {
             : [];
 
       setNotifications(list);
-
-      if (resData.meta) {
-        setMeta(resData.meta);
-      } else {
-        setMeta({
-          total: list.length,
-          page,
-          limit: limitPerPage,
-          totalPages: Math.max(1, Math.ceil(list.length / limitPerPage)),
-          hasNextPage: false,
-          hasPrevPage: false
-        });
-      }
-      setCurrentPage(page);
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
       if (!isSilent) {
@@ -193,15 +177,15 @@ const Notifications = () => {
   };
 
   useEffect(() => {
-    fetchNotifications(currentPage);
+    fetchNotifications();
 
     // Background polling every 15 seconds to fetch latest notifications live
     const pollTimer = setInterval(() => {
-      fetchNotifications(currentPage, false, true);
+      fetchNotifications(false, true);
     }, 15000);
 
     const onFocus = () => {
-      fetchNotifications(currentPage, false, true);
+      fetchNotifications(false, true);
     };
     window.addEventListener('focus', onFocus);
 
@@ -209,7 +193,7 @@ const Notifications = () => {
       clearInterval(pollTimer);
       window.removeEventListener('focus', onFocus);
     };
-  }, [currentPage, limitPerPage]);
+  }, []);
 
   // Mark Single Notification as Read
   const handleMarkAsRead = async (id, e) => {
@@ -329,6 +313,94 @@ const Notifications = () => {
     });
   }, [notifications, statusFilter, typeFilter, searchQuery]);
 
+  // Client-side pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredNotifications.length / limitPerPage));
+  const indexOfLastItem = currentPage * limitPerPage;
+  const indexOfFirstItem = indexOfLastItem - limitPerPage;
+  const currentNotifications = filteredNotifications.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Stepper calculations for Notification Detail Drawer
+  const selectedIndex = selectedNotification
+    ? filteredNotifications.findIndex(
+        (n) => (n._id || n.id) === (selectedNotification._id || selectedNotification.id)
+      )
+    : -1;
+  const hasPrev = selectedIndex > 0;
+  const hasNext = selectedIndex >= 0 && selectedIndex < filteredNotifications.length - 1;
+
+  const handlePrevNotification = () => {
+    if (hasPrev) {
+      setSelectedNotification(filteredNotifications[selectedIndex - 1]);
+    }
+  };
+
+  const handleNextNotification = () => {
+    if (hasNext) {
+      setSelectedNotification(filteredNotifications[selectedIndex + 1]);
+    }
+  };
+
+  // Keyboard navigation & body scroll lock for Notification Detail Drawer
+  useEffect(() => {
+    if (!selectedNotification) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setSelectedNotification(null);
+      } else if (e.key === 'ArrowLeft' && hasPrev) {
+        handlePrevNotification();
+      } else if (e.key === 'ArrowRight' && hasNext) {
+        handleNextNotification();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedNotification, hasPrev, hasNext, selectedIndex]);
+
+  // Reset to page 1 whenever search, filters, or limit changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, typeFilter, limitPerPage]);
+
+  // Ensure current page does not exceed total pages
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  // Generate pagination page numbers with ellipsis
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        for (let i = 1; i <= 5; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
+
   return (
     <div className="relative space-y-5 min-h-full w-full pb-10">
       {/* Toast Notification */}
@@ -362,13 +434,22 @@ const Notifications = () => {
         icon={MdNotificationsNone}
         description="Monitor system alerts, purchase order updates, and in-app communications in real time."
         badge={
-          meta.total > 0
-            ? `${meta.total} Total`
+          notifications.length > 0
+            ? `${filteredNotifications.length === notifications.length ? notifications.length : `${filteredNotifications.length} of ${notifications.length}`} Total`
             : null
         }
         actions={
           <div className='flex flex-col items-end'>
             <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => fetchNotifications(true)}
+                disabled={refreshing || loading}
+                className="p-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 text-xs font-bold flex items-center transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                title="Refresh notifications"
+              >
+                <FiRefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
+              </button>
               <div className="relative w-full sm:w-80">
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none" />
                 <input
@@ -493,7 +574,7 @@ const Notifications = () => {
             </div>
             <button
               type="button"
-              onClick={() => fetchNotifications(currentPage)}
+              onClick={() => fetchNotifications(true)}
               className="px-3 py-1 bg-rose-600 text-white rounded-lg font-bold hover:bg-rose-700 transition-colors cursor-pointer"
             >
               Retry
@@ -547,7 +628,7 @@ const Notifications = () => {
           </Card>
         ) : (
           /* List of Notifications */
-          filteredNotifications.map((item) => {
+          currentNotifications.map((item) => {
             const itemId = item._id || item.id;
             const isRead = Boolean(item.isRead);
             const isLoadingThis = actionLoadingId === itemId;
@@ -688,229 +769,305 @@ const Notifications = () => {
       </div>
 
       {/* Pagination Bar */}
-      {meta && meta.totalPages > 1 && (
-        <Card className="p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Page <span className="font-bold text-slate-800 dark:text-white">{meta.page}</span> of{' '}
-            <span className="font-bold text-slate-800 dark:text-white">{meta.totalPages}</span>{' '}
-            ({meta.total} total notifications)
-          </span>
+      {filteredNotifications.length > 0 && (
+        <Card className="p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+            <span>
+              Showing{' '}
+              <strong className="text-slate-800 dark:text-white">
+                {indexOfFirstItem + 1}
+              </strong>{' '}
+              to{' '}
+              <strong className="text-slate-800 dark:text-white">
+                {Math.min(indexOfLastItem, filteredNotifications.length)}
+              </strong>{' '}
+              of{' '}
+              <strong className="text-slate-800 dark:text-white">
+                {filteredNotifications.length}
+              </strong>{' '}
+              notifications
+            </span>
 
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage <= 1 || loading}
-              className="px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold border border-slate-200 dark:border-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
-            >
-              <FiChevronLeft className="inline text-xs mr-0.5" /> Prev
-            </button>
-
-            {Array.from({ length: Math.min(5, meta.totalPages) }, (_, i) => {
-              let pNum = i + 1;
-              if (meta.totalPages > 5 && currentPage > 3) {
-                pNum = currentPage - 2 + i;
-                if (pNum > meta.totalPages) {
-                  pNum = meta.totalPages - (4 - i);
-                }
-              }
-              if (pNum < 1) pNum = 1;
-
-              return (
-                <button
-                  key={pNum}
-                  type="button"
-                  onClick={() => setCurrentPage(pNum)}
-                  disabled={loading}
-                  className={`min-w-8 h-8 px-2 flex items-center justify-center rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
-                    pNum === currentPage
-                      ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-500/20'
-                      : 'bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
-                  }`}
-                >
-                  {pNum}
-                </button>
-              );
-            })}
-
-            <button
-              type="button"
-              onClick={() => setCurrentPage((p) => Math.min(meta.totalPages, p + 1))}
-              disabled={currentPage >= meta.totalPages || loading}
-              className="px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold border border-slate-200 dark:border-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
-            >
-              Next <FiChevronRight className="inline text-xs ml-0.5" />
-            </button>
+            {/* Rows Per Page Selector */}
+            <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 dark:border-white/10 pl-3">
+              <span className="text-[11px] text-slate-400">Per page:</span>
+              <select
+                value={limitPerPage}
+                onChange={(e) => {
+                  setLimitPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                {[5, 10, 20, 50].map((num) => (
+                  <option key={num} value={num}>
+                    {num}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold border border-slate-200 dark:border-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
+              >
+                <FiChevronLeft className="inline text-xs mr-0.5" /> Prev
+              </button>
+
+              <div className="flex items-center gap-1">
+                {getPageNumbers().map((pg, idx) => {
+                  if (pg === '...') {
+                    return (
+                      <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs">
+                        ...
+                      </span>
+                    );
+                  }
+                  return (
+                    <button
+                      key={pg}
+                      type="button"
+                      onClick={() => setCurrentPage(pg)}
+                      className={`min-w-8 h-8 px-2 flex items-center justify-center rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                        pg === currentPage
+                          ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-500/20'
+                          : 'bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
+                      }`}
+                    >
+                      {pg}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold border border-slate-200 dark:border-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
+              >
+                Next <FiChevronRight className="inline text-xs ml-0.5" />
+              </button>
+            </div>
+          )}
         </Card>
       )}
 
-      {/* ================= Notification Details Modal ================= */}
+      {/* ================= Notification Details Slide-Over Drawer ================= */}
       {selectedNotification && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg bg-white/40 dark:bg-slate-950/25 rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200/80 dark:border-white/10 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200/80 dark:border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20">
-                  <FiBell />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Notification Details</h3>
-                  <div className="flex items-center gap-1 font-mono text-[11px] text-slate-400">
-                    <span>ID: {selectedNotification._id || selectedNotification.id}</span>
-                    <CopyButton text={selectedNotification._id || selectedNotification.id} />
+        <div className="fixed inset-0 z-[10000] overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+            onClick={() => setSelectedNotification(null)}
+          />
+
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10 pointer-events-none">
+            <div className="w-screen max-w-md sm:max-w-xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto animate-in slide-in-from-right duration-300 z-10">
+              {/* Sticky Drawer Header */}
+              <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20">
+                    <FiBell />
                   </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedNotification(null)}
-                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer transition-colors"
-              >
-                <FiX className="text-lg" />
-              </button>
-            </div>
-
-            {/* Modal Details */}
-            <div className="space-y-3.5 text-xs">
-              {/* Status and Type Pills */}
-              <div className="flex items-center justify-between p-3 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status:</span>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                      selectedNotification.isRead
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
-                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
-                    }`}
-                  >
-                    {selectedNotification.isRead ? 'Read' : 'Unread'}
-                  </span>
-                </div>
-
-                {selectedNotification.type && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Type:</span>
-                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-mono text-[11px] font-bold">
-                      {selectedNotification.type}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Title */}
-              <div className="p-3.5 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Title</span>
-                <p className="font-bold text-slate-900 dark:text-white text-sm">
-                  {selectedNotification.title || 'Untitled Notification'}
-                </p>
-              </div>
-
-              {/* Message */}
-              <div className="p-3.5 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Message</span>
-                <p className="text-slate-700 dark:text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
-                  {selectedNotification.message || 'No message provided.'}
-                </p>
-              </div>
-
-              {/* Related Entity Information */}
-              {(selectedNotification.relatedEntityType || selectedNotification.relatedEntityId) && (
-                <div className="p-3.5 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5 space-y-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Linked Entity
-                  </span>
-                  <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
-                    <div>
-                      <span className="font-semibold text-slate-600 dark:text-slate-400">Type: </span>
-                      <span className="font-bold text-slate-900 dark:text-white">
-                        {selectedNotification.relatedEntityType || 'N/A'}
-                      </span>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Notification Details</h3>
+                    <div className="flex items-center gap-1 font-mono text-[11px] text-slate-400">
+                      <span>ID: {selectedNotification._id || selectedNotification.id}</span>
+                      <CopyButton text={selectedNotification._id || selectedNotification.id} />
                     </div>
-                    {selectedNotification.relatedEntityId && (
-                      <div className="flex items-center gap-1.5 font-mono text-slate-700 dark:text-slate-300">
-                        <span>ID: {selectedNotification.relatedEntityId}</span>
-                        <CopyButton text={selectedNotification.relatedEntityId} />
-                      </div>
-                    )}
                   </div>
+                </div>
 
-                  {/* Quick Action Button for Entity */}
-                  {selectedNotification.relatedEntityType === 'PurchaseOrder' && (
-                    <div className="pt-2">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  {/* Stepper Navigation */}
+                  {filteredNotifications.length > 1 && (
+                    <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-xl p-0.5 border border-slate-200/60 dark:border-white/10 mr-1">
                       <button
                         type="button"
-                        onClick={() => {
-                          setSelectedNotification(null);
-                          navigate('/purchase-orders', {
-                            state: { highlightOrderId: selectedNotification.relatedEntityId }
-                          });
-                        }}
-                        className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/25"
+                        onClick={handlePrevNotification}
+                        disabled={!hasPrev}
+                        title="Previous notification (Left arrow)"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
                       >
-                        <FiShoppingBag className="text-sm" />
-                        <span>Navigate to Purchase Orders</span>
-                        <FiArrowRight className="text-xs" />
+                        <FiChevronLeft size={16} />
+                      </button>
+                      <span className="text-[11px] font-mono px-2 text-slate-500 font-semibold select-none">
+                        {selectedIndex >= 0 ? `${selectedIndex + 1} of ${filteredNotifications.length}` : ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleNextNotification}
+                        disabled={!hasNext}
+                        title="Next notification (Right arrow)"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                      >
+                        <FiChevronRight size={16} />
                       </button>
                     </div>
                   )}
-                </div>
-              )}
 
-              {/* Recipient ID */}
-              {selectedNotification.recipientId && (
-                <div className="flex items-center justify-between p-3 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Recipient ID:</span>
-                  <div className="flex items-center gap-1 font-mono text-slate-700 dark:text-slate-300">
-                    <span>{selectedNotification.recipientId}</span>
-                    <CopyButton text={selectedNotification.recipientId} />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedNotification(null)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                    title="Close (Esc)"
+                  >
+                    <FiX className="text-lg" />
+                  </button>
                 </div>
-              )}
-
-              {/* Timestamps */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                {selectedNotification.createdAt && (
-                  <div className="p-3 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5 space-y-0.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Created</span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      {formatDateTimeDDMMYYYY(selectedNotification.createdAt, true)}
-                    </span>
-                  </div>
-                )}
-                {selectedNotification.updatedAt && (
-                  <div className="p-3 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5 space-y-0.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Updated</span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      {formatDateTimeDDMMYYYY(selectedNotification.updatedAt, true)}
-                    </span>
-                  </div>
-                )}
               </div>
-            </div>
 
-            {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-white/10">
-              {!selectedNotification.isRead && (
-                <button
-                  type="button"
-                  onClick={() => handleMarkAsRead(selectedNotification._id || selectedNotification.id)}
-                  disabled={actionLoadingId === (selectedNotification._id || selectedNotification.id)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/25 cursor-pointer disabled:opacity-50"
-                >
-                  {actionLoadingId === (selectedNotification._id || selectedNotification.id)
-                    ? 'Marking Read...'
-                    : 'Mark as Read'}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setSelectedNotification(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
-              >
-                Close
-              </button>
+              {/* Scrollable Drawer Body */}
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar text-xs">
+                {/* Status and Type Pills */}
+                <div className="flex items-center justify-between p-3.5 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status:</span>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                        selectedNotification.isRead
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
+                      }`}
+                    >
+                      {selectedNotification.isRead ? 'Read' : 'Unread'}
+                    </span>
+                  </div>
+
+                  {selectedNotification.type && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Type:</span>
+                      <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-mono text-[11px] font-bold">
+                        {selectedNotification.type}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Title */}
+                <div className="p-4 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Title</span>
+                  <p className="font-bold text-slate-900 dark:text-white text-sm">
+                    {selectedNotification.title || 'Untitled Notification'}
+                  </p>
+                </div>
+
+                {/* Message */}
+                <div className="p-4 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Message</span>
+                  <p className="text-slate-700 dark:text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
+                    {selectedNotification.message || 'No message provided.'}
+                  </p>
+                </div>
+
+                {/* Related Entity Information */}
+                {(selectedNotification.relatedEntityType || selectedNotification.relatedEntityId) && (
+                  <div className="p-4 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5 space-y-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Linked Entity
+                    </span>
+                    <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
+                      <div>
+                        <span className="font-semibold text-slate-600 dark:text-slate-400">Type: </span>
+                        <span className="font-bold text-slate-900 dark:text-white">
+                          {selectedNotification.relatedEntityType || 'N/A'}
+                        </span>
+                      </div>
+                      {selectedNotification.relatedEntityId && (
+                        <div className="flex items-center gap-1.5 font-mono text-slate-700 dark:text-slate-300">
+                          <span>ID: {selectedNotification.relatedEntityId}</span>
+                          <CopyButton text={selectedNotification.relatedEntityId} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick Action Button for Entity */}
+                    {selectedNotification.relatedEntityType === 'PurchaseOrder' && (
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedNotification(null);
+                            navigate('/purchase-orders', {
+                              state: { highlightOrderId: selectedNotification.relatedEntityId }
+                            });
+                          }}
+                          className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/25"
+                        >
+                          <FiShoppingBag className="text-sm" />
+                          <span>Navigate to Purchase Orders</span>
+                          <FiArrowRight className="text-xs" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Recipient ID */}
+                {selectedNotification.recipientId && (
+                  <div className="flex items-center justify-between p-3.5 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Recipient ID:</span>
+                    <div className="flex items-center gap-1 font-mono text-slate-700 dark:text-slate-300">
+                      <span>{selectedNotification.recipientId}</span>
+                      <CopyButton text={selectedNotification.recipientId} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Timestamps */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {selectedNotification.createdAt && (
+                    <div className="p-3 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5 space-y-0.5">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Created</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        {formatDateTimeDDMMYYYY(selectedNotification.createdAt, true)}
+                      </span>
+                    </div>
+                  )}
+                  {selectedNotification.updatedAt && (
+                    <div className="p-3 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5 space-y-0.5">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Updated</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        {formatDateTimeDDMMYYYY(selectedNotification.updatedAt, true)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Sticky Drawer Footer */}
+              <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md">
+                <span className="text-[11px] text-slate-400 hidden sm:inline">
+                  Press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-300">Esc</kbd> to exit or <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-300">←</kbd> <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-300">→</kbd> to step
+                </span>
+                <div className="flex items-center gap-2.5 ml-auto">
+                  {!selectedNotification.isRead && (
+                    <button
+                      type="button"
+                      onClick={() => handleMarkAsRead(selectedNotification._id || selectedNotification.id)}
+                      disabled={actionLoadingId === (selectedNotification._id || selectedNotification.id)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/25 cursor-pointer disabled:opacity-50"
+                    >
+                      {actionLoadingId === (selectedNotification._id || selectedNotification.id)
+                        ? 'Marking Read...'
+                        : 'Mark as Read'}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedNotification(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -918,7 +1075,7 @@ const Notifications = () => {
 
       {/* ================= Device Token Registration Modal ================= */}
       {isDeviceTokenModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
           <div className="relative w-full max-w-md bg-white/40 dark:bg-slate-950/25 rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-white/10">
               <div className="flex items-center gap-2.5">

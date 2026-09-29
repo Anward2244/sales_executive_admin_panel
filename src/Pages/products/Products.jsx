@@ -20,7 +20,9 @@ import {
   FiUploadCloud,
   FiBriefcase,
   FiMapPin,
-  FiGlobe
+  FiGlobe,
+  FiChevronLeft,
+  FiChevronRight
 } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 import BulkProductImportModal, { downloadProductExcelTemplate } from './BulkProductImportModal';
@@ -92,7 +94,14 @@ const Products = () => {
   // Pagination State
   const { preferences: displayPrefs } = useDisplayPreferences();
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = displayPrefs.rowsPerPage || 10;
+  const [limitPerPage, setLimitPerPage] = useState(displayPrefs.rowsPerPage || 10);
+  const itemsPerPage = limitPerPage;
+
+  useEffect(() => {
+    if (displayPrefs.rowsPerPage) {
+      setLimitPerPage(displayPrefs.rowsPerPage);
+    }
+  }, [displayPrefs.rowsPerPage]);
 
   // Modal & Dropdown States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -714,7 +723,6 @@ const Products = () => {
       <PageHeader
         title="Products Catalog"
         subtitle="Manage product portfolio, SKU inventory, brand collections, and distribution territories."
-        badgeText={`${products.length} Products`}
         badgeIcon={FiPackage}
         actions={
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
@@ -785,7 +793,7 @@ const Products = () => {
             </button>
 
             {isActionsOpen && (
-              <div className="absolute left-0 mt-2 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-from-top-2 duration-150">
+              <div className="absolute left-0 mt-2 w-64 bg-white/40 dark:bg-slate-900/25 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-from-top-2 duration-150">
                 {/* Option 1: Import Products via Excel */}
                 <button
                   type="button"
@@ -1238,60 +1246,83 @@ const Products = () => {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
 
-      {/* ================= PAGINATION CONTROLS ================= */}
-      {!loading && filteredProducts.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-          <div className="text-xs text-slate-500 dark:text-slate-400">
-            Showing <strong className="text-slate-800 dark:text-slate-200">{indexOfFirstItem + 1}</strong> to{' '}
-            <strong className="text-slate-800 dark:text-slate-200">
-              {Math.min(indexOfLastItem, filteredProducts.length)}
-            </strong>{' '}
-            of <strong className="text-slate-800 dark:text-slate-200">{filteredProducts.length}</strong> products
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-white/5 transition-all cursor-pointer"
-            >
-              Previous
-            </button>
-
-            {paginationPages.map((page, idx) =>
-              page === '...' ? (
-                <span key={idx} className="px-2 py-1 text-slate-400 text-xs">
-                  ...
+          {/* ================= ATTACHED PAGINATION CONTROLS ================= */}
+          {filteredProducts.length > 0 && (
+            <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-white/[0.02]">
+              <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                <span>
+                  Showing <strong className="text-slate-800 dark:text-slate-200">{indexOfFirstItem + 1}</strong> to{' '}
+                  <strong className="text-slate-800 dark:text-slate-200">
+                    {Math.min(indexOfLastItem, filteredProducts.length)}
+                  </strong>{' '}
+                  of <strong className="text-slate-800 dark:text-slate-200">{filteredProducts.length}</strong> products
                 </span>
-              ) : (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    currentPage === page
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                      : 'border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'
-                  }`}
-                >
-                  {page}
-                </button>
-              )
-            )}
 
-            <button
-              type="button"
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-white/5 transition-all cursor-pointer"
-            >
-              Next
-            </button>
-          </div>
+                {/* Rows Per Page Selector */}
+                <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 dark:border-white/10 pl-3">
+                  <span className="text-[11px] text-slate-400">Per page:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setLimitPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  >
+                    {[5, 10, 20, 50].map((num) => (
+                      <option key={num} value={num}>
+                        {num}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs"
+                  >
+                    <FiChevronLeft className="inline text-xs mr-0.5" /> Previous
+                  </button>
+
+                  {paginationPages.map((page, idx) =>
+                    page === '...' ? (
+                      <span key={idx} className="px-2 py-1 text-slate-400 text-xs">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                            : 'border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs"
+                  >
+                    Next <FiChevronRight className="inline text-xs ml-0.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

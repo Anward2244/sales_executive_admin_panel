@@ -20,7 +20,9 @@ import {
   FiFileText,
   FiCheck,
   FiRotateCw,
-  FiInbox
+  FiInbox,
+  FiChevronLeft,
+  FiChevronRight
 } from 'react-icons/fi';
 import {
   getEmailLogsApi,
@@ -166,6 +168,57 @@ const EmailNotifications = () => {
   const indexOfLastLog = currentPage * limitPerPage;
   const indexOfFirstLog = indexOfLastLog - limitPerPage;
   const currentLogs = filteredLogs.slice(indexOfFirstLog, indexOfLastLog);
+
+  // Slide-Over Detail Drawer navigation for Email Logs
+  const selectedLogIndex = useMemo(() => {
+    if (!selectedLog) return -1;
+    return filteredLogs.findIndex((l) => l._id === selectedLog._id);
+  }, [selectedLog, filteredLogs]);
+
+  const canGoPrevLog = selectedLogIndex > 0;
+  const canGoNextLog = selectedLogIndex >= 0 && selectedLogIndex < filteredLogs.length - 1;
+
+  const handlePrevLog = useCallback(() => {
+    if (selectedLogIndex > 0) {
+      setSelectedLog(filteredLogs[selectedLogIndex - 1]);
+    }
+  }, [selectedLogIndex, filteredLogs]);
+
+  const handleNextLog = useCallback(() => {
+    if (selectedLogIndex >= 0 && selectedLogIndex < filteredLogs.length - 1) {
+      setSelectedLog(filteredLogs[selectedLogIndex + 1]);
+    }
+  }, [selectedLogIndex, filteredLogs]);
+
+  // Drawer keyboard navigation & body scroll lock
+  useEffect(() => {
+    if (!selectedLog) return;
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+      }
+      if (e.key === 'Escape') {
+        setSelectedLog(null);
+      } else if (e.key === 'ArrowLeft') {
+        if (canGoPrevLog) handlePrevLog();
+      } else if (e.key === 'ArrowRight') {
+        if (canGoNextLog) handleNextLog();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedLog, canGoPrevLog, canGoNextLog, handlePrevLog, handleNextLog]);
+
+  useEffect(() => {
+    if (selectedLog) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedLog]);
 
   // Reset to page 1 whenever search or status filter changes
   useEffect(() => {
@@ -798,37 +851,75 @@ const EmailNotifications = () => {
         )}
       </Card>
 
-      {/* DETAIL VIEW MODAL */}
+      {/* DETAIL VIEW SLIDE-OVER DRAWER */}
       {selectedLog &&
         createPortal(
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in overflow-y-auto">
-            <div className="relative w-full max-w-xl bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in zoom-in-95">
-              {/* Modal Header */}
-              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/40 to-indigo-600/40">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
-                    <FiMail size={20} />
+          <div className="fixed inset-0 z-[10000] overflow-hidden">
+            {/* Backdrop Blur Overlay */}
+            <div
+              className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+              onClick={() => setSelectedLog(null)}
+            />
+
+            {/* Slide-Over Drawer Container (Pinned to Right) */}
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
+              <div className="w-screen max-w-xl sm:max-w-2xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10">
+                {/* 1. Sticky Drawer Header */}
+                <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                      <FiMail size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
+                        Email Delivery Details
+                      </h3>
+                      <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                        Log ID: {selectedLog._id}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-white">
-                      Email Delivery Details
-                    </h3>
-                    <p className="text-[11px] font-mono text-slate-950 dark:text-slate-400 mt-0.5">
-                      Log ID: {selectedLog._id}
-                    </p>
+
+                  {/* Header Actions: Stepping & Close */}
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    {selectedLogIndex >= 0 && (
+                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-1 text-xs">
+                        <button
+                          type="button"
+                          onClick={handlePrevLog}
+                          disabled={!canGoPrevLog}
+                          title="Previous Log (Left Arrow)"
+                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <FiChevronLeft size={15} />
+                        </button>
+                        <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                          {selectedLogIndex + 1} of {filteredLogs.length}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleNextLog}
+                          disabled={!canGoNextLog}
+                          title="Next Log (Right Arrow)"
+                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <FiChevronRight size={15} />
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLog(null)}
+                      className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all rounded-xl cursor-pointer"
+                      title="Close drawer (Esc)"
+                    >
+                      <FiX size={18} />
+                    </button>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedLog(null)}
-                  className="p-2 text-white hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  <FiX size={18} />
-                </button>
-              </div>
 
-              {/* Modal Body */}
-              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 text-xs text-slate-600 dark:text-slate-300 custom-scrollbar">
+                {/* 2. Scrollable Body Content */}
+                <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-4 text-xs text-slate-600 dark:text-slate-300 custom-scrollbar">
                 {/* Status & PO Bar */}
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-between">
                   <div>
@@ -919,30 +1010,31 @@ const EmailNotifications = () => {
                     <CopyButton text={selectedLog.messageId} />
                   </div>
                 )}
-              </div>
+                </div>
 
-              {/* Modal Footer */}
-              <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-slate-50/80 dark:bg-white/[0.02]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const target = selectedLog;
-                    setSelectedLog(null);
-                    handleOpenResendModal(target);
-                  }}
-                  className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-blue-500/20"
-                >
-                  <FiRotateCw size={13} />
-                  <span>Resend Email</span>
-                </button>
+                {/* 3. Sticky Action Footer */}
+                <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = selectedLog;
+                      setSelectedLog(null);
+                      handleOpenResendModal(target);
+                    }}
+                    className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-blue-500/20"
+                  >
+                    <FiRotateCw size={13} />
+                    <span>Resend Email</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedLog(null)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                >
-                  Close
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedLog(null)}
+                    className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Close Drawer
+                  </button>
+                </div>
               </div>
             </div>
           </div>,

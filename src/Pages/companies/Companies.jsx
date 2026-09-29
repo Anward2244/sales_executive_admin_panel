@@ -319,7 +319,6 @@ const Companies = () => {
         title="Companies"
         icon={FiBriefcase}
         description="Manage and organize partner companies, brand entities, and operational organizations."
-        badgeText="Directory"
         action={
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <div className="relative w-full sm:w-80">

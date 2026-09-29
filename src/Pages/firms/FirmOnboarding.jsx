@@ -6,7 +6,9 @@ import {
   FiRefreshCcw, FiX, FiClock, FiPhone, FiEye, FiBriefcase,
   FiUserCheck, FiUserX, FiMapPin, FiPlus, FiUser,
   FiCheckCircle, FiLayers, FiDownload, FiDollarSign,
-  FiAlertTriangle
+  FiAlertTriangle, FiChevronLeft, FiChevronRight,
+  FiFileText, FiCreditCard, FiExternalLink, FiShield,
+  FiAward, FiGlobe, FiCalendar, FiMaximize2
 } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
@@ -55,11 +57,19 @@ const FirmOnboarding = () => {
 
   // Requests state
   const [requests, setRequests] = useState([]);
+  const [apiMeta, setApiMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [imageErrors, setImageErrors] = useState({});
   const [actionLoadingId, setActionLoadingId] = useState(null);
+
+  // Document preview lightbox modal state
+  const [docPreviewModal, setDocPreviewModal] = useState({
+    isOpen: false,
+    title: '',
+    url: ''
+  });
 
   // Companies loaded for dropdown
   const [availableCompanies, setAvailableCompanies] = useState([]);
@@ -95,9 +105,15 @@ const FirmOnboarding = () => {
   const selectedCompany = searchParams.get('company') || '';
   const selectedStatus = searchParams.get('status') || 'ALL';
 
-  // Display Preferences
+  // Display Preferences & Pagination
   const { preferences: displayPrefs } = useDisplayPreferences();
-  const rowsPerPage = displayPrefs.rowsPerPage || 10;
+  const [rowsPerPage, setRowsPerPage] = useState(displayPrefs.rowsPerPage || 10);
+
+  useEffect(() => {
+    if (displayPrefs.rowsPerPage) {
+      setRowsPerPage(displayPrefs.rowsPerPage);
+    }
+  }, [displayPrefs.rowsPerPage]);
 
   // Sync local input with URL
   useEffect(() => {
@@ -135,16 +151,20 @@ const FirmOnboarding = () => {
     try {
       const response = await getFirmOnboardingRequestsApi();
       let list = [];
+      let meta = null;
       if (response && response.data) {
         if (Array.isArray(response.data.data)) {
           list = response.data.data;
+          meta = response.data.meta;
         } else if (Array.isArray(response.data)) {
           list = response.data;
         } else if (Array.isArray(response.data.requests)) {
           list = response.data.requests;
+          meta = response.data.meta;
         }
       }
       setRequests(list);
+      if (meta) setApiMeta(meta);
     } catch (err) {
       console.error('Fetch firm onboarding requests error:', err);
       if (!isSilent) {
@@ -190,7 +210,9 @@ const FirmOnboarding = () => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        if (isOnboardModalOpen && !onboardSubmitting) {
+        if (docPreviewModal.isOpen) {
+          setDocPreviewModal({ isOpen: false, title: '', url: '' });
+        } else if (isOnboardModalOpen && !onboardSubmitting) {
           setIsOnboardModalOpen(false);
         } else if (reviewModalState.isOpen && !reviewModalState.submitting) {
           setReviewModalState((prev) => ({ ...prev, isOpen: false }));
@@ -201,7 +223,7 @@ const FirmOnboarding = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOnboardModalOpen, onboardSubmitting, reviewModalState, selectedRequest]);
+  }, [isOnboardModalOpen, onboardSubmitting, reviewModalState, selectedRequest, docPreviewModal.isOpen]);
 
   // All distinct companies for filtering
   const allCompanyOptions = useMemo(() => {
@@ -253,22 +275,36 @@ const FirmOnboarding = () => {
         const firmCode = (item.firmCode || '').toLowerCase();
         const contactPerson = (item.contactPerson || '').toLowerCase();
         const phone = (item.phone || '').toLowerCase();
+        const altPhone = (item.alternatePhone || '').toLowerCase();
         const email = (item.email || '').toLowerCase();
         const city = (item.city || '').toLowerCase();
         const state = (item.state || '').toLowerCase();
         const gstin = (item.gstin || '').toLowerCase();
+        const panNumber = (item.panNumber || '').toLowerCase();
+        const tanNumber = (item.tanNumber || '').toLowerCase();
+        const bankName = (item.bankName || '').toLowerCase();
+        const businessType = (item.businessType || '').toLowerCase();
+        const designation = (item.designation || '').toLowerCase();
+        const signatory = (item.authorizedSignatoryName || '').toLowerCase();
         const compName = (item.companyId?.name || '').toLowerCase();
-        const submitter = (item.submittedBy?.email || '').toLowerCase();
+        const submitter = (item.submittedBy?.email || item.submittedBy?.phone || '').toLowerCase();
 
         return (
           firmName.includes(term) ||
           firmCode.includes(term) ||
           contactPerson.includes(term) ||
           phone.includes(term) ||
+          altPhone.includes(term) ||
           email.includes(term) ||
           city.includes(term) ||
           state.includes(term) ||
           gstin.includes(term) ||
+          panNumber.includes(term) ||
+          tanNumber.includes(term) ||
+          bankName.includes(term) ||
+          businessType.includes(term) ||
+          designation.includes(term) ||
+          signatory.includes(term) ||
           compName.includes(term) ||
           submitter.includes(term)
         );
@@ -289,6 +325,58 @@ const FirmOnboarding = () => {
     return list;
   }, [filteredRequests]);
 
+  // Slide-Over Detail Drawer navigation for Firm Review
+  const selectedRequestIndex = useMemo(() => {
+    if (!selectedRequest) return -1;
+    return sortedRequests.findIndex((r) => r._id === selectedRequest._id);
+  }, [selectedRequest, sortedRequests]);
+
+  const canGoPrevRequest = selectedRequestIndex > 0;
+  const canGoNextRequest = selectedRequestIndex >= 0 && selectedRequestIndex < sortedRequests.length - 1;
+
+  const handlePrevRequest = useCallback(() => {
+    if (selectedRequestIndex > 0) {
+      setSelectedRequest(sortedRequests[selectedRequestIndex - 1]);
+    }
+  }, [selectedRequestIndex, sortedRequests]);
+
+  const handleNextRequest = useCallback(() => {
+    if (selectedRequestIndex >= 0 && selectedRequestIndex < sortedRequests.length - 1) {
+      setSelectedRequest(sortedRequests[selectedRequestIndex + 1]);
+    }
+  }, [selectedRequestIndex, sortedRequests]);
+
+  // Drawer keyboard shortcuts (Left/Right arrow to cycle requests, Esc to close)
+  useEffect(() => {
+    if (!selectedRequest || docPreviewModal.isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+      }
+      if (e.key === 'Escape') {
+        setSelectedRequest(null);
+      } else if (e.key === 'ArrowLeft') {
+        if (canGoPrevRequest) handlePrevRequest();
+      } else if (e.key === 'ArrowRight') {
+        if (canGoNextRequest) handleNextRequest();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedRequest, canGoPrevRequest, canGoNextRequest, handlePrevRequest, handleNextRequest, docPreviewModal.isOpen]);
+
+  // Prevent background scroll when Drawer is open
+  useEffect(() => {
+    if (selectedRequest) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedRequest]);
+
   // Pagination
   const totalPages = Math.ceil(sortedRequests.length / rowsPerPage) || 1;
   const indexOfLastItem = currentPage * rowsPerPage;
@@ -302,6 +390,13 @@ const FirmOnboarding = () => {
       return prev;
     });
   };
+
+  // Ensure current page does not exceed total pages
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      handlePageChange(1);
+    }
+  }, [currentPage, totalPages]);
 
   const handleStatusFilter = (status) => {
     setSearchParams((prev) => {
@@ -617,10 +712,9 @@ const FirmOnboarding = () => {
 
       {/* Page Header */}
       <PageHeader
-        title="Customer / Firm Onboarding"
+        title="Firm Onboarding"
         icon={FiUserCheck}
         badgeIcon={FiUserCheck}
-        badgeText={`${sortedRequests.length} Requests`}
         subtitle="Review, approve, and initiate customer onboarding requests across enterprise companies"
         actions={
           <div className="flex items-center flex-wrap gap-2.5">
@@ -922,14 +1016,27 @@ const FirmOnboarding = () => {
                             {(item.firmName || 'F').charAt(0).toUpperCase()}
                           </div>
                           <div className="space-y-1">
-                            <p className="font-bold text-slate-900 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                              {item.firmName}
-                            </p>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-bold text-slate-900 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                {item.firmName}
+                              </p>
+                              {item.businessType && (
+                                <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/10 px-1.5 py-0.2 rounded border border-slate-200/60 dark:border-white/5">
+                                  {item.businessType}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-mono text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 px-2 py-0.5 rounded-md whitespace-nowrap">
                                 {item.firmCode || '-'}
                               </span>
                               {item.firmCode && <CopyButton text={item.firmCode} />}
+                              {(item.panCardUrl || item.tanCertificateUrl || item.companySealOrSignatureUrl || item.cancelledChequeUrl) && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20" title="KYC Documents Attached">
+                                  <FiFileText size={10} />
+                                  <span>Docs</span>
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -977,6 +1084,11 @@ const FirmOnboarding = () => {
                           <p className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
                             {item.contactPerson || '-'}
                           </p>
+                          {item.designation && (
+                            <p className="text-[10px] text-slate-400 font-medium">
+                              {item.designation}
+                            </p>
+                          )}
                           {item.phone && (
                             <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">
                               <FiPhone size={11} className="text-slate-400 shrink-0" />
@@ -1113,90 +1225,166 @@ const FirmOnboarding = () => {
         </div>
 
         {/* Pagination Bar */}
-        {totalPages > 1 && (
-          <div className="px-5 py-3.5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-            <div>
-              Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, sortedRequests.length)} of{' '}
-              {sortedRequests.length} requests
+        {sortedRequests.length > 0 && (
+          <div className="px-5 py-3.5 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-white/[0.02]">
+            <div className="flex items-center gap-3">
+              <span>
+                Showing <strong className="text-slate-800 dark:text-slate-200">{indexOfFirstItem + 1}</strong> to{' '}
+                <strong className="text-slate-800 dark:text-slate-200">
+                  {Math.min(indexOfLastItem, sortedRequests.length)}
+                </strong>{' '}
+                of <strong className="text-slate-800 dark:text-slate-200">{sortedRequests.length}</strong> requests
+              </span>
+
+              {/* Rows Per Page Selector */}
+              <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 dark:border-white/10 pl-3">
+                <span className="text-[11px] text-slate-400">Per page:</span>
+                <select
+                  value={rowsPerPage}
+                  onChange={(e) => {
+                    setRowsPerPage(Number(e.target.value));
+                    handlePageChange(1);
+                  }}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                >
+                  {[5, 10, 20, 50].map((num) => (
+                    <option key={num} value={num}>
+                      {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-semibold"
-              >
-                Previous
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => {
-                if (
-                  pg === 1 ||
-                  pg === totalPages ||
-                  (pg >= currentPage - 1 && pg <= currentPage + 1)
-                ) {
-                  return (
-                    <button
-                      key={pg}
-                      onClick={() => handlePageChange(pg)}
-                      className={`px-3 py-1 rounded-lg font-bold transition-colors cursor-pointer ${
-                        currentPage === pg
-                          ? 'bg-blue-600 text-white shadow-xs'
-                          : 'border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
-                      }`}
-                    >
-                      {pg}
-                    </button>
-                  );
-                }
-                if (pg === currentPage - 2 || pg === currentPage + 2) {
-                  return <span key={pg} className="px-1 text-slate-400">...</span>;
-                }
-                return null;
-              })}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-semibold"
-              >
-                Next
-              </button>
-            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-semibold shadow-xs flex items-center gap-1 text-slate-700 dark:text-slate-300"
+                >
+                  <FiChevronLeft size={13} />
+                  <span>Previous</span>
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => {
+                  if (
+                    pg === 1 ||
+                    pg === totalPages ||
+                    (pg >= currentPage - 1 && pg <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={pg}
+                        type="button"
+                        onClick={() => handlePageChange(pg)}
+                        className={`min-w-7 h-7 px-2 flex items-center justify-center rounded-lg font-bold transition-colors cursor-pointer ${
+                          currentPage === pg
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {pg}
+                      </button>
+                    );
+                  }
+                  if (pg === currentPage - 2 || pg === currentPage + 2) {
+                    return <span key={pg} className="px-1 text-slate-400">...</span>;
+                  }
+                  return null;
+                })}
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-semibold shadow-xs flex items-center gap-1 text-slate-700 dark:text-slate-300"
+                >
+                  <span>Next</span>
+                  <FiChevronRight size={13} />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* DETAIL MODAL / SLIDE-OVER */}
+      {/* DETAIL SLIDE-OVER DRAWER */}
       {selectedRequest &&
         createPortal(
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in overflow-y-auto">
-            <div className="relative w-full max-w-2xl bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in zoom-in-95">
-              {/* Modal Header */}
-              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/40 to-indigo-600/40">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
-                    <FiServer size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-white">
-                      {selectedRequest.firmName}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="font-mono text-xs text-slate-900 dark:text-slate-300 bg-white/20 dark:bg-white/10 px-2 py-0.5 rounded backdrop-blur-xs font-semibold">
-                        {selectedRequest.firmCode || '-'}
-                      </span>
-                      {getStatusBadge(selectedRequest.approvalStatus)}
+          <div className="fixed inset-0 z-[10000] overflow-hidden">
+            {/* Backdrop Blur Overlay */}
+            <div
+              className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+              onClick={() => setSelectedRequest(null)}
+            />
+
+            {/* Slide-Over Drawer Container (Pinned to Right) */}
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
+              <div className="w-screen max-w-2xl sm:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10">
+                {/* 1. Sticky Drawer Header */}
+                <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20 shrink-0">
+                      <FiServer size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
+                          {selectedRequest.firmName}
+                        </h3>
+                        {selectedRequest.firmCode && (
+                          <span className="font-mono text-xs text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded font-semibold border border-slate-200 dark:border-white/10">
+                            {selectedRequest.firmCode}
+                          </span>
+                        )}
+                        {getStatusBadge(selectedRequest.approvalStatus)}
+                      </div>
+                      <p className="text-xs text-slate-400 truncate mt-0.5">
+                        Submitted: {selectedRequest.createdAt ? formatDateTimeDDMMYYYY(selectedRequest.createdAt) : '-'}
+                      </p>
                     </div>
                   </div>
-                </div>
-                <button
-                  onClick={() => setSelectedRequest(null)}
-                  className="p-2 text-white hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  <FiX size={18} />
-                </button>
-              </div>
 
-              {/* Modal Body */}
-              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 text-xs text-slate-600 dark:text-slate-300 custom-scrollbar">
+                  {/* Header Actions: Quick Request Stepping + Close */}
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    {selectedRequestIndex >= 0 && (
+                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-1 text-xs">
+                        <button
+                          type="button"
+                          onClick={handlePrevRequest}
+                          disabled={!canGoPrevRequest}
+                          title="Previous Request (Left Arrow)"
+                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <FiChevronLeft size={15} />
+                        </button>
+                        <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                          {selectedRequestIndex + 1} of {sortedRequests.length}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleNextRequest}
+                          disabled={!canGoNextRequest}
+                          title="Next Request (Right Arrow)"
+                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <FiChevronRight size={15} />
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRequest(null)}
+                      title="Close drawer (Esc)"
+                      className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                    >
+                      <FiX size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Scrollable Body Content */}
+                <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6 text-xs text-slate-600 dark:text-slate-300 custom-scrollbar">
                 {/* Rejection Alert if Rejected */}
                 {(selectedRequest.approvalStatus || '').toUpperCase() === 'REJECTED' &&
                   selectedRequest.rejectionReason && (
@@ -1239,80 +1427,425 @@ const FirmOnboarding = () => {
                   )}
                 </div>
 
-                {/* Grid Info */}
+                {/* Grid 1: Business Profile & Contact */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Contact Info */}
-                  <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                  {/* Business Entity Profile */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
                     <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiUser className="text-blue-500" />
-                      Contact & Entity
+                      <FiBriefcase className="text-blue-500" />
+                      Business & Establishment
                     </p>
                     <div className="space-y-2">
-                      <div>
-                        <span className="text-[10px] text-slate-400">Contact Person</span>
-                        <p className="font-semibold text-slate-700 dark:text-slate-200">
-                          {selectedRequest.contactPerson || '-'}
-                        </p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Business Type</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 bg-slate-200/60 dark:bg-white/10 px-2 py-0.5 rounded text-[11px]">
+                          {selectedRequest.businessType || 'Proprietorship'}
+                        </span>
                       </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400">Phone Number</span>
-                        <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200 font-semibold">
-                          <span>{selectedRequest.phone || '-'}</span>
-                          {selectedRequest.phone && <CopyButton text={selectedRequest.phone} />}
-                        </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Established Date</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200 font-mono">
+                          {selectedRequest.dateOfEstablishment ? formatDateDDMMYYYY(selectedRequest.dateOfEstablishment) : '-'}
+                        </span>
                       </div>
-                      {selectedRequest.email && (
-                        <div>
-                          <span className="text-[10px] text-slate-400">Email Address</span>
-                          <p className="font-semibold text-slate-700 dark:text-slate-200">
-                            {selectedRequest.email}
-                          </p>
+                      {selectedRequest.website && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-slate-400">Website</span>
+                          <a
+                            href={selectedRequest.website.startsWith('http') ? selectedRequest.website : `https://${selectedRequest.website}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 truncate max-w-[170px]"
+                          >
+                            <FiGlobe size={11} />
+                            <span className="truncate">{selectedRequest.website}</span>
+                          </a>
                         </div>
                       )}
-                      <div>
-                        <span className="text-[10px] text-slate-400">GSTIN</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                            {selectedRequest.gstin || '-'}
-                          </span>
-                          {selectedRequest.gstin && <CopyButton text={selectedRequest.gstin} />}
-                        </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Cash Discount</span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
+                          {selectedRequest.cashDiscount !== undefined && selectedRequest.cashDiscount !== null ? `${selectedRequest.cashDiscount}%` : '0%'}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Financial & Location */}
-                  <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                  {/* Contact Representative */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
                     <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiDollarSign className="text-emerald-500" />
-                      Credit & Location
+                      <FiUser className="text-indigo-500" />
+                      Contact Representative
                     </p>
                     <div className="space-y-2">
                       <div>
-                        <span className="text-[10px] text-slate-400">Credit Limit</span>
-                        <p className="font-bold text-base text-slate-800 dark:text-white">
+                        <span className="text-[10px] text-slate-400">Name & Designation</span>
+                        <p className="font-semibold text-slate-800 dark:text-slate-200">
+                          {selectedRequest.contactPerson || '-'}
+                          {selectedRequest.designation && (
+                            <span className="text-slate-400 text-[11px] font-normal block">
+                              {selectedRequest.designation}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400">Primary Phone</span>
+                        <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200 font-semibold font-mono">
+                          <span>{selectedRequest.phone || '-'}</span>
+                          {selectedRequest.phone && <CopyButton text={selectedRequest.phone} />}
+                        </div>
+                      </div>
+                      {selectedRequest.alternatePhone && (
+                        <div>
+                          <span className="text-[10px] text-slate-400">Alternate Phone</span>
+                          <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300 font-mono">
+                            <span>{selectedRequest.alternatePhone}</span>
+                            <CopyButton text={selectedRequest.alternatePhone} />
+                          </div>
+                        </div>
+                      )}
+                      {selectedRequest.email && (
+                        <div>
+                          <span className="text-[10px] text-slate-400">Email Address</span>
+                          <div className="mt-0.5">
+                            <GmailLink email={selectedRequest.email} label={selectedRequest.email} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grid 2: Premises & Financial Terms */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Premises & Operating Address */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiMapPin className="text-rose-500" />
+                      Premises & Address
+                    </p>
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400">Registered Address</span>
+                        <p className="font-semibold text-slate-700 dark:text-slate-200 leading-snug">
+                          {selectedRequest.address || '-'}
+                        </p>
+                      </div>
+                      {selectedRequest.branchAddress && (
+                        <div>
+                          <span className="text-[10px] text-slate-400">Branch Address</span>
+                          <p className="font-medium text-slate-600 dark:text-slate-300 leading-snug">
+                            {selectedRequest.branchAddress}
+                          </p>
+                        </div>
+                      )}
+                      <div className="pt-1 border-t border-slate-200/60 dark:border-white/5 flex justify-between">
+                        <span className="text-[10px] text-slate-400">City, State, PIN</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          {[selectedRequest.city, selectedRequest.state, selectedRequest.pincode].filter(Boolean).join(', ') || '-'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Financial & Credit Terms */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiDollarSign className="text-emerald-500" />
+                      Credit & Terms
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-[10px] text-slate-400">Approved Credit Limit</span>
+                        <span className="font-bold text-base text-slate-900 dark:text-white font-mono">
                           ₹{(selectedRequest.creditLimit ?? 0).toLocaleString('en-IN')}
-                        </p>
+                        </span>
                       </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400">Credit Days</span>
-                        <p className="font-semibold text-slate-700 dark:text-slate-200">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-[10px] text-slate-400">Credit Days Window</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-200 font-mono">
                           {selectedRequest.creditDays ?? 30} Days
-                        </p>
+                        </span>
                       </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400">Address / City / State</span>
-                        <p className="font-semibold text-slate-700 dark:text-slate-200">
-                          {[
-                            selectedRequest.address,
-                            selectedRequest.city,
-                            selectedRequest.state,
-                            selectedRequest.pincode
-                          ]
-                            .filter(Boolean)
-                            .join(', ') || '-'}
-                        </p>
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-[10px] text-slate-400">Cash Discount</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                          {selectedRequest.cashDiscount ?? 0}%
+                        </span>
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Statutory Tax & Document Proofs (PAN, TAN, GSTIN, MSME) */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiFileText className="text-amber-500" />
+                      Statutory KYC & Tax Proofs
+                    </p>
+                    <span className="text-[10px] text-slate-400 font-mono">Click documents to preview</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {/* PAN Card Proof */}
+                    <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">PAN Card</span>
+                        {selectedRequest.panCardUrl ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                            Uploaded
+                          </span>
+                        ) : (
+                          <span className="text-[9px] text-slate-400">Not Uploaded</span>
+                        )}
+                      </div>
+                      <div className="font-mono text-xs font-bold text-slate-800 dark:text-white">
+                        {selectedRequest.panNumber || 'Not Provided'}
+                      </div>
+                      {selectedRequest.panCardUrl && (
+                        <div className="pt-1 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDocPreviewModal({
+                                isOpen: true,
+                                title: `PAN Card (${selectedRequest.panNumber || selectedRequest.firmName})`,
+                                url: selectedRequest.panCardUrl
+                              })
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 text-[11px] font-bold transition-all cursor-pointer"
+                          >
+                            <FiEye size={12} />
+                            <span>Preview</span>
+                          </button>
+                          <a
+                            href={selectedRequest.panCardUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-slate-400 hover:text-slate-600 p-1"
+                            title="Open direct image"
+                          >
+                            <FiExternalLink size={12} />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* TAN Certificate Proof */}
+                    <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">TAN Certificate</span>
+                        {selectedRequest.tanCertificateUrl ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                            Uploaded
+                          </span>
+                        ) : (
+                          <span className="text-[9px] text-slate-400">Not Uploaded</span>
+                        )}
+                      </div>
+                      <div className="font-mono text-xs font-bold text-slate-800 dark:text-white">
+                        {selectedRequest.tanNumber || 'Not Provided'}
+                      </div>
+                      {selectedRequest.tanCertificateUrl && (
+                        <div className="pt-1 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDocPreviewModal({
+                                isOpen: true,
+                                title: `TAN Certificate (${selectedRequest.tanNumber || selectedRequest.firmName})`,
+                                url: selectedRequest.tanCertificateUrl
+                              })
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 text-[11px] font-bold transition-all cursor-pointer"
+                          >
+                            <FiEye size={12} />
+                            <span>Preview</span>
+                          </button>
+                          <a
+                            href={selectedRequest.tanCertificateUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-slate-400 hover:text-slate-600 p-1"
+                            title="Open direct image"
+                          >
+                            <FiExternalLink size={12} />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* GSTIN & Certificate */}
+                    <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">GSTIN</span>
+                        {selectedRequest.gstCertificateUrl ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                            Proof Attached
+                          </span>
+                        ) : (
+                          <span className="text-[9px] text-slate-400">Self Declared</span>
+                        )}
+                      </div>
+                      <div className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                        {selectedRequest.gstin || 'Not Provided'}
+                      </div>
+                      {selectedRequest.gstCertificateUrl && (
+                        <div className="pt-1 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDocPreviewModal({
+                                isOpen: true,
+                                title: `GST Certificate (${selectedRequest.gstin || selectedRequest.firmName})`,
+                                url: selectedRequest.gstCertificateUrl
+                              })
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 text-[11px] font-bold transition-all cursor-pointer"
+                          >
+                            <FiEye size={12} />
+                            <span>Preview</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Additional Certificates if uploaded */}
+                  {(selectedRequest.msmeNumber || selectedRequest.msmeCertificateUrl || selectedRequest.incorporationCertificateUrl || selectedRequest.otherLicensesUrl) && (
+                    <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap gap-2 text-[11px]">
+                      {selectedRequest.msmeNumber && (
+                        <span className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 font-mono">
+                          MSME: <strong>{selectedRequest.msmeNumber}</strong>
+                        </span>
+                      )}
+                      {selectedRequest.msmeCertificateUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setDocPreviewModal({ isOpen: true, title: 'MSME Certificate', url: selectedRequest.msmeCertificateUrl })}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-500/20 flex items-center gap-1 cursor-pointer"
+                        >
+                          <FiEye size={11} /> MSME Certificate
+                        </button>
+                      )}
+                      {selectedRequest.incorporationCertificateUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setDocPreviewModal({ isOpen: true, title: 'Incorporation Certificate', url: selectedRequest.incorporationCertificateUrl })}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-500/20 flex items-center gap-1 cursor-pointer"
+                        >
+                          <FiEye size={11} /> Incorporation Doc
+                        </button>
+                      )}
+                      {selectedRequest.otherLicensesUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setDocPreviewModal({ isOpen: true, title: 'Trade / Business License', url: selectedRequest.otherLicensesUrl })}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-500/20 flex items-center gap-1 cursor-pointer"
+                        >
+                          <FiEye size={11} /> Other Licenses
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 4: Banking & Signatory Stamp */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Banking Details */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiCreditCard className="text-purple-500" />
+                      Banking Credentials
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Bank Name</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                          {selectedRequest.bankName || 'Not Provided'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Account Number</span>
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                          {selectedRequest.accountNumber || '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">IFSC Code</span>
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                          {selectedRequest.ifscCode || '-'}
+                        </span>
+                      </div>
+                      {selectedRequest.cancelledChequeUrl && (
+                        <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400">Cancelled Cheque</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDocPreviewModal({
+                                isOpen: true,
+                                title: `Cancelled Cheque Proof (${selectedRequest.bankName || selectedRequest.firmName})`,
+                                url: selectedRequest.cancelledChequeUrl
+                              })
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[11px] font-bold hover:bg-purple-100 transition-all cursor-pointer"
+                          >
+                            <FiEye size={12} />
+                            <span>View Cheque</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Declaration & Signatory Stamp */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiShield className="text-emerald-500" />
+                      Signatory & Authorization
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Signatory</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                          {selectedRequest.authorizedSignatoryName || selectedRequest.contactPerson || '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Designation</span>
+                        <span className="text-slate-600 dark:text-slate-300">
+                          {selectedRequest.signatoryDesignation || selectedRequest.designation || '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Declaration</span>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${selectedRequest.declarationAgreed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 text-slate-600'}`}>
+                          <FiCheck size={10} />
+                          {selectedRequest.declarationAgreed ? 'Agreed & Signed' : 'Pending'}
+                        </span>
+                      </div>
+                      {selectedRequest.companySealOrSignatureUrl && (
+                        <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400">Stamp / Signature Proof</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDocPreviewModal({
+                                isOpen: true,
+                                title: `Official Stamp / Signature (${selectedRequest.firmName})`,
+                                url: selectedRequest.companySealOrSignatureUrl
+                              })
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold hover:bg-emerald-100 transition-all cursor-pointer"
+                          >
+                            <FiEye size={12} />
+                            <span>View Stamp Proof</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1348,44 +1881,45 @@ const FirmOnboarding = () => {
                 </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-slate-50/80 dark:bg-white/[0.02]">
-                <div className="text-[11px] text-slate-400 font-mono">
-                  ID: {selectedRequest._id}
-                </div>
-                <div className="flex items-center gap-2">
-                  {(selectedRequest.approvalStatus || 'PENDING').toUpperCase() === 'PENDING' && (
-                    <>
-                      <button
-                        onClick={() => {
-                          const req = selectedRequest;
-                          setSelectedRequest(null);
-                          handleOpenReviewModal(req, 'APPROVED');
-                        }}
-                        className="px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/20"
-                      >
-                        <FiCheck size={14} />
-                        <span>Approve Request</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          const req = selectedRequest;
-                          setSelectedRequest(null);
-                          handleOpenReviewModal(req, 'REJECTED');
-                        }}
-                        className="px-3.5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-rose-600/20"
-                      >
-                        <FiX size={14} />
-                        <span>Reject Request</span>
-                      </button>
-                    </>
-                  )}
-                  <button
-                    onClick={() => setSelectedRequest(null)}
-                    className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Close
-                  </button>
+              {/* 3. Sticky Action Footer */}
+                <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-slate-50/90 dark:bg-slate-950/80 backdrop-blur-md">
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    ID: {selectedRequest._id}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(selectedRequest.approvalStatus || 'PENDING').toUpperCase() === 'PENDING' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            const req = selectedRequest;
+                            setSelectedRequest(null);
+                            handleOpenReviewModal(req, 'APPROVED');
+                          }}
+                          className="px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/20"
+                        >
+                          <FiCheck size={14} />
+                          <span>Approve Request</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            const req = selectedRequest;
+                            setSelectedRequest(null);
+                            handleOpenReviewModal(req, 'REJECTED');
+                          }}
+                          className="px-3.5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-rose-600/20"
+                        >
+                          <FiX size={14} />
+                          <span>Reject Request</span>
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => setSelectedRequest(null)}
+                      className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                    >
+                      Close Drawer
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1886,6 +2420,74 @@ const FirmOnboarding = () => {
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* Document Preview Lightbox Modal */}
+      {docPreviewModal.isOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[10002] flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+            onClick={() => setDocPreviewModal({ isOpen: false, title: '', url: '' })}
+          >
+            <div
+              className="relative max-w-3xl w-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/80 dark:bg-slate-950/80">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base shrink-0">
+                    <FiFileText />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                      {docPreviewModal.title || 'Document Preview'}
+                    </h4>
+                    <p className="text-[11px] font-mono text-slate-400 truncate max-w-sm sm:max-w-md">
+                      {docPreviewModal.url}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <a
+                    href={docPreviewModal.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-xs font-bold transition-all"
+                  >
+                    <FiExternalLink size={13} />
+                    <span className="hidden sm:inline">Open in New Tab</span>
+                  </a>
+                  <CopyButton text={docPreviewModal.url} />
+                  <button
+                    type="button"
+                    onClick={() => setDocPreviewModal({ isOpen: false, title: '', url: '' })}
+                    className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <FiX size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Image/Doc Content */}
+              <div className="flex-1 overflow-auto p-4 sm:p-6 flex items-center justify-center bg-slate-100/50 dark:bg-black/40 min-h-[320px]">
+                {docPreviewModal.url?.toLowerCase().endsWith('.pdf') ? (
+                  <iframe
+                    src={docPreviewModal.url}
+                    title={docPreviewModal.title}
+                    className="w-full h-[65vh] rounded-xl border border-slate-200 dark:border-white/10"
+                  />
+                ) : (
+                  <img
+                    src={docPreviewModal.url}
+                    alt={docPreviewModal.title}
+                    className="max-h-[65vh] max-w-full object-contain rounded-xl shadow-lg border border-slate-200/60 dark:border-white/10"
+                  />
+                )}
               </div>
             </div>
           </div>,

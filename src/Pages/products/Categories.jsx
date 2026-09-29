@@ -311,7 +311,6 @@ const Categories = () => {
       <PageHeader
         title="Category Management"
         subtitle="Create, edit, and organize product categories with unique SKU codes."
-        badgeText={`${categories.length} Categories`}
         badgeIcon={FiGrid}
         actions={
           <div className="flex items-center gap-2.5 w-full sm:w-auto">

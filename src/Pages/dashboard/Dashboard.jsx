@@ -31,7 +31,9 @@ import {
   FiGrid,
   FiShare2,
   FiMail,
-  FiSend
+  FiSend,
+  FiChevronLeft,
+  FiChevronRight
 } from 'react-icons/fi';
 import VisxTrendChart from '@/components/dashboard/VisxTrendChart';
 import VisxPipelineDonut from '@/components/dashboard/VisxPipelineDonut';
@@ -185,6 +187,57 @@ const Dashboard = () => {
   const recentOrders = Array.isArray(dashboardData?.recentOrders)
     ? dashboardData.recentOrders
     : [];
+
+  // Slide-Over Detail Drawer navigation for Recent Orders
+  const selectedOrderIndex = useMemo(() => {
+    if (!selectedOrder) return -1;
+    return recentOrders.findIndex((o) => o._id === selectedOrder._id);
+  }, [selectedOrder, recentOrders]);
+
+  const canGoPrevOrder = selectedOrderIndex > 0;
+  const canGoNextOrder = selectedOrderIndex >= 0 && selectedOrderIndex < recentOrders.length - 1;
+
+  const handlePrevOrder = useCallback(() => {
+    if (selectedOrderIndex > 0) {
+      setSelectedOrder(recentOrders[selectedOrderIndex - 1]);
+    }
+  }, [selectedOrderIndex, recentOrders]);
+
+  const handleNextOrder = useCallback(() => {
+    if (selectedOrderIndex >= 0 && selectedOrderIndex < recentOrders.length - 1) {
+      setSelectedOrder(recentOrders[selectedOrderIndex + 1]);
+    }
+  }, [selectedOrderIndex, recentOrders]);
+
+  // Drawer keyboard navigation & body scroll lock
+  useEffect(() => {
+    if (!selectedOrder) return;
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+      }
+      if (e.key === 'Escape') {
+        setSelectedOrder(null);
+      } else if (e.key === 'ArrowLeft') {
+        if (canGoPrevOrder) handlePrevOrder();
+      } else if (e.key === 'ArrowRight') {
+        if (canGoNextOrder) handleNextOrder();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedOrder, canGoPrevOrder, canGoNextOrder, handlePrevOrder, handleNextOrder]);
+
+  useEffect(() => {
+    if (selectedOrder) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedOrder]);
 
   // Process daily trend data for Chart 1 based on trendRange ('1w' | '1m' | '1y')
   const processedTrendData = useMemo(() => {
@@ -635,7 +688,6 @@ const Dashboard = () => {
       <PageHeader
         title="Dashboard Overview"
         subtitle="Real-time performance analytics, order lifecycle pipeline, partner performance, and recent procurement stream."
-        badgeText="Live Sync"
         badgeIcon={FiTrendingUp}
         actions={
           <div className="flex items-center gap-2.5">
@@ -727,7 +779,7 @@ const Dashboard = () => {
           </button>
         </div>
       </div>
-      
+
       {/* 3. Two-Column Analytics: Company Breakdown & Top Sales Executives */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Company Breakdown Card */}
@@ -1445,40 +1497,77 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 6. Order Snapshot Details Modal */}
+      {/* 6. Order Snapshot Details Slide-Over Drawer */}
       {selectedOrder && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[10000] overflow-hidden">
+          {/* Backdrop Blur Overlay */}
           <div
-            className="absolute inset-0 dark:bg-slate-950/50 backdrop-blur-lg animate-fade-in"
+            className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
             onClick={() => setSelectedOrder(null)}
           />
-          <div className="relative bg-white/40 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200 dark:border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl border border-blue-500/20">
-                  <FiPackage />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-mono">
-                      {selectedOrder.poNumber || selectedOrder.orderNumber || 'Order Details'}
-                    </h3>
-                    <CopyButton text={selectedOrder.poNumber || selectedOrder.orderNumber || selectedOrder._id} />
+
+          {/* Slide-Over Drawer Container (Pinned to Right) */}
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
+            <div className="w-screen max-w-2xl sm:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 backdrop-blur-2xl">
+              {/* 1. Sticky Drawer Header */}
+              <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl border border-blue-500/20 shrink-0">
+                    <FiPackage />
                   </div>
-                  <p className="text-xs text-slate-400">
-                    Created on {formatDateTimeDDMMYYYY(selectedOrder.createdAt)}
-                  </p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-mono truncate">
+                        {selectedOrder.poNumber || selectedOrder.orderNumber || 'Order Details'}
+                      </h3>
+                      <CopyButton text={selectedOrder.poNumber || selectedOrder.orderNumber || selectedOrder._id} />
+                    </div>
+                    <p className="text-xs text-slate-400 truncate mt-0.5">
+                      Created on {formatDateTimeDDMMYYYY(selectedOrder.createdAt)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Header Actions: Stepping & Close */}
+                <div className="flex items-center gap-2 shrink-0 ml-3">
+                  {selectedOrderIndex >= 0 && (
+                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-1 text-xs">
+                      <button
+                        type="button"
+                        onClick={handlePrevOrder}
+                        disabled={!canGoPrevOrder}
+                        title="Previous Order (Left Arrow)"
+                        className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      >
+                        <FiChevronLeft size={15} />
+                      </button>
+                      <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                        {selectedOrderIndex + 1} of {recentOrders.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleNextOrder}
+                        disabled={!canGoNextOrder}
+                        title="Next Order (Right Arrow)"
+                        className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      >
+                        <FiChevronRight size={15} />
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrder(null)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                    title="Close drawer (Esc)"
+                  >
+                    <FiX size={18} />
+                  </button>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
-              >
-                <FiX size={18} />
-              </button>
-            </div>
+
+              {/* 2. Scrollable Body Content */}
+              <div className="flex-1 overflow-y-auto p-5 sm:p-7 custom-scrollbar space-y-5">
 
             {/* Order Entity Metadata Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs">
@@ -1673,26 +1762,29 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Modal Actions */}
-            <div className="mt-5 flex justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(null)}
-                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer transition-colors"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedOrder(null);
-                  navigate('/purchase-orders');
-                }}
-                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-blue-600/25 cursor-pointer"
-              >
-                <span>Go to Purchase Orders</span>
-                <FiArrowUpRight size={14} />
-              </button>
+              </div>
+
+              {/* 3. Sticky Action Footer */}
+              <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(null)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer transition-colors"
+                >
+                  Close Drawer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedOrder(null);
+                    navigate('/purchase-orders');
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-blue-600/25 cursor-pointer"
+                >
+                  <span>Go to Purchase Orders</span>
+                  <FiArrowUpRight size={14} />
+                </button>
+              </div>
             </div>
           </div>
         </div>,

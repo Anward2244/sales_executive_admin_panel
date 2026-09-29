@@ -98,6 +98,18 @@ const ProductDetailsModal = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   // Resolve Company details (object or ID)
   const getCompanyDetails = useCallback(() => {
     if (!product) return { name: 'Unassigned', code: null, id: null };
@@ -129,62 +141,62 @@ const ProductDetailsModal = ({
   const locations = Array.isArray(product?.locations) ? product.locations : [];
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[99999] overflow-hidden">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 dark:bg-slate-950/50 backdrop-blur-md"
+        className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
         onClick={onClose}
       />
 
-      {/* Modal Container */}
-      <div className="relative bg-white/40 dark:bg-slate-950/25 border border-slate-200 dark:border-white/10 rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200 text-left">
-        {/* Floating Close Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 z-30 p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-white/10 rounded-full transition-all shadow-md cursor-pointer"
-          title="Close"
-        >
-          <FiX className="text-lg" />
-        </button>
-
-        {/* Modal Header */}
-        <div className="p-6 border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-800/40 pr-16">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
-              <FiPackage className="text-2xl" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white line-clamp-1">
-                  {product?.name || 'Product Details'}
-                </h2>
+      {/* Slide-Over Drawer Container (Pinned to Right) */}
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
+        <div className="w-screen max-w-2xl sm:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 text-left">
+          {/* Sticky Drawer Header */}
+          <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3 min-w-0 pr-4">
+              <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
+                <FiPackage className="text-2xl" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white line-clamp-1">
+                    {product?.name || 'Product Details'}
+                  </h2>
+                  {product && (
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                        product.isActive !== false
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                          : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
+                      }`}
+                    >
+                      {product.isActive !== false ? 'Active' : 'Inactive'}
+                    </span>
+                  )}
+                </div>
                 {product && (
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                      product.isActive !== false
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                        : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
-                    }`}
-                  >
-                    {product.isActive !== false ? 'Active' : 'Inactive'}
-                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
+                      {product.sku}
+                    </span>
+                    <CopyButton text={product.sku} size={11} />
+                  </div>
                 )}
               </div>
-              {product && (
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
-                    {product.sku}
-                  </span>
-                  <CopyButton text={product.sku} size={11} />
-                </div>
-              )}
             </div>
-          </div>
-        </div>
 
-        {/* Modal Body */}
-        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer shrink-0"
+              title="Close drawer (Esc)"
+            >
+              <FiX size={18} />
+            </button>
+          </div>
+
+          {/* Scrollable Body Content */}
+          <div className="flex-1 overflow-y-auto p-5 sm:p-7 custom-scrollbar space-y-6">
           {loading ? (
             <div className="py-24 flex flex-col items-center justify-center gap-3 text-slate-400">
               <FiLoader className="animate-spin text-3xl text-blue-500" />
@@ -317,35 +329,36 @@ const ProductDetailsModal = ({
               </div>
             </>
           ) : null}
-        </div>
+          </div>
 
-        {/* Modal Footer */}
-        <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
-          >
-            Close
-          </button>
-
-          {(showEditButton || onEdit) && product && (
+          {/* Sticky Drawer Footer */}
+          <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
             <button
               type="button"
-              onClick={() => {
-                onClose?.();
-                if (onEdit) {
-                  onEdit(product);
-                } else {
-                  navigate(`/products/edit/${product._id}`);
-                }
-              }}
-              className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer"
+              onClick={onClose}
+              className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
             >
-              <FiEdit2 className="text-xs" />
-              <span>Edit Product</span>
+              Close Drawer
             </button>
-          )}
+
+            {(showEditButton || onEdit) && product && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose?.();
+                  if (onEdit) {
+                    onEdit(product);
+                  } else {
+                    navigate(`/products/edit/${product._id}`);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer"
+              >
+                <FiEdit2 className="text-xs" />
+                <span>Edit Product</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>,

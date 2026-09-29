@@ -142,7 +142,7 @@ const CustomDropdown = ({
       {/* Trigger Button */}
       <div
         onClick={toggleDropdown}
-        className={`w-full bg-transparent outline-none px-3 py-2.5 rounded-lg border cursor-pointer transition-all flex justify-between items-center select-none gap-2 ${
+        className={`w-full bg-white dark:bg-blue-700 outline-none px-3 py-2.5 rounded-lg border cursor-pointer transition-all flex justify-between items-center select-none gap-2 ${
           disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
         } ${statusColor || ''} ${className || ''}`}
       >

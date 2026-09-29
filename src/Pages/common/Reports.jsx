@@ -26,10 +26,13 @@ import {
   FiHash,
   FiMail,
   FiSend,
+  FiChevronLeft,
+  FiChevronRight
 } from 'react-icons/fi';
 import PageHeader from '@/components/ui/PageHeader';
 import Skeleton from '@/components/ui/Skeleton';
 import CopyButton from '@/components/ui/CopyButton';
+import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { getReportsApi } from '@/api/axios';
 
 // Format Indian Rupee currency
@@ -341,40 +344,83 @@ const Reports = () => {
 
   // Derived Product Performance for the active range
   const productPerformance = useMemo(() => {
-    if ((selectedRange === 'all' || rangeFilteredOrders.length === rawOrders.length) && Array.isArray(reportData?.productPerformance) && reportData.productPerformance.length > 0) {
-      return reportData.productPerformance;
+    const totalOrdersCount = rangeFilteredOrders.length;
+    if (totalOrdersCount > 0) {
+      const prodMap = {};
+      rangeFilteredOrders.forEach((o) => {
+        const orderId = o._id || o.poNumber;
+        if (Array.isArray(o.items)) {
+          o.items.forEach((item) => {
+            const pId = item.productId?._id || item.productId || item.name || 'item';
+            const pName = item.productNameSnapshot || item.productId?.name || item.name || 'Catalog Product';
+            const sku = item.skuSnapshot || item.productId?.sku || item.sku || 'N/A';
+            const qty = Number(item.quantity || 1);
+            const uPrice = Number(item.unitPrice || 0);
+            const rev = Number(item.totalPrice || (qty * uPrice) || 0);
+
+            if (!prodMap[pId]) {
+              prodMap[pId] = {
+                _id: pId,
+                productName: pName,
+                sku,
+                totalQuantity: 0,
+                totalRevenue: 0,
+                orderIds: new Set()
+              };
+            }
+            prodMap[pId].totalQuantity += qty;
+            prodMap[pId].totalRevenue += rev;
+            if (orderId) prodMap[pId].orderIds.add(orderId);
+          });
+        }
+      });
+
+      const list = Object.values(prodMap).map((p) => ({
+        ...p,
+        ordersCount: p.orderIds ? p.orderIds.size : 1
+      })).sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+      if (list.length > 0) return list;
     }
 
-    const prodMap = {};
-    rangeFilteredOrders.forEach((o) => {
-      if (Array.isArray(o.items)) {
-        o.items.forEach((item) => {
-          const pId = item.productId?._id || item.productId || item.name || 'item';
-          const pName = item.productNameSnapshot || item.productId?.name || item.name || 'Catalog Product';
-          const sku = item.skuSnapshot || item.productId?.sku || item.sku || 'N/A';
-          const qty = Number(item.quantity || 1);
-          const uPrice = Number(item.unitPrice || 0);
-          const rev = Number(item.totalPrice || (qty * uPrice) || 0);
+    if (Array.isArray(reportData?.productPerformance)) {
+      return reportData.productPerformance.map((p) => ({
+        ...p,
+        ordersCount: p.ordersCount || p.orderCount || Math.max(1, Math.round((p.totalQuantity || 1) / 3))
+      }));
+    }
 
-          if (!prodMap[pId]) {
-            prodMap[pId] = {
-              _id: pId,
-              productName: pName,
-              sku,
-              totalQuantity: 0,
-              totalRevenue: 0
-            };
-          }
-          prodMap[pId].totalQuantity += qty;
-          prodMap[pId].totalRevenue += rev;
-        });
-      }
-    });
+    return [];
+  }, [rangeFilteredOrders, reportData?.productPerformance]);
 
-    const list = Object.values(prodMap).sort((a, b) => b.totalRevenue - a.totalRevenue);
-    if (list.length > 0) return list;
-    return reportData?.productPerformance || [];
-  }, [rangeFilteredOrders, selectedRange, reportData?.productPerformance, rawOrders.length]);
+  // Product Sales Performance Pagination
+  const { preferences: displayPrefs } = useDisplayPreferences();
+  const [productPage, setProductPage] = useState(1);
+  const [productRowsPerPage, setProductRowsPerPage] = useState(displayPrefs.rowsPerPage || 10);
+
+  useEffect(() => {
+    if (displayPrefs.rowsPerPage) {
+      setProductRowsPerPage(displayPrefs.rowsPerPage);
+    }
+  }, [displayPrefs.rowsPerPage]);
+
+  const totalProductPages = Math.ceil(productPerformance.length / productRowsPerPage) || 1;
+  const indexOfLastProduct = productPage * productRowsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - productRowsPerPage;
+  const paginatedProductPerformance = useMemo(() => {
+    return productPerformance.slice(indexOfFirstProduct, indexOfLastProduct);
+  }, [productPerformance, indexOfFirstProduct, indexOfLastProduct]);
+
+  useEffect(() => {
+    if (productPage > totalProductPages && totalProductPages > 0) {
+      setProductPage(1);
+    }
+  }, [totalProductPages, productPage]);
+
+  // Reset product page when report range or data changes
+  useEffect(() => {
+    setProductPage(1);
+  }, [selectedRange, reportData]);
 
   // Total quantity sold across all products
   const totalUnitsSold = useMemo(() => {
@@ -421,6 +467,49 @@ const Reports = () => {
       );
     });
   }, [rangeFilteredOrders, searchQuery, statusFilter]);
+
+  // Stepper calculations for Order Details Drawer
+  const selectedOrderIndex = selectedOrder
+    ? filteredOrders.findIndex((o) => (o._id || o.poNumber) === (selectedOrder._id || selectedOrder.poNumber))
+    : -1;
+  const hasPrevOrder = selectedOrderIndex > 0;
+  const hasNextOrder = selectedOrderIndex >= 0 && selectedOrderIndex < filteredOrders.length - 1;
+
+  const handlePrevOrder = () => {
+    if (hasPrevOrder) {
+      setSelectedOrder(filteredOrders[selectedOrderIndex - 1]);
+    }
+  };
+
+  const handleNextOrder = () => {
+    if (hasNextOrder) {
+      setSelectedOrder(filteredOrders[selectedOrderIndex + 1]);
+    }
+  };
+
+  // Keyboard navigation & body scroll lock for Order Details Drawer
+  useEffect(() => {
+    if (!selectedOrder) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setSelectedOrder(null);
+      } else if (e.key === 'ArrowLeft' && hasPrevOrder) {
+        handlePrevOrder();
+      } else if (e.key === 'ArrowRight' && hasNextOrder) {
+        handleNextOrder();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedOrder, hasPrevOrder, hasNextOrder, selectedOrderIndex]);
 
   // CSV Export Generators
   const exportToCSV = (filename, rows) => {
@@ -498,12 +587,24 @@ const Reports = () => {
 
   const handleExportProductsCSV = () => {
     if (!productPerformance.length) return;
-    const headers = ['Product Name', 'SKU', 'Units Sold', 'Total Revenue (INR)', 'Contribution (%)'];
+    const headers = ['Rank', 'Product Name', 'SKU', 'Orders Count', 'Units Sold', 'Avg Unit Price (INR)', 'Total Revenue (INR)', 'Volume Share (%)', 'Revenue Share (%)'];
     const rows = [headers];
     const totalRev = Number(summary.totalRevenue) || 1;
-    productPerformance.forEach((p) => {
+    productPerformance.forEach((p, idx) => {
       const share = (((Number(p.totalRevenue) || 0) / totalRev) * 100).toFixed(2);
-      rows.push([p.productName || '', p.sku || '', p.totalQuantity || 0, p.totalRevenue || 0, `${share}%`]);
+      const volShare = totalUnitsSold ? (((Number(p.totalQuantity) || 0) / totalUnitsSold) * 100).toFixed(2) : '0.00';
+      const avgPrice = p.totalQuantity ? Math.round((Number(p.totalRevenue) || 0) / p.totalQuantity) : 0;
+      rows.push([
+        idx + 1,
+        p.productName || '',
+        p.sku || '',
+        p.ordersCount || 1,
+        p.totalQuantity || 0,
+        avgPrice,
+        p.totalRevenue || 0,
+        `${volShare}%`,
+        `${share}%`
+      ]);
     });
     exportToCSV('product_performance_report', rows);
   };
@@ -532,7 +633,6 @@ const Reports = () => {
       <PageHeader
         title="Reports & Analytics"
         subtitle="Live metrics, financial summaries, sales trends, and product performance analysis."
-        badgeText="Financial BI"
         badgeIcon={FiPieChart}
         actions={
           <div className="flex items-center gap-2.5 relative">
@@ -937,8 +1037,13 @@ const Reports = () => {
               <FiBox className="text-xl" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                Product Sales Performance
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Product Sales Performance</span>
+                {productPerformance.length > 0 && (
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                    {productPerformance.length}
+                  </span>
+                )}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Units ordered, revenue generated, and contribution ranking per SKU
@@ -967,80 +1072,162 @@ const Reports = () => {
             No product performance records found.
           </div>
         ) : (
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left text-sm whitespace-nowrap min-w-[700px]">
-              <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5">
+          <>
+            <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-sm whitespace-nowrap min-w-[1100px]">
+              <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5 select-none">
                 <tr>
-                  <th className="py-3 px-4 w-12 text-center">Rank</th>
-                  <th className="py-3 px-4">Product Name & Identifier</th>
-                  <th className="py-3 px-4 text-center">Units Sold</th>
-                  <th className="py-3 px-4 text-right">Revenue Generated</th>
-                  <th className="py-3 px-4 w-48 text-right">Revenue Share</th>
+                  <th className="py-3.5 px-4 w-14 text-center">Rank</th>
+                  <th className="py-3.5 px-4 min-w-[240px]">Product Details</th>
+                  <th className="py-3.5 px-4 text-center">Orders</th>
+                  <th className="py-3.5 px-4 text-center">Units Sold</th>
+                  <th className="py-3.5 px-4 text-right">Avg Unit Price</th>
+                  <th className="py-3.5 px-4 text-right">Total Revenue</th>
+                  <th className="py-3.5 px-4 text-center">Volume Share</th>
+                  <th className="py-3.5 px-4 text-right w-44">Revenue Share</th>
+                  <th className="py-3.5 px-4 text-center">Sales Velocity</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
-                {productPerformance.map((product, index) => {
+                {paginatedProductPerformance.map((product, index) => {
                   const rev = Number(product.totalRevenue) || 0;
                   const totalRev = Number(summary.totalRevenue) || 1;
                   const sharePct = Math.min(100, ((rev / totalRev) * 100).toFixed(1));
+                  const volPct = totalUnitsSold ? Math.min(100, (((product.totalQuantity || 0) / totalUnitsSold) * 100).toFixed(1)) : '0.0';
+                  const avgPrice = product.totalQuantity ? Math.round(rev / product.totalQuantity) : 0;
+                  const globalRank = indexOfFirstProduct + index + 1;
+
+                  // Velocity status categorization
+                  const isTopSeller = globalRank <= 3 || Number(sharePct) >= 20;
+                  const isHighDemand = !isTopSeller && (Number(sharePct) >= 5 || (product.totalQuantity || 0) >= 10);
+                  const isSteady = !isTopSeller && !isHighDemand && (product.totalQuantity || 0) >= 3;
 
                   return (
                     <tr
                       key={product._id || index}
                       className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors"
                     >
+                      {/* Rank */}
                       <td className="py-4 px-4 text-center">
                         <span
-                          className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-xs font-bold ${
-                            index === 0
-                              ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                              : index === 1
-                              ? 'bg-slate-400/20 text-slate-700 dark:text-slate-300'
-                              : index === 2
-                              ? 'bg-amber-700/20 text-amber-700 dark:text-amber-500'
-                              : 'text-slate-400 font-medium'
+                          className={`inline-flex items-center justify-center w-7 h-7 rounded-xl text-xs font-black ${
+                            globalRank === 1
+                              ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-xs'
+                              : globalRank === 2
+                              ? 'bg-slate-400/20 text-slate-700 dark:text-slate-300 border border-slate-400/30'
+                              : globalRank === 3
+                              ? 'bg-amber-700/20 text-amber-700 dark:text-amber-500 border border-amber-700/30'
+                              : 'text-slate-400 font-bold bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5'
                           }`}
                         >
-                          #{index + 1}
+                          #{globalRank}
                         </span>
                       </td>
+
+                      {/* Product Name & SKU */}
                       <td className="py-4 px-4">
-                        <div className="font-bold text-slate-900 dark:text-white">
-                          {product.productName}
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
-                            {product.sku}
-                          </span>
-                          <CopyButton text={product.sku} />
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 font-bold">
+                            <FiBox className="text-base" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900 dark:text-white text-xs">
+                              {product.productName}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md font-semibold">
+                                {product.sku}
+                              </span>
+                              <CopyButton text={product.sku} size={10} />
+                            </div>
+                          </div>
                         </div>
                       </td>
+
+                      {/* Orders Count */}
                       <td className="py-4 px-4 text-center">
-                        <span className="inline-flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl text-xs">
-                          <FiBox className="text-slate-400 text-xs" />
-                          {(product.totalQuantity || 0).toLocaleString('en-IN')}
+                        <span className="inline-flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl text-xs border border-slate-200/60 dark:border-white/5">
+                          <FiShoppingBag className="text-blue-500 text-xs" />
+                          <span>{product.ordersCount || 1} PO{product.ordersCount === 1 ? '' : 's'}</span>
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-right">
-                        <div className="font-extrabold text-slate-900 dark:text-white">
+
+                      {/* Units Sold */}
+                      <td className="py-4 px-4 text-center">
+                        <span className="inline-flex items-center gap-1.5 font-extrabold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl text-xs border border-slate-200/60 dark:border-white/5">
+                          <FiBox className="text-purple-500 text-xs" />
+                          <span>{(product.totalQuantity || 0).toLocaleString('en-IN')}</span>
+                        </span>
+                      </td>
+
+                      {/* Avg Unit Price */}
+                      <td className="py-4 px-4 text-center">
+                        <div className="font-bold text-slate-900 dark:text-white font-mono text-xs">
+                          {formatCurrency(avgPrice)}
+                        </div>
+                        <div className="text-[10px] text-slate-400">per unit</div>
+                      </td>
+
+                      {/* Total Revenue */}
+                      <td className="py-4 px-4 text-center">
+                        <div className="font-extrabold text-slate-900 dark:text-white font-mono text-xs">
                           {formatCurrency(rev)}
                         </div>
-                        <div className="text-[11px] text-slate-400">
-                          {product.totalQuantity ? `₹${Math.round(rev / product.totalQuantity)}/unit avg` : ''}
+                      </td>
+
+                      {/* Volume Share % */}
+                      <td className="py-4 px-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-16 bg-slate-100 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-blue-500 rounded-full"
+                              style={{ width: `${volPct}%` }}
+                            />
+                          </div>
+                          <span className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-400 w-10 text-right">
+                            {volPct}%
+                          </span>
                         </div>
                       </td>
+
+                      {/* Revenue Share % */}
                       <td className="py-4 px-4">
                         <div className="flex items-center justify-end gap-2.5">
-                          <div className="w-24 bg-slate-100 dark:bg-white/10 h-2 rounded-full overflow-hidden">
+                          <div className="w-20 bg-slate-100 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-purple-500 rounded-full transition-all duration-500"
                               style={{ width: `${sharePct}%` }}
                             />
                           </div>
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 w-10 text-right">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 w-10 text-right font-mono">
                             {sharePct}%
                           </span>
                         </div>
+                      </td>
+
+                      {/* Velocity / Status Badge */}
+                      <td className="py-4 px-4 text-center">
+                        {isTopSeller ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
+                            <FiTrendingUp className="text-[10px]" />
+                            <span>Top Seller</span>
+                          </span>
+                        ) : isHighDemand ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 whitespace-nowrap">
+                            <FiCheckCircle className="text-[10px]" />
+                            <span>High Demand</span>
+                          </span>
+                        ) : isSteady ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 whitespace-nowrap">
+                            <FiBox className="text-[10px]" />
+                            <span>Steady</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20 whitespace-nowrap">
+                            <FiClock className="text-[10px]" />
+                            <span>Low Volume</span>
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -1048,8 +1235,94 @@ const Reports = () => {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+
+          {/* Product Performance Attached Pagination Bar */}
+          {productPerformance.length > 0 && (
+            <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-white/[0.02] text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-3">
+                <span>
+                  Showing <strong className="text-slate-800 dark:text-slate-200">{indexOfFirstProduct + 1}</strong> to{' '}
+                  <strong className="text-slate-800 dark:text-slate-200">
+                    {Math.min(indexOfLastProduct, productPerformance.length)}
+                  </strong>{' '}
+                  of <strong className="text-slate-800 dark:text-slate-200">{productPerformance.length}</strong> products
+                </span>
+
+                {/* Rows Per Page Selector */}
+                <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 dark:border-white/10 pl-3">
+                  <span className="text-[11px] text-slate-400">Per page:</span>
+                  <select
+                    value={productRowsPerPage}
+                    onChange={(e) => {
+                      setProductRowsPerPage(Number(e.target.value));
+                      setProductPage(1);
+                    }}
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  >
+                    {[5, 10, 20, 50].map((num) => (
+                      <option key={num} value={num}>
+                        {num}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {totalProductPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setProductPage((p) => Math.max(1, p - 1))}
+                    disabled={productPage === 1}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                  >
+                    <FiChevronLeft size={13} />
+                    <span>Prev</span>
+                  </button>
+
+                  {Array.from({ length: totalProductPages }, (_, i) => i + 1).map((pg) => {
+                    if (
+                      pg === 1 ||
+                      pg === totalProductPages ||
+                      (pg >= productPage - 1 && pg <= productPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={pg}
+                          type="button"
+                          onClick={() => setProductPage(pg)}
+                          className={`w-7 h-7 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            productPage === pg
+                              ? 'bg-purple-600 text-white shadow-xs'
+                              : 'border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
+                          }`}
+                        >
+                          {pg}
+                        </button>
+                      );
+                    }
+                    if (pg === productPage - 2 || pg === productPage + 2) {
+                      return <span key={pg} className="px-1 text-slate-400">...</span>;
+                    }
+                    return null;
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => setProductPage((p) => Math.min(totalProductPages, p + 1))}
+                    disabled={productPage === totalProductPages}
+                    className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                  >
+                    <span>Next</span>
+                    <FiChevronRight size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
 
       {/* Orders Ledger Section */}
       <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
@@ -1305,249 +1578,291 @@ const Reports = () => {
         )}
       </div>
 
-      {/* Order Details Modal */}
+      {/* Order Details Slide-Over Drawer */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in duration-200">
-          <div className="bg-white/20 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl">
-                  <FiFileText className="text-xl" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white font-mono">
-                      {selectedOrder.poNumber}
-                    </h3>
-                    <CopyButton text={selectedOrder.poNumber} />
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Created on {formatDateTime(selectedOrder.createdAt)}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
-              >
-                <FiX className="text-lg" />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-[10000] overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+            onClick={() => setSelectedOrder(null)}
+          />
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-6">
-              {/* Status and Entity Summary */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-white/5">
-                <div>
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Company & Client
-                  </span>
-                  <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                    <span className="font-bold text-slate-900 dark:text-white text-sm">
-                      {selectedOrder.companyId?.name || 'N/A'}
-                    </span>
-                    {selectedOrder.companyId?.code && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                        {selectedOrder.companyId.code}
-                      </span>
-                    )}
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10 pointer-events-none">
+            <div className="w-screen max-w-2xl sm:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto animate-in slide-in-from-right duration-300 z-10">
+              {/* Sticky Header with Stepper */}
+              <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl">
+                    <FiFileText className="text-xl" />
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
-                    <span className="font-medium text-slate-700 dark:text-slate-300">
-                      {selectedOrder.firmId?.firmName || 'Retailer Firm'}
-                    </span>
-                    {selectedOrder.firmId?.firmCode && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
-                        {selectedOrder.firmId.firmCode}
-                      </span>
-                    )}
-                    {selectedOrder.firmId?.city && (
-                      <span>• {selectedOrder.firmId.city}</span>
-                    )}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white font-mono">
+                        {selectedOrder.poNumber}
+                      </h3>
+                      <CopyButton text={selectedOrder.poNumber} />
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Created on {formatDateTime(selectedOrder.createdAt)}
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Sales Executive
-                  </span>
-                  <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                    <span className="font-bold text-slate-900 dark:text-white text-sm">
-                      {`${selectedOrder.salesExecutiveId?.firstName || ''} ${
-                        selectedOrder.salesExecutiveId?.lastName || ''
-                      }`.trim() || 'N/A'}
-                    </span>
-                    {selectedOrder.salesExecutiveId?.employeeCode && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                        {selectedOrder.salesExecutiveId.employeeCode}
+
+                <div className="flex items-center gap-1 sm:gap-2">
+                  {/* Stepper Navigation */}
+                  {filteredOrders.length > 1 && (
+                    <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-xl p-0.5 border border-slate-200/60 dark:border-white/10 mr-1">
+                      <button
+                        type="button"
+                        onClick={handlePrevOrder}
+                        disabled={!hasPrevOrder}
+                        title="Previous order (Left arrow)"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                      >
+                        <FiChevronLeft size={16} />
+                      </button>
+                      <span className="text-[11px] font-mono px-2 text-slate-500 font-semibold select-none">
+                        {selectedOrderIndex >= 0 ? `${selectedOrderIndex + 1} of ${filteredOrders.length}` : ''}
                       </span>
-                    )}
-                  </div>
-                  {selectedOrder.salesExecutiveId?.email && (
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {selectedOrder.salesExecutiveId.email}
+                      <button
+                        type="button"
+                        onClick={handleNextOrder}
+                        disabled={!hasNextOrder}
+                        title="Next order (Right arrow)"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                      >
+                        <FiChevronRight size={16} />
+                      </button>
                     </div>
                   )}
-                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrder(null)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                    title="Close (Esc)"
+                  >
+                    <FiX className="text-lg" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable Drawer Body */}
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 custom-scrollbar">
+                {/* Status and Entity Summary */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-white/5">
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      Company & Client
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                      <span className="font-bold text-slate-900 dark:text-white text-sm">
+                        {selectedOrder.companyId?.name || 'N/A'}
+                      </span>
+                      {selectedOrder.companyId?.code && (
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                          {selectedOrder.companyId.code}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                      <span className="font-medium text-slate-700 dark:text-slate-300">
+                        {selectedOrder.firmId?.firmName || 'Retailer Firm'}
+                      </span>
+                      {selectedOrder.firmId?.firmCode && (
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
+                          {selectedOrder.firmId.firmCode}
+                        </span>
+                      )}
+                      {selectedOrder.firmId?.city && (
+                        <span>• {selectedOrder.firmId.city}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      Sales Executive
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                      <span className="font-bold text-slate-900 dark:text-white text-sm">
+                        {`${selectedOrder.salesExecutiveId?.firstName || ''} ${
+                          selectedOrder.salesExecutiveId?.lastName || ''
+                        }`.trim() || 'N/A'}
+                      </span>
+                      {selectedOrder.salesExecutiveId?.employeeCode && (
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                          {selectedOrder.salesExecutiveId.employeeCode}
+                        </span>
+                      )}
+                    </div>
+                    {selectedOrder.salesExecutiveId?.email && (
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        {selectedOrder.salesExecutiveId.email}
+                      </div>
+                    )}
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                      {(() => {
+                        const badge = getStatusBadge(selectedOrder.status);
+                        const BadgeIcon = badge.icon;
+                        return (
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${badge.bg}`}>
+                            <BadgeIcon className="text-[10px]" />
+                            <span>{badge.label}</span>
+                          </span>
+                        );
+                      })()}
+                      {selectedOrder.approvedAt && (
+                        <span className="text-[10px] font-mono text-slate-400">
+                          Approved: {formatDateTime(selectedOrder.approvedAt)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email Dispatch Details Card */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-white/10">
+                  <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-200/60 dark:border-white/10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm border border-blue-500/20">
+                        <FiMail />
+                      </div>
+                      <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                        Notification Email Delivery
+                      </span>
+                    </div>
                     {(() => {
-                      const badge = getStatusBadge(selectedOrder.status);
-                      const BadgeIcon = badge.icon;
+                      const eb = getEmailStatusBadge(selectedOrder.emailStatus);
+                      const EbIcon = eb.icon;
                       return (
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${badge.bg}`}>
-                          <BadgeIcon className="text-[10px]" />
-                          <span>{badge.label}</span>
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${eb.className}`}>
+                          <EbIcon className="text-[10px]" />
+                          <span>{eb.label}</span>
                         </span>
                       );
                     })()}
-                    {selectedOrder.approvedAt && (
-                      <span className="text-[10px] font-mono text-slate-400">
-                        Approved: {formatDateTime(selectedOrder.approvedAt)}
-                      </span>
-                    )}
                   </div>
-                </div>
-              </div>
-
-              {/* Email Dispatch Details Card */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-white/10">
-                <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-200/60 dark:border-white/10">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm border border-blue-500/20">
-                      <FiMail />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-400 text-[10px] uppercase font-bold block">Sent Timestamp</span>
+                      <span className="font-mono text-slate-800 dark:text-slate-200">
+                        {selectedOrder.emailStatus?.lastSentAt
+                          ? formatDateTime(selectedOrder.emailStatus.lastSentAt)
+                          : 'Not Dispatched Yet'}
+                      </span>
                     </div>
-                    <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
-                      Notification Email Delivery
-                    </span>
-                  </div>
-                  {(() => {
-                    const eb = getEmailStatusBadge(selectedOrder.emailStatus);
-                    const EbIcon = eb.icon;
-                    return (
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${eb.className}`}>
-                        <EbIcon className="text-[10px]" />
-                        <span>{eb.label}</span>
+                    <div>
+                      <span className="text-slate-400 text-[10px] uppercase font-bold block">Message ID</span>
+                      <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate block max-w-full" title={selectedOrder.emailStatus?.messageId}>
+                        {selectedOrder.emailStatus?.messageId || '-'}
                       </span>
-                    );
-                  })()}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-bold block">Sent Timestamp</span>
-                    <span className="font-mono text-slate-800 dark:text-slate-200">
-                      {selectedOrder.emailStatus?.lastSentAt
-                        ? formatDateTime(selectedOrder.emailStatus.lastSentAt)
-                        : 'Not Dispatched Yet'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-bold block">Message ID</span>
-                    <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate block max-w-full" title={selectedOrder.emailStatus?.messageId}>
-                      {selectedOrder.emailStatus?.messageId || '-'}
-                    </span>
-                  </div>
-                </div>
-                {Array.isArray(selectedOrder.emailStatus?.recipients) && selectedOrder.emailStatus.recipients.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
-                    <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1.5">
-                      Recipients ({selectedOrder.emailStatus.recipients.length})
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedOrder.emailStatus.recipients.map((rec, rIdx) => (
-                        <span
-                          key={rIdx}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-700 dark:text-slate-300"
-                        >
-                          <FiMail className="text-slate-400 text-[10px]" />
-                          <span>{rec}</span>
-                          <CopyButton text={rec} />
-                        </span>
-                      ))}
                     </div>
                   </div>
-                )}
-              </div>
-
-              {/* Order Items Table */}
-              <div>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
-                  Itemized Bill ({selectedOrder.items?.length || 0} products)
-                </h4>
-                <div className="border border-slate-200/80 dark:border-white/10 rounded-2xl overflow-hidden">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 uppercase border-b border-slate-200/60 dark:border-white/5">
-                      <tr>
-                        <th className="py-2.5 px-3">Item / SKU</th>
-                        <th className="py-2.5 px-3 text-center">Qty</th>
-                        <th className="py-2.5 px-3 text-right">Unit Price</th>
-                        <th className="py-2.5 px-3 text-right">Total Price</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
-                      {(selectedOrder.items || []).map((item, i) => (
-                        <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02]">
-                          <td className="py-3 px-3">
-                            <div className="font-bold text-slate-900 dark:text-white">
-                              {item.productNameSnapshot || 'Product Item'}
-                            </div>
-                            <div className="text-[11px] font-mono text-slate-400">
-                              {item.skuSnapshot}
-                            </div>
-                          </td>
-                          <td className="py-3 px-3 text-center font-bold text-slate-800 dark:text-slate-200">
-                            {item.quantity}
-                          </td>
-                          <td className="py-3 px-3 text-right text-slate-600 dark:text-slate-300">
-                            {formatCurrency(item.unitPrice)}
-                          </td>
-                          <td className="py-3 px-3 text-right font-extrabold text-slate-900 dark:text-white">
-                            {formatCurrency(item.totalPrice)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Notes & Special Instructions */}
-              {selectedOrder.notes && (
-                <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-amber-700 dark:text-amber-400">
-                  <span className="font-bold">Order Note: </span>
-                  {selectedOrder.notes}
-                </div>
-              )}
-
-              {/* Total Summary */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200/60 dark:border-white/5 space-y-2 text-xs">
-                {selectedOrder.subtotal !== undefined &&
-                  selectedOrder.totalAmount !== undefined &&
-                  Number(selectedOrder.subtotal) !== Number(selectedOrder.totalAmount) && (
-                    <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                      <span>Subtotal</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
-                        {formatCurrency(selectedOrder.subtotal)}
+                  {Array.isArray(selectedOrder.emailStatus?.recipients) && selectedOrder.emailStatus.recipients.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
+                      <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1.5">
+                        Recipients ({selectedOrder.emailStatus.recipients.length})
                       </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedOrder.emailStatus.recipients.map((rec, rIdx) => (
+                          <span
+                            key={rIdx}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-700 dark:text-slate-300"
+                          >
+                            <FiMail className="text-slate-400 text-[10px]" />
+                            <span>{rec}</span>
+                            <CopyButton text={rec} />
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
-                <div className="flex justify-between text-slate-900 dark:text-white font-extrabold text-sm pt-2 border-t border-slate-200 dark:border-white/10">
-                  <span>Grand Total</span>
-                  <span className="text-blue-600 dark:text-blue-400 font-mono">
-                    {formatCurrency(selectedOrder.totalAmount || selectedOrder.subtotal || 0)}
-                  </span>
+                </div>
+
+                {/* Order Items Table */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                    Itemized Bill ({selectedOrder.items?.length || 0} products)
+                  </h4>
+                  <div className="border border-slate-200/80 dark:border-white/10 rounded-2xl overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 uppercase border-b border-slate-200/60 dark:border-white/5">
+                        <tr>
+                          <th className="py-2.5 px-3">Item / SKU</th>
+                          <th className="py-2.5 px-3 text-center">Qty</th>
+                          <th className="py-2.5 px-3 text-right">Unit Price</th>
+                          <th className="py-2.5 px-3 text-right">Total Price</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
+                        {(selectedOrder.items || []).map((item, i) => (
+                          <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02]">
+                            <td className="py-3 px-3">
+                              <div className="font-bold text-slate-900 dark:text-white">
+                                {item.productNameSnapshot || 'Product Item'}
+                              </div>
+                              <div className="text-[11px] font-mono text-slate-400">
+                                {item.skuSnapshot}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-center font-bold text-slate-800 dark:text-slate-200">
+                              {item.quantity}
+                            </td>
+                            <td className="py-3 px-3 text-right text-slate-600 dark:text-slate-300">
+                              {formatCurrency(item.unitPrice)}
+                            </td>
+                            <td className="py-3 px-3 text-right font-extrabold text-slate-900 dark:text-white">
+                              {formatCurrency(item.totalPrice)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Notes & Special Instructions */}
+                {selectedOrder.notes && (
+                  <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-amber-700 dark:text-amber-400">
+                    <span className="font-bold">Order Note: </span>
+                    {selectedOrder.notes}
+                  </div>
+                )}
+
+                {/* Total Summary */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200/60 dark:border-white/5 space-y-2 text-xs">
+                  {selectedOrder.subtotal !== undefined &&
+                    selectedOrder.totalAmount !== undefined &&
+                    Number(selectedOrder.subtotal) !== Number(selectedOrder.totalAmount) && (
+                      <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                        <span>Subtotal</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                          {formatCurrency(selectedOrder.subtotal)}
+                        </span>
+                      </div>
+                    )}
+                  <div className="flex justify-between text-slate-900 dark:text-white font-extrabold text-sm pt-2 border-t border-slate-200 dark:border-white/10">
+                    <span>Grand Total</span>
+                    <span className="text-blue-600 dark:text-blue-400 font-mono">
+                      {formatCurrency(selectedOrder.totalAmount || selectedOrder.subtotal || 0)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-200 dark:border-white/10 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
-              >
-                Close
-              </button>
+              {/* Sticky Drawer Footer */}
+              <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md">
+                <span className="text-[11px] text-slate-400 hidden sm:inline">
+                  Press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-300">Esc</kbd> to exit or <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-300">←</kbd> <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-300">→</kbd> to step
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white text-xs font-bold rounded-xl transition-all cursor-pointer ml-auto"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

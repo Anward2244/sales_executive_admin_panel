@@ -275,7 +275,7 @@ const InternetStrengthIndicator = ({ compact = true, className = '' }) => {
 
       {/* Popover Details Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2.5 w-72 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-3.5">
+        <div className="absolute right-0 mt-2.5 w-72 bg-white/10 dark:bg-slate-900/95 backdrop-blur-lg border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-3.5">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2.5">
             <div className="flex items-center gap-2">

@@ -7,7 +7,8 @@ import {
   FiMail, FiEye, FiExternalLink, FiHash, FiBriefcase,
   FiUsers, FiUserCheck, FiUserX, FiMapPin, FiFileText,
   FiPlus, FiUser, FiCheckCircle, FiEdit2, FiTrash2,
-  FiLayers, FiDownload, FiCreditCard
+  FiLayers, FiDownload, FiCreditCard, FiChevronLeft, FiChevronRight,
+  FiShield, FiAward, FiGlobe, FiMaximize2
 } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
@@ -54,6 +55,23 @@ const Firms = () => {
   const [selectedFirm, setSelectedFirm] = useState(null);
   const [imageErrors, setImageErrors] = useState({});
   const [actionLoadingId, setActionLoadingId] = useState(null);
+
+  // Pagination metadata from API response
+  const [apiMeta, setApiMeta] = useState({
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
+
+  // Lightbox Document Preview Modal (for PAN, TAN, GST, Cheque, Stamp Proofs)
+  const [docPreviewModal, setDocPreviewModal] = useState({
+    isOpen: false,
+    title: '',
+    url: ''
+  });
 
   // Companies loaded from API for dropdowns
   const [availableCompanies, setAvailableCompanies] = useState([]);
@@ -220,6 +238,10 @@ const Firms = () => {
         } else if (Array.isArray(response.data.firms)) {
           firmList = response.data.firms;
         }
+
+        if (response.data.meta) {
+          setApiMeta(response.data.meta);
+        }
       }
 
       setFirms(firmList);
@@ -246,6 +268,10 @@ const Firms = () => {
             : Array.isArray(resData)
               ? resData
               : [];
+
+          if (resData.meta) {
+            setApiMeta(resData.meta);
+          }
 
           setFirms(list);
           setLoading(false);
@@ -287,6 +313,10 @@ const Firms = () => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
+        if (docPreviewModal.isOpen) {
+          setDocPreviewModal({ isOpen: false, title: '', url: '' });
+          return;
+        }
         if (isCreateModalOpen && !createSubmitting) {
           setIsCreateModalOpen(false);
         } else if (isEditModalOpen && !editSubmitting) {
@@ -298,7 +328,7 @@ const Firms = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCreateModalOpen, createSubmitting, isEditModalOpen, editSubmitting, selectedFirm]);
+  }, [docPreviewModal.isOpen, isCreateModalOpen, createSubmitting, isEditModalOpen, editSubmitting, selectedFirm]);
 
   // Combined Companies list for Select Dropdown
   const allCompanyOptions = useMemo(() => {
@@ -415,16 +445,31 @@ const Firms = () => {
         const creditLimitStr = firm.creditLimit ? String(firm.creditLimit) : '';
         const createdAtStr = firm.createdAt ? formatDateDDMMYYYY(firm.createdAt).toLowerCase() : '';
 
+        const panNumber = (firm.panNumber || '').toLowerCase();
+        const tanNumber = (firm.tanNumber || '').toLowerCase();
+        const bankName = (firm.bankName || '').toLowerCase();
+        const businessType = (firm.businessType || '').toLowerCase();
+        const designation = (firm.designation || '').toLowerCase();
+        const signatory = (firm.authorizedSignatoryName || '').toLowerCase();
+        const alternatePhone = (firm.alternatePhone || '').toLowerCase();
+
         const matches =
           firmName.includes(term) ||
           firmCode.includes(term) ||
           contactPerson.includes(term) ||
+          designation.includes(term) ||
+          signatory.includes(term) ||
+          businessType.includes(term) ||
           email.includes(term) ||
           phone.includes(term) ||
+          alternatePhone.includes(term) ||
           id.includes(term) ||
           city.includes(term) ||
           state.includes(term) ||
           gstin.includes(term) ||
+          panNumber.includes(term) ||
+          tanNumber.includes(term) ||
+          bankName.includes(term) ||
           companyName.includes(term) ||
           companyCode.includes(term) ||
           statusText.includes(term) ||
@@ -482,6 +527,61 @@ const Firms = () => {
 
     return list;
   }, [filteredFirms, sortKey, sortOrder]);
+
+  // Slide-Over Detail Drawer navigation for Firms
+  const selectedFirmIndex = useMemo(() => {
+    if (!selectedFirm) return -1;
+    return sortedFirms.findIndex((f) => f._id === selectedFirm._id);
+  }, [selectedFirm, sortedFirms]);
+
+  const canGoPrevFirm = selectedFirmIndex > 0;
+  const canGoNextFirm = selectedFirmIndex >= 0 && selectedFirmIndex < sortedFirms.length - 1;
+
+  const handlePrevFirm = useCallback(() => {
+    if (selectedFirmIndex > 0) {
+      setSelectedFirm(sortedFirms[selectedFirmIndex - 1]);
+    }
+  }, [selectedFirmIndex, sortedFirms]);
+
+  const handleNextFirm = useCallback(() => {
+    if (selectedFirmIndex >= 0 && selectedFirmIndex < sortedFirms.length - 1) {
+      setSelectedFirm(sortedFirms[selectedFirmIndex + 1]);
+    }
+  }, [selectedFirmIndex, sortedFirms]);
+
+  // Drawer keyboard navigation & body scroll lock
+  useEffect(() => {
+    if (!selectedFirm) return;
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+      }
+      if (e.key === 'Escape') {
+        if (docPreviewModal.isOpen) {
+          setDocPreviewModal({ isOpen: false, title: '', url: '' });
+          return;
+        }
+        setSelectedFirm(null);
+      } else if (e.key === 'ArrowLeft') {
+        if (canGoPrevFirm) handlePrevFirm();
+      } else if (e.key === 'ArrowRight') {
+        if (canGoNextFirm) handleNextFirm();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedFirm, canGoPrevFirm, canGoNextFirm, handlePrevFirm, handleNextFirm, docPreviewModal.isOpen]);
+
+  useEffect(() => {
+    if (selectedFirm) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedFirm]);
 
   // Dropdown options
   const companyFilterOptions = useMemo(() => {
@@ -1442,6 +1542,11 @@ const Firms = () => {
                                 >
                                   {firm.firmName}
                                 </span>
+                                {firm.businessType && (
+                                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/10">
+                                    {firm.businessType}
+                                  </span>
+                                )}
                               </div>
                               <div className="flex items-center gap-1 mt-0.5">
                                 <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono font-medium">
@@ -1503,9 +1608,16 @@ const Firms = () => {
 
                         {/* Contact Person */}
                         <td className="p-4 text-sm text-slate-700 dark:text-slate-300">
-                          <div className="flex items-center gap-1.5 font-medium text-slate-900 dark:text-slate-200 text-xs">
-                            <FiUser className="text-slate-400 text-xs shrink-0" />
-                            <span>{firm.contactPerson || '-'}</span>
+                          <div>
+                            <div className="flex items-center gap-1.5 font-medium text-slate-900 dark:text-slate-200 text-xs">
+                              <FiUser className="text-slate-400 text-xs shrink-0" />
+                              <span>{firm.contactPerson || '-'}</span>
+                            </div>
+                            {firm.designation && (
+                              <span className="text-[10px] text-slate-400 block font-normal ml-4">
+                                {firm.designation}
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -1541,14 +1653,24 @@ const Firms = () => {
 
                         {/* GSTIN */}
                         <td className="p-4 text-sm text-center">
-                          {firm.gstin ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/80 dark:bg-amber-500/10 text-white dark:text-amber-600 border border-amber-500/20 text-xs font-mono font-bold">
-                              {firm.gstin}
-                              <CopyButton text={firm.gstin} />
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-xs">-</span>
-                          )}
+                          <div className="flex flex-col items-center gap-1">
+                            {firm.gstin ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/80 dark:bg-amber-500/10 text-white dark:text-amber-600 border border-amber-500/20 text-xs font-mono font-bold">
+                                {firm.gstin}
+                                <CopyButton text={firm.gstin} />
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-xs">-</span>
+                            )}
+                            {(firm.panCardUrl || firm.tanCertificateUrl || firm.gstCertificateUrl || firm.cancelledChequeUrl || firm.companySealOrSignatureUrl) && (
+                              <span
+                                className="inline-flex items-center gap-0.5 text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20"
+                                title="Statutory documents attached"
+                              >
+                                <FiFileText size={9} /> KYC Docs
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Credit Terms */}
@@ -1660,9 +1782,6 @@ const Firms = () => {
                                 <FiTrash2 className="text-base" />
                               )}
                             </button>
-
-                            {/* Copy ID */}
-                            <CopyButton text={firm._id} />
                           </div>
                         </td>
                       </tr>
@@ -2377,52 +2496,81 @@ const Firms = () => {
           document.body
         )}
 
-      {/* QUICK VIEW FIRM DETAILS MODAL (Portal) */}
+      {/* QUICK VIEW FIRM DETAILS SLIDE-OVER DRAWER (Portal) */}
       {selectedFirm &&
         createPortal(
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-            {/* Frosted Backdrop */}
+          <div className="fixed inset-0 z-[10000] overflow-hidden">
+            {/* Backdrop Blur Overlay */}
             <div
-              className="fixed inset-0 dark:bg-slate-950/50 backdrop-blur-lg transition-opacity"
+              className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
               onClick={() => setSelectedFirm(null)}
             />
 
-            {/* Modal Box */}
-            <div className="relative w-full max-w-2xl bg-white/20 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
-              {/* Modal Header */}
-              <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-lg font-black shrink-0 shadow-sm">
-                    {selectedFirm.firmName ? selectedFirm.firmName.charAt(0).toUpperCase() : 'F'}
+            {/* Slide-Over Drawer Container (Pinned to Right) */}
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
+              <div className="w-screen max-w-2xl sm:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 backdrop-blur-2xl">
+                {/* 1. Sticky Drawer Header */}
+                <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-lg font-black shrink-0 shadow-sm">
+                      {selectedFirm.firmName ? selectedFirm.firmName.charAt(0).toUpperCase() : 'F'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
+                          {selectedFirm.firmName}
+                        </h3>
+                        <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono text-xs font-bold border border-blue-500/20">
+                          {selectedFirm.firmCode}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-xs text-slate-400 font-mono">ID: {selectedFirm._id}</span>
+                        <CopyButton text={selectedFirm._id} />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                        {selectedFirm.firmName}
-                      </h3>
-                      <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono text-xs font-bold border border-blue-500/20">
-                        {selectedFirm.firmCode}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-xs text-slate-400 font-mono">ID: {selectedFirm._id}</span>
-                      <CopyButton text={selectedFirm._id} />
-                    </div>
+
+                  {/* Header Actions: Stepping & Close */}
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    {selectedFirmIndex >= 0 && (
+                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-1 text-xs">
+                        <button
+                          type="button"
+                          onClick={handlePrevFirm}
+                          disabled={!canGoPrevFirm}
+                          title="Previous Firm (Left Arrow)"
+                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <FiChevronLeft size={15} />
+                        </button>
+                        <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                          {selectedFirmIndex + 1} of {sortedFirms.length}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleNextFirm}
+                          disabled={!canGoNextFirm}
+                          title="Next Firm (Right Arrow)"
+                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <FiChevronRight size={15} />
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFirm(null)}
+                      className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                      title="Close drawer (Esc)"
+                    >
+                      <FiX size={18} />
+                    </button>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedFirm(null)}
-                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                  title="Close modal (Esc)"
-                >
-                  <FiX className="text-xl" />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
+                {/* 2. Scrollable Drawer Body */}
+                <div className="flex-1 p-5 sm:p-7 overflow-y-auto custom-scrollbar space-y-6">
                 {/* Status & Parent Company Banner */}
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
                   <div className="flex items-center gap-3">
@@ -2505,182 +2653,491 @@ const Firms = () => {
                   </div>
                 </div>
 
-                {/* Grid Info Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Contact Representative */}
-                  <div className="p-4 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                      <FiUser className="text-blue-500" />
-                      <span>Contact Representative</span>
+                {/* Grid 1: Business Profile & Contact Rep */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Business Profile & Entity Type */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiBriefcase className="text-blue-500" />
+                      Business & Establishment
                     </p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">
-                      {selectedFirm.contactPerson || '-'}
-                    </p>
-                    <div className="mt-2 space-y-1 text-xs">
-                      {selectedFirm.phone && (
-                        <div className="flex items-center gap-2">
-                          <FiPhone className="text-slate-400" />
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Business Type</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 bg-slate-200/60 dark:bg-white/10 px-2 py-0.5 rounded text-[11px]">
+                          {selectedFirm.businessType || 'Proprietorship'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Established Date</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200 font-mono">
+                          {selectedFirm.dateOfEstablishment ? formatDateDDMMYYYY(selectedFirm.dateOfEstablishment) : '-'}
+                        </span>
+                      </div>
+                      {selectedFirm.website && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-slate-400">Website</span>
                           <a
-                            href={`tel:${selectedFirm.phone}`}
-                            className="font-mono text-blue-600 dark:text-blue-400 hover:underline"
+                            href={selectedFirm.website.startsWith('http') ? selectedFirm.website : `https://${selectedFirm.website}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 truncate max-w-[170px]"
                           >
-                            {selectedFirm.phone}
+                            <FiGlobe size={11} />
+                            <span className="truncate">{selectedFirm.website}</span>
                           </a>
                         </div>
                       )}
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Cash Discount</span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
+                          {selectedFirm.cashDiscount !== undefined && selectedFirm.cashDiscount !== null ? `${selectedFirm.cashDiscount}%` : '0%'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Representative */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiUser className="text-indigo-500" />
+                      Contact Representative
+                    </p>
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400">Name & Designation</span>
+                        <p className="font-semibold text-slate-800 dark:text-slate-200">
+                          {selectedFirm.contactPerson || '-'}
+                          {selectedFirm.designation && (
+                            <span className="text-slate-400 text-[11px] font-normal block">
+                              {selectedFirm.designation}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400">Primary Phone</span>
+                        <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200 font-semibold font-mono">
+                          <span>{selectedFirm.phone || '-'}</span>
+                          {selectedFirm.phone && <CopyButton text={selectedFirm.phone} />}
+                        </div>
+                      </div>
+                      {selectedFirm.alternatePhone && (
+                        <div>
+                          <span className="text-[10px] text-slate-400">Alternate Phone</span>
+                          <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300 font-mono">
+                            <span>{selectedFirm.alternatePhone}</span>
+                            <CopyButton text={selectedFirm.alternatePhone} />
+                          </div>
+                        </div>
+                      )}
                       {selectedFirm.email && (
-                        <div className="flex items-center gap-2">
-                          <FiMail className="text-slate-400" />
-                          <GmailLink email={selectedFirm.email} label={selectedFirm.email} />
+                        <div>
+                          <span className="text-[10px] text-slate-400">Email Address</span>
+                          <div className="mt-0.5">
+                            <GmailLink email={selectedFirm.email} label={selectedFirm.email} />
+                          </div>
                         </div>
                       )}
                     </div>
                   </div>
+                </div>
 
-                  {/* Premises & Location */}
-                  <div className="p-4 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                {/* Grid 2: Premises & Financial Terms */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Premises & Operating Address */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
                       <FiMapPin className="text-rose-500" />
-                      <span>Premises & Location</span>
+                      Premises & Address
                     </p>
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                      {selectedFirm.address || '-'}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      {selectedFirm.city}, {selectedFirm.state} - {selectedFirm.pincode}
-                    </p>
-                  </div>
-
-                  {/* Tax Identification (GSTIN) */}
-                  <div className="p-4 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                      <FiFileText className="text-amber-500" />
-                      <span>Tax Identification (GSTIN)</span>
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-black text-sm text-slate-900 dark:text-white bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-lg border border-slate-200/80 dark:border-white/10">
-                        {selectedFirm.gstin || 'Not Provided'}
-                      </span>
-                      {selectedFirm.gstin && <CopyButton text={selectedFirm.gstin} />}
-                    </div>
-                  </div>
-
-                  {/* Registration Timestamps */}
-                  <div className="p-4 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                      <FiCalendar className="text-indigo-500" />
-                      <span>Registration Timestamps</span>
-                    </p>
-                    <div className="space-y-1 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Created:</span>
-                        <span className="font-medium text-slate-700 dark:text-slate-300">
-                          {formatDateTimeDDMMYYYY(selectedFirm.createdAt)}
-                        </span>
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400">Registered Address</span>
+                        <p className="font-semibold text-slate-700 dark:text-slate-200 leading-snug">
+                          {selectedFirm.address || '-'}
+                        </p>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Last Modified:</span>
+                      {selectedFirm.branchAddress && (
+                        <div>
+                          <span className="text-[10px] text-slate-400">Branch Address</span>
+                          <p className="font-medium text-slate-600 dark:text-slate-300 leading-snug">
+                            {selectedFirm.branchAddress}
+                          </p>
+                        </div>
+                      )}
+                      <div className="pt-1 border-t border-slate-200/60 dark:border-white/5 flex justify-between">
+                        <span className="text-[10px] text-slate-400">City, State, PIN</span>
                         <span className="font-medium text-slate-700 dark:text-slate-300">
-                          {formatDateTimeDDMMYYYY(selectedFirm.updatedAt)}
+                          {[selectedFirm.city, selectedFirm.state, selectedFirm.pincode].filter(Boolean).join(', ') || '-'}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Credit Terms & Limit */}
-                  <div className="p-4 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                  {/* Financial & Credit Terms */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
                       <FiCreditCard className="text-emerald-500" />
-                      <span>Credit Terms & Limit</span>
+                      Credit & Terms
                     </p>
-                    <div className="space-y-1.5 text-xs">
+                    <div className="space-y-2">
                       <div className="flex justify-between items-baseline">
-                        <span className="text-slate-400">Credit Limit:</span>
-                        <span className="text-sm font-extrabold text-slate-900 dark:text-white font-mono">
+                        <span className="text-[10px] text-slate-400">Approved Credit Limit</span>
+                        <span className="font-bold text-base text-slate-900 dark:text-white font-mono">
                           ₹{(selectedFirm.creditLimit ?? 0).toLocaleString('en-IN')}
                         </span>
                       </div>
                       <div className="flex justify-between items-baseline">
-                        <span className="text-slate-400">Credit Window:</span>
-                        <span className="font-bold text-slate-700 dark:text-slate-300 font-mono">
+                        <span className="text-[10px] text-slate-400">Credit Days Window</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-200 font-mono">
                           {selectedFirm.creditDays ?? 30} Days
                         </span>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Submission & Review Audit */}
-                  <div className="p-4 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                      <FiUserCheck className="text-blue-500" />
-                      <span>Submission & Review Audit</span>
-                    </p>
-                    <div className="space-y-1 text-xs">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Submitted By:</span>
-                        <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={selectedFirm.submittedBy?.email}>
-                          {selectedFirm.submittedBy?.email || 'System / Admin'}
-                        </span>
-                      </div>
-                      {selectedFirm.submittedBy?.role && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-400">Submitter Role:</span>
-                          <span className="font-semibold text-slate-600 dark:text-slate-400">
-                            {selectedFirm.submittedBy.role}
-                          </span>
-                        </div>
-                      )}
-                      {selectedFirm.submittedBy?.phone && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-400">Submitter Phone:</span>
-                          <span className="font-mono text-slate-600 dark:text-slate-400">
-                            {selectedFirm.submittedBy.phone}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Reviewed By:</span>
-                        <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={selectedFirm.reviewedBy?.email}>
-                          {selectedFirm.reviewedBy?.email || (selectedFirm.approvalStatus === 'PENDING' ? 'Pending Approval' : 'Auto / Admin')}
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-[10px] text-slate-400">Cash Discount</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                          {selectedFirm.cashDiscount ?? 0}%
                         </span>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Section 3: Statutory Tax & Document Proofs (PAN, TAN, GSTIN, MSME) */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiFileText className="text-amber-500" />
+                      Statutory KYC & Tax Proofs
+                    </p>
+                    <span className="text-[10px] text-slate-400 font-mono">Click documents to preview</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {/* PAN Card Proof */}
+                    <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">PAN Card</span>
+                        {selectedFirm.panCardUrl ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                            Uploaded
+                          </span>
+                        ) : (
+                          <span className="text-[9px] text-slate-400">Not Uploaded</span>
+                        )}
+                      </div>
+                      <div className="font-mono text-xs font-bold text-slate-800 dark:text-white">
+                        {selectedFirm.panNumber || 'Not Provided'}
+                      </div>
+                      {selectedFirm.panCardUrl && (
+                        <div className="pt-1 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDocPreviewModal({
+                                isOpen: true,
+                                title: `PAN Card (${selectedFirm.panNumber || selectedFirm.firmName})`,
+                                url: selectedFirm.panCardUrl
+                              })
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 text-[11px] font-bold transition-all cursor-pointer"
+                          >
+                            <FiEye size={12} />
+                            <span>Preview</span>
+                          </button>
+                          <a
+                            href={selectedFirm.panCardUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-slate-400 hover:text-slate-600 p-1"
+                            title="Open direct image"
+                          >
+                            <FiExternalLink size={12} />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* TAN Certificate Proof */}
+                    <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">TAN Certificate</span>
+                        {selectedFirm.tanCertificateUrl ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                            Uploaded
+                          </span>
+                        ) : (
+                          <span className="text-[9px] text-slate-400">Not Uploaded</span>
+                        )}
+                      </div>
+                      <div className="font-mono text-xs font-bold text-slate-800 dark:text-white">
+                        {selectedFirm.tanNumber || 'Not Provided'}
+                      </div>
+                      {selectedFirm.tanCertificateUrl && (
+                        <div className="pt-1 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDocPreviewModal({
+                                isOpen: true,
+                                title: `TAN Certificate (${selectedFirm.tanNumber || selectedFirm.firmName})`,
+                                url: selectedFirm.tanCertificateUrl
+                              })
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 text-[11px] font-bold transition-all cursor-pointer"
+                          >
+                            <FiEye size={12} />
+                            <span>Preview</span>
+                          </button>
+                          <a
+                            href={selectedFirm.tanCertificateUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-slate-400 hover:text-slate-600 p-1"
+                            title="Open direct image"
+                          >
+                            <FiExternalLink size={12} />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* GSTIN & Certificate */}
+                    <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">GSTIN</span>
+                        {selectedFirm.gstCertificateUrl ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                            Proof Attached
+                          </span>
+                        ) : (
+                          <span className="text-[9px] text-slate-400">Self Declared</span>
+                        )}
+                      </div>
+                      <div className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                        {selectedFirm.gstin || 'Not Provided'}
+                      </div>
+                      {selectedFirm.gstCertificateUrl && (
+                        <div className="pt-1 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDocPreviewModal({
+                                isOpen: true,
+                                title: `GST Certificate (${selectedFirm.gstin || selectedFirm.firmName})`,
+                                url: selectedFirm.gstCertificateUrl
+                              })
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 text-[11px] font-bold transition-all cursor-pointer"
+                          >
+                            <FiEye size={12} />
+                            <span>Preview</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Additional Certificates if uploaded */}
+                  {(selectedFirm.msmeNumber || selectedFirm.msmeCertificateUrl || selectedFirm.incorporationCertificateUrl || selectedFirm.otherLicensesUrl) && (
+                    <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap gap-2 text-[11px]">
+                      {selectedFirm.msmeNumber && (
+                        <span className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 font-mono">
+                          MSME: <strong>{selectedFirm.msmeNumber}</strong>
+                        </span>
+                      )}
+                      {selectedFirm.msmeCertificateUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setDocPreviewModal({ isOpen: true, title: 'MSME Certificate', url: selectedFirm.msmeCertificateUrl })}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-500/20 flex items-center gap-1 cursor-pointer"
+                        >
+                          <FiEye size={11} /> MSME Certificate
+                        </button>
+                      )}
+                      {selectedFirm.incorporationCertificateUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setDocPreviewModal({ isOpen: true, title: 'Incorporation Certificate', url: selectedFirm.incorporationCertificateUrl })}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-500/20 flex items-center gap-1 cursor-pointer"
+                        >
+                          <FiEye size={11} /> Incorporation Doc
+                        </button>
+                      )}
+                      {selectedFirm.otherLicensesUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setDocPreviewModal({ isOpen: true, title: 'Trade / Business License', url: selectedFirm.otherLicensesUrl })}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-500/20 flex items-center gap-1 cursor-pointer"
+                        >
+                          <FiEye size={11} /> Other Licenses
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 4: Banking & Signatory Stamp */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Banking Details */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiCreditCard className="text-purple-500" />
+                      Banking Credentials
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Bank Name</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                          {selectedFirm.bankName || 'Not Provided'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Account Number</span>
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                          {selectedFirm.accountNumber || '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">IFSC Code</span>
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                          {selectedFirm.ifscCode || '-'}
+                        </span>
+                      </div>
+                      {selectedFirm.cancelledChequeUrl && (
+                        <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400">Cancelled Cheque</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDocPreviewModal({
+                                isOpen: true,
+                                title: `Cancelled Cheque Proof (${selectedFirm.bankName || selectedFirm.firmName})`,
+                                url: selectedFirm.cancelledChequeUrl
+                              })
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[11px] font-bold hover:bg-purple-100 transition-all cursor-pointer"
+                          >
+                            <FiEye size={12} />
+                            <span>View Cheque</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Declaration & Signatory Stamp */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiShield className="text-emerald-500" />
+                      Signatory & Authorization
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Signatory</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                          {selectedFirm.authorizedSignatoryName || selectedFirm.contactPerson || '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Designation</span>
+                        <span className="text-slate-600 dark:text-slate-300">
+                          {selectedFirm.signatoryDesignation || selectedFirm.designation || '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400">Declaration</span>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${selectedFirm.declarationAgreed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 text-slate-600'}`}>
+                          <FiCheck size={10} />
+                          {selectedFirm.declarationAgreed ? 'Agreed & Signed' : 'Self Declared'}
+                        </span>
+                      </div>
+                      {selectedFirm.companySealOrSignatureUrl && (
+                        <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400">Stamp / Signature Proof</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDocPreviewModal({
+                                isOpen: true,
+                                title: `Official Stamp / Signature (${selectedFirm.firmName})`,
+                                url: selectedFirm.companySealOrSignatureUrl
+                              })
+                            }
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold hover:bg-emerald-100 transition-all cursor-pointer"
+                          >
+                            <FiEye size={12} />
+                            <span>View Stamp Proof</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Audit & Submitter Metadata */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400">Submitted By</span>
+                    <p className="font-semibold text-slate-700 dark:text-slate-200 mt-0.5">
+                      {selectedFirm.submittedBy?.email || selectedFirm.submittedBy?.phone || 'Sales Executive / Admin'}
+                    </p>
+                    {selectedFirm.submittedBy?.role && (
+                      <span className="inline-block mt-1 text-[9px] font-extrabold uppercase px-1.5 py-0.2 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded">
+                        {selectedFirm.submittedBy.role}
+                      </span>
+                    )}
+                    <p className="text-slate-400 text-[10px] mt-1">
+                      Registered on: {selectedFirm.createdAt ? formatDateTimeDDMMYYYY(selectedFirm.createdAt) : '-'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400">Reviewed / Updated</span>
+                    <p className="font-semibold text-slate-700 dark:text-slate-200 mt-0.5">
+                      {selectedFirm.reviewedBy?.email || 'Operations / Admin'}
+                    </p>
+                    <p className="text-slate-400 text-[10px] mt-1">
+                      Last modified: {selectedFirm.updatedAt ? formatDateTimeDDMMYYYY(selectedFirm.updatedAt) : '-'}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="p-4 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleDeleteFirm(selectedFirm)}
-                  disabled={actionLoadingId === selectedFirm._id}
-                  className="flex items-center gap-1.5 px-3.5 py-2 text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
-                >
-                  <FiTrash2 className="text-sm" />
-                  <span>Delete Firm</span>
-                </button>
+                {/* 3. Sticky Drawer Footer */}
+                <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteFirm(selectedFirm)}
+                    disabled={actionLoadingId === selectedFirm._id}
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <FiTrash2 className="text-sm" />
+                    <span>Delete Firm</span>
+                  </button>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const firm = selectedFirm;
-                      setSelectedFirm(null);
-                      handleOpenEditModal(firm);
-                    }}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/20 cursor-pointer active:scale-95"
-                  >
-                    <FiEdit2 className="text-sm" />
-                    <span>Edit Firm</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedFirm(null)}
-                    className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer"
-                  >
-                    Close
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const firm = selectedFirm;
+                        setSelectedFirm(null);
+                        handleOpenEditModal(firm);
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/20 cursor-pointer active:scale-95"
+                    >
+                      <FiEdit2 className="text-sm" />
+                      <span>Edit Firm</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFirm(null)}
+                      className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer"
+                    >
+                      Close Drawer
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2789,6 +3246,72 @@ const Firms = () => {
           </div>
         </div>
       )}
+
+      {/* Lightbox Document Preview Modal (Portal) */}
+      {docPreviewModal.isOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[10002] flex items-center justify-center p-3 sm:p-5 dark:bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+            <div
+              className="fixed inset-0"
+              onClick={() => setDocPreviewModal({ isOpen: false, title: '', url: '' })}
+            />
+            <div className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col z-10 animate-in zoom-in-95 duration-200">
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/80 dark:bg-slate-950/80">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base shrink-0">
+                    <FiFileText />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                      {docPreviewModal.title || 'Document Preview'}
+                    </h4>
+                    <p className="text-[11px] font-mono text-slate-400 truncate max-w-sm sm:max-w-md">
+                      {docPreviewModal.url}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <a
+                    href={docPreviewModal.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-xs font-bold transition-all"
+                  >
+                    <FiExternalLink size={13} />
+                    <span className="hidden sm:inline">Open in New Tab</span>
+                  </a>
+                  <CopyButton text={docPreviewModal.url} />
+                  <button
+                    type="button"
+                    onClick={() => setDocPreviewModal({ isOpen: false, title: '', url: '' })}
+                    className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <FiX size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Image/Doc Content */}
+              <div className="flex-1 overflow-auto p-4 sm:p-6 flex items-center justify-center bg-slate-100/50 dark:bg-black/40 min-h-[320px]">
+                {docPreviewModal.url?.toLowerCase().endsWith('.pdf') ? (
+                  <iframe
+                    src={docPreviewModal.url}
+                    title={docPreviewModal.title}
+                    className="w-full h-[65vh] rounded-xl border border-slate-200 dark:border-white/10"
+                  />
+                ) : (
+                  <img
+                    src={docPreviewModal.url}
+                    alt={docPreviewModal.title}
+                    className="max-h-[65vh] max-w-full object-contain rounded-xl shadow-lg border border-slate-200/60 dark:border-white/10"
+                  />
+                )}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* Batch Progress Modal */}
       {batchProgress && (
