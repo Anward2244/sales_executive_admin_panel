@@ -49,13 +49,7 @@ const Notifications = () => {
   // Pagination state
   const { preferences: displayPrefs } = useDisplayPreferences();
   const [currentPage, setCurrentPage] = useState(1);
-  const [limitPerPage, setLimitPerPage] = useState(displayPrefs.rowsPerPage || 10);
-
-  useEffect(() => {
-    if (displayPrefs.rowsPerPage) {
-      setLimitPerPage(displayPrefs.rowsPerPage);
-    }
-  }, [displayPrefs.rowsPerPage]);
+  const limitPerPage = displayPrefs.rowsPerPage || 10;
 
   // Filters & Search
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'unread' | 'read'
@@ -787,25 +781,6 @@ const Notifications = () => {
               </strong>{' '}
               notifications
             </span>
-
-            {/* Rows Per Page Selector */}
-            <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 dark:border-white/10 pl-3">
-              <span className="text-[11px] text-slate-400">Per page:</span>
-              <select
-                value={limitPerPage}
-                onChange={(e) => {
-                  setLimitPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-              >
-                {[5, 10, 20, 50].map((num) => (
-                  <option key={num} value={num}>
-                    {num}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           {totalPages > 1 && (

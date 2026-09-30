@@ -424,10 +424,10 @@ export const getProductsApi = async (params = {}) => {
 
 export const createProductApi = async (productData) => {
   try {
-    return await api.post('/products', productData);
+    return await api.post('/v1/products', productData);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.post('/v1/products', productData);
+      return await api.post('/products', productData);
     }
     throw err;
   }
@@ -457,14 +457,14 @@ export const getProductByIdApi = async (id) => {
 
 export const updateProductApi = async (id, productData) => {
   try {
-    return await api.patch(`/products/${id}`, productData);
+    return await api.put(`/products/${id}`, productData);
   } catch (err) {
     if (err.response?.status === 404 || err.response?.status === 405) {
       try {
-        return await api.put(`/products/${id}`, productData);
+        return await api.put(`/v1/products/${id}`, productData);
       } catch (err2) {
-        if (err2.response?.status === 404) {
-          return await api.patch(`/v1/products/${id}`, productData);
+        if (err2.response?.status === 404 || err2.response?.status === 405) {
+          return await api.patch(`/products/${id}`, productData);
         }
         throw err2;
       }
@@ -626,6 +626,68 @@ export const updateEmailRecipientsApi = async (recipients = []) => {
 };
 
 
+
+// Brand Routing Matrix APIs
+export const getBrandRoutingMatrixApi = async () => {
+  try {
+    return await api.get('/v1/brand-routings/matrix');
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.get('/brand-routings/matrix');
+    }
+    throw err;
+  }
+};
+
+export const getBrandRoutingByBrandApi = async (brand) => {
+  const enc = encodeURIComponent(brand);
+  try {
+    return await api.get(`/v1/brand-routings/matrix/${enc}`);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.get(`/brand-routings/matrix/${enc}`);
+    }
+    throw err;
+  }
+};
+
+export const updateBrandRoutingMatrixApi = async (data) => {
+  try {
+    return await api.post('/v1/brand-routings/matrix', data);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.post('/brand-routings/matrix', data);
+    }
+    throw err;
+  }
+};
+
+export const bulkUpdateBrandRoutingMatrixApi = async (data) => {
+  try {
+    return await api.post('/v1/brand-routings/bulk-matrix', data);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.post('/brand-routings/bulk-matrix', data);
+    }
+    throw err;
+  }
+};
+
+export const resolveBrandRoutingApi = async (brand, state) => {
+  const params = new URLSearchParams();
+  if (brand) params.set('brand', brand);
+  if (state) params.set('state', state);
+  const qStr = params.toString();
+
+  try {
+    return await api.get(`/v1/brand-routings/resolve?${qStr}`);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.get(`/brand-routings/resolve?${qStr}`);
+    }
+    throw err;
+  }
+};
 
 api.interceptors.response.use(
   (response) => response,

@@ -15,7 +15,7 @@ import {
   FiGlobe
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import { getProductByIdApi, getCompaniesApi } from '@/api/axios';
+import { getProductByIdApi, getCompaniesApi, getCategoryApi } from '@/api/axios';
 import { formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import CopyButton from './CopyButton';
 
@@ -25,15 +25,17 @@ const ProductDetailsModal = ({
   productId,
   product: initialProduct = null,
   showEditButton = false,
-  onEdit = null
+  onEdit = null,
+  categories: initialCategories = []
 }) => {
   const navigate = useNavigate();
   const [product, setProduct] = useState(initialProduct);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [companies, setCompanies] = useState([]);
+  const [categories, setCategories] = useState(initialCategories);
 
-  // Fetch product and companies metadata when modal opens
+  // Fetch product and metadata when modal opens
   useEffect(() => {
     if (!isOpen) {
       setProduct(null);
@@ -51,11 +53,14 @@ const ProductDetailsModal = ({
       setError('');
 
       try {
-        const [prodRes, compRes] = await Promise.all([
+        const [prodRes, compRes, catRes] = await Promise.all([
           currentId
             ? getProductByIdApi(currentId).catch(() => ({ data: initialProduct }))
             : Promise.resolve({ data: initialProduct }),
-          getCompaniesApi().catch(() => ({ data: [] }))
+          getCompaniesApi().catch(() => ({ data: [] })),
+          initialCategories.length === 0
+            ? getCategoryApi().catch(() => ({ data: [] }))
+            : Promise.resolve({ data: initialCategories })
         ]);
 
         if (!isMounted) return;
@@ -65,6 +70,9 @@ const ProductDetailsModal = ({
 
         const compData = compRes.data?.data || (Array.isArray(compRes.data) ? compRes.data : []);
         setCompanies(compData);
+
+        const catData = catRes.data?.data || (Array.isArray(catRes.data) ? catRes.data : initialCategories);
+        setCategories(catData);
       } catch (err) {
         console.error('Failed to load product details:', err);
         if (isMounted) {
@@ -135,9 +143,36 @@ const ProductDetailsModal = ({
     };
   }, [product, companies]);
 
+  // Resolve Category details (object or ID)
+  const getCategoryDetails = useCallback(() => {
+    if (!product || !product.categoryId) return null;
+    if (typeof product.categoryId === 'object' && product.categoryId !== null) {
+      return {
+        name: product.categoryId.name || 'Unassigned',
+        code: product.categoryId.code || null,
+        id: product.categoryId._id || null
+      };
+    }
+    const catList = categories.length > 0 ? categories : initialCategories;
+    const found = catList.find((c) => c._id === product.categoryId);
+    if (found) {
+      return {
+        name: found.name || 'Unassigned',
+        code: found.code || null,
+        id: found._id || null
+      };
+    }
+    return {
+      name: product.categoryId,
+      code: null,
+      id: typeof product.categoryId === 'string' ? product.categoryId : null
+    };
+  }, [product, categories, initialCategories]);
+
   if (!isOpen) return null;
 
   const company = getCompanyDetails();
+  const category = getCategoryDetails();
   const locations = Array.isArray(product?.locations) ? product.locations : [];
 
   return createPortal(
@@ -216,12 +251,30 @@ const ProductDetailsModal = ({
                   <span>General Information</span>
                 </h3>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                   <div>
                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Brand</p>
                     <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
                       {product.brand || 'N/A'}
                     </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Category</p>
+                    {category ? (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                          {category.name}
+                        </span>
+                        {category.code && (
+                          <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                            {category.code}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400 italic">Unassigned</p>
+                    )}
                   </div>
 
                   <div>
@@ -246,46 +299,123 @@ const ProductDetailsModal = ({
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-slate-400">Product System ID:</span>
-                  <span className="font-mono text-xs text-slate-600 dark:text-slate-400">{product._id}</span>
-                  <CopyButton text={product._id} size={10} />
+                <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-slate-400">Product System ID:</span>
+                    <span className="font-mono text-xs text-slate-600 dark:text-slate-400">{product._id}</span>
+                    <CopyButton text={product._id} size={10} />
+                  </div>
+                  {category?.id && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold text-slate-400">Category ID:</span>
+                      <span className="font-mono text-xs text-slate-600 dark:text-slate-400">{category.id}</span>
+                      <CopyButton text={category.id} size={10} />
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Trading / Partner Company */}
-              <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
-                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                  <FiBriefcase className="text-emerald-500" />
-                  <span>Partner / Trading Company</span>
-                </h3>
-
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">
-                        {company.name}
-                      </span>
-                      {company.code && (
-                        <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md border border-blue-500/20">
-                          {company.code}
-                        </span>
-                      )}
-                    </div>
-                    {company.id && (
-                      <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
-                        <span>ID: {company.id}</span>
-                        <CopyButton text={company.id} size={10} />
-                      </div>
-                    )}
+              {/* Company Territory Mappings (if present) */}
+              {Array.isArray(product.companyMappings) && product.companyMappings.length > 0 ? (
+                <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                      <FiBriefcase className="text-blue-500" />
+                      <span>Company Territory Mappings ({product.companyMappings.length})</span>
+                    </h3>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                      companyMappings
+                    </span>
                   </div>
 
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                    <FiCheckCircle className="text-xs" />
-                    <span>Mapped Company</span>
-                  </span>
+                  <div className="space-y-2.5">
+                    {product.companyMappings.map((mapping, idx) => {
+                      const compObj = typeof mapping.companyId === 'object' && mapping.companyId !== null
+                        ? mapping.companyId
+                        : companies.find((c) => c._id === mapping.companyId);
+                      const compName = compObj?.name || (typeof mapping.companyId === 'string' ? mapping.companyId : 'Unassigned');
+                      const compCode = compObj?.code || null;
+                      const states = Array.isArray(mapping.states) ? mapping.states : [];
+
+                      return (
+                        <div
+                          key={idx}
+                          className="p-3.5 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 space-y-2"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                {idx + 1}
+                              </span>
+                              <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                {compName}
+                              </span>
+                              {compCode && (
+                                <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                  {compCode}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                              {states.length} {states.length === 1 ? 'state' : 'states'}
+                            </span>
+                          </div>
+
+                          {states.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 pt-1">
+                              {states.map((st, sIdx) => (
+                                <span
+                                  key={sIdx}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 text-[10px] font-medium border border-slate-200/60 dark:border-white/5"
+                                >
+                                  <FiMapPin className="text-[9px] text-blue-500 shrink-0" />
+                                  <span>{st}</span>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">No specific states assigned (All territories fallback)</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* Single Trading / Partner Company Fallback */
+                <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                  <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <FiBriefcase className="text-emerald-500" />
+                    <span>Partner / Trading Company</span>
+                  </h3>
+
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">
+                          {company.name}
+                        </span>
+                        {company.code && (
+                          <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md border border-blue-500/20">
+                            {company.code}
+                          </span>
+                        )}
+                      </div>
+                      {company.id && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                          <span>ID: {company.id}</span>
+                          <CopyButton text={company.id} size={10} />
+                        </div>
+                      )}
+                    </div>
+
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                      <FiCheckCircle className="text-xs" />
+                      <span>Mapped Company</span>
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Covered Distribution Locations */}
               <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">

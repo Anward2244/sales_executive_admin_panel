@@ -20,7 +20,8 @@ import {
   BASE_URL,
   getNotificationsApi,
   markNotificationAsReadApi,
-  markAllNotificationsAsReadApi
+  markAllNotificationsAsReadApi,
+  getFirmOnboardingRequestsApi
 } from '@/api/axios';
 import { isRouteAllowed } from '@/utils/rbac';
 import {
@@ -160,6 +161,7 @@ const Layout = () => {
   const [brokenImagesUnreadCount, setBrokenImagesUnreadCount] = useState(0);
   const [inAppNotifications, setInAppNotifications] = useState([]);
   const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
+  const [pendingOnboardingCount, setPendingOnboardingCount] = useState(0);
   const prevNotificationsRef = useRef(null);
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [browserPermission, setBrowserPermission] = useState(() => getNotificationPermission());
@@ -530,6 +532,54 @@ const Layout = () => {
     };
   }, [user, pollingConfigVersion]);
 
+  // Poll firm onboarding requests for pending count (red dot indicator)
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchPendingOnboarding = async () => {
+      if (!user) return;
+      try {
+        const response = await getFirmOnboardingRequestsApi();
+        let list = [];
+        if (response && response.data) {
+          if (Array.isArray(response.data.data)) {
+            list = response.data.data;
+          } else if (Array.isArray(response.data)) {
+            list = response.data;
+          } else if (Array.isArray(response.data.requests)) {
+            list = response.data.requests;
+          }
+        }
+        if (!isMounted) return;
+        const pending = list.filter(
+          (item) => (item.approvalStatus || 'PENDING').toUpperCase() === 'PENDING'
+        ).length;
+        setPendingOnboardingCount(pending);
+      } catch (err) {
+        console.warn('Failed to poll firm onboarding requests in Layout:', err);
+      }
+    };
+
+    fetchPendingOnboarding();
+    const intervalMs = 15000; // 15 seconds polling for fresh requests
+    const intervalId = setInterval(fetchPendingOnboarding, intervalMs);
+
+    const handleOnboardingUpdated = (e) => {
+      if (e?.detail?.pendingCount !== undefined) {
+        setPendingOnboardingCount(e.detail.pendingCount);
+      } else {
+        fetchPendingOnboarding();
+      }
+    };
+    window.addEventListener('firm-onboarding-updated', handleOnboardingUpdated);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+      window.removeEventListener('firm-onboarding-updated', handleOnboardingUpdated);
+    };
+  }, [user]);
+
   // Clear counts when visiting the page
   useEffect(() => {
     if (location.pathname === '/users' || location.pathname === '/users/list') {
@@ -539,13 +589,13 @@ const Layout = () => {
 
   // Update browser tab title with total unread notification counts
   useEffect(() => {
-    const totalNotifications = chatUnreadCount + usersUnreadCount + notificationsUnreadCount;
+    const totalNotifications = chatUnreadCount + usersUnreadCount + notificationsUnreadCount + pendingOnboardingCount;
     if (totalNotifications > 0) {
       document.title = `(${totalNotifications}) Auric`;
     } else {
       document.title = 'Auric';
     }
-  }, [chatUnreadCount, usersUnreadCount, notificationsUnreadCount]);
+  }, [chatUnreadCount, usersUnreadCount, notificationsUnreadCount, pendingOnboardingCount]);
 
   // Global event listener for image load failures
   useEffect(() => {
@@ -578,6 +628,7 @@ const Layout = () => {
     if (path === '/chat') return chatUnreadCount;
     if (path === '/users') return usersUnreadCount;
     if (path === '/notifications') return notificationsUnreadCount;
+    if (path === '/firms/onboarding' || path === '/firms') return pendingOnboardingCount;
     return 0;
   };
 
@@ -591,18 +642,20 @@ const Layout = () => {
         : 'panel-bg-light text-slate-700'
     }`}>
 
+      {/* Top-Left Ambient Glowing Blob */}
+      <div className="fixed -top-24 -left-24 w-[420px] h-[420px] sm:w-[560px] sm:h-[560px] bg-gradient-to-br from-blue-600/40 via-indigo-600/30 to-sky-400/25 rounded-full blur-[110px] pointer-events-none z-0 transform-gpu opacity-85 dark:opacity-70 mix-blend-screen" />
+
       {/* Global Ambient Glows */}
       {displayPrefs.ambientGlow && (
         isDark ? (
-          <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+          <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
             <div className="absolute top-10 left-10 w-80 h-80 bg-blue-500/30 rounded-full mix-blend-screen filter blur-[80px] opacity-60 transform-gpu animate-glow"></div>
             <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-500/20 rounded-full mix-blend-screen filter blur-[100px] opacity-70 transform-gpu animate-glow-alt" style={{ animationDelay: '-12s' }}></div>
           </div>
         ) : (
-          <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+          <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
             {/* Blue glowing moving blobs for Light Mode */}
             <div className="absolute -top-12 -left-12 w-[420px] h-[420px] bg-gradient-to-br from-blue-400/40 to-sky-400/35 rounded-full filter blur-[75px] opacity-80 transform-gpu animate-glow"></div>
-            {/* <div className="absolute bottom-0 right-0 w-[480px] h-[480px] bg-gradient-to-tl from-blue-500/35 to-indigo-400/30 rounded-full filter blur-[95px] opacity-85 transform-gpu animate-glow-alt" style={{ animationDelay: '-12s' }}></div> */}
             <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[380px] h-[380px] bg-gradient-to-tr from-sky-400/30 to-blue-500/25 rounded-full filter blur-[85px] opacity-75 transform-gpu animate-glow" style={{ animationDelay: '-25s' }}></div>
           </div>
         )
@@ -1074,6 +1127,12 @@ const Layout = () => {
                       )}
                       <span className={`font-medium text-sm whitespace-nowrap transition-all duration-300 ease-in-out ${isExpanded ? 'opacity-100 max-w-[150px] ml-3' : 'opacity-0 max-w-0 overflow-hidden ml-0'
                         }`}>{menu.name}</span>
+                      {isExpanded && parentBadgeCount > 0 && (
+                        <span className="relative flex h-2 w-2 ml-2 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500 shadow-xs"></span>
+                        </span>
+                      )}
                     </div>
 
                     <div className={`flex items-center shrink-0 transition-all duration-300 ease-in-out ${isExpanded ? 'opacity-100 max-w-[50px] ml-2' : 'opacity-0 max-w-0 overflow-hidden ml-0'
@@ -1121,6 +1180,12 @@ const Layout = () => {
                                     <SubIcon className={`text-[15px] mr-2.5 shrink-0 transition-colors ${isSubActive ? (isDark ? 'text-blue-400' : 'text-blue-600') : (isDark ? 'text-slate-500 group-hover:text-slate-300' : 'text-slate-400 group-hover:text-slate-700')}`} />
                                   )}
                                   <span className="truncate">{sub.name}</span>
+                                  {badgeCount > 0 && (
+                                    <span className="relative flex h-2 w-2 ml-1.5 shrink-0">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500 shadow-xs"></span>
+                                    </span>
+                                  )}
                                 </div>
                                 {badgeCount > 0 && (
                                   <span className="ml-2 flex h-4.5 min-w-4.5 px-1 items-center justify-center rounded-full bg-red-500 text-[10px] font-black text-white shrink-0 shadow-xs">
@@ -1207,6 +1272,9 @@ const Layout = () => {
 
       {/* MAIN CONTENT WRAPPER (Includes Header, Content, Footer) */}
       <div className={`flex-1 flex flex-col h-full overflow-hidden bg-transparent relative pt-16 lg:pt-0 lg:pl-20 transition-all duration-300 ${isExpanded ? 'lg:blur-[2px]' : 'blur-none'}`}>
+
+        {/* Ambient Top-Left Glowing Blob for Content Layout */}
+        <div className="absolute -top-24 -left-24 w-96 h-96 sm:w-[500px] sm:h-[500px] bg-gradient-to-br from-blue-500/25 via-indigo-500/20 to-sky-400/15 rounded-full blur-[100px] pointer-events-none z-0 transform-gpu opacity-80 dark:opacity-60" />
 
         {/* GLOBAL HEADER (Desktop Top Bar) */}
         <header className={`hidden lg:flex h-16 border-b items-center justify-between px-8 sticky top-0 z-40 transition-colors ${

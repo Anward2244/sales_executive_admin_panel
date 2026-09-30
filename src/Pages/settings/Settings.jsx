@@ -2166,24 +2166,28 @@ const Settings = () => {
               <div className="pt-4 border-t border-slate-200/80 dark:border-white/10">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <label className="block text-sm font-bold text-slate-900 dark:text-white">
-                      Default Rows Per Page
+                    <label className="block text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <FiSliders className="text-blue-500" />
+                      Default Table Rows Per Page
                     </label>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Sets the global pagination row limit across all data tables and lists
+                      Sets the global pagination rows limit across all data tables (Products, Firms, Users, Reports, Orders, Notifications)
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {[10, 20, 50, 100].map((count) => {
+                    {[5, 10, 20, 50, 100].map((count) => {
                       const isSelected = (displayPrefs.rowsPerPage || 10) === count;
                       return (
                         <button
                           key={count}
                           type="button"
-                          onClick={() => updateDisplayPref('rowsPerPage', count)}
+                          onClick={() => {
+                            updateDisplayPref('rowsPerPage', count);
+                            triggerFeedback(`Default pagination set to ${count} rows per page`);
+                          }}
                           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 ring-2 ring-blue-500/30'
                               : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
                           }`}
                         >

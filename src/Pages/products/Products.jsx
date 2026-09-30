@@ -22,7 +22,10 @@ import {
   FiMapPin,
   FiGlobe,
   FiChevronLeft,
-  FiChevronRight
+  FiChevronRight,
+  FiGitBranch,
+  FiZap,
+  FiExternalLink
 } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 import BulkProductImportModal, { downloadProductExcelTemplate } from './BulkProductImportModal';
@@ -38,37 +41,27 @@ import {
   createProductApi,
   updateProductApi,
   deleteProductApi,
-  getCompaniesApi
+  getCompaniesApi,
+  getBrandRoutingMatrixApi,
+  getBrandRoutingByBrandApi,
+  getCategoryApi
 } from '@/api/axios';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import { useDebounce } from '@/hooks/useDebounce';
 import { formatEntityCode } from '@/utils/formatters';
 import { validateEntityCode } from '@/utils/validators';
+import { INDIAN_STATES, POPULAR_STATES, isAllKeyword } from '@/utils/indianStates';
 
-// Popular Indian states for quick-tag selection
-const POPULAR_STATES = [
-  'Andhra Pradesh',
-  'Telangana',
-  'Delhi',
-  'Haryana',
-  'Karnataka',
-  'Maharashtra',
-  'Tamil Nadu',
-  'Uttar Pradesh',
-  'Gujarat',
-  'West Bengal',
-  'Kerala',
-  'Punjab',
-  'Rajasthan'
-];
 
 // Initial form state for Add/Edit product according to new schema
 const INITIAL_PRODUCT_FORM = {
   name: '',
   sku: '',
   brand: 'Realme',
+  categoryId: '',
   companyId: '',
   locations: [],
+  companyMappings: [],
   unit: 'PCS',
   description: '',
   isActive: true
@@ -78,6 +71,8 @@ const Products = () => {
   // Data States
   const [products, setProducts] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [brandMatrix, setBrandMatrix] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -86,6 +81,7 @@ const Products = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState('ALL');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
   const [selectedLocationFilter, setSelectedLocationFilter] = useState('ALL');
   const [selectedBrandFilter, setSelectedBrandFilter] = useState('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
@@ -94,14 +90,7 @@ const Products = () => {
   // Pagination State
   const { preferences: displayPrefs } = useDisplayPreferences();
   const [currentPage, setCurrentPage] = useState(1);
-  const [limitPerPage, setLimitPerPage] = useState(displayPrefs.rowsPerPage || 10);
-  const itemsPerPage = limitPerPage;
-
-  useEffect(() => {
-    if (displayPrefs.rowsPerPage) {
-      setLimitPerPage(displayPrefs.rowsPerPage);
-    }
-  }, [displayPrefs.rowsPerPage]);
+  const itemsPerPage = displayPrefs.rowsPerPage || 10;
 
   // Modal & Dropdown States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -111,8 +100,13 @@ const Products = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState(INITIAL_PRODUCT_FORM);
   const [customLocationInput, setCustomLocationInput] = useState('');
+  const [customMappingInputs, setCustomMappingInputs] = useState({});
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Auto-Mapping from Brand Routing Matrix States
+  const [isAutoMappingBrand, setIsAutoMappingBrand] = useState(false);
+  const [autoMappedBanner, setAutoMappedBanner] = useState(null);
 
   // Details Modal & Delete Confirm Modal
   const [detailsProduct, setDetailsProduct] = useState(null);
@@ -154,7 +148,7 @@ const Products = () => {
     };
   }, [isActionsOpen]);
 
-  // Fetch products & companies
+  // Fetch products, companies, categories & brand routing matrix
   const fetchData = useCallback(async (isSilent = false) => {
     if (isSilent) {
       setRefreshing(true);
@@ -164,16 +158,22 @@ const Products = () => {
     setError(null);
 
     try {
-      const [prodRes, compRes] = await Promise.all([
+      const [prodRes, compRes, matrixRes, catRes] = await Promise.all([
         getProductsApi(),
-        getCompaniesApi().catch(() => ({ data: [] }))
+        getCompaniesApi().catch(() => ({ data: [] })),
+        getBrandRoutingMatrixApi().catch(() => ({ data: [] })),
+        getCategoryApi().catch(() => ({ data: [] }))
       ]);
 
       const prodData = prodRes?.data?.data || (Array.isArray(prodRes?.data) ? prodRes?.data : []);
       const compData = compRes?.data?.data || (Array.isArray(compRes?.data) ? compRes?.data : []);
+      const matrixData = matrixRes?.data?.data || (Array.isArray(matrixRes?.data) ? matrixRes?.data : []);
+      const catData = catRes?.data?.data || (Array.isArray(catRes?.data) ? catRes?.data : []);
 
       setProducts(prodData);
       setCompanies(compData);
+      setBrandMatrix(matrixData);
+      setCategories(catData);
     } catch (err) {
       console.error('Failed to load products:', err);
       setError(err.response?.data?.message || 'Failed to fetch catalog products. Please check network connectivity.');
@@ -187,7 +187,7 @@ const Products = () => {
     fetchData();
   }, [fetchData]);
 
-  // Derive unique brands
+  // Derive unique brands from products
   const uniqueBrands = useMemo(() => {
     const brandsSet = new Set();
     products.forEach((p) => {
@@ -198,7 +198,55 @@ const Products = () => {
     return Array.from(brandsSet).sort();
   }, [products]);
 
-  // Derive unique locations
+  // Derive matrix brands (brands configured in brand routing matrix)
+  const matrixBrands = useMemo(() => {
+    const list = [];
+    (brandMatrix || []).forEach((item) => {
+      if (item.brand && item.brand.toUpperCase() !== 'ALL') {
+        list.push({
+          brand: item.brand,
+          rulesCount: item.rulesCount || item.rules?.length || 0,
+          rules: item.rules || []
+        });
+      }
+    });
+    return list.sort((a, b) => a.brand.localeCompare(b.brand));
+  }, [brandMatrix]);
+
+  // Combined list of all known brands (from matrix + products)
+  const allKnownBrands = useMemo(() => {
+    const brandMap = new Map();
+    (brandMatrix || []).forEach((item) => {
+      if (item.brand) {
+        brandMap.set(item.brand.trim(), {
+          brand: item.brand.trim(),
+          hasMatrix: true,
+          rulesCount: item.rulesCount || item.rules?.length || 0
+        });
+      }
+    });
+    uniqueBrands.forEach((b) => {
+      if (!brandMap.has(b)) {
+        brandMap.set(b, {
+          brand: b,
+          hasMatrix: false,
+          rulesCount: 0
+        });
+      }
+    });
+    return Array.from(brandMap.values()).sort((a, b) => {
+      if (a.brand === 'ALL') return 1;
+      if (b.brand === 'ALL') return -1;
+      return a.brand.localeCompare(b.brand);
+    });
+  }, [brandMatrix, uniqueBrands]);
+
+  // Check if current form brand has active rules in the routing matrix
+  const activeBrandGroup = useMemo(() => {
+    const curBrand = (formData.brand || '').trim().toLowerCase();
+    if (!curBrand) return null;
+    return (brandMatrix || []).find((m) => (m.brand || '').trim().toLowerCase() === curBrand);
+  }, [formData.brand, brandMatrix]);
   const uniqueLocations = useMemo(() => {
     const locSet = new Set();
     products.forEach((p) => {
@@ -239,13 +287,25 @@ const Products = () => {
           if (product.brand !== selectedBrandFilter) return false;
         }
 
-        // Search Query (name, sku, brand, description, company name, company code, locations)
+        // Category Filter
+        if (selectedCategoryFilter !== 'ALL') {
+          const pCatId = typeof product.categoryId === 'object' ? product.categoryId?._id : product.categoryId;
+          if (pCatId !== selectedCategoryFilter) return false;
+        }
+
+        // Search Query (name, sku, brand, description, category, company name, company code, locations)
         if (debouncedSearchQuery.trim()) {
           const q = debouncedSearchQuery.toLowerCase().trim();
           const name = String(product.name || '').toLowerCase();
           const sku = String(product.sku || '').toLowerCase();
           const brand = String(product.brand || '').toLowerCase();
           const desc = String(product.description || '').toLowerCase();
+          const catName = typeof product.categoryId === 'object'
+            ? String(product.categoryId?.name || '').toLowerCase()
+            : String(categories.find((c) => c._id === product.categoryId)?.name || '').toLowerCase();
+          const catCode = typeof product.categoryId === 'object'
+            ? String(product.categoryId?.code || '').toLowerCase()
+            : String(categories.find((c) => c._id === product.categoryId)?.code || '').toLowerCase();
           const compName = typeof product.companyId === 'object' ? String(product.companyId?.name || '').toLowerCase() : '';
           const compCode = typeof product.companyId === 'object' ? String(product.companyId?.code || '').toLowerCase() : '';
           const locsStr = Array.isArray(product.locations) ? product.locations.join(' ').toLowerCase() : '';
@@ -255,6 +315,8 @@ const Products = () => {
             sku.includes(q) ||
             brand.includes(q) ||
             desc.includes(q) ||
+            catName.includes(q) ||
+            catCode.includes(q) ||
             compName.includes(q) ||
             compCode.includes(q) ||
             locsStr.includes(q)
@@ -268,7 +330,7 @@ const Products = () => {
         if (sortBy === 'oldest') return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
         return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
       });
-  }, [products, debouncedSearchQuery, selectedCompanyFilter, selectedLocationFilter, selectedBrandFilter, selectedStatusFilter, sortBy]);
+  }, [products, debouncedSearchQuery, selectedCompanyFilter, selectedCategoryFilter, selectedLocationFilter, selectedBrandFilter, selectedStatusFilter, sortBy, categories]);
 
   // Product count statistics
   const { activeCount, inactiveCount } = useMemo(() => {
@@ -284,7 +346,7 @@ const Products = () => {
   // Reset pagination on filter or search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchQuery, selectedCompanyFilter, selectedLocationFilter, selectedBrandFilter, selectedStatusFilter, sortBy, itemsPerPage]);
+  }, [debouncedSearchQuery, selectedCompanyFilter, selectedCategoryFilter, selectedLocationFilter, selectedBrandFilter, selectedStatusFilter, sortBy, itemsPerPage]);
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
@@ -307,16 +369,199 @@ const Products = () => {
     return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
   }, [totalPages, currentPage]);
 
+  // Resolve brand routing rules from matrix or live backend
+  const resolveBrandRoutingRules = useCallback(
+    async (brandName) => {
+      if (!brandName || typeof brandName !== 'string') return null;
+      const target = brandName.trim();
+      if (!target) return null;
+
+      // 1. Check local loaded matrix first (case-insensitive)
+      let matchedGroup = (brandMatrix || []).find(
+        (item) => item.brand && item.brand.trim().toLowerCase() === target.toLowerCase()
+      );
+
+      // 2. If not found in loaded matrix, query backend API
+      if (!matchedGroup) {
+        try {
+          const res = await getBrandRoutingByBrandApi(target);
+          const data = res?.data?.data || res?.data;
+          if (data) {
+            if (Array.isArray(data.rules) && data.rules.length > 0) {
+              matchedGroup = data;
+            } else if (Array.isArray(data) && data.length > 0) {
+              matchedGroup = { brand: target, rules: data };
+            }
+          }
+        } catch {
+          // Ignore error and fall through to global ALL fallback
+        }
+      }
+
+      // 3. Fallback to global "ALL" brand rules if no brand-specific rules
+      if (!matchedGroup || !Array.isArray(matchedGroup.rules) || matchedGroup.rules.length === 0) {
+        matchedGroup = (brandMatrix || []).find(
+          (item) => item.brand && item.brand.trim().toUpperCase() === 'ALL'
+        );
+      }
+
+      if (matchedGroup && Array.isArray(matchedGroup.rules) && matchedGroup.rules.length > 0) {
+        return {
+          brand: matchedGroup.brand,
+          rules: matchedGroup.rules,
+          isFallback: matchedGroup.brand?.toUpperCase() === 'ALL' && target.toUpperCase() !== 'ALL'
+        };
+      }
+
+      return null;
+    },
+    [brandMatrix]
+  );
+
+  // Apply brand routing rules to form state
+  const applyBrandRoutingToForm = useCallback(
+    (routingResult, options = { notify: true }) => {
+      if (!routingResult || !Array.isArray(routingResult.rules) || routingResult.rules.length === 0) {
+        return false;
+      }
+
+      const { rules, brand: sourceBrand, isFallback } = routingResult;
+
+      const newMappings = rules
+        .map((r) => {
+          const cId = typeof r.companyId === 'object' ? r.companyId?._id : (r.companyId || '');
+          const rawStates = Array.isArray(r.states) ? r.states : [];
+          // Wildcard '*' or 'ALL' expands to all 36 Indian states
+          const states =
+            rawStates.includes('*') || rawStates.some((s) => String(s).toUpperCase() === 'ALL')
+              ? [...INDIAN_STATES]
+              : rawStates;
+          return {
+            companyId: cId,
+            states
+          };
+        })
+        .filter((m) => Boolean(m.companyId));
+
+      if (newMappings.length === 0) return false;
+
+      // Extract all unique states
+      const stateSet = new Set();
+      newMappings.forEach((m) => {
+        m.states.forEach((s) => stateSet.add(s));
+      });
+
+      setFormData((prev) => ({
+        ...prev,
+        companyId: newMappings[0].companyId,
+        locations: Array.from(stateSet),
+        companyMappings: newMappings
+      }));
+
+      const bannerText = isFallback
+        ? `Applied global standard routing rules (ALL) for brand "${sourceBrand}" (${newMappings.length} partner company mapped)`
+        : `Automatically mapped ${newMappings.length} partner ${newMappings.length === 1 ? 'company' : 'companies'} & ${stateSet.size} states from Brand Routing Matrix for "${sourceBrand}"`;
+
+      setAutoMappedBanner(bannerText);
+
+      if (options.notify) {
+        showToast(bannerText, 'success');
+      }
+
+      return true;
+    },
+    [showToast]
+  );
+
+  // Brand selection handler (triggered when picking a brand or changing brand input)
+  const handleBrandSelect = async (newBrand) => {
+    if (!newBrand) return;
+    const targetBrand = newBrand.trim();
+
+    // Update form data brand & auto-generate SKU if needed
+    setFormData((prev) => {
+      const updated = { ...prev, brand: targetBrand };
+      if (!editingProduct && !prev.skuManual) {
+        const prefix = targetBrand.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+        const namePart = (prev.name || '')
+          .toUpperCase()
+          .replace(/[^A-Z0-9\s]/g, '')
+          .trim()
+          .split(/\s+/)
+          .slice(0, 2)
+          .join('-');
+        if (namePart) {
+          updated.sku = `${prefix}-${namePart}`.slice(0, 18);
+        }
+      }
+      return updated;
+    });
+
+    // Automatically resolve and map companies & states from brand routings
+    setIsAutoMappingBrand(true);
+    try {
+      const resolved = await resolveBrandRoutingRules(targetBrand);
+      if (resolved) {
+        applyBrandRoutingToForm(resolved, { notify: true });
+      } else {
+        setAutoMappedBanner(null);
+      }
+    } finally {
+      setIsAutoMappingBrand(false);
+    }
+  };
+
+  // Manual trigger to re-sync current brand with Brand Routing Matrix
+  const handleManualSyncBrandRouting = async () => {
+    const brandToSync = formData.brand?.trim();
+    if (!brandToSync) {
+      showToast('Please enter a brand name first.', 'error');
+      return;
+    }
+    setIsAutoMappingBrand(true);
+    try {
+      const resolved = await resolveBrandRoutingRules(brandToSync);
+      if (resolved) {
+        applyBrandRoutingToForm(resolved, { notify: true });
+      } else {
+        showToast(`No routing rules found for "${brandToSync}" in Brand Routing Matrix.`, 'error');
+      }
+    } finally {
+      setIsAutoMappingBrand(false);
+    }
+  };
+
   // Open Modal for Add
-  const handleOpenAdd = () => {
+  const handleOpenAdd = async () => {
     setEditingProduct(null);
+    const initialBrand = matrixBrands.length > 0 ? matrixBrands[0].brand : (uniqueBrands[0] || 'Realme');
+    const initialCompId = companies.length > 0 ? companies[0]._id : '';
+
     setFormData({
       ...INITIAL_PRODUCT_FORM,
-      companyId: companies.length > 0 ? companies[0]._id : ''
+      brand: initialBrand,
+      companyId: initialCompId,
+      locations: [],
+      companyMappings: initialCompId ? [{ companyId: initialCompId, states: [] }] : []
     });
     setCustomLocationInput('');
+    setCustomMappingInputs({});
     setFormError('');
+    setAutoMappedBanner(null);
     setIsModalOpen(true);
+
+    // Automatically map companies and states for initial brand
+    if (initialBrand) {
+      setIsAutoMappingBrand(true);
+      try {
+        const resolved = await resolveBrandRoutingRules(initialBrand);
+        if (resolved) {
+          applyBrandRoutingToForm(resolved, { notify: false });
+        }
+      } finally {
+        setIsAutoMappingBrand(false);
+      }
+    }
   };
 
   // Open Modal for Edit
@@ -324,18 +569,38 @@ const Products = () => {
     if (e) e.stopPropagation();
     setEditingProduct(product);
     const compId = typeof product.companyId === 'object' ? product.companyId?._id : (product.companyId || '');
+    const catId = typeof product.categoryId === 'object' ? product.categoryId?._id : (product.categoryId || '');
+
+    // Parse existing companyMappings if present
+    let initialMappings = [];
+    if (Array.isArray(product.companyMappings) && product.companyMappings.length > 0) {
+      initialMappings = product.companyMappings.map((m) => ({
+        companyId: typeof m.companyId === 'object' ? m.companyId?._id : (m.companyId || ''),
+        states: Array.isArray(m.states) ? [...m.states] : []
+      }));
+    } else if (compId) {
+      initialMappings = [{
+        companyId: compId,
+        states: Array.isArray(product.locations) ? [...product.locations] : []
+      }];
+    }
+
     setFormData({
       name: product.name || '',
       sku: product.sku || '',
       brand: product.brand || 'Realme',
+      categoryId: catId || '',
       companyId: compId || (companies.length > 0 ? companies[0]._id : ''),
       locations: Array.isArray(product.locations) ? [...product.locations] : [],
+      companyMappings: initialMappings,
       unit: product.unit || 'PCS',
       description: product.description || '',
       isActive: product.isActive !== undefined ? Boolean(product.isActive) : true
     });
     setCustomLocationInput('');
+    setCustomMappingInputs({});
     setFormError('');
+    setAutoMappedBanner(null);
     setIsModalOpen(true);
   };
 
@@ -358,39 +623,104 @@ const Products = () => {
     setFormData(updated);
   };
 
-  // Location Tag Management
-  const handleToggleLocation = (loc) => {
-    const currentLocs = formData.locations || [];
-    if (currentLocs.includes(loc)) {
-      setFormData({
-        ...formData,
-        locations: currentLocs.filter((l) => l !== loc)
-      });
-    } else {
-      setFormData({
-        ...formData,
-        locations: [...currentLocs, loc]
-      });
-    }
+  // Company Mappings Handlers for Multi-Company Territory Routing
+  const handleAddCompanyMapping = () => {
+    const existingCompIds = new Set((formData.companyMappings || []).map((m) => m.companyId));
+    const nextUnusedComp = companies.find((c) => !existingCompIds.has(c._id));
+    const compToAssign = nextUnusedComp ? nextUnusedComp._id : (companies[0]?._id || '');
+
+    setFormData((prev) => ({
+      ...prev,
+      companyMappings: [
+        ...(prev.companyMappings || []),
+        { companyId: compToAssign, states: [] }
+      ]
+    }));
   };
 
-  const handleAddCustomLocation = () => {
-    const trimmed = customLocationInput.trim();
+  const handleRemoveCompanyMapping = (index) => {
+    setFormData((prev) => {
+      const updated = (prev.companyMappings || []).filter((_, idx) => idx !== index);
+      return {
+        ...prev,
+        companyMappings: updated,
+        companyId: updated.length > 0 ? updated[0].companyId : prev.companyId
+      };
+    });
+  };
+
+  const handleUpdateCompanyMappingCompany = (index, newCompanyId) => {
+    setFormData((prev) => {
+      const updated = [...(prev.companyMappings || [])];
+      if (updated[index]) {
+        updated[index] = { ...updated[index], companyId: newCompanyId };
+      }
+      return {
+        ...prev,
+        companyMappings: updated,
+        companyId: index === 0 ? newCompanyId : prev.companyId
+      };
+    });
+  };
+
+  const handleToggleMappingState = (mappingIndex, stateName) => {
+    setFormData((prev) => {
+      const updated = [...(prev.companyMappings || [])];
+      if (!updated[mappingIndex]) return prev;
+      const currentStates = updated[mappingIndex].states || [];
+      const nextStates = currentStates.includes(stateName)
+        ? currentStates.filter((s) => s !== stateName)
+        : [...currentStates, stateName];
+      updated[mappingIndex] = { ...updated[mappingIndex], states: nextStates };
+      return {
+        ...prev,
+        companyMappings: updated
+      };
+    });
+  };
+
+  const handleSelectAllStatesForMapping = (mappingIndex) => {
+    setFormData((prev) => {
+      const updated = [...(prev.companyMappings || [])];
+      if (!updated[mappingIndex]) return prev;
+      updated[mappingIndex] = { ...updated[mappingIndex], states: [...INDIAN_STATES] };
+      return {
+        ...prev,
+        companyMappings: updated
+      };
+    });
+  };
+
+  const handleClearStatesForMapping = (mappingIndex) => {
+    setFormData((prev) => {
+      const updated = [...(prev.companyMappings || [])];
+      if (!updated[mappingIndex]) return prev;
+      updated[mappingIndex] = { ...updated[mappingIndex], states: [] };
+      return {
+        ...prev,
+        companyMappings: updated
+      };
+    });
+  };
+
+  const handleAddCustomLocationToMapping = (mappingIndex, text) => {
+    const trimmed = (text || '').trim();
     if (!trimmed) return;
-    const currentLocs = formData.locations || [];
-    if (!currentLocs.includes(trimmed)) {
-      setFormData({
-        ...formData,
-        locations: [...currentLocs, trimmed]
-      });
+    if (isAllKeyword(trimmed)) {
+      handleSelectAllStatesForMapping(mappingIndex);
+      return;
     }
-    setCustomLocationInput('');
-  };
-
-  const handleRemoveLocation = (loc) => {
-    setFormData({
-      ...formData,
-      locations: (formData.locations || []).filter((l) => l !== loc)
+    setFormData((prev) => {
+      const updated = [...(prev.companyMappings || [])];
+      if (!updated[mappingIndex]) return prev;
+      const currentStates = updated[mappingIndex].states || [];
+      if (!currentStates.includes(trimmed)) {
+        updated[mappingIndex] = { ...updated[mappingIndex], states: [...currentStates, trimmed] };
+      }
+      return {
+        ...prev,
+        companyMappings: updated
+      };
     });
   };
 
@@ -412,9 +742,35 @@ const Products = () => {
       setFormError('Brand name is required.');
       return;
     }
-    if (!formData.companyId) {
-      setFormError('Please select a trading company.');
+
+    // Format & sanitize companyMappings
+    let cleanMappings = [];
+    if (Array.isArray(formData.companyMappings) && formData.companyMappings.length > 0) {
+      cleanMappings = formData.companyMappings
+        .filter((m) => m && m.companyId)
+        .map((m) => ({
+          companyId: typeof m.companyId === 'object' ? m.companyId?._id : m.companyId,
+          states: Array.isArray(m.states) ? m.states : []
+        }));
+    }
+
+    const effectiveCompanyId = cleanMappings.length > 0 ? cleanMappings[0].companyId : formData.companyId;
+
+    if (!effectiveCompanyId) {
+      setFormError('Please select at least one partner company.');
       return;
+    }
+
+    // Determine effective locations (flatten union of states across mappings, or fallback to formData.locations)
+    let effectiveLocations = formData.locations || [];
+    if (cleanMappings.length > 0) {
+      const stateSet = new Set();
+      cleanMappings.forEach((m) => {
+        (m.states || []).forEach((st) => stateSet.add(st));
+      });
+      if (stateSet.size > 0) {
+        effectiveLocations = Array.from(stateSet);
+      }
     }
 
     setSubmitting(true);
@@ -423,8 +779,10 @@ const Products = () => {
         name: formData.name.trim(),
         sku: formData.sku.trim().toUpperCase(),
         brand: formData.brand.trim(),
-        companyId: formData.companyId,
-        locations: formData.locations || [],
+        categoryId: formData.categoryId ? formData.categoryId : undefined,
+        companyId: effectiveCompanyId,
+        locations: effectiveLocations,
+        companyMappings: cleanMappings.length > 0 ? cleanMappings : [{ companyId: effectiveCompanyId, states: effectiveLocations }],
         unit: formData.unit.trim() || 'PCS',
         description: formData.description.trim(),
         isActive: Boolean(formData.isActive)
@@ -433,10 +791,14 @@ const Products = () => {
       if (editingProduct) {
         const res = await updateProductApi(editingProduct._id, payload);
         const updated = res.data?.data || res.data || { ...editingProduct, ...payload };
-        // Populate companyId object if available from companies list
+        // Populate companyId and categoryId object if available
         const matchedComp = companies.find((c) => c._id === payload.companyId);
         if (matchedComp && typeof updated.companyId !== 'object') {
           updated.companyId = matchedComp;
+        }
+        const matchedCat = categories.find((c) => c._id === payload.categoryId);
+        if (matchedCat && typeof updated.categoryId !== 'object') {
+          updated.categoryId = matchedCat;
         }
         setProducts((prev) =>
           prev.map((p) => (p._id === editingProduct._id ? { ...p, ...updated } : p))
@@ -449,6 +811,10 @@ const Products = () => {
           const matchedComp = companies.find((c) => c._id === payload.companyId);
           if (matchedComp && typeof created.companyId !== 'object') {
             created.companyId = matchedComp;
+          }
+          const matchedCat = categories.find((c) => c._id === payload.categoryId);
+          if (matchedCat && typeof created.categoryId !== 'object') {
+            created.categoryId = matchedCat;
           }
           setProducts((prev) => [created, ...prev]);
         } else {
@@ -948,6 +1314,24 @@ const Products = () => {
             </div>
           )}
 
+          {/* Category Filter */}
+          {categories.length > 0 && (
+            <div className="min-w-[140px]">
+              <CustomDropdown
+                value={selectedCategoryFilter}
+                onChange={(val) => setSelectedCategoryFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Categories' },
+                  ...categories.map((c) => ({
+                    value: c._id,
+                    label: c.name || c.code
+                  }))
+                ]}
+                statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+              />
+            </div>
+          )}
+
           {/* Status Filter */}
           <div className="min-w-[120px]">
             <CustomDropdown
@@ -977,12 +1361,13 @@ const Products = () => {
           </div>
 
           {/* Reset Filters */}
-          {(searchQuery || selectedCompanyFilter !== 'ALL' || selectedLocationFilter !== 'ALL' || selectedBrandFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || sortBy !== 'newest') && (
+          {(searchQuery || selectedCompanyFilter !== 'ALL' || selectedCategoryFilter !== 'ALL' || selectedLocationFilter !== 'ALL' || selectedBrandFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || sortBy !== 'newest') && (
             <button
               type="button"
               onClick={() => {
                 setSearchQuery('');
                 setSelectedCompanyFilter('ALL');
+                setSelectedCategoryFilter('ALL');
                 setSelectedLocationFilter('ALL');
                 setSelectedBrandFilter('ALL');
                 setSelectedStatusFilter('ALL');
@@ -1076,6 +1461,7 @@ const Products = () => {
                   <th className="py-4 px-5 text-center w-16 whitespace-nowrap">S.No.</th>
                   <th className="py-4 px-5 whitespace-nowrap">Product Details</th>
                   <th className="py-4 px-5 whitespace-nowrap">Brand</th>
+                  <th className="py-4 px-5 whitespace-nowrap">Category</th>
                   <th className="py-4 px-5 whitespace-nowrap">Partner Company</th>
                   <th className="py-4 px-5 whitespace-nowrap">Covered Locations</th>
                   <th className="py-4 px-5 text-center whitespace-nowrap">Unit</th>
@@ -1091,6 +1477,14 @@ const Products = () => {
                   const serialNumber = indexOfFirstItem + idx + 1;
                   const isSelected = selectedProductIds.includes(product._id);
                   const locations = Array.isArray(product.locations) ? product.locations : [];
+                  const pCatId = typeof product.categoryId === 'object' ? product.categoryId?._id : product.categoryId;
+                  const matchedCat = categories.find((c) => c._id === pCatId);
+                  const categoryName = typeof product.categoryId === 'object' && product.categoryId?.name
+                    ? product.categoryId.name
+                    : (matchedCat ? matchedCat.name : '');
+                  const categoryCode = typeof product.categoryId === 'object' && product.categoryId?.code
+                    ? product.categoryId.code
+                    : (matchedCat ? matchedCat.code : '');
 
                   return (
                     <tr
@@ -1144,17 +1538,45 @@ const Products = () => {
                         </span>
                       </td>
 
+                      {/* Category */}
+                      <td className="py-4 px-5 whitespace-nowrap">
+                        {categoryName ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20">
+                              <FiTag className="text-[10px]" />
+                              <span>{categoryName}</span>
+                            </span>
+                            {categoryCode && (
+                              <span className="font-mono text-[10px] text-slate-400">
+                                ({categoryCode})
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">Unassigned</span>
+                        )}
+                      </td>
+
                       {/* Partner Company */}
                       <td className="py-4 px-5 whitespace-nowrap">
                         {compName ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                              {compName}
-                            </span>
-                            {compCode && (
-                              <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                {compCode}
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                {compName}
                               </span>
+                              {compCode && (
+                                <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                  {compCode}
+                                </span>
+                              )}
+                            </div>
+                            {Array.isArray(product.companyMappings) && product.companyMappings.length > 1 && (
+                              <div className="flex items-center gap-1">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                  +{product.companyMappings.length - 1} more partner{product.companyMappings.length > 2 ? 's' : ''}
+                                </span>
+                              </div>
                             )}
                           </div>
                         ) : (
@@ -1258,25 +1680,6 @@ const Products = () => {
                   </strong>{' '}
                   of <strong className="text-slate-800 dark:text-slate-200">{filteredProducts.length}</strong> products
                 </span>
-
-                {/* Rows Per Page Selector */}
-                <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 dark:border-white/10 pl-3">
-                  <span className="text-[11px] text-slate-400">Per page:</span>
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setLimitPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                  >
-                    {[5, 10, 20, 50].map((num) => (
-                      <option key={num} value={num}>
-                        {num}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               {totalPages > 1 && (
@@ -1380,8 +1783,8 @@ const Products = () => {
                 />
               </div>
 
-              {/* SKU & Brand Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* SKU, Brand, Category & Unit Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     SKU Code *
@@ -1391,42 +1794,83 @@ const Products = () => {
                     value={formData.sku}
                     onChange={(e) => setFormData({ ...formData, sku: formatEntityCode(e.target.value), skuManual: true })}
                     placeholder="e.g. REALME-BW3-YLW"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 uppercase"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 uppercase"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Brand Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.brand}
-                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    placeholder="e.g. Realme"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
-                    required
-                  />
-                </div>
-              </div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Brand Name *
+                    </label>
+                    {activeBrandGroup && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-md border border-emerald-500/20">
+                        <FiZap className="text-[10px]" />
+                        <span>Matrix Configured</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      list="brand-datalist-options"
+                      value={formData.brand}
+                      onChange={(e) => handleBrandSelect(e.target.value)}
+                      placeholder="e.g. Realme, OnePlus, Apple"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                      required
+                    />
+                    <datalist id="brand-datalist-options">
+                      {allKnownBrands.map((b) => (
+                        <option key={b.brand} value={b.brand}>
+                          {b.hasMatrix ? `${b.brand} (${b.rulesCount} routing rules)` : b.brand}
+                        </option>
+                      ))}
+                    </datalist>
+                  </div>
 
-              {/* Company & Unit Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Quick Select Brand Chips from Matrix */}
+                  {matrixBrands.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1 mt-1.5 max-h-16 overflow-y-auto">
+                      <span className="text-[10px] text-slate-400 font-semibold mr-0.5">Quick Brand:</span>
+                      {matrixBrands.slice(0, 8).map((mb) => (
+                        <button
+                          key={mb.brand}
+                          type="button"
+                          onClick={() => handleBrandSelect(mb.brand)}
+                          className={`px-2 py-0.5 text-[10px] font-semibold rounded-md border transition-all cursor-pointer ${
+                            (formData.brand || '').trim().toLowerCase() === mb.brand.toLowerCase()
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-2xs font-bold'
+                              : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
+                          }`}
+                        >
+                          {mb.brand}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Partner Company *
-                  </label>
-                  <CustomDropdown
-                    value={formData.companyId}
-                    onChange={(val) => setFormData({ ...formData, companyId: val })}
-                    defaultLabel="Select Partner Company"
-                    options={companies.map((c) => ({
-                      value: c._id,
-                      label: `${c.name} ${c.code ? `(${c.code})` : ''}`
-                    }))}
-                    statusColor="!px-3.5 !py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Category
+                    </label>
+                    <span className="text-[10px] font-mono text-slate-400">categoryId</span>
+                  </div>
+                  <select
+                    value={formData.categoryId || ''}
+                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 cursor-pointer"
+                  >
+                    <option value="">Select Category (None)</option>
+                    {categories.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {c.name} {c.code ? `(${c.code})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -1437,88 +1881,225 @@ const Products = () => {
                     type="text"
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    placeholder="e.g. PCS, BOX, SET"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden uppercase"
+                    placeholder="e.g. PCS, BOX"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden uppercase"
                     required
                   />
                 </div>
               </div>
 
-              {/* Covered Locations / Distribution Territories */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Distribution Locations / States
-                </label>
-                <p className="text-[11px] text-slate-400 mb-2">
-                  Select covered states or type custom cities/regions and press Enter.
-                </p>
-
-                {/* Selected Location Chips */}
-                {formData.locations && formData.locations.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-2.5 p-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
-                    {formData.locations.map((loc, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold border border-blue-500/20"
-                      >
-                        <FiMapPin className="text-[10px]" />
-                        <span>{loc}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveLocation(loc)}
-                          className="hover:text-rose-500 ml-0.5 cursor-pointer"
-                        >
-                          <FiX size={12} />
-                        </button>
+              {/* Company Territory Routing (companyMappings) */}
+              <div className="space-y-3 pt-2 border-t border-slate-200/80 dark:border-white/10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <FiBriefcase className="text-blue-500" />
+                      <span>Company Territory Routing</span>
+                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        companyMappings
                       </span>
-                    ))}
+                    </label>
+                    <p className="text-[11px] text-slate-400">
+                      Auto-mapped from Brand Routing Matrix or customize manually per trading partner.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleManualSyncBrandRouting}
+                      disabled={isAutoMappingBrand || !formData.brand}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/20 transition-all cursor-pointer disabled:opacity-40"
+                      title="Fetch and re-apply routing matrix rules for this brand"
+                    >
+                      <FiZap className={`text-xs ${isAutoMappingBrand ? 'animate-spin' : ''}`} />
+                      <span>Sync Matrix</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddCompanyMapping}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-500/20 transition-all cursor-pointer"
+                    >
+                      <FiPlus className="text-xs" />
+                      <span>Add Partner</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Auto-Mapped Notification Banner */}
+                {autoMappedBanner && (
+                  <div className="flex items-center justify-between p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-700 dark:text-blue-300 text-xs animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2">
+                      <FiZap className="text-sm shrink-0 text-blue-500" />
+                      <span className="font-medium">{autoMappedBanner}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAutoMappedBanner(null)}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer ml-2"
+                    >
+                      <FiX size={12} />
+                    </button>
                   </div>
                 )}
 
-                {/* Quick Toggle Popular States */}
-                <div className="flex flex-wrap gap-1.5 mb-2.5">
-                  {POPULAR_STATES.map((state) => {
-                    const isSelected = formData.locations?.includes(state);
+                {/* Mapping Cards */}
+                <div className="space-y-3">
+                  {(formData.companyMappings || []).map((mapping, mIdx) => {
+                    const compCount = (formData.companyMappings || []).length;
                     return (
-                      <button
-                        key={state}
-                        type="button"
-                        onClick={() => handleToggleLocation(state)}
-                        className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
-                        }`}
+                      <div
+                        key={mIdx}
+                        className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3"
                       >
-                        {isSelected ? '✓ ' : '+ '}{state}
-                      </button>
+                        {/* Header of mapping: Company dropdown + Delete */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-1">
+                            <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                              {mIdx + 1}
+                            </span>
+                            <div className="flex-1">
+                              <CustomDropdown
+                                value={mapping.companyId}
+                                onChange={(val) => handleUpdateCompanyMappingCompany(mIdx, val)}
+                                defaultLabel="Select Trading Company"
+                                options={companies.map((c) => ({
+                                  value: c._id,
+                                  label: `${c.name} ${c.code ? `(${c.code})` : ''}`
+                                }))}
+                                statusColor="!px-3 !py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+                              />
+                            </div>
+                          </div>
+
+                          {compCount > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCompanyMapping(mIdx)}
+                              className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all cursor-pointer shrink-0"
+                              title="Remove this company mapping"
+                            >
+                              <FiTrash2 className="text-sm" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Assigned States */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                              <FiMapPin className="text-[10px] text-blue-500" />
+                              <span>Covered States ({mapping.states?.length || 0})</span>
+                            </span>
+                            <div className="flex items-center gap-2 text-[10px]">
+                              <button
+                                type="button"
+                                onClick={() => handleSelectAllStatesForMapping(mIdx)}
+                                className="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
+                              >
+                                All 36 States
+                              </button>
+                              <span className="text-slate-300 dark:text-slate-600">|</span>
+                              <button
+                                type="button"
+                                onClick={() => handleClearStatesForMapping(mIdx)}
+                                className="text-slate-500 hover:text-rose-500 font-semibold cursor-pointer"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Selected States Tags */}
+                          {mapping.states && mapping.states.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-2 p-1.5 bg-white dark:bg-slate-900/60 rounded-xl border border-slate-200/60 dark:border-white/5 max-h-24 overflow-y-auto">
+                              {mapping.states.map((st, sIdx) => (
+                                <span
+                                  key={sIdx}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-semibold border border-blue-500/20"
+                                >
+                                  <span>{st}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleMappingState(mIdx, st)}
+                                    className="hover:text-rose-500 ml-0.5 cursor-pointer"
+                                  >
+                                    <FiX size={10} />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Quick Indian States Pills */}
+                          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-white/50 dark:bg-black/20 mb-2">
+                            {INDIAN_STATES.map((st) => {
+                              const isSelected = mapping.states?.includes(st);
+                              return (
+                                <button
+                                  key={st}
+                                  type="button"
+                                  onClick={() => handleToggleMappingState(mIdx, st)}
+                                  className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-blue-600 text-white border-blue-600 font-bold'
+                                      : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
+                                  }`}
+                                >
+                                  {isSelected ? '✓ ' : '+ '}{st}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Custom Location / State Entry */}
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={customMappingInputs[mIdx] || ''}
+                              onChange={(e) =>
+                                setCustomMappingInputs((prev) => ({ ...prev, [mIdx]: e.target.value }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const val = customMappingInputs[mIdx] || '';
+                                  handleAddCustomLocationToMapping(mIdx, val);
+                                  setCustomMappingInputs((prev) => ({ ...prev, [mIdx]: '' }));
+                                }
+                              }}
+                              placeholder="Type state/region or 'ALL' and press Enter..."
+                              className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const val = customMappingInputs[mIdx] || '';
+                                handleAddCustomLocationToMapping(mIdx, val);
+                                setCustomMappingInputs((prev) => ({ ...prev, [mIdx]: '' }));
+                              }}
+                              disabled={!(customMappingInputs[mIdx] || '').trim()}
+                              className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     );
                   })}
-                </div>
 
-                {/* Custom Location Entry */}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={customLocationInput}
-                    onChange={(e) => setCustomLocationInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCustomLocation();
-                      }
-                    }}
-                    placeholder="Type custom location and press Enter (e.g. Goa, Noida)..."
-                    className="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomLocation}
-                    disabled={!customLocationInput.trim()}
-                    className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
-                  >
-                    Add
-                  </button>
+                  {(!formData.companyMappings || formData.companyMappings.length === 0) && (
+                    <div className="p-4 text-center border border-dashed border-slate-300 dark:border-white/10 rounded-2xl">
+                      <p className="text-xs text-slate-400 mb-2">No company routing mappings configured.</p>
+                      <button
+                        type="button"
+                        onClick={handleAddCompanyMapping}
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors"
+                      >
+                        + Add Partner Company
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1589,6 +2170,7 @@ const Products = () => {
           isOpen={Boolean(detailsProduct)}
           onClose={() => setDetailsProduct(null)}
           product={detailsProduct}
+          categories={categories}
           showEditButton
           onEdit={(prod) => {
             setDetailsProduct(null);
@@ -1636,6 +2218,8 @@ const Products = () => {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         companies={companies}
+        categories={categories}
+        brandMatrix={brandMatrix}
         existingProducts={products}
         onImportComplete={handleImportComplete}
       />

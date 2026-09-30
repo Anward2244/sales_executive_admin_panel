@@ -17,10 +17,13 @@ import {
   FiInfo,
   FiPackage,
   FiBriefcase,
-  FiMapPin
+  FiMapPin,
+  FiZap,
+  FiTag
 } from 'react-icons/fi';
-import { createProductApi, bulkCreateProductsApi, getCompaniesApi } from '@/api/axios';
+import { createProductApi, bulkCreateProductsApi, getCompaniesApi, getBrandRoutingMatrixApi, getCategoryApi } from '@/api/axios';
 import CustomDropdown from '@/components/ui/CustomDropdown';
+import { INDIAN_STATES, parseLocationInput, isAllKeyword } from '@/utils/indianStates';
 
 // Standard measurement units
 const COMMON_UNITS = ['PCS', 'SET', 'BOX', 'PAIR', 'KG', 'MTR', 'PKT', 'ROLL'];
@@ -30,6 +33,31 @@ const normalizeKey = (key) =>
   String(key || '')
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
+
+// Helper to match category by code, ID, or name
+export const matchCategory = (inputStr, catList) => {
+  if (!inputStr || !catList || catList.length === 0) return null;
+  const clean = String(inputStr).toLowerCase().trim();
+  const cleanAlphanum = clean.replace(/[^a-z0-9]/g, '');
+
+  return catList.find((c) => {
+    const cId = String(c._id || '').toLowerCase().trim();
+    const cCode = String(c.code || '').toLowerCase().trim();
+    const cName = String(c.name || '').toLowerCase().trim();
+    const cCodeAlphanum = cCode.replace(/[^a-z0-9]/g, '');
+    const cNameAlphanum = cName.replace(/[^a-z0-9]/g, '');
+
+    return (
+      cId === clean ||
+      cCode === clean ||
+      cName === clean ||
+      (cCodeAlphanum && cCodeAlphanum === cleanAlphanum) ||
+      (cNameAlphanum && cNameAlphanum === cleanAlphanum) ||
+      (clean.length >= 3 && (cName.includes(clean) || clean.includes(cName))) ||
+      (cCode && clean.includes(cCode))
+    );
+  });
+};
 
 // Helper to match company by code, ID, or name
 const matchCompany = (inputStr, compList) => {
@@ -56,8 +84,110 @@ const matchCompany = (inputStr, compList) => {
   });
 };
 
+// Helper to resolve brand routing rules from matrix for bulk row
+export const resolveBrandRoutingForBulk = (brandName, brandMatrix = [], companies = []) => {
+  if (!brandName || typeof brandName !== 'string') return null;
+  const target = brandName.trim();
+  if (!target) return null;
+
+  // 1. Direct match in matrix (case-insensitive)
+  let matchedGroup = (brandMatrix || []).find(
+    (item) => item.brand && item.brand.trim().toLowerCase() === target.toLowerCase()
+  );
+
+  // 2. Fallback to global "ALL" brand rules
+  if (!matchedGroup || !Array.isArray(matchedGroup.rules) || matchedGroup.rules.length === 0) {
+    matchedGroup = (brandMatrix || []).find(
+      (item) => item.brand && item.brand.trim().toUpperCase() === 'ALL'
+    );
+  }
+
+  if (!matchedGroup || !Array.isArray(matchedGroup.rules) || matchedGroup.rules.length === 0) {
+    return null;
+  }
+
+  const isFallback = matchedGroup.brand?.toUpperCase() === 'ALL' && target.toUpperCase() !== 'ALL';
+  const companyMappings = [];
+  const allStates = new Set();
+
+  matchedGroup.rules.forEach((rule) => {
+    const cRef = rule.companyId;
+    let cId = typeof cRef === 'object' ? cRef?._id : cRef;
+    let matchedComp = companies.find((c) => c._id === cId);
+    if (!matchedComp && typeof cRef === 'object' && cRef?.name) {
+      matchedComp = matchCompany(cRef.name, companies);
+      if (matchedComp) cId = matchedComp._id;
+    }
+
+    if (cId) {
+      const rawStates = Array.isArray(rule.states) ? rule.states : [];
+      const states = rawStates.includes('*') || rawStates.some((s) => String(s).toUpperCase() === 'ALL')
+        ? [...INDIAN_STATES]
+        : rawStates;
+
+      states.forEach((st) => allStates.add(st));
+      companyMappings.push({
+        companyId: cId,
+        companyName: matchedComp?.name || (typeof cRef === 'object' ? cRef?.name : ''),
+        companyCode: matchedComp?.code || (typeof cRef === 'object' ? cRef?.code : ''),
+        states
+      });
+    }
+  });
+
+  if (companyMappings.length === 0) return null;
+
+  return {
+    sourceBrand: matchedGroup.brand,
+    isFallback,
+    primaryCompanyId: companyMappings[0].companyId,
+    primaryCompanyName: companyMappings[0].companyName,
+    primaryCompanyCode: companyMappings[0].companyCode,
+    locations: Array.from(allStates),
+    companyMappings
+  };
+};
+
+// Helper to generate a unique, clean SKU for products missing SKU in uploaded sheet
+export const generateUniqueSku = (name, brand, rowIndex, usedSkusSet = null) => {
+  const brandPrefix = (brand || 'PRD')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 4) || 'PRD';
+
+  const cleanName = (name || 'ITEM')
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, '')
+    .trim();
+
+  // Extract initials or word chunks
+  const words = cleanName.split(/\s+/).filter(Boolean);
+  let namePart = '';
+  if (words.length === 1) {
+    namePart = words[0].slice(0, 6);
+  } else if (words.length === 2) {
+    namePart = `${words[0].slice(0, 4)}-${words[1].slice(0, 4)}`;
+  } else {
+    namePart = words.slice(0, 3).map((w) => w.slice(0, 3)).join('');
+  }
+  if (!namePart) namePart = 'ITEM';
+
+  let candidate = `${brandPrefix}-${namePart}-${String(rowIndex + 1).padStart(3, '0')}`.toUpperCase();
+
+  let counter = 1;
+  while (usedSkusSet && usedSkusSet.has(candidate)) {
+    candidate = `${brandPrefix}-${namePart}-${String(rowIndex + 1).padStart(3, '0')}-${counter}`.toUpperCase();
+    counter++;
+  }
+
+  if (usedSkusSet) {
+    usedSkusSet.add(candidate);
+  }
+  return candidate;
+};
+
 // Clean and normalize incoming row data from parsed Excel sheet
-const mapExcelRow = (rawRow, rowIndex, companies = []) => {
+const mapExcelRow = (rawRow, rowIndex, companies = [], brandMatrix = [], usedSkusSet = null, categories = []) => {
   const row = {};
   Object.keys(rawRow).forEach((k) => {
     row[normalizeKey(k)] = rawRow[k];
@@ -77,11 +207,12 @@ const mapExcelRow = (rawRow, rowIndex, companies = []) => {
   const brand = String(
     row.brand ||
     row.brandname ||
-    'Realme'
+    row.make ||
+    ''
   ).trim() || 'Realme';
 
   // Extract SKU
-  let sku = String(
+  let rawSku = String(
     row.sku ||
     row.skucode ||
     row.productcode ||
@@ -90,24 +221,66 @@ const mapExcelRow = (rawRow, rowIndex, companies = []) => {
     ''
   ).trim().toUpperCase();
 
-  // Auto-generate fallback SKU if empty
+  // Auto-generate unique SKU if empty/missing in sheet
+  let sku = rawSku;
   let isSkuAutoGenerated = false;
-  if (!sku && name) {
-    const prefix = brand.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5) || 'PRD';
-    const namePart = name
-      .toUpperCase()
-      .replace(/[^A-Z0-9\s]/g, '')
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .join('-');
-    const randomSuffix = String(rowIndex + 1).padStart(3, '0');
-    sku = `${prefix}-${namePart || 'ITEM'}-${randomSuffix}`.slice(0, 18);
+  if (!sku) {
+    sku = generateUniqueSku(name, brand, rowIndex, usedSkusSet);
     isSkuAutoGenerated = true;
+  } else if (usedSkusSet) {
+    usedSkusSet.add(sku);
+  }
+
+  // Extract Category ID / Name / Code
+  const findCategoryValue = () => {
+    const directKeys = [
+      'categoryid',
+      'category',
+      'categoryname',
+      'categorycode',
+      'itemcategory',
+      'productcategory',
+      'catid',
+      'catname',
+      'catcode',
+      'cat'
+    ];
+    for (const k of directKeys) {
+      if (row[k] !== undefined && String(row[k]).trim() !== '') {
+        return String(row[k]).trim();
+      }
+    }
+    // Fuzzy search for any key containing "categor"
+    const fuzzyKey = Object.keys(row).find((k) => k.includes('categor'));
+    if (fuzzyKey && row[fuzzyKey] !== undefined && String(row[fuzzyKey]).trim() !== '') {
+      return String(row[fuzzyKey]).trim();
+    }
+    return '';
+  };
+
+  const rawCat = findCategoryValue();
+  let categoryId = '';
+  let categoryName = '';
+  let categoryCode = '';
+
+  if (rawCat) {
+    const matchedCat = matchCategory(rawCat, categories);
+    if (matchedCat) {
+      categoryId = matchedCat._id;
+      categoryName = matchedCat.name;
+      categoryCode = matchedCat.code || '';
+    } else {
+      // Direct 24-character hex ObjectId
+      if (/^[a-f\d]{24}$/i.test(rawCat)) {
+        categoryId = rawCat;
+        categoryName = rawCat;
+      } else {
+        categoryName = rawCat;
+      }
+    }
   }
 
   // Extract Company Code / Name / ID
-  // Checks all possible permutations of column headers including 'companycodename', 'companycode', 'company', etc.
   const findCompanyValue = () => {
     const directKeys = [
       'companycode',
@@ -120,9 +293,7 @@ const mapExcelRow = (rawRow, rowIndex, companies = []) => {
       'tradingcompany',
       'compcode',
       'compname',
-      'comp',
-      'category',
-      'categoryname'
+      'comp'
     ];
     for (const k of directKeys) {
       if (row[k] !== undefined && String(row[k]).trim() !== '') {
@@ -141,9 +312,13 @@ const mapExcelRow = (rawRow, rowIndex, companies = []) => {
 
   const rawComp = findCompanyValue();
 
+  // Resolve routing from brand matrix
+  const routed = resolveBrandRoutingForBulk(brand, brandMatrix, companies);
+
   let companyId = '';
   let companyName = '';
   let companyCode = '';
+  let isAutoMappedFromMatrix = false;
 
   if (rawComp) {
     const matched = matchCompany(rawComp, companies);
@@ -154,14 +329,20 @@ const mapExcelRow = (rawRow, rowIndex, companies = []) => {
     } else {
       companyName = rawComp; // Unmatched text
     }
-  } else if (companies.length === 1) {
-    // If only one company exists in the system, automatically default to it
+  } else if (routed && routed.primaryCompanyId) {
+    // Automatically set company according to brand routing matrix
+    companyId = routed.primaryCompanyId;
+    companyName = routed.primaryCompanyName;
+    companyCode = routed.primaryCompanyCode || '';
+    isAutoMappedFromMatrix = true;
+  } else if (companies.length > 0) {
+    // If no brand matrix match, default to first available partner company
     companyId = companies[0]._id;
     companyName = companies[0].name;
     companyCode = companies[0].code || '';
   }
 
-  // Extract Locations (comma or semicolon separated string -> array of trimmed strings)
+  // Extract Locations / States
   const rawLocations = String(
     row.locationscommaseparated ||
     row.locations ||
@@ -172,12 +353,32 @@ const mapExcelRow = (rawRow, rowIndex, companies = []) => {
     ''
   ).trim();
 
-  const locations = rawLocations
-    ? rawLocations
-        .split(/[,;\n]/)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0)
-    : [];
+  let locations = parseLocationInput(rawLocations);
+  let isAll = isAllKeyword(rawLocations) || (locations.length === INDIAN_STATES.length && locations.length > 0);
+
+  // If locations not specified in sheet, auto-fill from brand routing matrix or default to all states
+  if (locations.length === 0) {
+    if (routed && Array.isArray(routed.locations) && routed.locations.length > 0) {
+      locations = routed.locations;
+      isAll = locations.length === INDIAN_STATES.length;
+      isAutoMappedFromMatrix = true;
+    } else {
+      locations = [...INDIAN_STATES];
+      isAll = true;
+    }
+  }
+
+  // Construct companyMappings
+  let companyMappings = [];
+  if (routed && Array.isArray(routed.companyMappings) && routed.companyMappings.length > 0) {
+    if (rawComp && companyId && companyId !== routed.primaryCompanyId) {
+      companyMappings = [{ companyId, states: locations }];
+    } else {
+      companyMappings = routed.companyMappings;
+    }
+  } else if (companyId) {
+    companyMappings = [{ companyId, states: locations }];
+  }
 
   // Extract Unit
   const unit = String(
@@ -217,13 +418,20 @@ const mapExcelRow = (rawRow, rowIndex, companies = []) => {
     name,
     sku,
     brand,
+    categoryId,
+    categoryName,
+    categoryCode,
+    rawCategory: rawCat,
     unit,
     companyId,
     companyName,
     companyCode,
     rawCompany: rawComp,
     locations,
-    rawLocationsInput: locations.join(', '),
+    rawLocationsInput: isAll ? 'ALL' : locations.join(', '),
+    companyMappings,
+    isAutoMappedFromMatrix,
+    routingSourceBrand: routed ? routed.sourceBrand : null,
     description,
     isActive,
     isSkuAutoGenerated,
@@ -254,13 +462,9 @@ const validateRow = (row, allRows = [], existingCatalogSkus = new Set(), compani
       errors.push(`Duplicate SKU "${row.sku}" found in sheet (row ${duplicateInFile.map((d) => d.rowIndex).join(', ')})`);
     }
 
-    // Check duplicates in existing catalog
-    if (existingCatalogSkus.has(row.sku.trim().toUpperCase())) {
+    // Check duplicates in existing catalog (only for manually provided SKUs)
+    if (!row.isSkuAutoGenerated && existingCatalogSkus.has(row.sku.trim().toUpperCase())) {
       warnings.push(`SKU "${row.sku}" already exists in catalog. Creating may fail or overwrite.`);
-    }
-
-    if (row.isSkuAutoGenerated) {
-      warnings.push('SKU was auto-generated from product name.');
     }
   }
 
@@ -300,42 +504,45 @@ const validateRow = (row, allRows = [], existingCatalogSkus = new Set(), compani
 };
 
 // Standalone template generator exported for direct use across the app
-export const downloadProductExcelTemplate = (companies = []) => {
+export const downloadProductExcelTemplate = (companies = [], categories = []) => {
   const wb = XLSX.utils.book_new();
 
-  const sampleComp = companies[0]?.code || 'AURIC';
+  const sampleCat = categories[0]?.name || 'Electronics';
 
-  // Sheet 1: Products Template
+  // Sheet 1: Products Template (Minimal format: SKU, Company Code, Category, and Locations are completely optional!)
   const templateData = [
     {
+      'Product Name*': 'Whatnot NitroCharge 65W GaN Fast Charger',
+      'Brand*': 'Whatnot',
+      'Category (Optional)': sampleCat,
+      'Unit': 'PCS',
+      'Description': 'Ultra-compact 65W GaN adapter',
+      'Active Status (Yes/No)': 'Yes',
+      'SKU (Optional)': '',
+      'Company Code (Optional)': '',
+      'Locations (Optional)': ''
+    },
+    {
       'Product Name*': 'Realme Buds Wireless 3',
-      'SKU*': 'REALME-BW3-YLW',
       'Brand*': 'Realme',
-      'Company Code*': sampleComp,
-      'Locations (comma-separated)': 'Andhra Pradesh, Telangana, Delhi, Haryana',
+      'Category (Optional)': categories[1]?.name || 'Audio',
       'Unit': 'PCS',
       'Description': '30dB Active Noise Cancellation Neckband',
-      'Active Status (Yes/No)': 'Yes'
+      'Active Status (Yes/No)': 'Yes',
+      'SKU (Optional)': '',
+      'Company Code (Optional)': '',
+      'Locations (Optional)': ''
     },
     {
       'Product Name*': 'Realme Buds Air 5 Pro',
-      'SKU*': 'REALME-BA5P-BLK',
       'Brand*': 'Realme',
-      'Company Code*': companies[1]?.code || sampleComp,
-      'Locations (comma-separated)': 'Karnataka, Maharashtra, Delhi',
+      'Category (Optional)': categories[1]?.name || 'Audio',
       'Unit': 'PCS',
       'Description': '50dB Deep Sea Noise Cancellation 2.0 Earbuds',
-      'Active Status (Yes/No)': 'Yes'
-    },
-    {
-      'Product Name*': 'Realme TechLife 65W GaN Charger',
-      'SKU*': 'REALME-CHG-65W',
-      'Brand*': 'Realme',
-      'Company Code*': sampleComp,
-      'Locations (comma-separated)': 'Delhi, Haryana, Punjab, Uttar Pradesh',
-      'Unit': 'PCS',
-      'Description': 'Multi-port super fast flash charger with dual Type-C',
-      'Active Status (Yes/No)': 'Yes'
+      'Active Status (Yes/No)': 'Yes',
+      'SKU (Optional)': '',
+      'Company Code (Optional)': '',
+      'Locations (Optional)': ''
     }
   ];
 
@@ -343,19 +550,35 @@ export const downloadProductExcelTemplate = (companies = []) => {
 
   // Auto-fit column widths
   wsProducts['!cols'] = [
-    { wch: 38 }, // Product Name
-    { wch: 22 }, // SKU
+    { wch: 42 }, // Product Name
     { wch: 16 }, // Brand
-    { wch: 20 }, // Company Code
-    { wch: 45 }, // Locations
+    { wch: 22 }, // Category (Optional)
     { wch: 10 }, // Unit
     { wch: 45 }, // Description
-    { wch: 22 }  // Active Status
+    { wch: 22 }, // Active Status
+    { wch: 22 }, // SKU (Optional)
+    { wch: 26 }, // Company Code (Optional)
+    { wch: 28 }  // Locations (Optional)
   ];
 
   XLSX.utils.book_append_sheet(wb, wsProducts, 'Products Import');
 
-  // Sheet 2: Company Reference List
+  // Sheet 2: Instructions
+  const instructionsData = [
+    { Instruction: '⚡ MINIMAL FORMAT: Only "Product Name" and "Brand" are required in your Excel sheet.' },
+    { Instruction: 'SKU: Leave blank or omit. Unique, non-colliding SKUs are generated automatically on upload.' },
+    { Instruction: 'Company Code: Leave blank or omit. Automatically matched to your partner billing company based on Brand (Brand Routing Matrix).' },
+    { Instruction: 'Locations: Leave blank or omit. Automatically filled with covered Indian states mapped to that Brand.' },
+    { Instruction: 'Category: Optional. Provide Category Name, Category Code, or Category ID. Matched automatically against your product categories.' },
+    { Instruction: 'Unit: Optional. Recommended values: PCS, SET, BOX, PAIR, KG, MTR. Defaults to PCS.' },
+    { Instruction: 'Active Status: Optional. Enter "Yes" or "No". Defaults to Yes.' },
+    { Instruction: 'Manual Overrides: You can still provide custom SKU, Company Code, or Locations if you need specific overrides.' }
+  ];
+  const wsInstructions = XLSX.utils.json_to_sheet(instructionsData);
+  wsInstructions['!cols'] = [{ wch: 105 }];
+  XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions');
+
+  // Sheet 3: Company Reference List (Optional for manual overrides)
   if (companies && companies.length > 0) {
     const compReferenceData = companies.map((c) => ({
       'Company Code': c.code || '',
@@ -364,21 +587,20 @@ export const downloadProductExcelTemplate = (companies = []) => {
     }));
     const wsCompanies = XLSX.utils.json_to_sheet(compReferenceData);
     wsCompanies['!cols'] = [{ wch: 18 }, { wch: 35 }, { wch: 32 }];
-    XLSX.utils.book_append_sheet(wb, wsCompanies, 'Company Reference');
+    XLSX.utils.book_append_sheet(wb, wsCompanies, 'Company Reference (Optional)');
   }
 
-  // Sheet 3: Instructions
-  const instructionsData = [
-    { Instruction: 'Columns marked with an asterisk (*) are mandatory: Product Name, SKU, Brand, Company Code.' },
-    { Instruction: 'Company Code: Enter the exact Company Code (e.g. AURIC) or Company Name from the "Company Reference" sheet.' },
-    { Instruction: 'Locations: Enter states or territories separated by commas (e.g. "Andhra Pradesh, Telangana, Delhi, Haryana").' },
-    { Instruction: 'SKU: Unique alphanumeric inventory identifier code. If empty, it will be auto-generated from brand & name.' },
-    { Instruction: 'Unit: Recommended values: PCS, SET, BOX, PAIR, KG, MTR. Defaults to PCS.' },
-    { Instruction: 'Active Status: Enter "Yes" or "No". Defaults to Yes.' }
-  ];
-  const wsInstructions = XLSX.utils.json_to_sheet(instructionsData);
-  wsInstructions['!cols'] = [{ wch: 95 }];
-  XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions');
+  // Sheet 4: Category Reference List (Optional for manual overrides)
+  if (categories && categories.length > 0) {
+    const catReferenceData = categories.map((c) => ({
+      'Category Code': c.code || '',
+      'Category Name': c.name,
+      'Category ID': c._id
+    }));
+    const wsCategories = XLSX.utils.json_to_sheet(catReferenceData);
+    wsCategories['!cols'] = [{ wch: 18 }, { wch: 35 }, { wch: 32 }];
+    XLSX.utils.book_append_sheet(wb, wsCategories, 'Category Reference (Optional)');
+  }
 
   XLSX.writeFile(wb, 'Products_Bulk_Import_Template.xlsx');
 };
@@ -387,12 +609,27 @@ const BulkProductImportModal = ({
   isOpen,
   onClose,
   companies = [],
-  categories = [], // backwards compatibility
+  categories = [],
+  brandMatrix = [],
   existingProducts = [],
   onImportComplete
 }) => {
   const fileInputRef = useRef(null);
   const [fetchedCompanies, setFetchedCompanies] = useState([]);
+  const [fetchedBrandMatrix, setFetchedBrandMatrix] = useState([]);
+  const [fetchedCategories, setFetchedCategories] = useState([]);
+
+  // Auto-fetch categories if not passed from parent
+  useEffect(() => {
+    if (isOpen && (!categories || categories.length === 0)) {
+      getCategoryApi()
+        .then((res) => {
+          const catData = res?.data?.data || (Array.isArray(res?.data) ? res.data : []);
+          setFetchedCategories(catData);
+        })
+        .catch(() => {});
+    }
+  }, [categories, isOpen]);
 
   // Auto-fetch companies if not passed from parent
   useEffect(() => {
@@ -406,13 +643,36 @@ const BulkProductImportModal = ({
     }
   }, [companies, isOpen]);
 
+  // Auto-fetch brand routing matrix if not passed from parent
+  useEffect(() => {
+    if (isOpen && (!brandMatrix || brandMatrix.length === 0)) {
+      getBrandRoutingMatrixApi()
+        .then((res) => {
+          const matrix = res?.data?.data || (Array.isArray(res?.data) ? res.data : []);
+          setFetchedBrandMatrix(matrix);
+        })
+        .catch(() => {});
+    }
+  }, [brandMatrix, isOpen]);
+
+  // Normalize available categories list
+  const resolvedCategories = useMemo(() => {
+    if (categories && categories.length > 0) return categories;
+    return fetchedCategories;
+  }, [categories, fetchedCategories]);
+
   // Normalize available companies list
   const resolvedCompanies = useMemo(() => {
     if (companies && companies.length > 0) return companies;
     if (fetchedCompanies && fetchedCompanies.length > 0) return fetchedCompanies;
-    if (categories && categories.length > 0) return categories;
     return [];
-  }, [companies, fetchedCompanies, categories]);
+  }, [companies, fetchedCompanies]);
+
+  // Normalize available brand routing matrix
+  const resolvedBrandMatrix = useMemo(() => {
+    if (Array.isArray(brandMatrix) && brandMatrix.length > 0) return brandMatrix;
+    return fetchedBrandMatrix;
+  }, [brandMatrix, fetchedBrandMatrix]);
 
   // Steps: 'upload' | 'preview' | 'importing' | 'completed'
   const [step, setStep] = useState('upload');
@@ -457,9 +717,18 @@ const BulkProductImportModal = ({
           rowCopy.companyCode = matched.code || '';
         }
       }
+      // If category was unmatched before but categories are now loaded, attempt re-matching
+      if (!rowCopy.categoryId && rowCopy.rawCategory && resolvedCategories.length > 0) {
+        const matchedCat = matchCategory(rowCopy.rawCategory, resolvedCategories);
+        if (matchedCat) {
+          rowCopy.categoryId = matchedCat._id;
+          rowCopy.categoryName = matchedCat.name;
+          rowCopy.categoryCode = matchedCat.code || '';
+        }
+      }
       return validateRow(rowCopy, parsedRows, existingCatalogSkus, resolvedCompanies);
     });
-  }, [parsedRows, existingCatalogSkus, resolvedCompanies]);
+  }, [parsedRows, existingCatalogSkus, resolvedCompanies, resolvedCategories]);
 
   // Counts
   const validCount = useMemo(() => validatedRows.filter((r) => r.isValid).length, [validatedRows]);
@@ -479,9 +748,10 @@ const BulkProductImportModal = ({
         const matchName = r.name.toLowerCase().includes(q);
         const matchSku = r.sku.toLowerCase().includes(q);
         const matchBrand = r.brand.toLowerCase().includes(q);
+        const matchCat = (r.categoryName || r.categoryCode || r.rawCategory || '').toLowerCase().includes(q);
         const matchComp = (r.companyName || r.companyCode || r.rawCompany || '').toLowerCase().includes(q);
         const matchLoc = (r.rawLocationsInput || '').toLowerCase().includes(q);
-        if (!matchName && !matchSku && !matchBrand && !matchComp && !matchLoc) return false;
+        if (!matchName && !matchSku && !matchBrand && !matchCat && !matchComp && !matchLoc) return false;
       }
 
       return true;
@@ -530,7 +800,17 @@ const BulkProductImportModal = ({
         // Ignore
       }
     }
-    downloadProductExcelTemplate(comps);
+    let cats = resolvedCategories;
+    if (cats.length === 0) {
+      try {
+        const cRes = await getCategoryApi();
+        cats = cRes?.data?.data || (Array.isArray(cRes?.data) ? cRes.data : []);
+        setFetchedCategories(cats);
+      } catch {
+        // Ignore
+      }
+    }
+    downloadProductExcelTemplate(comps, cats);
   };
 
   // Parse Excel or CSV file
@@ -559,6 +839,28 @@ const BulkProductImportModal = ({
         }
       }
 
+      let cats = resolvedCategories;
+      if (cats.length === 0) {
+        try {
+          const cRes = await getCategoryApi();
+          cats = cRes?.data?.data || (Array.isArray(cRes?.data) ? cRes.data : []);
+          setFetchedCategories(cats);
+        } catch {
+          // Ignore
+        }
+      }
+
+      let bMatrix = resolvedBrandMatrix;
+      if (!bMatrix || bMatrix.length === 0) {
+        try {
+          const mRes = await getBrandRoutingMatrixApi();
+          bMatrix = mRes?.data?.data || (Array.isArray(mRes?.data) ? mRes.data : []);
+          setFetchedBrandMatrix(bMatrix);
+        } catch {
+          // Ignore
+        }
+      }
+
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
       const firstSheetName = workbook.SheetNames[0];
@@ -570,7 +872,8 @@ const BulkProductImportModal = ({
         return;
       }
 
-      const rows = rawRows.map((row, idx) => mapExcelRow(row, idx, comps));
+      const usedSkusSet = new Set(existingCatalogSkus);
+      const rows = rawRows.map((row, idx) => mapExcelRow(row, idx, comps, bMatrix, usedSkusSet, cats));
       setParsedRows(rows);
       setStep('preview');
     } catch (err) {
@@ -612,19 +915,112 @@ const BulkProductImportModal = ({
         if (field === 'sku') {
           updated.isSkuAutoGenerated = false;
         }
+        if (field === 'brand') {
+          // When brand changes, re-resolve from brand matrix
+          const routed = resolveBrandRoutingForBulk(value, resolvedBrandMatrix, resolvedCompanies);
+          if (routed) {
+            updated.companyId = routed.primaryCompanyId;
+            updated.companyName = routed.primaryCompanyName;
+            updated.companyCode = routed.primaryCompanyCode;
+            updated.locations = routed.locations;
+            updated.rawLocationsInput = routed.locations.length === INDIAN_STATES.length ? 'ALL' : routed.locations.join(', ');
+            updated.companyMappings = routed.companyMappings;
+            updated.isAutoMappedFromMatrix = true;
+            updated.routingSourceBrand = routed.sourceBrand;
+          }
+        }
+        if (field === 'categoryId') {
+          const selectedCat = resolvedCategories.find((c) => c._id === value);
+          updated.categoryId = value;
+          updated.categoryName = selectedCat ? selectedCat.name : '';
+          updated.categoryCode = selectedCat ? (selectedCat.code || '') : '';
+          updated.rawCategory = selectedCat ? (selectedCat.name || selectedCat.code) : '';
+        }
         if (field === 'companyId') {
           const selectedComp = resolvedCompanies.find((c) => c._id === value);
           updated.companyName = selectedComp ? selectedComp.name : '';
           updated.companyCode = selectedComp ? (selectedComp.code || '') : '';
           updated.rawCompany = selectedComp ? (selectedComp.code || selectedComp.name) : '';
+          updated.isAutoMappedFromMatrix = false;
+          if (updated.companyMappings && updated.companyMappings.length > 0) {
+            updated.companyMappings = updated.companyMappings.map((m, mIdx) =>
+              mIdx === 0 ? { ...m, companyId: value } : m
+            );
+          } else {
+            updated.companyMappings = [{ companyId: value, states: updated.locations || [] }];
+          }
         }
         if (field === 'rawLocationsInput') {
-          updated.locations = value
-            .split(/[,;\n]/)
-            .map((s) => s.trim())
-            .filter((s) => s.length > 0);
+          if (isAllKeyword(value)) {
+            updated.locations = [...INDIAN_STATES];
+            updated.rawLocationsInput = value;
+          } else {
+            updated.locations = parseLocationInput(value);
+            updated.rawLocationsInput = value;
+          }
+          if (updated.companyMappings && updated.companyMappings.length > 0) {
+            updated.companyMappings = updated.companyMappings.map((m, mIdx) =>
+              mIdx === 0 ? { ...m, states: updated.locations } : m
+            );
+          }
         }
         return updated;
+      })
+    );
+  };
+
+  const handleSetRowLocationsAll = (rowId) => {
+    setParsedRows((prev) =>
+      prev.map((r) => {
+        if (r.id !== rowId) return r;
+        const isCurrentlyAll = r.locations.length === INDIAN_STATES.length;
+        const nextLocs = isCurrentlyAll ? [] : [...INDIAN_STATES];
+        const nextInput = isCurrentlyAll ? '' : 'ALL';
+        const nextMappings = r.companyMappings && r.companyMappings.length > 0
+          ? r.companyMappings.map((m, mIdx) => (mIdx === 0 ? { ...m, states: nextLocs } : m))
+          : [{ companyId: r.companyId, states: nextLocs }];
+        return {
+          ...r,
+          locations: nextLocs,
+          rawLocationsInput: nextInput,
+          companyMappings: nextMappings
+        };
+      })
+    );
+  };
+
+  const handleSetAllRowsAllLocations = () => {
+    setParsedRows((prev) =>
+      prev.map((r) => ({
+        ...r,
+        locations: [...INDIAN_STATES],
+        rawLocationsInput: 'ALL',
+        companyMappings: r.companyMappings && r.companyMappings.length > 0
+          ? r.companyMappings.map((m, mIdx) => (mIdx === 0 ? { ...m, states: [...INDIAN_STATES] } : m))
+          : [{ companyId: r.companyId, states: [...INDIAN_STATES] }]
+      }))
+    );
+  };
+
+  // Re-map all rows according to their brands via Brand Routing Matrix
+  const handleAutoMapAllByMatrix = () => {
+    setParsedRows((prev) =>
+      prev.map((r) => {
+        const routed = resolveBrandRoutingForBulk(r.brand, resolvedBrandMatrix, resolvedCompanies);
+        if (routed) {
+          return {
+            ...r,
+            companyId: routed.primaryCompanyId,
+            companyName: routed.primaryCompanyName,
+            companyCode: routed.primaryCompanyCode,
+            locations: routed.locations,
+            rawLocationsInput: routed.locations.length === INDIAN_STATES.length ? 'ALL' : routed.locations.join(', '),
+            companyMappings: routed.companyMappings,
+            isAutoMappedFromMatrix: true,
+            routingSourceBrand: routed.sourceBrand
+          };
+        }
+        return r;
       })
     );
   };
@@ -642,6 +1038,10 @@ const BulkProductImportModal = ({
       name: '',
       sku: '',
       brand: 'Realme',
+      categoryId: '',
+      categoryName: '',
+      categoryCode: '',
+      rawCategory: '',
       unit: 'PCS',
       companyId: defaultComp?._id || '',
       companyName: defaultComp?.name || '',
@@ -684,8 +1084,12 @@ const BulkProductImportModal = ({
         name: r.name.trim(),
         sku: r.sku.trim().toUpperCase(),
         brand: r.brand.trim() || 'Realme',
+        categoryId: r.categoryId || undefined,
         companyId: r.companyId,
         locations: Array.isArray(r.locations) ? r.locations : [],
+        companyMappings: Array.isArray(r.companyMappings) && r.companyMappings.length > 0
+          ? r.companyMappings.map((m) => ({ companyId: m.companyId, states: m.states || [] }))
+          : [{ companyId: r.companyId, states: Array.isArray(r.locations) ? r.locations : [] }],
         unit: r.unit.trim() || 'PCS',
         description: r.description.trim(),
         isActive: Boolean(r.isActive)
@@ -714,8 +1118,12 @@ const BulkProductImportModal = ({
                 name: row.name.trim(),
                 sku: row.sku.trim().toUpperCase(),
                 brand: row.brand.trim() || 'Realme',
+                categoryId: row.categoryId || undefined,
                 companyId: row.companyId,
                 locations: Array.isArray(row.locations) ? row.locations : [],
+                companyMappings: Array.isArray(row.companyMappings) && row.companyMappings.length > 0
+                  ? row.companyMappings.map((m) => ({ companyId: m.companyId, states: m.states || [] }))
+                  : [{ companyId: row.companyId, states: Array.isArray(row.locations) ? row.locations : [] }],
                 unit: row.unit.trim() || 'PCS',
                 description: row.description.trim(),
                 isActive: Boolean(row.isActive)
@@ -881,15 +1289,18 @@ const BulkProductImportModal = ({
                 </p>
               </div>
 
-              <div className="flex items-center gap-4 mt-2 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                <span className="flex items-center gap-1.5">
-                  <FiCheck className="text-emerald-500" /> Auto-header matching
+              <div className="flex items-center gap-4 mt-2 text-[11px] font-medium text-slate-500 dark:text-slate-400 flex-wrap justify-center">
+                <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <FiZap /> Minimal 2-column format supported
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <FiCheck className="text-emerald-500" /> Company code resolution
+                <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <FiZap /> SKU auto-generated
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <FiCheck className="text-emerald-500" /> Territory array parsing
+                <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <FiZap /> Company auto-matched
+                </span>
+                <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <FiZap /> States auto-filled
                 </span>
               </div>
             </div>
@@ -906,24 +1317,30 @@ const BulkProductImportModal = ({
                   <p className="text-[11px]">Full title of the product (e.g. Realme Buds Wireless 3).</p>
                 </div>
                 <div className="space-y-1">
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">SKU*</span>
-                  <p className="text-[11px]">Unique inventory identifier code (e.g. REALME-BW3-YLW).</p>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">Brand*</span>
+                  <p className="text-[11px]">Brand name (e.g. Realme) used to route company & covered states.</p>
                 </div>
                 <div className="space-y-1">
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">Company Code*</span>
-                  <p className="text-[11px]">Trading company code or name (e.g. AURIC, INIZIO).</p>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <FiZap className="text-xs" /> SKU (Auto-Generated)
+                  </span>
+                  <p className="text-[11px]">Not needed in Excel. Unique, clean SKUs are generated automatically.</p>
                 </div>
                 <div className="space-y-1">
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">Locations</span>
-                  <p className="text-[11px]">Covered states separated by comma (e.g. Delhi, Haryana).</p>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <FiZap className="text-xs" /> Company (Auto-Matched)
+                  </span>
+                  <p className="text-[11px]">Not needed in Excel. Automatically resolved from Brand Routing Matrix.</p>
                 </div>
                 <div className="space-y-1">
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">Brand & Unit</span>
-                  <p className="text-[11px]">Defaults to "Realme" and "PCS" if left blank.</p>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <FiZap className="text-xs" /> States (Auto-Filled)
+                  </span>
+                  <p className="text-[11px]">Not needed in Excel. Automatically mapped with states assigned to the brand.</p>
                 </div>
                 <div className="space-y-1">
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">Description</span>
-                  <p className="text-[11px]">Product specifications, notes, or highlights.</p>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">Unit & Description</span>
+                  <p className="text-[11px]">Unit defaults to "PCS". Description is optional.</p>
                 </div>
               </div>
             </div>
@@ -994,6 +1411,16 @@ const BulkProductImportModal = ({
 
                 <button
                   type="button"
+                  onClick={handleAutoMapAllByMatrix}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0"
+                  title="Auto-map partner company and state coverage for all rows based on their brand from the Brand Routing Matrix"
+                >
+                  <FiZap className="text-xs" />
+                  <span>Auto-Map Matrix</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={handleAddNewRow}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0"
                 >
@@ -1043,9 +1470,22 @@ const BulkProductImportModal = ({
                     <th className="py-2.5 px-3 w-24">Status</th>
                     <th className="py-2.5 px-3 min-w-[180px]">Product Name*</th>
                     <th className="py-2.5 px-3 min-w-[130px]">SKU Code*</th>
+                    <th className="py-2.5 px-3 min-w-[100px]">Brand*</th>
+                    <th className="py-2.5 px-3 min-w-[150px]">Category</th>
                     <th className="py-2.5 px-3 min-w-[150px]">Company*</th>
-                    <th className="py-2.5 px-3 min-w-[160px]">Covered Locations</th>
-                    <th className="py-2.5 px-3 min-w-[90px]">Brand</th>
+                    <th className="py-2.5 px-3 min-w-[190px]">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span>Covered Locations</span>
+                        <button
+                          type="button"
+                          onClick={handleSetAllRowsAllLocations}
+                          className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 transition-all cursor-pointer"
+                          title="Set all imported products to ALL Indian states"
+                        >
+                          All ({INDIAN_STATES.length})
+                        </button>
+                      </div>
+                    </th>
                     <th className="py-2.5 px-3 min-w-[80px]">Unit</th>
                     <th className="py-2.5 px-3 w-20 text-center">Active</th>
                     <th className="py-2.5 px-3 w-12 text-center">Action</th>
@@ -1054,7 +1494,7 @@ const BulkProductImportModal = ({
                 <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                   {displayRows.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-12 text-center text-slate-400">
+                      <td colSpan={11} className="py-12 text-center text-slate-400">
                         No rows found matching current filter or search criteria.
                       </td>
                     </tr>
@@ -1137,8 +1577,52 @@ const BulkProductImportModal = ({
                               }`}
                             />
                             {row.isSkuAutoGenerated && (
-                              <span className="text-[10px] text-amber-500 dark:text-amber-400 block mt-0.5">
-                                Auto-generated
+                              <span
+                                className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-0.5 mt-0.5"
+                                title="Unique SKU auto-generated from Brand and Product Name"
+                              >
+                                <FiZap className="text-[9px] shrink-0 text-emerald-500" /> Auto-generated
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Brand */}
+                          <td className="py-2 px-3">
+                            <input
+                              type="text"
+                              value={row.brand}
+                              onChange={(e) => handleRowChange(row.id, 'brand', e.target.value)}
+                              placeholder="Realme"
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500"
+                            />
+                            {row.isAutoMappedFromMatrix && (
+                              <span
+                                className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-0.5 mt-0.5"
+                                title={`Matrix rule matched: ${row.routingSourceBrand || 'ALL'}`}
+                              >
+                                <FiZap className="text-[9px] shrink-0 text-indigo-500" /> Matrix rule
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Category Dropdown */}
+                          <td className="py-2 px-3">
+                            <CustomDropdown
+                              value={row.categoryId || ''}
+                              onChange={(val) => handleRowChange(row.id, 'categoryId', val)}
+                              defaultLabel="No Category"
+                              options={[
+                                { value: '', label: 'No Category (None)' },
+                                ...resolvedCategories.map((c) => ({
+                                  value: c._id,
+                                  label: `${c.name} ${c.code ? `(${c.code})` : ''}`
+                                }))
+                              ]}
+                              statusColor="!px-2 !py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+                            />
+                            {row.rawCategory && !row.categoryId && (
+                              <span className="text-[10px] text-amber-500 block truncate mt-0.5" title={row.rawCategory}>
+                                In sheet: "{row.rawCategory}" (Unmatched)
                               </span>
                             )}
                           </td>
@@ -1158,6 +1642,14 @@ const BulkProductImportModal = ({
                               ]}
                               statusColor="!px-2 !py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
                             />
+                            {row.isAutoMappedFromMatrix && row.companyId && (
+                              <span
+                                className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 mt-0.5 truncate"
+                                title={`Auto-routed by Brand Routing Matrix (Source: ${row.routingSourceBrand || 'Brand'})`}
+                              >
+                                <FiZap className="text-[9px] shrink-0 text-emerald-500" /> Auto-routed by brand
+                              </span>
+                            )}
                             {row.rawCompany && !row.companyId && (
                               <span className="text-[10px] text-rose-500 block truncate mt-0.5" title={row.rawCompany}>
                                 In sheet: "{row.rawCompany}" (Unmatched)
@@ -1167,30 +1659,37 @@ const BulkProductImportModal = ({
 
                           {/* Covered Locations */}
                           <td className="py-2 px-3">
-                            <input
-                              type="text"
-                              value={row.rawLocationsInput || ''}
-                              onChange={(e) => handleRowChange(row.id, 'rawLocationsInput', e.target.value)}
-                              placeholder="e.g. Delhi, Haryana"
-                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500"
-                              title="Comma-separated distribution locations"
-                            />
-                            {row.locations.length > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="text"
+                                value={row.rawLocationsInput || ''}
+                                onChange={(e) => handleRowChange(row.id, 'rawLocationsInput', e.target.value)}
+                                placeholder='e.g. ALL or Delhi, Haryana'
+                                className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500"
+                                title='Comma-separated distribution locations, or type "ALL" for all states'
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSetRowLocationsAll(row.id)}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer shrink-0 ${
+                                  row.locations.length === INDIAN_STATES.length
+                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
+                                }`}
+                                title={row.locations.length === INDIAN_STATES.length ? 'Clear all locations' : 'Set to ALL states'}
+                              >
+                                {row.locations.length === INDIAN_STATES.length ? '✓ All' : 'All'}
+                              </button>
+                            </div>
+                            {row.locations.length === INDIAN_STATES.length ? (
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium block mt-0.5">
+                                ✓ All states covered ({row.locations.length})
+                              </span>
+                            ) : row.locations.length > 0 ? (
                               <span className="text-[10px] text-slate-400 block mt-0.5">
                                 {row.locations.length} {row.locations.length === 1 ? 'state' : 'states'} mapped
                               </span>
-                            )}
-                          </td>
-
-                          {/* Brand */}
-                          <td className="py-2 px-3">
-                            <input
-                              type="text"
-                              value={row.brand}
-                              onChange={(e) => handleRowChange(row.id, 'brand', e.target.value)}
-                              placeholder="Realme"
-                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:border-emerald-500"
-                            />
+                            ) : null}
                           </td>
 
                           {/* Unit */}

@@ -107,13 +107,7 @@ const FirmOnboarding = () => {
 
   // Display Preferences & Pagination
   const { preferences: displayPrefs } = useDisplayPreferences();
-  const [rowsPerPage, setRowsPerPage] = useState(displayPrefs.rowsPerPage || 10);
-
-  useEffect(() => {
-    if (displayPrefs.rowsPerPage) {
-      setRowsPerPage(displayPrefs.rowsPerPage);
-    }
-  }, [displayPrefs.rowsPerPage]);
+  const rowsPerPage = displayPrefs.rowsPerPage || 10;
 
   // Sync local input with URL
   useEffect(() => {
@@ -144,6 +138,10 @@ const FirmOnboarding = () => {
     return () => clearTimeout(delayDebounce);
   }, [searchInput, setSearchParams]);
 
+  // Live Polling State
+  const [isPollingActive, setIsPollingActive] = useState(true);
+  const [lastPolledAt, setLastPolledAt] = useState(null);
+
   // Fetch Onboarding Requests
   const fetchRequests = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -165,6 +163,16 @@ const FirmOnboarding = () => {
       }
       setRequests(list);
       if (meta) setApiMeta(meta);
+
+      // Dispatch global event for Layout menu bar badge & red dot indicator
+      const pendingCount = list.filter(
+        (item) => (item.approvalStatus || 'PENDING').toUpperCase() === 'PENDING'
+      ).length;
+      window.dispatchEvent(
+        new CustomEvent('firm-onboarding-updated', {
+          detail: { requests: list, pendingCount }
+        })
+      );
     } catch (err) {
       console.error('Fetch firm onboarding requests error:', err);
       if (!isSilent) {
@@ -178,6 +186,19 @@ const FirmOnboarding = () => {
   useEffect(() => {
     fetchRequests();
   }, [fetchRequests]);
+
+  // Background polling for real-time requests (every 15s)
+  useEffect(() => {
+    if (!isPollingActive) return;
+
+    const intervalId = setInterval(() => {
+      fetchRequests(true).then(() => {
+        setLastPolledAt(new Date());
+      });
+    }, 15000);
+
+    return () => clearInterval(intervalId);
+  }, [isPollingActive, fetchRequests]);
 
   // Load Companies
   useEffect(() => {
@@ -718,6 +739,38 @@ const FirmOnboarding = () => {
         subtitle="Review, approve, and initiate customer onboarding requests across enterprise companies"
         actions={
           <div className="flex items-center flex-wrap gap-2.5">
+            {/* Live Polling Status Indicator / Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsPollingActive((prev) => !prev)}
+              className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 ${
+                isPollingActive
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                  : 'border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'
+              }`}
+              title={
+                isPollingActive
+                  ? `Live polling active (every 15s). Click to pause.${
+                      lastPolledAt ? ` Last checked at ${lastPolledAt.toLocaleTimeString()}` : ''
+                    }`
+                  : 'Polling paused. Click to resume auto-polling.'
+              }
+            >
+              <span className="relative flex h-2 w-2">
+                {isPollingActive && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                )}
+                <span
+                  className={`relative inline-flex rounded-full h-2 w-2 ${
+                    isPollingActive ? 'bg-emerald-500' : 'bg-slate-400'
+                  }`}
+                ></span>
+              </span>
+              <span className="text-[11px] font-mono font-bold">
+                {isPollingActive ? 'Live (15s)' : 'Paused'}
+              </span>
+            </button>
+
             <button
               onClick={() => fetchRequests(false)}
               disabled={loading}
@@ -1235,25 +1288,6 @@ const FirmOnboarding = () => {
                 </strong>{' '}
                 of <strong className="text-slate-800 dark:text-slate-200">{sortedRequests.length}</strong> requests
               </span>
-
-              {/* Rows Per Page Selector */}
-              <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 dark:border-white/10 pl-3">
-                <span className="text-[11px] text-slate-400">Per page:</span>
-                <select
-                  value={rowsPerPage}
-                  onChange={(e) => {
-                    setRowsPerPage(Number(e.target.value));
-                    handlePageChange(1);
-                  }}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                >
-                  {[5, 10, 20, 50].map((num) => (
-                    <option key={num} value={num}>
-                      {num}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             {totalPages > 1 && (

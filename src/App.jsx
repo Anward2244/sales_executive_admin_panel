@@ -13,12 +13,12 @@ const Login = lazy(() => import('@/pages/auth/Login'));
 const Dashboard = lazy(() => import('@/pages/dashboard/Dashboard'));
 const Categories = lazy(() => import('@/pages/products/Categories'));
 const Companies = lazy(() => import('@/pages/companies/Companies'));
-const CompanyDetails = lazy(() => import('@/pages/companies/CompanyDetails'));
 const Firms = lazy(() => import('@/pages/firms/Firms'));
 const FirmOnboarding = lazy(() => import('@/pages/firms/FirmOnboarding'));
 const Notifications = lazy(() => import('@/pages/notifications/Notifications'));
 const EmailNotifications = lazy(() => import('@/pages/notifications/EmailNotifications'));
 const Products = lazy(() => import('@/pages/products/Products'));
+const BrandRoutings = lazy(() => import('@/pages/brandRoutings/BrandRoutings'));
 const PurchaseOrders = lazy(() => import('@/pages/orders/PurchaseOrders'));
 const Reports = lazy(() => import('@/pages/common/Reports'));
 const Users = lazy(() => import('@/pages/users/Users'));
@@ -86,7 +86,7 @@ function App() {
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/categories" element={<Categories />} />
                     <Route path="/companies" element={<Companies />} />
-                    <Route path="/companies/:id" element={<CompanyDetails />} />
+                    <Route path="/companies/:id" element={<Companies />} />
                     <Route path="/firms" element={<Firms />} />
                     <Route path="/firms/onboarding" element={<FirmOnboarding />} />
                     <Route path="/firms/onboarding-requests" element={<Navigate to="/firms/onboarding" replace />} />
@@ -97,6 +97,10 @@ function App() {
                     <Route path="/emails/logs" element={<Navigate to="/notifications/emails" replace />} />
                     <Route path="/emails/recipients" element={<Navigate to="/notifications/emails" replace />} />
                     <Route path="/products" element={<Products />} />
+                    <Route path="/brand-routings" element={<BrandRoutings />} />
+                    <Route path="/brand-routings/matrix" element={<BrandRoutings />} />
+                    <Route path="/brandRoutings" element={<Navigate to="/brand-routings" replace />} />
+                    <Route path="/brand-routing" element={<Navigate to="/brand-routings" replace />} />
                     <Route path="/purchase-orders" element={<PurchaseOrders />} />
                     <Route path="/purchaseOrders" element={<Navigate to="/purchase-orders" replace />} />
                     <Route path="/orders" element={<Navigate to="/purchase-orders" replace />} />

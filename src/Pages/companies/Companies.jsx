@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import {
   FiBriefcase,
   FiPlus,
@@ -15,9 +15,18 @@ import {
   FiX,
   FiImage,
   FiEye,
-  FiTrash2
+  FiTrash2,
+  FiEdit2,
+  FiClock,
+  FiExternalLink
 } from 'react-icons/fi';
-import { getCompaniesApi, createCompanyApi, deleteCompanyApi } from '@/api/axios';
+import {
+  getCompaniesApi,
+  createCompanyApi,
+  deleteCompanyApi,
+  updateCompanyApi,
+  getCompanyByIdApi
+} from '@/api/axios';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { useConfirm } from '@/Context/ConfirmationContext';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
@@ -38,6 +47,7 @@ const INITIAL_FORM = {
 const Companies = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { id: routeCompanyId } = useParams();
   const { confirm: confirmDialog, showAlert } = useConfirm() || {};
 
   const [companies, setCompanies] = useState([]);
@@ -59,6 +69,15 @@ const Companies = () => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
+
+  // Slide-Over Drawer State (Details & Edits)
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [drawerMode, setDrawerMode] = useState('details'); // 'details' | 'edit'
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerLoading, setDrawerLoading] = useState(false);
+  const [editFormData, setEditFormData] = useState(INITIAL_FORM);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState(null);
 
   useEffect(() => {
     if (location.state?.toastMessage) {
@@ -86,6 +105,13 @@ const Companies = () => {
     try {
       await deleteCompanyApi(targetId);
       setCompanies((prev) => prev.filter((c) => c._id !== targetId));
+      if (selectedCompany?._id === targetId) {
+        setIsDrawerOpen(false);
+        setSelectedCompany(null);
+        if (routeCompanyId) {
+          navigate('/companies', { replace: true });
+        }
+      }
       setSuccessToast(`Company "${company.name}" deleted successfully!`);
       setTimeout(() => setSuccessToast(null), 4000);
     } catch (err) {
@@ -98,6 +124,87 @@ const Companies = () => {
       }
     } finally {
       setActionLoadingId(null);
+    }
+  };
+
+  const handleOpenDrawer = (company, mode = 'details') => {
+    setSelectedCompany(company);
+    setDrawerMode(mode);
+    setEditFormData({
+      name: company.name || '',
+      code: company.code || '',
+      description: company.description || '',
+      logo: company.logo || '',
+      isActive: Boolean(company.isActive)
+    });
+    setEditError(null);
+    setIsDrawerOpen(true);
+  };
+
+  const handleCloseDrawer = () => {
+    if (editSubmitting) return;
+    setIsDrawerOpen(false);
+    setEditError(null);
+    if (routeCompanyId) {
+      navigate('/companies', { replace: true });
+    }
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setEditFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : (name === 'code' ? formatEntityCode(value) : value)
+    }));
+    if (editError) setEditError(null);
+  };
+
+  const handleUpdateCompany = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedCompany?._id) return;
+
+    if (!editFormData.name.trim()) {
+      setEditError('Company name is required.');
+      return;
+    }
+    const codeValidation = validateEntityCode(editFormData.code);
+    if (!codeValidation.isValid) {
+      setEditError(codeValidation.error);
+      return;
+    }
+
+    setEditSubmitting(true);
+    setEditError(null);
+
+    try {
+      const payload = {
+        name: editFormData.name.trim(),
+        code: editFormData.code.trim().toUpperCase(),
+        description: editFormData.description?.trim() || '',
+        logo: editFormData.logo?.trim() || '',
+        isActive: Boolean(editFormData.isActive)
+      };
+
+      const response = await updateCompanyApi(selectedCompany._id, payload);
+      const updated = response.data?.data || response.data || { ...selectedCompany, ...payload };
+
+      setCompanies((prev) =>
+        prev.map((c) => (c._id === selectedCompany._id ? { ...c, ...updated } : c))
+      );
+      setSelectedCompany((prev) => ({ ...prev, ...updated }));
+      setSuccessToast(`Company "${payload.name}" updated successfully!`);
+      setTimeout(() => setSuccessToast(null), 4000);
+      setDrawerMode('details');
+    } catch (err) {
+      console.error('Error updating company:', err);
+      setEditError(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Failed to update company. Please check your inputs.'
+      );
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
@@ -157,15 +264,44 @@ const Companies = () => {
     };
   }, []);
 
+  // Sync Route Param :id with Drawer
+  useEffect(() => {
+    if (routeCompanyId) {
+      const found = companies.find((c) => c._id === routeCompanyId);
+      if (found) {
+        handleOpenDrawer(found, 'details');
+      } else if (!loading) {
+        setDrawerLoading(true);
+        getCompanyByIdApi(routeCompanyId)
+          .then((res) => {
+            const data = res.data?.data || res.data;
+            if (data) {
+              handleOpenDrawer(data, 'details');
+            }
+          })
+          .catch((err) => {
+            console.error('Error loading company details for route ID:', routeCompanyId, err);
+          })
+          .finally(() => {
+            setDrawerLoading(false);
+          });
+      }
+    }
+  }, [routeCompanyId, companies, loading]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isCreateModalOpen && !submitting) {
-        setIsCreateModalOpen(false);
+      if (e.key === 'Escape') {
+        if (isCreateModalOpen && !submitting) {
+          setIsCreateModalOpen(false);
+        } else if (isDrawerOpen && !editSubmitting) {
+          handleCloseDrawer();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCreateModalOpen, submitting]);
+  }, [isCreateModalOpen, submitting, isDrawerOpen, editSubmitting, routeCompanyId]);
 
   // Derived filtered companies (debounced)
   const filteredCompanies = useMemo(() => {
@@ -502,7 +638,7 @@ const Companies = () => {
                           <td className="p-4 text-sm text-slate-900 dark:text-white font-medium">
                             <div className="flex items-center gap-3">
                               <div
-                                onClick={() => navigate(`/companies/${company._id}`)}
+                                onClick={() => handleOpenDrawer(company, 'details')}
                                 className="w-9 h-9 rounded-xl overflow-hidden bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm cursor-pointer hover:ring-2 hover:ring-blue-500/30 transition-all"
                                 title="View company details"
                               >
@@ -522,7 +658,7 @@ const Companies = () => {
                               <div>
                                 <div className="flex items-center gap-2">
                                   <span
-                                    onClick={() => navigate(`/companies/${company._id}`)}
+                                    onClick={() => handleOpenDrawer(company, 'details')}
                                     className="font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
                                     title="View company details"
                                   >
@@ -595,8 +731,8 @@ const Companies = () => {
                             <div className="flex items-center justify-center gap-1.5">
                               <button
                                 type="button"
-                                onClick={() => navigate(`/companies/${company._id}`)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                                onClick={() => handleOpenDrawer(company, 'details')}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                                 title="View Company Details"
                               >
                                 <FiEye size={13} />
@@ -604,10 +740,19 @@ const Companies = () => {
                               </button>
                               <button
                                 type="button"
+                                onClick={() => handleOpenDrawer(company, 'edit')}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border border-amber-200/60 dark:border-amber-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                                title="Edit Company"
+                              >
+                                <FiEdit2 size={13} />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => handleDeleteCompany(company)}
                                 disabled={actionLoadingId === company._id}
                                 className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl border border-transparent hover:border-rose-200/60 dark:hover:border-rose-500/20 transition-all cursor-pointer disabled:opacity-40"
-                                title="Delete Company (DEL /companies/{id})"
+                                title="Delete Company"
                               >
                                 {actionLoadingId === company._id ? (
                                   <FiLoader className="text-sm animate-spin text-rose-500" />
@@ -852,6 +997,435 @@ const Companies = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Slide-Over Drawer for Company Details & Edits */}
+      {isDrawerOpen && createPortal(
+        <div className="fixed inset-0 z-[10000] overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 dark:bg-slate-950/50 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+            onClick={handleCloseDrawer}
+          />
+
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-xl bg-white/30 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out animate-in slide-in-from-right duration-300">
+              
+              {/* Drawer Top Header */}
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-slate-950/40 backdrop-blur-md">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
+                      <FiBriefcase className="text-xl" />
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight truncate">
+                        {selectedCompany ? selectedCompany.name : 'Company Details'}
+                      </h2>
+                      <div className="flex items-center gap-2 mt-1">
+                        {selectedCompany?.code && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/10 text-slate-800 dark:text-slate-200 font-mono text-[11px] font-bold">
+                            <FiTag className="text-[10px] text-slate-400" />
+                            {selectedCompany.code}
+                          </span>
+                        )}
+                        {selectedCompany?._id && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
+                              {selectedCompany._id}
+                            </span>
+                            <CopyButton text={selectedCompany._id} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={editSubmitting}
+                    onClick={handleCloseDrawer}
+                    className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0 disabled:opacity-40"
+                    title="Close drawer (Esc)"
+                  >
+                    <FiX size={20} />
+                  </button>
+                </div>
+
+                {/* Tab Switcher: View Details vs. Edit Company */}
+                <div className="flex items-center gap-1.5 p-1 mt-4 bg-slate-200/60 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDrawerMode('details');
+                      setEditError(null);
+                    }}
+                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      drawerMode === 'details'
+                        ? 'bg-white dark:bg-white/15 text-blue-600 dark:text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    }`}
+                  >
+                    <FiEye className="text-sm" />
+                    <span>Overview & Details</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDrawerMode('edit');
+                      setEditError(null);
+                      if (selectedCompany) {
+                        setEditFormData({
+                          name: selectedCompany.name || '',
+                          code: selectedCompany.code || '',
+                          description: selectedCompany.description || '',
+                          logo: selectedCompany.logo || '',
+                          isActive: Boolean(selectedCompany.isActive)
+                        });
+                      }
+                    }}
+                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      drawerMode === 'edit'
+                        ? 'bg-white dark:bg-white/15 text-blue-600 dark:text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    }`}
+                  >
+                    <FiEdit2 className="text-sm" />
+                    <span>Edit Company</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Drawer Body Area */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-6">
+                {drawerLoading ? (
+                  <div className="py-20 flex flex-col items-center justify-center text-center">
+                    <FiLoader className="text-3xl text-blue-600 animate-spin mb-3" />
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Loading Company Details...
+                    </p>
+                  </div>
+                ) : !selectedCompany ? (
+                  <div className="py-20 text-center text-slate-500 dark:text-slate-400">
+                    <FiAlertCircle className="text-3xl mx-auto mb-2 text-slate-400" />
+                    <p className="text-sm font-semibold">No company found.</p>
+                  </div>
+                ) : drawerMode === 'details' ? (
+                  /* ================= DETAILS VIEW ================= */
+                  <div className="space-y-6 animate-in fade-in duration-200">
+                    {/* Hero Card */}
+                    <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+                      <div className="w-20 h-20 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-md">
+                        {selectedCompany.logo ? (
+                          <img
+                            src={selectedCompany.logo}
+                            alt={selectedCompany.name}
+                            className="w-full h-full object-contain p-2"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 !text-white flex items-center justify-center text-2xl font-black">
+                            {selectedCompany.name?.charAt(0)?.toUpperCase() || 'C'}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                          <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                            {selectedCompany.name}
+                          </h3>
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                              selectedCompany.isActive
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                selectedCompany.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                              }`}
+                            />
+                            <span>{selectedCompany.isActive ? 'Active Entity' : 'Inactive Entity'}</span>
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          Billing Code:{' '}
+                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                            {selectedCompany.code || 'N/A'}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Metadata Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          <FiTag className="text-blue-500 text-sm" />
+                          <span>Code Identifier</span>
+                        </div>
+                        <p className="mt-2 text-sm font-mono font-black text-slate-900 dark:text-white">
+                          {selectedCompany.code || 'N/A'}
+                        </p>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          <FiCheckCircle className="text-emerald-500 text-sm" />
+                          <span>Operational Status</span>
+                        </div>
+                        <p className="mt-2 text-sm font-bold text-slate-900 dark:text-white">
+                          {selectedCompany.isActive ? 'Available for Routing' : 'Deactivated'}
+                        </p>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          <FiCalendar className="text-blue-500 text-sm" />
+                          <span>Created Date</span>
+                        </div>
+                        <p className="mt-2 text-sm font-mono font-medium text-slate-900 dark:text-white">
+                          {selectedCompany.createdAt ? formatDateDDMMYYYY(selectedCompany.createdAt) : '-'}
+                        </p>
+                        {selectedCompany.createdAt && (
+                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                            {formatDateTimeDDMMYYYY(selectedCompany.createdAt).split(', ')[1] || ''}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          <FiClock className="text-indigo-500 text-sm" />
+                          <span>Last Updated</span>
+                        </div>
+                        <p className="mt-2 text-sm font-mono font-medium text-slate-900 dark:text-white">
+                          {selectedCompany.updatedAt ? formatDateDDMMYYYY(selectedCompany.updatedAt) : '-'}
+                        </p>
+                        {selectedCompany.updatedAt && (
+                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                            {formatDateTimeDDMMYYYY(selectedCompany.updatedAt).split(', ')[1] || ''}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Description Box */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                      <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                        Description & Notes
+                      </h4>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                        {selectedCompany.description || 'No description provided for this company.'}
+                      </p>
+                    </div>
+
+                    {/* Logo Source Preview if URL provided */}
+                    {selectedCompany.logo && (
+                      <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Logo Asset Source
+                          </h4>
+                          <a
+                            href={selectedCompany.logo}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 hover:underline"
+                          >
+                            <span>Open URL</span>
+                            <FiExternalLink size={12} />
+                          </a>
+                        </div>
+                        <p className="text-xs font-mono text-slate-500 dark:text-slate-400 truncate bg-white dark:bg-slate-950/40 p-2.5 rounded-xl border border-slate-200/60 dark:border-white/5">
+                          {selectedCompany.logo}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* ================= EDIT VIEW ================= */
+                  <form id="drawerEditCompanyForm" onSubmit={handleUpdateCompany} className="space-y-4 animate-in fade-in duration-200">
+                    {editError && (
+                      <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2.5 animate-in fade-in duration-150">
+                        <FiAlertCircle className="shrink-0 text-base" />
+                        <span>{editError}</span>
+                      </div>
+                    )}
+
+                    {/* Company Name */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                        Company Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        required
+                        disabled={editSubmitting}
+                        placeholder="e.g. Whatnot India Private Limited"
+                        value={editFormData.name}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 font-medium"
+                      />
+                    </div>
+
+                    {/* Company Code */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                        Company Code <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <FiTag className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+                        <input
+                          type="text"
+                          name="code"
+                          required
+                          disabled={editSubmitting}
+                          placeholder="e.g. WHATNOT"
+                          value={editFormData.code}
+                          onChange={handleEditInputChange}
+                          className="w-full pl-10 pr-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">Unique uppercase code identifier for billing and orders.</p>
+                    </div>
+
+                    {/* Logo URL + Live Preview */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                        Logo URL
+                      </label>
+                      <div className="flex gap-2.5 items-center">
+                        <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                          {editFormData.logo ? (
+                            <img
+                              src={editFormData.logo}
+                              alt="Logo preview"
+                              className="w-full h-full object-contain p-1"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <FiImage className="text-slate-400 text-lg" />
+                          )}
+                        </div>
+                        <input
+                          type="url"
+                          name="logo"
+                          disabled={editSubmitting}
+                          placeholder="https://example.com/logo.png"
+                          value={editFormData.logo}
+                          onChange={handleEditInputChange}
+                          className="flex-1 px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                        Description
+                      </label>
+                      <textarea
+                        name="description"
+                        rows={4}
+                        disabled={editSubmitting}
+                        placeholder="Company summary, corporate crossover, or distribution details..."
+                        value={editFormData.description}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 resize-none leading-relaxed"
+                      />
+                    </div>
+
+                    {/* Active Toggle */}
+                    <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                      <div>
+                        <label htmlFor="editCompanyIsActiveDrawer" className="text-xs font-bold text-slate-900 dark:text-white cursor-pointer block">
+                          Active Status
+                        </label>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Enable this company for catalogs and inventory listings.
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        id="editCompanyIsActiveDrawer"
+                        name="isActive"
+                        checked={editFormData.isActive}
+                        onChange={handleEditInputChange}
+                        className="w-5 h-5 rounded-md text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+                      />
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              {/* Drawer Footer Actions */}
+              <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-slate-950/40 backdrop-blur-md flex items-center justify-between gap-3">
+                {drawerMode === 'details' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCompany(selectedCompany)}
+                      disabled={actionLoadingId === selectedCompany?._id}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl border border-rose-200/60 dark:border-rose-500/20 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {actionLoadingId === selectedCompany?._id ? (
+                        <FiLoader className="animate-spin text-sm" />
+                      ) : (
+                        <FiTrash2 className="text-sm" />
+                      )}
+                      <span>Delete Company</span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCloseDrawer}
+                        className="px-4 py-2.5 bg-slate-200/60 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={editSubmitting}
+                      onClick={() => {
+                        setDrawerMode('details');
+                        setEditError(null);
+                      }}
+                      className="px-4 py-2.5 bg-slate-200/60 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      form="drawerEditCompanyForm"
+                      disabled={editSubmitting}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all shadow-md shadow-blue-600/25 cursor-pointer disabled:opacity-50 active:scale-95"
+                    >
+                      {editSubmitting && <FiLoader className="animate-spin text-xs" />}
+                      <span>{editSubmitting ? 'Saving Changes...' : 'Save Changes'}</span>
+                    </button>
+                  </>
+                )}
+              </div>
+
+            </div>
           </div>
         </div>,
         document.body

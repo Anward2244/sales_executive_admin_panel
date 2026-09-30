@@ -396,13 +396,7 @@ const Reports = () => {
   // Product Sales Performance Pagination
   const { preferences: displayPrefs } = useDisplayPreferences();
   const [productPage, setProductPage] = useState(1);
-  const [productRowsPerPage, setProductRowsPerPage] = useState(displayPrefs.rowsPerPage || 10);
-
-  useEffect(() => {
-    if (displayPrefs.rowsPerPage) {
-      setProductRowsPerPage(displayPrefs.rowsPerPage);
-    }
-  }, [displayPrefs.rowsPerPage]);
+  const productRowsPerPage = displayPrefs.rowsPerPage || 10;
 
   const totalProductPages = Math.ceil(productPerformance.length / productRowsPerPage) || 1;
   const indexOfLastProduct = productPage * productRowsPerPage;
@@ -1247,25 +1241,6 @@ const Reports = () => {
                   </strong>{' '}
                   of <strong className="text-slate-800 dark:text-slate-200">{productPerformance.length}</strong> products
                 </span>
-
-                {/* Rows Per Page Selector */}
-                <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 dark:border-white/10 pl-3">
-                  <span className="text-[11px] text-slate-400">Per page:</span>
-                  <select
-                    value={productRowsPerPage}
-                    onChange={(e) => {
-                      setProductRowsPerPage(Number(e.target.value));
-                      setProductPage(1);
-                    }}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                  >
-                    {[5, 10, 20, 50].map((num) => (
-                      <option key={num} value={num}>
-                        {num}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               {totalProductPages > 1 && (

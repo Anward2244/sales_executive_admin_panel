@@ -1,7 +1,7 @@
 import { 
   FiHome, FiGrid, FiBriefcase, FiServer, 
   FiBell, FiBox, FiShoppingCart, FiPieChart, FiUsers, FiSettings,
-  FiUserCheck, FiList, FiMail
+  FiUserCheck, FiList, FiMail, FiGitBranch
 } from 'react-icons/fi';
 import { filterAccessibleMenus } from '../utils/rbac';
 
@@ -20,6 +20,7 @@ const PAGES = {
   COMPANIES: { path: '/companies', name: 'Companies', icon: FiBriefcase },
   CATEGORIES: { path: '/categories', name: 'Categories', icon: FiGrid },
   PRODUCTS: { path: '/products', name: 'Products', icon: FiBox },
+  BRAND_ROUTINGS: { path: '/brand-routings', name: 'Brand Routings', icon: FiGitBranch },
   PURCHASE_ORDERS: { path: '/purchase-orders', name: 'Purchase Orders', icon: FiShoppingCart },
   NOTIFICATIONS: {
     path: '/notifications',
@@ -42,6 +43,7 @@ export const getAccessibleMenus = (userPermissions = [], userRole = '') => {
     PAGES.COMPANIES,
     PAGES.CATEGORIES,
     PAGES.PRODUCTS,
+    PAGES.BRAND_ROUTINGS,
     PAGES.PURCHASE_ORDERS,
     PAGES.NOTIFICATIONS,
     PAGES.REPORTS,
