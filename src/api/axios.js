@@ -446,10 +446,10 @@ export const bulkCreateProductsApi = async (productsArray) => {
 
 export const getProductByIdApi = async (id) => {
   try {
-    return await api.get(`/products/${id}`);
+    return await api.get(`/v1/products/${id}`);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.get(`/v1/products/${id}`);
+      return await api.get(`/products/${id}`);
     }
     throw err;
   }
@@ -457,14 +457,14 @@ export const getProductByIdApi = async (id) => {
 
 export const updateProductApi = async (id, productData) => {
   try {
-    return await api.put(`/products/${id}`, productData);
+    return await api.put(`/v1/products/${id}`, productData);
   } catch (err) {
     if (err.response?.status === 404 || err.response?.status === 405) {
       try {
-        return await api.put(`/v1/products/${id}`, productData);
+        return await api.patch(`/v1/products/${id}`, productData);
       } catch (err2) {
         if (err2.response?.status === 404 || err2.response?.status === 405) {
-          return await api.patch(`/products/${id}`, productData);
+          return await api.put(`/products/${id}`, productData);
         }
         throw err2;
       }

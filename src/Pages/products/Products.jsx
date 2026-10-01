@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FiPlus,
   FiEdit2,
@@ -25,11 +26,12 @@ import {
   FiChevronRight,
   FiGitBranch,
   FiZap,
-  FiExternalLink
+  FiExternalLink,
+  FiCalendar,
+  FiLoader
 } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 import BulkProductImportModal, { downloadProductExcelTemplate } from './BulkProductImportModal';
-import ProductDetailsModal from '@/components/ui/ProductDetailsModal';
 import PageHeader from '@/components/ui/PageHeader';
 import Skeleton from '@/components/ui/Skeleton';
 import CopyButton from '@/components/ui/CopyButton';
@@ -60,6 +62,7 @@ const INITIAL_PRODUCT_FORM = {
   brand: 'Realme',
   categoryId: '',
   companyId: '',
+  price: '',
   locations: [],
   companyMappings: [],
   unit: 'PCS',
@@ -92,8 +95,10 @@ const Products = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = displayPrefs.rowsPerPage || 10;
 
-  // Modal & Dropdown States
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Drawer, Form & Modal States
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState('overview'); // 'overview' | 'edit'
+  const [drawerProduct, setDrawerProduct] = useState(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const actionsDropdownRef = useRef(null);
@@ -108,8 +113,7 @@ const Products = () => {
   const [isAutoMappingBrand, setIsAutoMappingBrand] = useState(false);
   const [autoMappedBanner, setAutoMappedBanner] = useState(null);
 
-  // Details Modal & Delete Confirm Modal
-  const [detailsProduct, setDetailsProduct] = useState(null);
+  // Delete Confirm Modal
   const [deleteConfirmProduct, setDeleteConfirmProduct] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -118,6 +122,25 @@ const Products = () => {
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [isBulkCompanyModalOpen, setIsBulkCompanyModalOpen] = useState(false);
   const [bulkTargetCompanyId, setBulkTargetCompanyId] = useState('');
+  const [isBulkLocationModalOpen, setIsBulkLocationModalOpen] = useState(false);
+  const [bulkLocationMode, setBulkLocationMode] = useState('sync-matrix'); // 'sync-matrix' | 'replace' | 'append' | 'all' | 'clear'
+  const [bulkLocations, setBulkLocations] = useState([]);
+  const [bulkCustomLocationInput, setBulkCustomLocationInput] = useState('');
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+  const [bulkEditFields, setBulkEditFields] = useState({
+    updateCategory: false,
+    categoryId: '',
+    updateBrand: false,
+    brand: '',
+    updatePrice: false,
+    priceMode: 'fixed',
+    priceValue: '',
+    updateUnit: false,
+    unit: 'PCS',
+    updateStatus: false,
+    isActive: true,
+    syncLocationsWithMatrix: false
+  });
   const [batchProgress, setBatchProgress] = useState(null);
   const abortBatchRef = useRef(false);
 
@@ -250,13 +273,16 @@ const Products = () => {
   const uniqueLocations = useMemo(() => {
     const locSet = new Set();
     products.forEach((p) => {
-      if (Array.isArray(p.locations)) {
-        p.locations.forEach((loc) => {
-          if (loc && typeof loc === 'string') {
-            locSet.add(loc.trim());
-          }
-        });
-      }
+      const locList = Array.isArray(p.locations) && p.locations.length > 0
+        ? p.locations
+        : (Array.isArray(p.companyMappings)
+            ? p.companyMappings.flatMap((m) => m?.states || [])
+            : []);
+      locList.forEach((loc) => {
+        if (loc && typeof loc === 'string') {
+          locSet.add(loc.trim());
+        }
+      });
     });
     return Array.from(locSet).sort();
   }, [products]);
@@ -277,7 +303,12 @@ const Products = () => {
 
         // Location Filter
         if (selectedLocationFilter !== 'ALL') {
-          if (!Array.isArray(product.locations) || !product.locations.includes(selectedLocationFilter)) {
+          const productLocs = Array.isArray(product.locations) && product.locations.length > 0
+            ? product.locations
+            : (Array.isArray(product.companyMappings)
+                ? product.companyMappings.flatMap((m) => m?.states || [])
+                : []);
+          if (!productLocs.includes(selectedLocationFilter)) {
             return false;
           }
         }
@@ -308,7 +339,12 @@ const Products = () => {
             : String(categories.find((c) => c._id === product.categoryId)?.code || '').toLowerCase();
           const compName = typeof product.companyId === 'object' ? String(product.companyId?.name || '').toLowerCase() : '';
           const compCode = typeof product.companyId === 'object' ? String(product.companyId?.code || '').toLowerCase() : '';
-          const locsStr = Array.isArray(product.locations) ? product.locations.join(' ').toLowerCase() : '';
+          const locsList = Array.isArray(product.locations) && product.locations.length > 0
+            ? product.locations
+            : (Array.isArray(product.companyMappings)
+                ? product.companyMappings.flatMap((m) => m?.states || [])
+                : []);
+          const locsStr = locsList.join(' ').toLowerCase();
 
           return (
             name.includes(q) ||
@@ -531,42 +567,59 @@ const Products = () => {
     }
   };
 
-  // Open Modal for Add
-  const handleOpenAdd = async () => {
-    setEditingProduct(null);
-    const initialBrand = matrixBrands.length > 0 ? matrixBrands[0].brand : (uniqueBrands[0] || 'Realme');
-    const initialCompId = companies.length > 0 ? companies[0]._id : '';
-
-    setFormData({
-      ...INITIAL_PRODUCT_FORM,
-      brand: initialBrand,
-      companyId: initialCompId,
-      locations: [],
-      companyMappings: initialCompId ? [{ companyId: initialCompId, states: [] }] : []
-    });
-    setCustomLocationInput('');
-    setCustomMappingInputs({});
-    setFormError('');
-    setAutoMappedBanner(null);
-    setIsModalOpen(true);
-
-    // Automatically map companies and states for initial brand
-    if (initialBrand) {
-      setIsAutoMappingBrand(true);
-      try {
-        const resolved = await resolveBrandRoutingRules(initialBrand);
-        if (resolved) {
-          applyBrandRoutingToForm(resolved, { notify: false });
-        }
-      } finally {
-        setIsAutoMappingBrand(false);
-      }
+  // Resolve Company details for Drawer
+  const getDrawerCompanyDetails = useCallback((prod) => {
+    if (!prod) return { name: 'Unassigned', code: null, id: null };
+    if (typeof prod.companyId === 'object' && prod.companyId !== null) {
+      return {
+        name: prod.companyId.name || 'Unassigned',
+        code: prod.companyId.code || null,
+        id: prod.companyId._id || null
+      };
     }
-  };
+    const found = companies.find((c) => c._id === prod.companyId);
+    if (found) {
+      return {
+        name: found.name || 'Unassigned',
+        code: found.code || null,
+        id: found._id || null
+      };
+    }
+    return {
+      name: prod.companyId || 'Unassigned',
+      code: null,
+      id: typeof prod.companyId === 'string' ? prod.companyId : null
+    };
+  }, [companies]);
 
-  // Open Modal for Edit
-  const handleOpenEdit = (product, e) => {
-    if (e) e.stopPropagation();
+  // Resolve Category details for Drawer
+  const getDrawerCategoryDetails = useCallback((prod) => {
+    if (!prod || !prod.categoryId) return null;
+    if (typeof prod.categoryId === 'object' && prod.categoryId !== null) {
+      return {
+        name: prod.categoryId.name || 'Unassigned',
+        code: prod.categoryId.code || null,
+        id: prod.categoryId._id || null
+      };
+    }
+    const found = categories.find((c) => c._id === prod.categoryId);
+    if (found) {
+      return {
+        name: found.name || 'Unassigned',
+        code: found.code || null,
+        id: found._id || null
+      };
+    }
+    return {
+      name: prod.categoryId,
+      code: null,
+      id: typeof prod.categoryId === 'string' ? prod.categoryId : null
+    };
+  }, [categories]);
+
+  // Populate form with product attributes
+  const populateProductForm = (product) => {
+    if (!product) return;
     setEditingProduct(product);
     const compId = typeof product.companyId === 'object' ? product.companyId?._id : (product.companyId || '');
     const catId = typeof product.categoryId === 'object' ? product.categoryId?._id : (product.categoryId || '');
@@ -585,13 +638,22 @@ const Products = () => {
       }];
     }
 
+    // Determine initial locations
+    let initialLocations = Array.isArray(product.locations) ? [...product.locations] : [];
+    if (initialLocations.length === 0 && initialMappings.length > 0) {
+      const stateSet = new Set();
+      initialMappings.forEach((m) => (m.states || []).forEach((st) => stateSet.add(st)));
+      initialLocations = Array.from(stateSet);
+    }
+
     setFormData({
       name: product.name || '',
       sku: product.sku || '',
       brand: product.brand || 'Realme',
       categoryId: catId || '',
       companyId: compId || (companies.length > 0 ? companies[0]._id : ''),
-      locations: Array.isArray(product.locations) ? [...product.locations] : [],
+      price: product.price !== undefined && product.price !== null ? product.price : '',
+      locations: initialLocations,
       companyMappings: initialMappings,
       unit: product.unit || 'PCS',
       description: product.description || '',
@@ -601,7 +663,169 @@ const Products = () => {
     setCustomMappingInputs({});
     setFormError('');
     setAutoMappedBanner(null);
-    setIsModalOpen(true);
+  };
+
+  // Open Drawer for Add Product
+  const handleOpenAdd = async () => {
+    setDrawerProduct(null);
+    setEditingProduct(null);
+    setDrawerTab('edit');
+    const initialBrand = matrixBrands.length > 0 ? matrixBrands[0].brand : (uniqueBrands[0] || 'Realme');
+    const initialCompId = companies.length > 0 ? companies[0]._id : '';
+
+    setFormData({
+      ...INITIAL_PRODUCT_FORM,
+      brand: initialBrand,
+      companyId: initialCompId,
+      price: '',
+      locations: [],
+      companyMappings: initialCompId ? [{ companyId: initialCompId, states: [] }] : []
+    });
+    setCustomLocationInput('');
+    setCustomMappingInputs({});
+    setFormError('');
+    setAutoMappedBanner(null);
+    setIsDrawerOpen(true);
+
+    // Automatically map companies and states for initial brand
+    if (initialBrand) {
+      setIsAutoMappingBrand(true);
+      try {
+        const resolved = await resolveBrandRoutingRules(initialBrand);
+        if (resolved) {
+          applyBrandRoutingToForm(resolved, { notify: false });
+        }
+      } finally {
+        setIsAutoMappingBrand(false);
+      }
+    }
+  };
+
+  // Open Drawer for Details View
+  const handleOpenDetails = (product) => {
+    setDrawerProduct(product);
+    setDrawerTab('overview');
+    populateProductForm(product);
+    setIsDrawerOpen(true);
+  };
+
+  // Open Drawer for Edit
+  const handleOpenEdit = (product, e) => {
+    if (e) e.stopPropagation();
+    setDrawerProduct(product);
+    setDrawerTab('edit');
+    populateProductForm(product);
+    setIsDrawerOpen(true);
+  };
+
+  // Close Drawer
+  const handleCloseDrawer = () => {
+    setIsDrawerOpen(false);
+    setDrawerProduct(null);
+    setEditingProduct(null);
+    setFormError('');
+  };
+
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (isDrawerOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isDrawerOpen]);
+
+  // Handle escape key to close drawer
+  useEffect(() => {
+    if (!isDrawerOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !deleteConfirmProduct) {
+        handleCloseDrawer();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDrawerOpen, deleteConfirmProduct]);
+
+  // Direct Product Location Handlers
+  const handleToggleProductLocation = (locName) => {
+    setFormData((prev) => {
+      const currentLocs = Array.isArray(prev.locations) ? prev.locations : [];
+      const updatedLocs = currentLocs.includes(locName)
+        ? currentLocs.filter((l) => l !== locName)
+        : [...currentLocs, locName];
+
+      // Keep single companyMapping in sync if present
+      let updatedMappings = prev.companyMappings || [];
+      if (updatedMappings.length <= 1) {
+        const compId = updatedMappings[0]?.companyId || prev.companyId;
+        updatedMappings = [{ companyId: compId, states: updatedLocs }];
+      }
+
+      return {
+        ...prev,
+        locations: updatedLocs,
+        companyMappings: updatedMappings
+      };
+    });
+  };
+
+  const handleSelectAllProductLocations = () => {
+    setFormData((prev) => {
+      const updatedLocs = [...INDIAN_STATES];
+      let updatedMappings = prev.companyMappings || [];
+      if (updatedMappings.length <= 1) {
+        const compId = updatedMappings[0]?.companyId || prev.companyId;
+        updatedMappings = [{ companyId: compId, states: updatedLocs }];
+      }
+      return {
+        ...prev,
+        locations: updatedLocs,
+        companyMappings: updatedMappings
+      };
+    });
+  };
+
+  const handleClearProductLocations = () => {
+    setFormData((prev) => {
+      let updatedMappings = prev.companyMappings || [];
+      if (updatedMappings.length <= 1) {
+        const compId = updatedMappings[0]?.companyId || prev.companyId;
+        updatedMappings = [{ companyId: compId, states: [] }];
+      }
+      return {
+        ...prev,
+        locations: [],
+        companyMappings: updatedMappings
+      };
+    });
+  };
+
+  const handleAddCustomProductLocation = (val) => {
+    const trimmed = (val || '').trim();
+    if (!trimmed) return;
+    if (isAllKeyword(trimmed)) {
+      handleSelectAllProductLocations();
+      return;
+    }
+    setFormData((prev) => {
+      const currentLocs = Array.isArray(prev.locations) ? prev.locations : [];
+      if (currentLocs.includes(trimmed)) return prev;
+      const updatedLocs = [...currentLocs, trimmed];
+      let updatedMappings = prev.companyMappings || [];
+      if (updatedMappings.length <= 1) {
+        const compId = updatedMappings[0]?.companyId || prev.companyId;
+        updatedMappings = [{ companyId: compId, states: updatedLocs }];
+      }
+      return {
+        ...prev,
+        locations: updatedLocs,
+        companyMappings: updatedMappings
+      };
+    });
   };
 
   // Auto-generate SKU from name
@@ -641,10 +865,13 @@ const Products = () => {
   const handleRemoveCompanyMapping = (index) => {
     setFormData((prev) => {
       const updated = (prev.companyMappings || []).filter((_, idx) => idx !== index);
+      const stateSet = new Set();
+      updated.forEach((m) => (m.states || []).forEach((st) => stateSet.add(st)));
       return {
         ...prev,
         companyMappings: updated,
-        companyId: updated.length > 0 ? updated[0].companyId : prev.companyId
+        companyId: updated.length > 0 ? updated[0].companyId : prev.companyId,
+        locations: Array.from(stateSet)
       };
     });
   };
@@ -667,14 +894,40 @@ const Products = () => {
     setFormData((prev) => {
       const updated = [...(prev.companyMappings || [])];
       if (!updated[mappingIndex]) return prev;
-      const currentStates = updated[mappingIndex].states || [];
+      const currentStates = (updated[mappingIndex].states || []).filter((s) => s !== '*');
       const nextStates = currentStates.includes(stateName)
         ? currentStates.filter((s) => s !== stateName)
         : [...currentStates, stateName];
       updated[mappingIndex] = { ...updated[mappingIndex], states: nextStates };
+
+      // Keep union of states in formData.locations
+      const stateSet = new Set();
+      updated.forEach((m) => (m.states || []).forEach((st) => stateSet.add(st)));
+
       return {
         ...prev,
-        companyMappings: updated
+        companyMappings: updated,
+        locations: Array.from(stateSet)
+      };
+    });
+  };
+
+  const handleToggleWildcardMapping = (mappingIndex) => {
+    setFormData((prev) => {
+      const updated = [...(prev.companyMappings || [])];
+      if (!updated[mappingIndex]) return prev;
+      const currentStates = updated[mappingIndex].states || [];
+      const hasWildcard = currentStates.includes('*');
+      const nextStates = hasWildcard ? [] : ['*'];
+      updated[mappingIndex] = { ...updated[mappingIndex], states: nextStates };
+
+      const stateSet = new Set();
+      updated.forEach((m) => (m.states || []).forEach((st) => stateSet.add(st)));
+
+      return {
+        ...prev,
+        companyMappings: updated,
+        locations: Array.from(stateSet)
       };
     });
   };
@@ -684,9 +937,14 @@ const Products = () => {
       const updated = [...(prev.companyMappings || [])];
       if (!updated[mappingIndex]) return prev;
       updated[mappingIndex] = { ...updated[mappingIndex], states: [...INDIAN_STATES] };
+
+      const stateSet = new Set();
+      updated.forEach((m) => (m.states || []).forEach((st) => stateSet.add(st)));
+
       return {
         ...prev,
-        companyMappings: updated
+        companyMappings: updated,
+        locations: Array.from(stateSet)
       };
     });
   };
@@ -696,9 +954,14 @@ const Products = () => {
       const updated = [...(prev.companyMappings || [])];
       if (!updated[mappingIndex]) return prev;
       updated[mappingIndex] = { ...updated[mappingIndex], states: [] };
+
+      const stateSet = new Set();
+      updated.forEach((m) => (m.states || []).forEach((st) => stateSet.add(st)));
+
       return {
         ...prev,
-        companyMappings: updated
+        companyMappings: updated,
+        locations: Array.from(stateSet)
       };
     });
   };
@@ -706,6 +969,10 @@ const Products = () => {
   const handleAddCustomLocationToMapping = (mappingIndex, text) => {
     const trimmed = (text || '').trim();
     if (!trimmed) return;
+    if (trimmed === '*') {
+      handleToggleWildcardMapping(mappingIndex);
+      return;
+    }
     if (isAllKeyword(trimmed)) {
       handleSelectAllStatesForMapping(mappingIndex);
       return;
@@ -717,16 +984,21 @@ const Products = () => {
       if (!currentStates.includes(trimmed)) {
         updated[mappingIndex] = { ...updated[mappingIndex], states: [...currentStates, trimmed] };
       }
+
+      const stateSet = new Set();
+      updated.forEach((m) => (m.states || []).forEach((st) => stateSet.add(st)));
+
       return {
         ...prev,
-        companyMappings: updated
+        companyMappings: updated,
+        locations: Array.from(stateSet)
       };
     });
   };
 
   // Save Product (Create or Update)
   const handleSaveProduct = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setFormError('');
 
     if (!formData.name.trim()) {
@@ -754,22 +1026,28 @@ const Products = () => {
         }));
     }
 
-    const effectiveCompanyId = cleanMappings.length > 0 ? cleanMappings[0].companyId : formData.companyId;
+    const effectiveCompanyId = cleanMappings.length > 0
+      ? cleanMappings[0].companyId
+      : (typeof formData.companyId === 'object' ? formData.companyId?._id : (formData.companyId || companies[0]?._id));
 
     if (!effectiveCompanyId) {
       setFormError('Please select at least one partner company.');
       return;
     }
 
-    // Determine effective locations (flatten union of states across mappings, or fallback to formData.locations)
-    let effectiveLocations = formData.locations || [];
-    if (cleanMappings.length > 0) {
+    // Determine effective locations
+    let effectiveLocations = Array.isArray(formData.locations) ? [...formData.locations] : [];
+
+    // If multi-company mappings are explicitly configured, compute union
+    if (cleanMappings.length > 1) {
       const stateSet = new Set();
-      cleanMappings.forEach((m) => {
-        (m.states || []).forEach((st) => stateSet.add(st));
-      });
-      if (stateSet.size > 0) {
-        effectiveLocations = Array.from(stateSet);
+      cleanMappings.forEach((m) => (m.states || []).forEach((st) => stateSet.add(st)));
+      effectiveLocations = Array.from(stateSet);
+    } else if (cleanMappings.length === 1) {
+      if (cleanMappings[0].states && cleanMappings[0].states.length > 0) {
+        effectiveLocations = cleanMappings[0].states;
+      } else {
+        cleanMappings[0].states = effectiveLocations;
       }
     }
 
@@ -781,49 +1059,62 @@ const Products = () => {
         brand: formData.brand.trim(),
         categoryId: formData.categoryId ? formData.categoryId : undefined,
         companyId: effectiveCompanyId,
-        locations: effectiveLocations,
-        companyMappings: cleanMappings.length > 0 ? cleanMappings : [{ companyId: effectiveCompanyId, states: effectiveLocations }],
+        price: formData.price !== undefined && formData.price !== '' && !isNaN(Number(formData.price))
+          ? Number(formData.price)
+          : 0,
         unit: formData.unit.trim() || 'PCS',
         description: formData.description.trim(),
+        locations: effectiveLocations,
+        companyMappings: cleanMappings,
         isActive: Boolean(formData.isActive)
       };
 
-      if (editingProduct) {
-        const res = await updateProductApi(editingProduct._id, payload);
-        const updated = res.data?.data || res.data || { ...editingProduct, ...payload };
-        // Populate companyId and categoryId object if available
+      const targetProd = editingProduct || drawerProduct;
+
+      if (targetProd?._id) {
+        const res = await updateProductApi(targetProd._id, payload);
+        const serverData = res.data?.data || (res.data?._id ? res.data : {});
         const matchedComp = companies.find((c) => c._id === payload.companyId);
-        if (matchedComp && typeof updated.companyId !== 'object') {
-          updated.companyId = matchedComp;
-        }
         const matchedCat = categories.find((c) => c._id === payload.categoryId);
-        if (matchedCat && typeof updated.categoryId !== 'object') {
-          updated.categoryId = matchedCat;
-        }
+
+        const updatedMerged = {
+          ...targetProd,
+          ...payload,
+          ...serverData,
+          companyId: matchedComp || serverData.companyId || payload.companyId,
+          categoryId: matchedCat || serverData.categoryId || payload.categoryId,
+          locations: payload.locations,
+          companyMappings: payload.companyMappings
+        };
+
         setProducts((prev) =>
-          prev.map((p) => (p._id === editingProduct._id ? { ...p, ...updated } : p))
+          prev.map((p) => (p._id === targetProd._id ? updatedMerged : p))
         );
+        setDrawerProduct(updatedMerged);
+        setEditingProduct(updatedMerged);
+        setDrawerTab('overview');
         showToast(`Product "${payload.name}" updated successfully!`);
       } else {
         const res = await createProductApi(payload);
-        const created = res.data?.data || res.data;
-        if (created) {
-          const matchedComp = companies.find((c) => c._id === payload.companyId);
-          if (matchedComp && typeof created.companyId !== 'object') {
-            created.companyId = matchedComp;
-          }
-          const matchedCat = categories.find((c) => c._id === payload.categoryId);
-          if (matchedCat && typeof created.categoryId !== 'object') {
-            created.categoryId = matchedCat;
-          }
-          setProducts((prev) => [created, ...prev]);
-        } else {
-          await fetchData(true);
-        }
+        const serverData = res.data?.data || (res.data?._id ? res.data : null);
+        const matchedComp = companies.find((c) => c._id === payload.companyId);
+        const matchedCat = categories.find((c) => c._id === payload.categoryId);
+        const completeCreated = {
+          ...payload,
+          ...(serverData || {}),
+          _id: serverData?._id || ('prod_' + Date.now()),
+          companyId: matchedComp || serverData?.companyId || payload.companyId,
+          categoryId: matchedCat || serverData?.categoryId || payload.categoryId,
+          locations: payload.locations,
+          companyMappings: payload.companyMappings
+        };
+
+        setProducts((prev) => [completeCreated, ...prev]);
+        setDrawerProduct(completeCreated);
+        setEditingProduct(completeCreated);
+        setDrawerTab('overview');
         showToast(`Product "${payload.name}" created successfully!`);
       }
-
-      setIsModalOpen(false);
     } catch (err) {
       console.error('Failed to save product:', err);
       setFormError(err.response?.data?.message || 'Failed to save product. Please try again.');
@@ -840,10 +1131,10 @@ const Products = () => {
       await deleteProductApi(deleteConfirmProduct._id);
       setProducts((prev) => prev.filter((p) => p._id !== deleteConfirmProduct._id));
       showToast(`Product "${deleteConfirmProduct.name}" removed from catalog.`);
-      setDeleteConfirmProduct(null);
-      if (detailsProduct?._id === deleteConfirmProduct._id) {
-        setDetailsProduct(null);
+      if (drawerProduct?._id === deleteConfirmProduct._id) {
+        handleCloseDrawer();
       }
+      setDeleteConfirmProduct(null);
     } catch (err) {
       console.error('Failed to delete product:', err);
       alert(err.response?.data?.message || 'Failed to delete product.');
@@ -908,6 +1199,69 @@ const Products = () => {
     }
   };
 
+  // Helper to build a complete product payload for the single product update API:
+  // PUT or PATCH /api/v1/products/:id
+  const buildProductPayload = useCallback((prod, overrides = {}) => {
+    if (!prod) return {};
+    const compId = typeof prod.companyId === 'object' ? prod.companyId?._id : (prod.companyId || companies[0]?._id);
+    const catId = typeof prod.categoryId === 'object' ? prod.categoryId?._id : prod.categoryId;
+
+    let cleanMappings = [];
+    if (Array.isArray(overrides.companyMappings)) {
+      cleanMappings = overrides.companyMappings.map((m) => ({
+        companyId: typeof m.companyId === 'object' ? m.companyId?._id : m.companyId,
+        states: Array.isArray(m.states) ? m.states : []
+      }));
+    } else if (Array.isArray(prod.companyMappings) && prod.companyMappings.length > 0) {
+      cleanMappings = prod.companyMappings.map((m) => ({
+        companyId: typeof m.companyId === 'object' ? m.companyId?._id : m.companyId,
+        states: Array.isArray(m.states) ? m.states : []
+      }));
+    } else {
+      cleanMappings = [{
+        companyId: overrides.companyId || compId,
+        states: Array.isArray(overrides.locations || prod.locations) ? (overrides.locations || prod.locations) : []
+      }];
+    }
+
+    let effectiveLocations = [];
+    if (Array.isArray(overrides.locations)) {
+      effectiveLocations = overrides.locations;
+    } else if (Array.isArray(prod.locations)) {
+      effectiveLocations = prod.locations;
+    } else {
+      const stateSet = new Set();
+      cleanMappings.forEach((m) => (m.states || []).forEach((st) => stateSet.add(st)));
+      effectiveLocations = Array.from(stateSet);
+    }
+
+    const effectiveCompanyId = overrides.companyId !== undefined
+      ? overrides.companyId
+      : (cleanMappings.length > 0 ? cleanMappings[0].companyId : compId);
+
+    const priceVal = overrides.price !== undefined
+      ? overrides.price
+      : prod.price;
+
+    return {
+      name: (overrides.name !== undefined ? overrides.name : (prod.name || '')).trim(),
+      sku: (overrides.sku !== undefined ? overrides.sku : (prod.sku || '')).trim().toUpperCase(),
+      categoryId: overrides.categoryId !== undefined
+        ? overrides.categoryId
+        : (catId ? catId : undefined),
+      brand: (overrides.brand !== undefined ? overrides.brand : (prod.brand || '')).trim(),
+      price: priceVal !== undefined && priceVal !== '' && !isNaN(Number(priceVal))
+        ? Number(priceVal)
+        : 0,
+      unit: (overrides.unit !== undefined ? overrides.unit : (prod.unit || 'PCS')).trim() || 'PCS',
+      description: (overrides.description !== undefined ? overrides.description : (prod.description || '')).trim(),
+      companyId: effectiveCompanyId,
+      locations: effectiveLocations,
+      companyMappings: cleanMappings,
+      isActive: overrides.isActive !== undefined ? Boolean(overrides.isActive) : Boolean(prod.isActive !== false)
+    };
+  }, [companies]);
+
   const handleBulkStatusChange = async (targetActive) => {
     if (selectedProductIds.length === 0) return;
     const actionLabel = targetActive ? 'Activating' : 'Deactivating';
@@ -919,6 +1273,7 @@ const Products = () => {
       total: selectedProductIds.length,
       percentage: 0,
       status: 'processing',
+      isFinished: false,
       logs: [`Starting bulk ${actionLabel.toLowerCase()} for ${selectedProductIds.length} products...`]
     });
 
@@ -930,6 +1285,7 @@ const Products = () => {
         setBatchProgress((prev) => ({
           ...prev,
           status: 'error',
+          isFinished: true,
           logs: [...prev.logs, 'Batch execution aborted by user.']
         }));
         break;
@@ -940,7 +1296,8 @@ const Products = () => {
       const name = prod ? prod.name : prodId;
 
       try {
-        await updateProductApi(prodId, { isActive: targetActive });
+        const payload = buildProductPayload(prod, { isActive: targetActive });
+        await updateProductApi(prodId, payload);
         successCount++;
         setBatchProgress((prev) => {
           const current = i + 1;
@@ -968,6 +1325,7 @@ const Products = () => {
     setBatchProgress((prev) => ({
       ...prev,
       status: prev.status === 'error' ? 'error' : 'completed',
+      isFinished: true,
       logs: [...prev.logs, `Finished! Success: ${successCount}, Failed: ${failCount}`]
     }));
 
@@ -989,6 +1347,7 @@ const Products = () => {
       total: selectedProductIds.length,
       percentage: 0,
       status: 'processing',
+      isFinished: false,
       logs: [`Starting company reassignment to "${compName}" for ${selectedProductIds.length} products...`]
     });
 
@@ -1000,6 +1359,7 @@ const Products = () => {
         setBatchProgress((prev) => ({
           ...prev,
           status: 'error',
+          isFinished: true,
           logs: [...prev.logs, 'Batch execution aborted by user.']
         }));
         break;
@@ -1010,7 +1370,16 @@ const Products = () => {
       const name = prod ? prod.name : prodId;
 
       try {
-        await updateProductApi(prodId, { companyId: bulkTargetCompanyId });
+        const nextMappings = Array.isArray(prod?.companyMappings) && prod.companyMappings.length > 0
+          ? prod.companyMappings.map((m, idx) => (idx === 0 ? { ...m, companyId: bulkTargetCompanyId } : m))
+          : [{ companyId: bulkTargetCompanyId, states: Array.isArray(prod?.locations) ? prod.locations : [] }];
+
+        const payload = buildProductPayload(prod, {
+          companyId: bulkTargetCompanyId,
+          companyMappings: nextMappings
+        });
+
+        await updateProductApi(prodId, payload);
         successCount++;
         setBatchProgress((prev) => {
           const current = i + 1;
@@ -1038,11 +1407,360 @@ const Products = () => {
     setBatchProgress((prev) => ({
       ...prev,
       status: prev.status === 'error' ? 'error' : 'completed',
+      isFinished: true,
       logs: [...prev.logs, `Finished! Success: ${successCount}, Failed: ${failCount}`]
     }));
 
     await fetchData(true);
     showToast(`Reassigned ${successCount} products to ${compName}`);
+  };
+
+  const handleBulkReassignLocations = async () => {
+    if (selectedProductIds.length === 0) return;
+    setIsBulkLocationModalOpen(false);
+    abortBatchRef.current = false;
+
+    let modeLabel = '';
+    if (bulkLocationMode === 'sync-matrix') {
+      modeLabel = 'Sync Matrix (Brand Routing)';
+    } else if (bulkLocationMode === 'all') {
+      modeLabel = 'All 36 States';
+    } else if (bulkLocationMode === 'clear') {
+      modeLabel = 'Clear All Locations';
+    } else if (bulkLocationMode === 'replace') {
+      modeLabel = `Replace (${bulkLocations.length} states)`;
+    } else if (bulkLocationMode === 'append') {
+      modeLabel = `Append (${bulkLocations.length} states)`;
+    }
+
+    setBatchProgress({
+      isOpen: true,
+      title: `Bulk Reassign Locations: ${modeLabel}`,
+      current: 0,
+      total: selectedProductIds.length,
+      percentage: 0,
+      status: 'processing',
+      isFinished: false,
+      logs: [`Starting bulk location reassignment (${bulkLocationMode}) for ${selectedProductIds.length} products...`]
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+    const updatedProdMap = new Map();
+
+    for (let i = 0; i < selectedProductIds.length; i++) {
+      if (abortBatchRef.current) {
+        setBatchProgress((prev) => ({
+          ...prev,
+          status: 'error',
+          isFinished: true,
+          logs: [...prev.logs, 'Batch execution aborted by user.']
+        }));
+        break;
+      }
+
+      const prodId = selectedProductIds[i];
+      const prod = products.find((p) => p._id === prodId);
+      const name = prod ? prod.name : prodId;
+      const brand = prod ? (prod.brand || '').trim() : '';
+
+      try {
+        let nextLocations = [];
+        let nextMappings = [];
+        let targetCompanyId = typeof prod?.companyId === 'object' ? prod.companyId?._id : (prod?.companyId || companies[0]?._id);
+
+        if (bulkLocationMode === 'sync-matrix') {
+          // Resolve brand routing rules for this product's brand
+          const routingResult = await resolveBrandRoutingRules(brand);
+
+          if (routingResult && Array.isArray(routingResult.rules) && routingResult.rules.length > 0) {
+            nextMappings = routingResult.rules
+              .map((r) => {
+                const cId = typeof r.companyId === 'object' ? r.companyId?._id : (r.companyId || '');
+                const rawStates = Array.isArray(r.states) ? r.states : [];
+                return {
+                  companyId: cId,
+                  states: rawStates
+                };
+              })
+              .filter((m) => Boolean(m.companyId));
+
+            if (nextMappings.length > 0) {
+              targetCompanyId = nextMappings[0].companyId;
+              const stateSet = new Set();
+              nextMappings.forEach((m) => (m.states || []).forEach((st) => stateSet.add(st)));
+              nextLocations = Array.from(stateSet);
+              if (nextLocations.includes('*') || nextLocations.some((s) => String(s).toUpperCase() === 'ALL')) {
+                nextLocations = [...INDIAN_STATES];
+              }
+            } else {
+              nextLocations = Array.isArray(prod?.locations) ? prod.locations : [];
+              nextMappings = [{ companyId: targetCompanyId, states: nextLocations }];
+            }
+          } else {
+            // No matrix routing rules found for this brand, retain existing or fallback
+            nextLocations = Array.isArray(prod?.locations) ? prod.locations : [];
+            nextMappings = Array.isArray(prod?.companyMappings) && prod.companyMappings.length > 0
+              ? prod.companyMappings
+              : [{ companyId: targetCompanyId, states: nextLocations }];
+          }
+        } else if (bulkLocationMode === 'all') {
+          nextLocations = [...INDIAN_STATES];
+          nextMappings = [{
+            companyId: targetCompanyId,
+            states: nextLocations
+          }];
+        } else if (bulkLocationMode === 'clear') {
+          nextLocations = [];
+          nextMappings = [{
+            companyId: targetCompanyId,
+            states: []
+          }];
+        } else if (bulkLocationMode === 'replace') {
+          nextLocations = [...bulkLocations];
+          nextMappings = [{
+            companyId: targetCompanyId,
+            states: nextLocations
+          }];
+        } else if (bulkLocationMode === 'append') {
+          const existing = Array.isArray(prod?.locations) ? prod.locations : [];
+          nextLocations = Array.from(new Set([...existing, ...bulkLocations]));
+          nextMappings = [{
+            companyId: targetCompanyId,
+            states: nextLocations
+          }];
+        }
+
+        // Build the single product API payload matching PUT/PATCH /api/v1/products/:id
+        const payload = buildProductPayload(prod || { _id: prodId }, {
+          companyId: targetCompanyId,
+          locations: nextLocations,
+          companyMappings: nextMappings
+        });
+
+        // Use the same single product API: PUT or PATCH /api/v1/products/:id
+        await updateProductApi(prodId, payload);
+        successCount++;
+        updatedProdMap.set(prodId, payload);
+
+        setBatchProgress((prev) => {
+          const current = i + 1;
+          const detail = bulkLocationMode === 'sync-matrix'
+            ? `matrix-synced for brand "${brand}" (${nextMappings.length} partners, ${nextLocations.length} locations)`
+            : `${nextLocations.length} locations configured`;
+          return {
+            ...prev,
+            current,
+            percentage: Math.round((current / prev.total) * 100),
+            logs: [...prev.logs, `✓ Product "${name}": ${detail}`]
+          };
+        });
+      } catch (err) {
+        failCount++;
+        setBatchProgress((prev) => {
+          const current = i + 1;
+          return {
+            ...prev,
+            current,
+            percentage: Math.round((current / prev.total) * 100),
+            logs: [...prev.logs, `✗ Failed for "${name}": ${err?.response?.data?.message || err.message}`]
+          };
+        });
+      }
+    }
+
+    setBatchProgress((prev) => ({
+      ...prev,
+      status: prev.status === 'error' ? 'error' : 'completed',
+      isFinished: true,
+      logs: [...prev.logs, `Finished! Success: ${successCount}, Failed: ${failCount}`]
+    }));
+
+    if (updatedProdMap.size > 0) {
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (updatedProdMap.has(p._id)) {
+            const updates = updatedProdMap.get(p._id);
+            const matchedComp = companies.find((c) => c._id === updates.companyId);
+            return {
+              ...p,
+              ...updates,
+              companyId: matchedComp || p.companyId
+            };
+          }
+          return p;
+        })
+      );
+    }
+
+    await fetchData(true);
+    showToast(`Bulk locations update complete: ${successCount} updated, ${failCount} failed`);
+  };
+
+  const resetBulkEditForm = () => {
+    setBulkEditFields({
+      updateCategory: false,
+      categoryId: categories[0]?._id || '',
+      updateBrand: false,
+      brand: '',
+      updatePrice: false,
+      priceMode: 'fixed',
+      priceValue: '',
+      updateUnit: false,
+      unit: 'PCS',
+      updateStatus: false,
+      isActive: true,
+      syncLocationsWithMatrix: false
+    });
+  };
+
+  const handleBulkEditSubmit = async () => {
+    if (selectedProductIds.length === 0) return;
+    setIsBulkEditModalOpen(false);
+    abortBatchRef.current = false;
+
+    setBatchProgress({
+      isOpen: true,
+      title: `Bulk Edit ${selectedProductIds.length} Products`,
+      current: 0,
+      total: selectedProductIds.length,
+      percentage: 0,
+      status: 'processing',
+      isFinished: false,
+      logs: [`Starting bulk product update for ${selectedProductIds.length} products using single product API...`]
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+    const updatedProdMap = new Map();
+
+    for (let i = 0; i < selectedProductIds.length; i++) {
+      if (abortBatchRef.current) {
+        setBatchProgress((prev) => ({
+          ...prev,
+          status: 'error',
+          isFinished: true,
+          logs: [...prev.logs, 'Batch execution aborted by user.']
+        }));
+        break;
+      }
+
+      const prodId = selectedProductIds[i];
+      const prod = products.find((p) => p._id === prodId);
+      const name = prod ? prod.name : prodId;
+      const effectiveBrand = (bulkEditFields.updateBrand ? bulkEditFields.brand : (prod?.brand || '')).trim();
+
+      try {
+        const overrides = {};
+
+        if (bulkEditFields.updateCategory && bulkEditFields.categoryId) {
+          overrides.categoryId = bulkEditFields.categoryId;
+        }
+
+        if (bulkEditFields.updateBrand) {
+          overrides.brand = bulkEditFields.brand.trim();
+        }
+
+        if (bulkEditFields.updatePrice && bulkEditFields.priceValue !== '') {
+          const val = Number(bulkEditFields.priceValue) || 0;
+          const currentPrice = Number(prod?.price) || 0;
+          if (bulkEditFields.priceMode === 'fixed') {
+            overrides.price = Math.max(0, val);
+          } else if (bulkEditFields.priceMode === 'increase_percent') {
+            overrides.price = Math.round(currentPrice * (1 + val / 100));
+          } else if (bulkEditFields.priceMode === 'decrease_percent') {
+            overrides.price = Math.max(0, Math.round(currentPrice * (1 - val / 100)));
+          }
+        }
+
+        if (bulkEditFields.updateUnit && bulkEditFields.unit) {
+          overrides.unit = bulkEditFields.unit;
+        }
+
+        if (bulkEditFields.updateStatus) {
+          overrides.isActive = bulkEditFields.isActive;
+        }
+
+        if (bulkEditFields.syncLocationsWithMatrix) {
+          const routingResult = await resolveBrandRoutingRules(effectiveBrand);
+          if (routingResult && Array.isArray(routingResult.rules) && routingResult.rules.length > 0) {
+            const nextMappings = routingResult.rules
+              .map((r) => ({
+                companyId: typeof r.companyId === 'object' ? r.companyId?._id : (r.companyId || ''),
+                states: Array.isArray(r.states) ? r.states : []
+              }))
+              .filter((m) => Boolean(m.companyId));
+
+            if (nextMappings.length > 0) {
+              overrides.companyMappings = nextMappings;
+              overrides.companyId = nextMappings[0].companyId;
+              const stateSet = new Set();
+              nextMappings.forEach((m) => (m.states || []).forEach((st) => stateSet.add(st)));
+              let locs = Array.from(stateSet);
+              if (locs.includes('*') || locs.some((s) => String(s).toUpperCase() === 'ALL')) {
+                locs = [...INDIAN_STATES];
+              }
+              overrides.locations = locs;
+            }
+          }
+        }
+
+        const payload = buildProductPayload(prod || { _id: prodId }, overrides);
+        await updateProductApi(prodId, payload);
+        successCount++;
+        updatedProdMap.set(prodId, payload);
+
+        setBatchProgress((prev) => {
+          const current = i + 1;
+          return {
+            ...prev,
+            current,
+            percentage: Math.round((current / prev.total) * 100),
+            logs: [...prev.logs, `✓ Product "${name}" updated successfully`]
+          };
+        });
+      } catch (err) {
+        failCount++;
+        setBatchProgress((prev) => {
+          const current = i + 1;
+          return {
+            ...prev,
+            current,
+            percentage: Math.round((current / prev.total) * 100),
+            logs: [...prev.logs, `✗ Failed for "${name}": ${err?.response?.data?.message || err.message}`]
+          };
+        });
+      }
+    }
+
+    setBatchProgress((prev) => ({
+      ...prev,
+      status: prev.status === 'error' ? 'error' : 'completed',
+      isFinished: true,
+      logs: [...prev.logs, `Finished! Success: ${successCount}, Failed: ${failCount}`]
+    }));
+
+    if (updatedProdMap.size > 0) {
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (updatedProdMap.has(p._id)) {
+            const updates = updatedProdMap.get(p._id);
+            const matchedComp = companies.find((c) => c._id === updates.companyId);
+            const matchedCat = categories.find((c) => c._id === updates.categoryId);
+            return {
+              ...p,
+              ...updates,
+              companyId: matchedComp || p.companyId,
+              categoryId: matchedCat || p.categoryId
+            };
+          }
+          return p;
+        })
+      );
+    }
+
+    await fetchData(true);
+    showToast(`Bulk edit complete: ${successCount} updated, ${failCount} failed`);
   };
 
   const handleBulkExportProducts = () => {
@@ -1476,8 +2194,12 @@ const Products = () => {
                   const compCode = typeof product.companyId === 'object' ? product.companyId?.code : '';
                   const serialNumber = indexOfFirstItem + idx + 1;
                   const isSelected = selectedProductIds.includes(product._id);
-                  const locations = Array.isArray(product.locations) ? product.locations : [];
                   const pCatId = typeof product.categoryId === 'object' ? product.categoryId?._id : product.categoryId;
+                  const locations = Array.isArray(product.locations) && product.locations.length > 0
+                    ? product.locations
+                    : (Array.isArray(product.companyMappings)
+                        ? Array.from(new Set(product.companyMappings.flatMap((m) => m?.states || [])))
+                        : []);
                   const matchedCat = categories.find((c) => c._id === pCatId);
                   const categoryName = typeof product.categoryId === 'object' && product.categoryId?.name
                     ? product.categoryId.name
@@ -1489,7 +2211,7 @@ const Products = () => {
                   return (
                     <tr
                       key={product._id}
-                      onClick={() => setDetailsProduct(product)}
+                      onClick={() => handleOpenDetails(product)}
                       className={`hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer ${
                         isBulkMode && isSelected
                           ? 'bg-blue-50/60 dark:bg-blue-900/10'
@@ -1526,6 +2248,11 @@ const Products = () => {
                                 {product.sku}
                               </span>
                               <CopyButton text={product.sku} size={10} />
+                              {product.price !== undefined && product.price !== null && product.price !== '' && (
+                                <span className="font-semibold text-[11px] text-emerald-600 dark:text-emerald-400 ml-1">
+                                  ₹{Number(product.price).toLocaleString('en-IN')}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1729,455 +2456,983 @@ const Products = () => {
         </div>
       )}
 
-      {/* ================= ADD / EDIT PRODUCT MODAL ================= */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in duration-200">
-          <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl">
-                  <FiPackage className="text-xl" />
-                </span>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                    {editingProduct ? 'Edit Catalog Product' : 'Add New Catalog Product'}
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {editingProduct
-                      ? 'Update specifications, company mapping, or distribution territory.'
-                      : 'Configure new hardware product with trading company and locations.'}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
-              >
-                <FiX className="text-lg" />
-              </button>
-            </div>
+      {/* ================= PRODUCT DETAILS & EDIT SLIDE-OVER DRAWER ================= */}
+      {isDrawerOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] overflow-hidden">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+              onClick={handleCloseDrawer}
+            />
 
-            {/* Modal Body */}
-            <form onSubmit={handleSaveProduct} className="p-6 overflow-y-auto space-y-4">
-              {formError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
-                  <FiAlertCircle className="shrink-0 text-sm" />
-                  <span>{formError}</span>
-                </div>
-              )}
-
-              {/* Product Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Product Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="e.g. Realme Buds Wireless 3"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
-                  required
-                />
-              </div>
-
-              {/* SKU, Brand, Category & Unit Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    SKU Code *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: formatEntityCode(e.target.value), skuManual: true })}
-                    placeholder="e.g. REALME-BW3-YLW"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 uppercase"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Brand Name *
-                    </label>
-                    {activeBrandGroup && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-md border border-emerald-500/20">
-                        <FiZap className="text-[10px]" />
-                        <span>Matrix Configured</span>
-                      </span>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      list="brand-datalist-options"
-                      value={formData.brand}
-                      onChange={(e) => handleBrandSelect(e.target.value)}
-                      placeholder="e.g. Realme, OnePlus, Apple"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
-                      required
-                    />
-                    <datalist id="brand-datalist-options">
-                      {allKnownBrands.map((b) => (
-                        <option key={b.brand} value={b.brand}>
-                          {b.hasMatrix ? `${b.brand} (${b.rulesCount} routing rules)` : b.brand}
-                        </option>
-                      ))}
-                    </datalist>
+            {/* Slide-over Container (Pinned to Right) */}
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
+              <div className="w-screen max-w-2xl sm:max-w-3xl bg-white/20 dark:bg-slate-900/95 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 text-left">
+                {/* Sticky Drawer Header */}
+                <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 flex items-center justify-between shrink-0 gap-4">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
+                      <FiPackage className="text-2xl" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white line-clamp-1">
+                          {drawerProduct ? drawerProduct.name : 'Add New Product'}
+                        </h2>
+                        {drawerProduct && (
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                              drawerProduct.isActive !== false
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
+                            }`}
+                          >
+                            {drawerProduct.isActive !== false ? 'Active' : 'Inactive'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        {drawerProduct ? (
+                          <>
+                            <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
+                              {drawerProduct.sku}
+                            </span>
+                            <CopyButton text={drawerProduct.sku} size={11} />
+                            {drawerProduct.price !== undefined && drawerProduct.price !== null && drawerProduct.price !== '' && (
+                              <span className="font-semibold text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                ₹{Number(drawerProduct.price).toLocaleString('en-IN')}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-xs text-slate-400">Configure new hardware catalog product with pricing and routing</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Quick Select Brand Chips from Matrix */}
-                  {matrixBrands.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1 mt-1.5 max-h-16 overflow-y-auto">
-                      <span className="text-[10px] text-slate-400 font-semibold mr-0.5">Quick Brand:</span>
-                      {matrixBrands.slice(0, 8).map((mb) => (
+                  {/* Mode Selector Tabs & Close Button */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {drawerProduct && (
+                      <div className="flex items-center p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
                         <button
-                          key={mb.brand}
                           type="button"
-                          onClick={() => handleBrandSelect(mb.brand)}
-                          className={`px-2 py-0.5 text-[10px] font-semibold rounded-md border transition-all cursor-pointer ${
-                            (formData.brand || '').trim().toLowerCase() === mb.brand.toLowerCase()
-                              ? 'bg-blue-600 text-white border-blue-600 shadow-2xs font-bold'
-                              : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
+                          onClick={() => {
+                            setDrawerTab('overview');
+                            setFormError('');
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            drawerTab === 'overview'
+                              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                           }`}
                         >
-                          {mb.brand}
+                          <FiEye className="text-xs" />
+                          <span>Overview</span>
                         </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDrawerTab('edit');
+                            setFormError('');
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            drawerTab === 'edit'
+                              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                          }`}
+                        >
+                          <FiEdit2 className="text-xs" />
+                          <span>Edit</span>
+                        </button>
+                      </div>
+                    )}
 
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Category
-                    </label>
-                    <span className="text-[10px] font-mono text-slate-400">categoryId</span>
-                  </div>
-                  <select
-                    value={formData.categoryId || ''}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 cursor-pointer"
-                  >
-                    <option value="">Select Category (None)</option>
-                    {categories.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.name} {c.code ? `(${c.code})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Unit of Measure *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.unit}
-                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    placeholder="e.g. PCS, BOX"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden uppercase"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Company Territory Routing (companyMappings) */}
-              <div className="space-y-3 pt-2 border-t border-slate-200/80 dark:border-white/10">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                      <FiBriefcase className="text-blue-500" />
-                      <span>Company Territory Routing</span>
-                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                        companyMappings
-                      </span>
-                    </label>
-                    <p className="text-[11px] text-slate-400">
-                      Auto-mapped from Brand Routing Matrix or customize manually per trading partner.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={handleManualSyncBrandRouting}
-                      disabled={isAutoMappingBrand || !formData.brand}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/20 transition-all cursor-pointer disabled:opacity-40"
-                      title="Fetch and re-apply routing matrix rules for this brand"
+                      onClick={handleCloseDrawer}
+                      className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                      title="Close drawer (Esc)"
                     >
-                      <FiZap className={`text-xs ${isAutoMappingBrand ? 'animate-spin' : ''}`} />
-                      <span>Sync Matrix</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleAddCompanyMapping}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-500/20 transition-all cursor-pointer"
-                    >
-                      <FiPlus className="text-xs" />
-                      <span>Add Partner</span>
+                      <FiX size={18} />
                     </button>
                   </div>
                 </div>
 
-                {/* Auto-Mapped Notification Banner */}
-                {autoMappedBanner && (
-                  <div className="flex items-center justify-between p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-700 dark:text-blue-300 text-xs animate-in fade-in duration-200">
-                    <div className="flex items-center gap-2">
-                      <FiZap className="text-sm shrink-0 text-blue-500" />
-                      <span className="font-medium">{autoMappedBanner}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setAutoMappedBanner(null)}
-                      className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer ml-2"
-                    >
-                      <FiX size={12} />
-                    </button>
-                  </div>
-                )}
+                {/* Scrollable Body Content */}
+                <div className="flex-1 overflow-y-auto p-5 sm:p-7 custom-scrollbar space-y-6">
+                  {drawerTab === 'overview' && drawerProduct ? (
+                    <>
+                      {/* Product Specifications Grid */}
+                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
+                        <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                          <FiTag className="text-blue-500" />
+                          <span>General Information</span>
+                        </h3>
 
-                {/* Mapping Cards */}
-                <div className="space-y-3">
-                  {(formData.companyMappings || []).map((mapping, mIdx) => {
-                    const compCount = (formData.companyMappings || []).length;
-                    return (
-                      <div
-                        key={mIdx}
-                        className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3"
-                      >
-                        {/* Header of mapping: Company dropdown + Delete */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-1">
-                            <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
-                              {mIdx + 1}
-                            </span>
-                            <div className="flex-1">
-                              <CustomDropdown
-                                value={mapping.companyId}
-                                onChange={(val) => handleUpdateCompanyMappingCompany(mIdx, val)}
-                                defaultLabel="Select Trading Company"
-                                options={companies.map((c) => ({
-                                  value: c._id,
-                                  label: `${c.name} ${c.code ? `(${c.code})` : ''}`
-                                }))}
-                                statusColor="!px-3 !py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
-                              />
-                            </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                          <div>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Brand</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                              {drawerProduct.brand || 'N/A'}
+                            </p>
                           </div>
 
-                          {compCount > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveCompanyMapping(mIdx)}
-                              className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all cursor-pointer shrink-0"
-                              title="Remove this company mapping"
+                          <div>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Category</p>
+                            {(() => {
+                              const cat = getDrawerCategoryDetails(drawerProduct);
+                              return cat ? (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                                    {cat.name}
+                                  </span>
+                                  {cat.code && (
+                                    <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                                      {cat.code}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-slate-400 italic">Unassigned</p>
+                              );
+                            })()}
+                          </div>
+
+                          <div>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Price (INR)</p>
+                            <p className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                              {drawerProduct.price !== undefined && drawerProduct.price !== null && drawerProduct.price !== ''
+                                ? `₹${Number(drawerProduct.price).toLocaleString('en-IN')}`
+                                : '₹0'}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Measurement Unit</p>
+                            <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">
+                              {drawerProduct.unit || 'PCS'}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Catalog Status</p>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                drawerProduct.isActive !== false
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                  : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
+                              }`}
                             >
-                              <FiTrash2 className="text-sm" />
-                            </button>
-                          )}
+                              {drawerProduct.isActive !== false ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+
+                          <div>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Created Date</p>
+                            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                              {formatDateTimeDDMMYYYY(drawerProduct.createdAt)}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Last Updated</p>
+                            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                              {formatDateTimeDDMMYYYY(drawerProduct.updatedAt)}
+                            </p>
+                          </div>
                         </div>
 
-                        {/* Assigned States */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                              <FiMapPin className="text-[10px] text-blue-500" />
-                              <span>Covered States ({mapping.states?.length || 0})</span>
+                        <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold text-slate-400">Product System ID:</span>
+                            <span className="font-mono text-xs text-slate-600 dark:text-slate-400">{drawerProduct._id}</span>
+                            <CopyButton text={drawerProduct._id} size={10} />
+                          </div>
+                          {(() => {
+                            const cat = getDrawerCategoryDetails(drawerProduct);
+                            return cat?.id ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-bold text-slate-400">Category ID:</span>
+                                <span className="font-mono text-xs text-slate-600 dark:text-slate-400">{cat.id}</span>
+                                <CopyButton text={cat.id} size={10} />
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                      </div>
+
+                      {/* Company Territory Routing (companyMappings) */}
+                      {Array.isArray(drawerProduct.companyMappings) && drawerProduct.companyMappings.length > 0 ? (
+                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                              <FiBriefcase className="text-blue-500" />
+                              <span>Company Territory Routing ({drawerProduct.companyMappings.length})</span>
+                            </h3>
+                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              companyMappings
                             </span>
-                            <div className="flex items-center gap-2 text-[10px]">
-                              <button
-                                type="button"
-                                onClick={() => handleSelectAllStatesForMapping(mIdx)}
-                                className="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
-                              >
-                                All 36 States
-                              </button>
-                              <span className="text-slate-300 dark:text-slate-600">|</span>
-                              <button
-                                type="button"
-                                onClick={() => handleClearStatesForMapping(mIdx)}
-                                className="text-slate-500 hover:text-rose-500 font-semibold cursor-pointer"
-                              >
-                                Clear
-                              </button>
-                            </div>
                           </div>
 
-                          {/* Selected States Tags */}
-                          {mapping.states && mapping.states.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-2 p-1.5 bg-white dark:bg-slate-900/60 rounded-xl border border-slate-200/60 dark:border-white/5 max-h-24 overflow-y-auto">
-                              {mapping.states.map((st, sIdx) => (
-                                <span
-                                  key={sIdx}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-semibold border border-blue-500/20"
-                                >
-                                  <span>{st}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleMappingState(mIdx, st)}
-                                    className="hover:text-rose-500 ml-0.5 cursor-pointer"
-                                  >
-                                    <FiX size={10} />
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                          <div className="space-y-2.5">
+                            {drawerProduct.companyMappings.map((mapping, idx) => {
+                              const compObj =
+                                typeof mapping.companyId === 'object' && mapping.companyId !== null
+                                  ? mapping.companyId
+                                  : companies.find((c) => c._id === mapping.companyId);
+                              const compName = compObj?.name || (typeof mapping.companyId === 'string' ? mapping.companyId : 'Unassigned');
+                              const compCode = compObj?.code || null;
+                              const states = Array.isArray(mapping.states) ? mapping.states : [];
+                              const isWildcard = states.includes('*');
 
-                          {/* Quick Indian States Pills */}
-                          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-white/50 dark:bg-black/20 mb-2">
-                            {INDIAN_STATES.map((st) => {
-                              const isSelected = mapping.states?.includes(st);
                               return (
-                                <button
-                                  key={st}
-                                  type="button"
-                                  onClick={() => handleToggleMappingState(mIdx, st)}
-                                  className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
-                                    isSelected
-                                      ? 'bg-blue-600 text-white border-blue-600 font-bold'
-                                      : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
-                                  }`}
+                                <div
+                                  key={idx}
+                                  className="p-3.5 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 space-y-2"
                                 >
-                                  {isSelected ? '✓ ' : '+ '}{st}
-                                </button>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                        {idx + 1}
+                                      </span>
+                                      <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                        {compName}
+                                      </span>
+                                      {compCode && (
+                                        <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                          {compCode}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                      {isWildcard
+                                        ? 'Pan-India Wildcard'
+                                        : `${states.length} ${states.length === 1 ? 'state' : 'states'}`}
+                                    </span>
+                                  </div>
+
+                                  {states.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1 pt-1">
+                                      {states.map((st, sIdx) =>
+                                        st === '*' ? (
+                                          <span
+                                            key={sIdx}
+                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20"
+                                          >
+                                            ★ Pan-India / All Territories (*)
+                                          </span>
+                                        ) : (
+                                          <span
+                                            key={sIdx}
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 text-[10px] font-medium border border-slate-200/60 dark:border-white/5"
+                                          >
+                                            <FiMapPin className="text-[9px] text-blue-500 shrink-0" />
+                                            <span>{st}</span>
+                                          </span>
+                                        )
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-[11px] text-slate-400 italic">No specific states assigned (All territories fallback)</span>
+                                  )}
+                                </div>
                               );
                             })}
                           </div>
+                        </div>
+                      ) : (
+                        /* Single Trading / Partner Company Fallback */
+                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                          <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                            <FiBriefcase className="text-emerald-500" />
+                            <span>Partner / Trading Company</span>
+                          </h3>
 
-                          {/* Custom Location / State Entry */}
-                          <div className="flex items-center gap-2">
+                          {(() => {
+                            const comp = getDrawerCompanyDetails(drawerProduct);
+                            return (
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5">
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                      {comp.name}
+                                    </span>
+                                    {comp.code && (
+                                      <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md border border-blue-500/20">
+                                        {comp.code}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {comp.id && (
+                                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                                      <span>ID: {comp.id}</span>
+                                      <CopyButton text={comp.id} size={10} />
+                                    </div>
+                                  )}
+                                </div>
+
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                                  <FiCheckCircle className="text-xs" />
+                                  <span>Mapped Company</span>
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Covered Distribution Locations */}
+                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                            <FiMapPin className="text-rose-500" />
+                            <span>Covered Locations / Territories</span>
+                          </h3>
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                            {(drawerProduct.locations || []).length} Locations
+                          </span>
+                        </div>
+
+                        {Array.isArray(drawerProduct.locations) && drawerProduct.locations.length > 0 ? (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {drawerProduct.locations.map((loc, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 shadow-2xs"
+                              >
+                                <FiGlobe className="text-blue-500 text-xs shrink-0" />
+                                <span>{loc}</span>
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-4 text-center text-slate-400 text-xs italic bg-white/40 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-white/10">
+                            No specific locations assigned. This product can be distributed across all territories.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Description */}
+                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
+                        <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          Product Description
+                        </h3>
+                        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                          {drawerProduct.description || 'No detailed description provided for this product.'}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    /* Edit or Create Form */
+                    <form onSubmit={handleSaveProduct} className="space-y-4">
+                      {formError && (
+                        <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
+                          <FiAlertCircle className="shrink-0 text-sm" />
+                          <span>{formError}</span>
+                        </div>
+                      )}
+
+                      {/* Product Name */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Product Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => handleNameChange(e.target.value)}
+                          placeholder="e.g. Whatnot NitroCharge 65W GaN Fast Charger Pro"
+                          className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                          required
+                        />
+                      </div>
+
+                      {/* SKU, Brand, Category, Price & Unit Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            SKU Code *
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.sku}
+                            onChange={(e) => setFormData({ ...formData, sku: formatEntityCode(e.target.value), skuManual: true })}
+                            placeholder="e.g. WNOT-CHG-065"
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 uppercase"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                              Brand Name *
+                            </label>
+                            {activeBrandGroup && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-md border border-emerald-500/20">
+                                <FiZap className="text-[10px]" />
+                                <span>Matrix</span>
+                              </span>
+                            )}
+                          </div>
+                          <div className="relative">
                             <input
                               type="text"
-                              value={customMappingInputs[mIdx] || ''}
-                              onChange={(e) =>
-                                setCustomMappingInputs((prev) => ({ ...prev, [mIdx]: e.target.value }))
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  const val = customMappingInputs[mIdx] || '';
-                                  handleAddCustomLocationToMapping(mIdx, val);
-                                  setCustomMappingInputs((prev) => ({ ...prev, [mIdx]: '' }));
-                                }
-                              }}
-                              placeholder="Type state/region or 'ALL' and press Enter..."
-                              className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                              list="brand-datalist-options"
+                              value={formData.brand}
+                              onChange={(e) => handleBrandSelect(e.target.value)}
+                              placeholder="e.g. Amazon, Realme, Apple"
+                              className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                              required
                             />
+                            <datalist id="brand-datalist-options">
+                              {allKnownBrands.map((b) => (
+                                <option key={b.brand} value={b.brand}>
+                                  {b.hasMatrix ? `${b.brand} (${b.rulesCount} routing rules)` : b.brand}
+                                </option>
+                              ))}
+                            </datalist>
+                          </div>
+
+                          {/* Quick Select Brand Chips from Matrix */}
+                          {matrixBrands.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1 mt-1.5 max-h-16 overflow-y-auto">
+                              <span className="text-[10px] text-slate-400 font-semibold mr-0.5">Quick:</span>
+                              {matrixBrands.slice(0, 6).map((mb) => (
+                                <button
+                                  key={mb.brand}
+                                  type="button"
+                                  onClick={() => handleBrandSelect(mb.brand)}
+                                  className={`px-2 py-0.5 text-[10px] font-semibold rounded-md border transition-all cursor-pointer ${
+                                    (formData.brand || '').trim().toLowerCase() === mb.brand.toLowerCase()
+                                      ? 'bg-blue-600 text-white border-blue-600 shadow-2xs font-bold'
+                                      : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
+                                  }`}
+                                >
+                                  {mb.brand}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                              Category
+                            </label>
+                            <span className="text-[10px] font-mono text-slate-400">categoryId</span>
+                          </div>
+                          <select
+                            value={formData.categoryId || ''}
+                            onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 cursor-pointer"
+                          >
+                            <option value="">Select Category (None)</option>
+                            {categories.map((c) => (
+                              <option key={c._id} value={c._id}>
+                                {c.name} {c.code ? `(${c.code})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Price (INR) Field */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                              Price (₹)
+                            </label>
+                            <span className="text-[10px] font-mono text-slate-400">price</span>
+                          </div>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={formData.price}
+                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                            placeholder="e.g. 1499"
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Unit *
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.unit}
+                            onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                            placeholder="e.g. PCS, BOX"
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden uppercase"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Product Distribution Locations (locations) */}
+                      <div className="space-y-3 pt-2 border-t border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                              <FiMapPin className="text-blue-500" />
+                              <span>Product Distribution Locations</span>
+                              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                {(formData.locations || []).length} Selected
+                              </span>
+                            </label>
+                            <p className="text-[11px] text-slate-400">
+                              Distribution states and territories where this product is actively covered.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
                             <button
                               type="button"
-                              onClick={() => {
-                                const val = customMappingInputs[mIdx] || '';
-                                handleAddCustomLocationToMapping(mIdx, val);
-                                setCustomMappingInputs((prev) => ({ ...prev, [mIdx]: '' }));
-                              }}
-                              disabled={!(customMappingInputs[mIdx] || '').trim()}
-                              className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
+                              onClick={handleSelectAllProductLocations}
+                              className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                             >
-                              Add
+                              All 36 States
+                            </button>
+                            <span className="text-slate-300 dark:text-slate-600">|</span>
+                            <button
+                              type="button"
+                              onClick={handleClearProductLocations}
+                              className="text-[11px] font-semibold text-rose-500 hover:underline cursor-pointer"
+                            >
+                              Clear All
                             </button>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
 
-                  {(!formData.companyMappings || formData.companyMappings.length === 0) && (
-                    <div className="p-4 text-center border border-dashed border-slate-300 dark:border-white/10 rounded-2xl">
-                      <p className="text-xs text-slate-400 mb-2">No company routing mappings configured.</p>
+                        {/* Selected Locations Tags */}
+                        {Array.isArray(formData.locations) && formData.locations.length > 0 && (
+                          <div className="flex flex-wrap gap-1 p-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/5 max-h-24 overflow-y-auto">
+                            {formData.locations.map((loc, lIdx) => (
+                              <span
+                                key={lIdx}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-semibold border border-blue-500/20"
+                              >
+                                <span>{loc}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleProductLocation(loc)}
+                                  className="hover:text-rose-500 ml-0.5 cursor-pointer"
+                                >
+                                  <FiX size={10} />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Quick Indian States Pills */}
+                        <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-black/20">
+                          {INDIAN_STATES.map((st) => {
+                            const isSelected = (formData.locations || []).includes(st);
+                            return (
+                              <button
+                                key={st}
+                                type="button"
+                                onClick={() => handleToggleProductLocation(st)}
+                                className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-blue-600 text-white border-blue-600 font-bold'
+                                    : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
+                                }`}
+                              >
+                                {isSelected ? '✓ ' : '+ '}{st}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Custom Location / State Entry */}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={customLocationInput}
+                            onChange={(e) => setCustomLocationInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddCustomProductLocation(customLocationInput);
+                                setCustomLocationInput('');
+                              }
+                            }}
+                            placeholder="Type state/region or 'ALL' and press Enter..."
+                            className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleAddCustomProductLocation(customLocationInput);
+                              setCustomLocationInput('');
+                            }}
+                            disabled={!customLocationInput.trim()}
+                            className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Company Territory Routing (companyMappings) */}
+                      <div className="space-y-3 pt-2 border-t border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                              <FiBriefcase className="text-blue-500" />
+                              <span>Company Territory Routing</span>
+                              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                companyMappings
+                              </span>
+                            </label>
+                            <p className="text-[11px] text-slate-400">
+                              Auto-mapped from Brand Routing Matrix or customize manually per trading partner.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={handleManualSyncBrandRouting}
+                              disabled={isAutoMappingBrand || !formData.brand}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/20 transition-all cursor-pointer disabled:opacity-40"
+                              title="Fetch and re-apply routing matrix rules for this brand"
+                            >
+                              <FiZap className={`text-xs ${isAutoMappingBrand ? 'animate-spin' : ''}`} />
+                              <span>Sync Matrix</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleAddCompanyMapping}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-500/20 transition-all cursor-pointer"
+                            >
+                              <FiPlus className="text-xs" />
+                              <span>Add Partner</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Auto-Mapped Notification Banner */}
+                        {autoMappedBanner && (
+                          <div className="flex items-center justify-between p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-700 dark:text-blue-300 text-xs animate-in fade-in duration-200">
+                            <div className="flex items-center gap-2">
+                              <FiZap className="text-sm shrink-0 text-blue-500" />
+                              <span className="font-medium">{autoMappedBanner}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setAutoMappedBanner(null)}
+                              className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer ml-2"
+                            >
+                              <FiX size={12} />
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Mapping Cards */}
+                        <div className="space-y-3">
+                          {(formData.companyMappings || []).map((mapping, mIdx) => {
+                            const compCount = (formData.companyMappings || []).length;
+                            const isWildcard = (mapping.states || []).includes('*');
+
+                            return (
+                              <div
+                                key={mIdx}
+                                className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3"
+                              >
+                                {/* Header of mapping: Company dropdown + Delete */}
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                      {mIdx + 1}
+                                    </span>
+                                    <div className="flex-1">
+                                      <CustomDropdown
+                                        value={mapping.companyId}
+                                        onChange={(val) => handleUpdateCompanyMappingCompany(mIdx, val)}
+                                        defaultLabel="Select Trading Company"
+                                        options={companies.map((c) => ({
+                                          value: c._id,
+                                          label: `${c.name} ${c.code ? `(${c.code})` : ''}`
+                                        }))}
+                                        statusColor="!px-3 !py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {compCount > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveCompanyMapping(mIdx)}
+                                      className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all cursor-pointer shrink-0"
+                                      title="Remove this company mapping"
+                                    >
+                                      <FiTrash2 className="text-sm" />
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Assigned States */}
+                                <div>
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                      <FiMapPin className="text-[10px] text-blue-500" />
+                                      <span>
+                                        Covered States ({isWildcard ? 'All / Wildcard' : mapping.states?.length || 0})
+                                      </span>
+                                    </span>
+                                    <div className="flex items-center gap-2 text-[10px]">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleWildcardMapping(mIdx)}
+                                        className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
+                                          isWildcard
+                                            ? 'bg-purple-600 text-white font-bold'
+                                            : 'text-purple-600 dark:text-purple-400 hover:underline'
+                                        }`}
+                                        title="Assign pan-India / all territories wildcard (*)"
+                                      >
+                                        ★ Pan-India (*)
+                                      </button>
+                                      <span className="text-slate-300 dark:text-slate-600">|</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSelectAllStatesForMapping(mIdx)}
+                                        className="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
+                                      >
+                                        All 36 States
+                                      </button>
+                                      <span className="text-slate-300 dark:text-slate-600">|</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleClearStatesForMapping(mIdx)}
+                                        className="text-slate-500 hover:text-rose-500 font-semibold cursor-pointer"
+                                      >
+                                        Clear
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Selected States Tags */}
+                                  {mapping.states && mapping.states.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mb-2 p-1.5 bg-white dark:bg-slate-900/60 rounded-xl border border-slate-200/60 dark:border-white/5 max-h-24 overflow-y-auto">
+                                      {mapping.states.map((st, sIdx) =>
+                                        st === '*' ? (
+                                          <span
+                                            key={sIdx}
+                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20"
+                                          >
+                                            <span>★ Pan-India Wildcard (*)</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleToggleWildcardMapping(mIdx)}
+                                              className="hover:text-rose-500 ml-0.5 cursor-pointer"
+                                            >
+                                              <FiX size={10} />
+                                            </button>
+                                          </span>
+                                        ) : (
+                                          <span
+                                            key={sIdx}
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-semibold border border-blue-500/20"
+                                          >
+                                            <span>{st}</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleToggleMappingState(mIdx, st)}
+                                              className="hover:text-rose-500 ml-0.5 cursor-pointer"
+                                            >
+                                              <FiX size={10} />
+                                            </button>
+                                          </span>
+                                        )
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Quick Indian States Pills */}
+                                  <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-white/50 dark:bg-black/20 mb-2">
+                                    {INDIAN_STATES.map((st) => {
+                                      const isSelected = mapping.states?.includes(st);
+                                      return (
+                                        <button
+                                          key={st}
+                                          type="button"
+                                          onClick={() => handleToggleMappingState(mIdx, st)}
+                                          className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                                            isSelected
+                                              ? 'bg-blue-600 text-white border-blue-600 font-bold'
+                                              : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
+                                          }`}
+                                        >
+                                          {isSelected ? '✓ ' : '+ '}{st}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+
+                                  {/* Custom Location / State Entry */}
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      value={customMappingInputs[mIdx] || ''}
+                                      onChange={(e) =>
+                                        setCustomMappingInputs((prev) => ({ ...prev, [mIdx]: e.target.value }))
+                                      }
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          const val = customMappingInputs[mIdx] || '';
+                                          handleAddCustomLocationToMapping(mIdx, val);
+                                          setCustomMappingInputs((prev) => ({ ...prev, [mIdx]: '' }));
+                                        }
+                                      }}
+                                      placeholder="Type state/region, '*' for all, or 'ALL'..."
+                                      className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const val = customMappingInputs[mIdx] || '';
+                                        handleAddCustomLocationToMapping(mIdx, val);
+                                        setCustomMappingInputs((prev) => ({ ...prev, [mIdx]: '' }));
+                                      }}
+                                      disabled={!(customMappingInputs[mIdx] || '').trim()}
+                                      className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
+                                    >
+                                      Add
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {(!formData.companyMappings || formData.companyMappings.length === 0) && (
+                            <div className="p-4 text-center border border-dashed border-slate-300 dark:border-white/10 rounded-2xl">
+                              <p className="text-xs text-slate-400 mb-2">No company routing mappings configured.</p>
+                              <button
+                                type="button"
+                                onClick={handleAddCompanyMapping}
+                                className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors"
+                              >
+                                + Add Partner Company
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Product Description
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          placeholder="e.g. Updated ultra-compact 65W GaN fast charger"
+                          className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden resize-none"
+                        />
+                      </div>
+
+                      {/* Status Toggle */}
+                      <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10">
+                        <div>
+                          <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Catalog Active Status</div>
+                          <div className="text-[11px] text-slate-400">
+                            Active products appear in sales order booking screens.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+                          className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
+                            formData.isActive ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                          }`}
+                        >
+                          <div
+                            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                              formData.isActive ? 'translate-x-6' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+
+                {/* Sticky Drawer Footer */}
+                <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
+                  {drawerTab === 'overview' && drawerProduct ? (
+                    <>
                       <button
                         type="button"
-                        onClick={handleAddCompanyMapping}
-                        className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors"
+                        onClick={handleCloseDrawer}
+                        className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
                       >
-                        + Add Partner Company
+                        Close Drawer
                       </button>
-                    </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDrawerTab('edit');
+                          populateProductForm(drawerProduct);
+                        }}
+                        className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer"
+                      >
+                        <FiEdit2 className="text-xs" />
+                        <span>Edit Product</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (drawerProduct) {
+                            setDrawerTab('overview');
+                            setFormError('');
+                          } else {
+                            handleCloseDrawer();
+                          }
+                        }}
+                        disabled={submitting}
+                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                      >
+                        {drawerProduct ? 'Back to Overview' : 'Cancel'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveProduct}
+                        disabled={submitting}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer disabled:opacity-50"
+                      >
+                        {submitting ? (
+                          <>
+                            <FiLoader className="text-sm animate-spin" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FiSave className="text-sm" />
+                            <span>{drawerProduct ? 'Update Product' : 'Create Product'}</span>
+                          </>
+                        )}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Product Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="e.g. 30dB Active Noise Cancellation Neckband"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden resize-none"
-                />
-              </div>
-
-              {/* Status Toggle */}
-              <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10">
-                <div>
-                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Catalog Active Status</div>
-                  <div className="text-[11px] text-slate-400">
-                    Active products appear in sales order booking screens.
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                  className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
-                    formData.isActive ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
-                  }`}
-                >
-                  <div
-                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                      formData.isActive ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  disabled={submitting}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer disabled:opacity-50"
-                >
-                  <FiSave className="text-sm" />
-                  <span>{submitting ? 'Saving...' : editingProduct ? 'Update Product' : 'Create Product'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ================= PRODUCT DETAILS MODAL ================= */}
-      {detailsProduct && (
-        <ProductDetailsModal
-          isOpen={Boolean(detailsProduct)}
-          onClose={() => setDetailsProduct(null)}
-          product={detailsProduct}
-          categories={categories}
-          showEditButton
-          onEdit={(prod) => {
-            setDetailsProduct(null);
-            handleOpenEdit(prod);
-          }}
-        />
-      )}
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* ================= DELETE CONFIRM MODAL ================= */}
       {deleteConfirmProduct && (
@@ -2225,7 +3480,7 @@ const Products = () => {
       />
 
       {/* Floating Bulk Action Bar */}
-      {isBulkMode && (
+      {isBulkMode && !isBulkCompanyModalOpen && !isBulkLocationModalOpen && !isBulkEditModalOpen && !batchProgress && !isDrawerOpen && (
         <BulkActionBar
           selectedCount={selectedProductIds.length}
           totalCount={filteredProducts.length}
@@ -2265,6 +3520,30 @@ const Products = () => {
               }
             },
             {
+              id: 'bulk-edit',
+              label: 'Bulk Edit',
+              icon: FiEdit2,
+              variant: 'purple',
+              disabled: selectedProductIds.length === 0,
+              onClick: () => {
+                resetBulkEditForm();
+                setIsBulkEditModalOpen(true);
+              }
+            },
+            {
+              id: 'reassign-locations',
+              label: 'Sync / Edit Locations',
+              icon: FiMapPin,
+              variant: 'info',
+              disabled: selectedProductIds.length === 0,
+              onClick: () => {
+                setBulkLocations([]);
+                setBulkLocationMode('sync-matrix');
+                setBulkCustomLocationInput('');
+                setIsBulkLocationModalOpen(true);
+              }
+            },
+            {
               id: 'export',
               label: 'Export Excel',
               icon: FiDownload,
@@ -2277,54 +3556,598 @@ const Products = () => {
       )}
 
       {/* ================= BULK COMPANY MODAL ================= */}
-      {isBulkCompanyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in duration-200">
-          <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-2xl mb-4">
-              <FiBriefcase />
-            </div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">Reassign Products to Company</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-              Reassign <span className="font-bold text-slate-800 dark:text-slate-200">{selectedProductIds.length}</span> selected products to the following partner company:
-            </p>
+      {isBulkCompanyModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 my-auto">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-2xl mb-4 border border-amber-500/20">
+                <FiBriefcase />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Reassign Products to Company</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                Reassign <span className="font-bold text-slate-800 dark:text-slate-200">{selectedProductIds.length}</span> selected products to the following partner company:
+              </p>
 
-            <div className="mt-4">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                Target Partner Company
-              </label>
-              <select
-                value={bulkTargetCompanyId}
-                onChange={(e) => setBulkTargetCompanyId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500/30"
-              >
-                {companies.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name} {c.code ? `(${c.code})` : ''}
-                  </option>
+              <div className="mt-4">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                  Target Partner Company
+                </label>
+                <select
+                  value={bulkTargetCompanyId}
+                  onChange={(e) => setBulkTargetCompanyId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500/30"
+                >
+                  {companies.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name} {c.code ? `(${c.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mt-6 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkCompanyModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkMoveCompany}
+                  disabled={!bulkTargetCompanyId}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-600/25 cursor-pointer disabled:opacity-50"
+                >
+                  Apply Reassignment
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* ================= BULK LOCATION REASSIGNMENT MODAL ================= */}
+      {isBulkLocationModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-xl p-6 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] my-auto">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl shrink-0 border border-blue-500/20">
+                  <FiMapPin />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Bulk Reassign Distribution Locations
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Update covered territories for <span className="font-bold text-slate-800 dark:text-slate-200">{selectedProductIds.length}</span> selected products.
+                  </p>
+                </div>
+              </div>
+
+              {/* Mode Selector Tabs */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4 p-1 bg-slate-100 dark:bg-white/5 rounded-2xl">
+                {[
+                  { id: 'sync-matrix', label: 'Sync Matrix', desc: 'By Brand', icon: FiZap },
+                  { id: 'replace', label: 'Replace', desc: 'Overwrite' },
+                  { id: 'append', label: 'Append', desc: 'Add to existing' },
+                  { id: 'all', label: 'All 36 States', desc: 'Pan-India' },
+                  { id: 'clear', label: 'Clear All', desc: 'Remove' }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setBulkLocationMode(tab.id)}
+                    className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      bulkLocationMode === tab.id
+                        ? tab.id === 'sync-matrix'
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                          : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <div className="truncate flex items-center justify-center gap-1">
+                      {tab.icon && <tab.icon className="text-xs shrink-0" />}
+                      <span>{tab.label}</span>
+                    </div>
+                    <div className="text-[10px] font-normal opacity-70 truncate">{tab.desc}</div>
+                  </button>
                 ))}
-              </select>
-            </div>
+              </div>
 
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setIsBulkCompanyModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleBulkMoveCompany}
-                disabled={!bulkTargetCompanyId}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-600/25 cursor-pointer disabled:opacity-50"
-              >
-                Apply Reassignment
-              </button>
+              {/* Sync Matrix View */}
+              {bulkLocationMode === 'sync-matrix' && (
+                <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                  <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-xs text-blue-800 dark:text-blue-300 space-y-1.5">
+                    <p className="font-bold flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400">
+                      <FiZap className="text-base" /> Sync Locations According to Brand Matrix
+                    </p>
+                    <p className="leading-relaxed">
+                      Each selected product will be evaluated against the configured rules in the <strong>Brand Routing Matrix</strong>. The product's covered distribution locations and trading partner mappings will be automatically assigned based on its specific brand.
+                    </p>
+                  </div>
+
+                  {/* Selected products brand summary */}
+                  {(() => {
+                    const selectedProds = products.filter((p) => selectedProductIds.includes(p._id));
+                    const brandCounts = {};
+                    selectedProds.forEach((p) => {
+                      const b = (p.brand || 'Unassigned').trim();
+                      brandCounts[b] = (brandCounts[b] || 0) + 1;
+                    });
+                    const uniqueBrandList = Object.entries(brandCounts);
+
+                    return (
+                      <div className="space-y-2 p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          <span>Brands in Selection ({uniqueBrandList.length})</span>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {selectedProductIds.length} Total Products
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pt-1">
+                          {uniqueBrandList.map(([bName, count]) => {
+                            const hasMatrixRule = (brandMatrix || []).some(
+                              (bm) => bm.brand && bm.brand.trim().toLowerCase() === bName.toLowerCase()
+                            );
+                            return (
+                              <span
+                                key={bName}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border ${
+                                  hasMatrixRule
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                                }`}
+                              >
+                                <FiZap className="text-[11px]" />
+                                <span>{bName}</span>
+                                <span className="text-[10px] font-mono opacity-80">({count})</span>
+                                {hasMatrixRule ? (
+                                  <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                                    ✓ Configured
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400">
+                                    (Fallback)
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* State selection UI for 'replace' and 'append' */}
+              {(bulkLocationMode === 'replace' || bulkLocationMode === 'append') && (
+                <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                      Selected States ({bulkLocations.length})
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setBulkLocations([...INDIAN_STATES])}
+                        className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                      >
+                        Select All 36
+                      </button>
+                      <span className="text-slate-300 dark:text-slate-700">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setBulkLocations([])}
+                        className="text-[11px] font-semibold text-rose-500 hover:underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Selected pills */}
+                  {bulkLocations.length > 0 && (
+                    <div className="flex flex-wrap gap-1 p-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/5 max-h-28 overflow-y-auto">
+                      {bulkLocations.map((st, sIdx) => (
+                        <span
+                          key={sIdx}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-semibold border border-blue-500/20"
+                        >
+                          <span>{st}</span>
+                          <button
+                            type="button"
+                            onClick={() => setBulkLocations((prev) => prev.filter((s) => s !== st))}
+                            className="hover:text-rose-500 cursor-pointer"
+                          >
+                            <FiX size={11} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Custom input */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={bulkCustomLocationInput}
+                      onChange={(e) => setBulkCustomLocationInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = bulkCustomLocationInput.trim();
+                          if (val) {
+                            if (isAllKeyword(val)) {
+                              setBulkLocations([...INDIAN_STATES]);
+                            } else if (!bulkLocations.includes(val)) {
+                              setBulkLocations((prev) => [...prev, val]);
+                            }
+                            setBulkCustomLocationInput('');
+                          }
+                        }
+                      }}
+                      placeholder="Type state/region name and press Enter..."
+                      className="flex-1 px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = bulkCustomLocationInput.trim();
+                        if (val) {
+                          if (isAllKeyword(val)) {
+                            setBulkLocations([...INDIAN_STATES]);
+                          } else if (!bulkLocations.includes(val)) {
+                            setBulkLocations((prev) => [...prev, val]);
+                          }
+                          setBulkCustomLocationInput('');
+                        }
+                      }}
+                      disabled={!bulkCustomLocationInput.trim()}
+                      className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {/* Quick Indian States Pills */}
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                      Quick Pick (All 36 Indian States & UTs):
+                    </span>
+                    <div className="flex flex-wrap gap-1 max-h-36 overflow-y-auto p-2 rounded-xl border border-slate-200/80 dark:border-white/5 bg-slate-50/50 dark:bg-black/20">
+                      {INDIAN_STATES.map((st) => {
+                        const isSelected = bulkLocations.includes(st);
+                        return (
+                          <button
+                            key={st}
+                            type="button"
+                            onClick={() => {
+                              setBulkLocations((prev) =>
+                                prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]
+                              );
+                            }}
+                            className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-blue-600 text-white border-blue-600 font-bold'
+                                : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
+                            }`}
+                          >
+                            {isSelected ? '✓ ' : '+ '}{st}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {bulkLocationMode === 'all' && (
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-xs text-blue-700 dark:text-blue-300">
+                  <p className="font-bold flex items-center gap-1.5 mb-1">
+                    <FiGlobe className="text-sm" /> All 36 States & Union Territories
+                  </p>
+                  <p>
+                    Every selected product will be configured for pan-India distribution across all 28 states and 8 union territories.
+                  </p>
+                </div>
+              )}
+
+              {bulkLocationMode === 'clear' && (
+                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-xs text-rose-700 dark:text-rose-300">
+                  <p className="font-bold flex items-center gap-1.5 mb-1">
+                    <FiAlertCircle className="text-sm" /> Clear All Covered Locations
+                  </p>
+                  <p>
+                    All location and territory associations will be removed from the {selectedProductIds.length} selected products.
+                  </p>
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkLocationModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkReassignLocations}
+                  disabled={
+                    (bulkLocationMode === 'replace' || bulkLocationMode === 'append') &&
+                    bulkLocations.length === 0
+                  }
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer disabled:opacity-50"
+                >
+                  {bulkLocationMode === 'sync-matrix'
+                    ? `Sync ${selectedProductIds.length} Products with Matrix`
+                    : `Apply to ${selectedProductIds.length} Products`}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
+
+      {/* ================= BULK PRODUCT EDIT MODAL ================= */}
+      {isBulkEditModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-xl p-6 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] my-auto">
+              <div className="flex items-center gap-3 mb-4 shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-2xl shrink-0 border border-purple-500/20">
+                  <FiEdit2 />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Bulk Edit Products
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Update common properties across <span className="font-bold text-slate-800 dark:text-slate-200">{selectedProductIds.length}</span> selected products using the single product API.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+                {/* Category */}
+                <div className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bulkEditFields.updateCategory}
+                      onChange={(e) =>
+                        setBulkEditFields((prev) => ({ ...prev, updateCategory: e.target.checked }))
+                      }
+                      className="w-4 h-4 rounded text-blue-600 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Update Category
+                    </span>
+                  </label>
+                  {bulkEditFields.updateCategory && (
+                    <select
+                      value={bulkEditFields.categoryId}
+                      onChange={(e) =>
+                        setBulkEditFields((prev) => ({ ...prev, categoryId: e.target.value }))
+                      }
+                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+                    >
+                      {categories.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Brand */}
+                <div className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bulkEditFields.updateBrand}
+                      onChange={(e) =>
+                        setBulkEditFields((prev) => ({ ...prev, updateBrand: e.target.checked }))
+                      }
+                      className="w-4 h-4 rounded text-blue-600 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Update Brand
+                    </span>
+                  </label>
+                  {bulkEditFields.updateBrand && (
+                    <input
+                      type="text"
+                      value={bulkEditFields.brand}
+                      onChange={(e) =>
+                        setBulkEditFields((prev) => ({ ...prev, brand: e.target.value }))
+                      }
+                      placeholder="e.g. Amazon, Realme, Noise..."
+                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+                    />
+                  )}
+                </div>
+
+                {/* Price */}
+                <div className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bulkEditFields.updatePrice}
+                      onChange={(e) =>
+                        setBulkEditFields((prev) => ({ ...prev, updatePrice: e.target.checked }))
+                      }
+                      className="w-4 h-4 rounded text-blue-600 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Update Price
+                    </span>
+                  </label>
+                  {bulkEditFields.updatePrice && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={bulkEditFields.priceMode}
+                        onChange={(e) =>
+                          setBulkEditFields((prev) => ({ ...prev, priceMode: e.target.value }))
+                        }
+                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+                      >
+                        <option value="fixed">Set Fixed Price (₹)</option>
+                        <option value="increase_percent">Increase by (%)</option>
+                        <option value="decrease_percent">Decrease by (%)</option>
+                      </select>
+                      <input
+                        type="number"
+                        min="0"
+                        value={bulkEditFields.priceValue}
+                        onChange={(e) =>
+                          setBulkEditFields((prev) => ({ ...prev, priceValue: e.target.value }))
+                        }
+                        placeholder={bulkEditFields.priceMode === 'fixed' ? 'e.g. 1499' : 'e.g. 10'}
+                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Unit */}
+                <div className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bulkEditFields.updateUnit}
+                      onChange={(e) =>
+                        setBulkEditFields((prev) => ({ ...prev, updateUnit: e.target.checked }))
+                      }
+                      className="w-4 h-4 rounded text-blue-600 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Update Unit of Measurement
+                    </span>
+                  </label>
+                  {bulkEditFields.updateUnit && (
+                    <select
+                      value={bulkEditFields.unit}
+                      onChange={(e) =>
+                        setBulkEditFields((prev) => ({ ...prev, unit: e.target.value }))
+                      }
+                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+                    >
+                      {['PCS', 'BOX', 'SET', 'MTR', 'KG', 'L', 'PACK', 'DOZEN'].map((u) => (
+                        <option key={u} value={u}>
+                          {u}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Status */}
+                <div className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bulkEditFields.updateStatus}
+                      onChange={(e) =>
+                        setBulkEditFields((prev) => ({ ...prev, updateStatus: e.target.checked }))
+                      }
+                      className="w-4 h-4 rounded text-blue-600 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Update Catalog Status
+                    </span>
+                  </label>
+                  {bulkEditFields.updateStatus && (
+                    <div className="flex items-center gap-4 pt-1">
+                      <label className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="bulkStatus"
+                          checked={bulkEditFields.isActive === true}
+                          onChange={() =>
+                            setBulkEditFields((prev) => ({ ...prev, isActive: true }))
+                          }
+                          className="text-emerald-600 cursor-pointer"
+                        />
+                        <span>Active</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="bulkStatus"
+                          checked={bulkEditFields.isActive === false}
+                          onChange={() =>
+                            setBulkEditFields((prev) => ({ ...prev, isActive: false }))
+                          }
+                          className="text-rose-600 cursor-pointer"
+                        />
+                        <span>Inactive</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                {/* Sync Locations with Matrix */}
+                <div className="p-3.5 bg-blue-500/10 dark:bg-blue-500/5 rounded-2xl border border-blue-500/20 space-y-2">
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bulkEditFields.syncLocationsWithMatrix}
+                      onChange={(e) =>
+                        setBulkEditFields((prev) => ({
+                          ...prev,
+                          syncLocationsWithMatrix: e.target.checked
+                        }))
+                      }
+                      className="w-4 h-4 mt-0.5 rounded text-blue-600 cursor-pointer shrink-0"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                        <FiZap className="text-blue-500 shrink-0" /> Sync Locations According to Brand Matrix
+                      </span>
+                      <p className="text-[11px] text-blue-800/80 dark:text-blue-400 mt-0.5 leading-relaxed">
+                        Automatically evaluate the Brand Routing Matrix for each product's brand and sync covered distribution locations and trading partner mappings.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkEditModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkEditSubmit}
+                  disabled={
+                    !bulkEditFields.updateCategory &&
+                    !bulkEditFields.updateBrand &&
+                    !bulkEditFields.updatePrice &&
+                    !bulkEditFields.updateUnit &&
+                    !bulkEditFields.updateStatus &&
+                    !bulkEditFields.syncLocationsWithMatrix
+                  }
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-purple-600/25 cursor-pointer disabled:opacity-50"
+                >
+                  Update {selectedProductIds.length} Products
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* Batch Progress Modal */}
       {batchProgress && (
@@ -2335,6 +4158,7 @@ const Products = () => {
           total={batchProgress.total}
           percentage={batchProgress.percentage}
           status={batchProgress.status}
+          isFinished={batchProgress.isFinished}
           logs={batchProgress.logs}
           onAbort={() => { abortBatchRef.current = true; }}
           onClose={() => setBatchProgress(null)}
