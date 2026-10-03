@@ -20,6 +20,7 @@ import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { useDebounce } from '@/hooks/useDebounce';
 import { formatEntityCode } from '@/utils/formatters';
 import { validateEntityCode } from '@/utils/validators';
+import { TableRowSkeleton } from '@/components/ui/Skeleton';
 
 const INITIAL_FORM_STATE = {
   name: '',
@@ -577,12 +578,9 @@ const Categories = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-200/80 dark:divide-white/5 text-xs">
                   {loading ? (
-                    <tr>
-                      <td colSpan="7" className="px-6 py-14 text-center text-slate-500 dark:text-slate-400 font-medium">
-                        <FiLoader className="animate-spin text-3xl mx-auto mb-3 text-blue-500 dark:text-blue-400" />
-                        <span>Loading category data...</span>
-                      </td>
-                    </tr>
+                    Array.from({ length: 6 }).map((_, idx) => (
+                      <TableRowSkeleton key={idx} cols={7} />
+                    ))
                   ) : currentCategories.length > 0 ? (
                     currentCategories.map((category, index) => {
                       const isRowEditing = editingId === category._id;

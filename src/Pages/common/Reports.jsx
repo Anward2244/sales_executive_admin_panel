@@ -32,6 +32,9 @@ import {
 import PageHeader from '@/components/ui/PageHeader';
 import Skeleton from '@/components/ui/Skeleton';
 import CopyButton from '@/components/ui/CopyButton';
+import OrderStatusBreakdownChart from '@/components/reports/OrderStatusBreakdownChart';
+import DailyTrendChart from '@/components/reports/DailyTrendChart';
+import { useTheme } from '@/Context/ThemeContext';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { getReportsApi } from '@/api/axios';
 
@@ -145,6 +148,7 @@ const getEmailStatusBadge = (emailStatus) => {
 };
 
 const Reports = () => {
+  const { isDark } = useTheme();
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -852,175 +856,27 @@ const Reports = () => {
 
       {/* Middle Row: Status Breakdown & Daily Trend */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Status Breakdown Card */}
-        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  <FiLayers className="text-lg" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Order Status Breakdown
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Distribution of order volume and financial commitments
-                  </p>
-                </div>
-              </div>
-              <span className="text-xs font-bold px-2.5 py-1 bg-slate-100 dark:bg-white/5 rounded-lg text-slate-600 dark:text-slate-300">
-                {statusBreakdown.length} Stages
-              </span>
-            </div>
+        {/* Order Status Breakdown Bar Chart Card */}
+        <OrderStatusBreakdownChart
+          statusBreakdown={statusBreakdown}
+          totalRevenue={summary.totalRevenue}
+          totalOrders={summary.totalOrders}
+          selectedStatus={statusFilter}
+          onSelectStatus={(status) => {
+            setStatusFilter((prev) => (prev === status ? 'ALL' : status));
+          }}
+          isDark={isDark}
+          loading={loading}
+        />
 
-            {loading ? (
-              <div className="space-y-4 my-4">
-                <Skeleton className="h-16 w-full rounded-2xl" />
-                <Skeleton className="h-16 w-full rounded-2xl" />
-              </div>
-            ) : statusBreakdown.length === 0 ? (
-              <div className="py-12 text-center text-slate-400 text-xs">
-                No order statuses recorded yet.
-              </div>
-            ) : (
-              <div className="space-y-3.5 mt-4">
-                {statusBreakdown.map((item, idx) => {
-                  const badge = getStatusBadge(item._id);
-                  const Icon = badge.icon;
-                  const totalRev = Number(summary.totalRevenue) || 1;
-                  const percent = Math.min(
-                    100,
-                    Math.round(((Number(item.totalAmount) || 0) / totalRev) * 100)
-                  );
-
-                  return (
-                    <div
-                      key={item._id || idx}
-                      className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${badge.bg}`}
-                          >
-                            <Icon className="text-xs" />
-                            <span>{item._id}</span>
-                          </span>
-                          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                            {item.count} {item.count === 1 ? 'order' : 'orders'}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-sm font-extrabold text-slate-900 dark:text-white">
-                            {formatCurrency(item.totalAmount || 0)}
-                          </span>
-                          <span className="text-[11px] font-medium text-slate-400 ml-1.5">
-                            ({percent}%)
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Progress bar */}
-                      <div className="w-full bg-slate-200 dark:bg-white/10 h-2 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${badge.barColor} transition-all duration-500 rounded-full`}
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span>Aggregated from backend pipeline</span>
-            <span className="font-bold text-slate-700 dark:text-slate-300">
-              Total: {formatCurrency(summary.totalRevenue || 0)}
-            </span>
-          </div>
-        </div>
-
-        {/* Daily Trend Card */}
-        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <FiTrendingUp className="text-lg" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Daily Velocity & Trend
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Day-by-day order generation and intake amounts
-                  </p>
-                </div>
-              </div>
-              <span className="text-xs font-bold px-2.5 py-1 bg-slate-100 dark:bg-white/5 rounded-lg text-slate-600 dark:text-slate-300">
-                {dailyTrend.length} Days
-              </span>
-            </div>
-
-            {loading ? (
-              <div className="space-y-4 my-4">
-                <Skeleton className="h-16 w-full rounded-2xl" />
-                <Skeleton className="h-16 w-full rounded-2xl" />
-              </div>
-            ) : dailyTrend.length === 0 ? (
-              <div className="py-12 text-center text-slate-400 text-xs">
-                No daily trends recorded yet.
-              </div>
-            ) : (
-              <div className="space-y-3.5 mt-4">
-                {dailyTrend.map((trend, idx) => {
-                  const rev = Number(trend.totalAmount) || 0;
-                  const relativePct = Math.min(100, Math.round((rev / maxDailyRevenue) * 100));
-
-                  return (
-                    <div
-                      key={trend._id || idx}
-                      className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <FiCalendar className="text-xs text-slate-400" />
-                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                            {formatDate(trend._id)}
-                          </span>
-                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                            {trend.orderCount} {trend.orderCount === 1 ? 'order' : 'orders'}
-                          </span>
-                        </div>
-                        <div className="text-right font-extrabold text-sm text-slate-900 dark:text-white">
-                          {formatCurrency(rev)}
-                        </div>
-                      </div>
-
-                      {/* Bar indicator */}
-                      <div className="w-full bg-slate-200 dark:bg-white/10 h-2 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500"
-                          style={{ width: `${relativePct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span>Continuous tracking</span>
-            <span className="font-bold text-slate-700 dark:text-slate-300">
-              Peak Day: {formatCurrency(maxDailyRevenue)}
-            </span>
-          </div>
-        </div>
+        {/* Daily Trend Line Chart Card */}
+        <DailyTrendChart
+          dailyTrend={dailyTrend}
+          totalRevenue={summary.totalRevenue}
+          totalOrders={summary.totalOrders}
+          isDark={isDark}
+          loading={loading}
+        />
       </div>
 
       {/* Product Performance Section */}
@@ -1562,41 +1418,41 @@ const Reports = () => {
             onClick={() => setSelectedOrder(null)}
           />
 
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10 pointer-events-none">
-            <div className="w-screen max-w-2xl sm:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto animate-in slide-in-from-right duration-300 z-10">
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
+            <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto animate-in slide-in-from-right duration-300 z-10">
               {/* Sticky Header with Stepper */}
-              <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl">
-                    <FiFileText className="text-xl" />
+              <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md gap-2 sm:gap-4">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                  <div className="p-2 sm:p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl shrink-0">
+                    <FiFileText className="text-lg sm:text-xl" />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-white font-mono">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-mono truncate">
                         {selectedOrder.poNumber}
                       </h3>
                       <CopyButton text={selectedOrder.poNumber} />
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
                       Created on {formatDateTime(selectedOrder.createdAt)}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                   {/* Stepper Navigation */}
                   {filteredOrders.length > 1 && (
-                    <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-xl p-0.5 border border-slate-200/60 dark:border-white/10 mr-1">
+                    <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-xl p-0.5 border border-slate-200/60 dark:border-white/10">
                       <button
                         type="button"
                         onClick={handlePrevOrder}
                         disabled={!hasPrevOrder}
                         title="Previous order (Left arrow)"
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                        className="p-1 sm:p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
                       >
-                        <FiChevronLeft size={16} />
+                        <FiChevronLeft size={15} />
                       </button>
-                      <span className="text-[11px] font-mono px-2 text-slate-500 font-semibold select-none">
+                      <span className="text-[10px] sm:text-[11px] font-mono px-1.5 sm:px-2 text-slate-500 font-semibold select-none">
                         {selectedOrderIndex >= 0 ? `${selectedOrderIndex + 1} of ${filteredOrders.length}` : ''}
                       </span>
                       <button
@@ -1604,9 +1460,9 @@ const Reports = () => {
                         onClick={handleNextOrder}
                         disabled={!hasNextOrder}
                         title="Next order (Right arrow)"
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                        className="p-1 sm:p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
                       >
-                        <FiChevronRight size={16} />
+                        <FiChevronRight size={15} />
                       </button>
                     </div>
                   )}
@@ -1623,7 +1479,7 @@ const Reports = () => {
               </div>
 
               {/* Scrollable Drawer Body */}
-              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6 custom-scrollbar">
                 {/* Status and Entity Summary */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-white/5">
                   <div>

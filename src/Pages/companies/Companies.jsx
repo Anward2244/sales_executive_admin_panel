@@ -18,7 +18,9 @@ import {
   FiTrash2,
   FiEdit2,
   FiClock,
-  FiExternalLink
+  FiExternalLink,
+  FiChevronLeft,
+  FiChevronRight
 } from 'react-icons/fi';
 import {
   getCompaniesApi,
@@ -35,6 +37,7 @@ import CopyButton from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
 import { formatEntityCode } from '@/utils/formatters';
 import { validateEntityCode } from '@/utils/validators';
+import { TableSkeleton, SkeletonPulse } from '@/components/ui/Skeleton';
 
 const INITIAL_FORM = {
   name: '',
@@ -365,6 +368,46 @@ const Companies = () => {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentCompanies = sortedCompanies.slice(indexOfFirstItem, indexOfLastItem);
 
+  // Stepping navigation across companies in drawer
+  const selectedCompanyIndex = useMemo(() => {
+    if (!selectedCompany) return -1;
+    return sortedCompanies.findIndex((c) => c._id === selectedCompany._id);
+  }, [selectedCompany, sortedCompanies]);
+
+  const canGoPrevCompany = selectedCompanyIndex > 0;
+  const canGoNextCompany = selectedCompanyIndex >= 0 && selectedCompanyIndex < sortedCompanies.length - 1;
+
+  const handlePrevCompany = useCallback(() => {
+    if (canGoPrevCompany) {
+      const prevComp = sortedCompanies[selectedCompanyIndex - 1];
+      handleOpenDrawer(prevComp, drawerMode);
+    }
+  }, [canGoPrevCompany, selectedCompanyIndex, sortedCompanies, drawerMode]);
+
+  const handleNextCompany = useCallback(() => {
+    if (canGoNextCompany) {
+      const nextComp = sortedCompanies[selectedCompanyIndex + 1];
+      handleOpenDrawer(nextComp, drawerMode);
+    }
+  }, [canGoNextCompany, selectedCompanyIndex, sortedCompanies, drawerMode]);
+
+  // Keyboard navigation for company drawer (Left/Right arrow keys)
+  useEffect(() => {
+    if (!isDrawerOpen || !selectedCompany) return;
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        if (canGoPrevCompany) handlePrevCompany();
+      } else if (e.key === 'ArrowRight') {
+        if (canGoNextCompany) handleNextCompany();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDrawerOpen, selectedCompany, canGoPrevCompany, canGoNextCompany, handlePrevCompany, handleNextCompany]);
+
   // Statistics
   const totalCount = meta?.total !== undefined ? meta.total : companies.length;
   const activeCount = companies.filter((c) => c.isActive).length;
@@ -546,12 +589,7 @@ const Companies = () => {
       {/* Main Companies Table (styled matching Users.jsx) */}
       <div className="relative z-10 bg-white/40 dark:bg-transparent border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl shadow-slate-500/30 dark:shadow-black/50 rounded-3xl overflow-hidden flex flex-col h-full isolate will-change-transform">
         {loading ? (
-          <div className="p-16 flex flex-col items-center justify-center">
-            <FiLoader className="text-3xl text-blue-600 animate-spin" />
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-3">
-              Loading companies...
-            </p>
-          </div>
+          <TableSkeleton columns={7} rows={6} className="border-0 shadow-none rounded-none" />
         ) : (
           <>
             <div className="overflow-auto custom-scrollbar max-h-[70vh]">
@@ -732,26 +770,24 @@ const Companies = () => {
                               <button
                                 type="button"
                                 onClick={() => handleOpenDrawer(company, 'details')}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                                className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                                 title="View Company Details"
                               >
                                 <FiEye size={13} />
-                                <span>View</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleOpenDrawer(company, 'edit')}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border border-amber-200/60 dark:border-amber-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                                className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border border-amber-200/60 dark:border-amber-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                                 title="Edit Company"
                               >
                                 <FiEdit2 size={13} />
-                                <span>Edit</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteCompany(company)}
                                 disabled={actionLoadingId === company._id}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl border border-transparent hover:border-rose-200/60 dark:hover:border-rose-500/20 transition-all cursor-pointer disabled:opacity-40"
+                                className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200/60 dark:border-rose-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                                 title="Delete Company"
                               >
                                 {actionLoadingId === company._id ? (
@@ -1011,30 +1047,30 @@ const Companies = () => {
             onClick={handleCloseDrawer}
           />
 
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-xl bg-white/30 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out animate-in slide-in-from-right duration-300">
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
+            <div className="w-screen max-w-full sm:max-w-xl bg-white/30 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out animate-in slide-in-from-right duration-300">
               
               {/* Drawer Top Header */}
-              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-slate-950/40 backdrop-blur-md">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
-                      <FiBriefcase className="text-xl" />
+              <div className="p-4 sm:p-6 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-slate-950/40 backdrop-blur-md">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
+                      <FiBriefcase className="text-lg sm:text-xl" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight truncate">
                         {selectedCompany ? selectedCompany.name : 'Company Details'}
                       </h2>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
                         {selectedCompany?.code && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/10 text-slate-800 dark:text-slate-200 font-mono text-[11px] font-bold">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/10 text-slate-800 dark:text-slate-200 font-mono text-[10px] sm:text-[11px] font-bold">
                             <FiTag className="text-[10px] text-slate-400" />
                             {selectedCompany.code}
                           </span>
                         )}
                         {selectedCompany?._id && (
                           <div className="flex items-center gap-1">
-                            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
+                            <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 font-mono">
                               {selectedCompany._id}
                             </span>
                             <CopyButton text={selectedCompany._id} />
@@ -1044,19 +1080,47 @@ const Companies = () => {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    disabled={editSubmitting}
-                    onClick={handleCloseDrawer}
-                    className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0 disabled:opacity-40"
-                    title="Close drawer (Esc)"
-                  >
-                    <FiX size={20} />
-                  </button>
+                  {/* Stepper Navigation & Close button */}
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    {selectedCompanyIndex >= 0 && sortedCompanies.length > 1 && (
+                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
+                        <button
+                          type="button"
+                          onClick={handlePrevCompany}
+                          disabled={!canGoPrevCompany}
+                          title="Previous Company (Left Arrow)"
+                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <FiChevronLeft size={15} />
+                        </button>
+                        <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                          {selectedCompanyIndex + 1} of {sortedCompanies.length}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleNextCompany}
+                          disabled={!canGoNextCompany}
+                          title="Next Company (Right Arrow)"
+                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <FiChevronRight size={15} />
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      disabled={editSubmitting}
+                      onClick={handleCloseDrawer}
+                      className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0 disabled:opacity-40"
+                      title="Close drawer (Esc)"
+                    >
+                      <FiX size={18} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Tab Switcher: View Details vs. Edit Company */}
-                <div className="flex items-center gap-1.5 p-1 mt-4 bg-slate-200/60 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
+                <div className="flex items-center gap-1.5 p-1 mt-3 sm:mt-4 bg-slate-200/60 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
                   <button
                     type="button"
                     onClick={() => {
@@ -1100,13 +1164,21 @@ const Companies = () => {
               </div>
 
               {/* Drawer Body Area */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-6">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-5 sm:space-y-6">
                 {drawerLoading ? (
-                  <div className="py-20 flex flex-col items-center justify-center text-center">
-                    <FiLoader className="text-3xl text-blue-600 animate-spin mb-3" />
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Loading Company Details...
-                    </p>
+                  <div className="space-y-6 animate-pulse p-2">
+                    <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 flex items-center gap-5">
+                      <SkeletonPulse className="w-16 h-16 rounded-2xl shrink-0" />
+                      <div className="space-y-2 flex-1">
+                        <SkeletonPulse className="h-6 w-1/2" />
+                        <SkeletonPulse className="h-4 w-1/3" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <SkeletonPulse className="h-24 w-full rounded-2xl" />
+                      <SkeletonPulse className="h-24 w-full rounded-2xl" />
+                    </div>
+                    <SkeletonPulse className="h-36 w-full rounded-2xl" />
                   </div>
                 ) : !selectedCompany ? (
                   <div className="py-20 text-center text-slate-500 dark:text-slate-400">

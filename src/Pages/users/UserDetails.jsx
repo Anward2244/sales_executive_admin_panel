@@ -13,6 +13,7 @@ import { useConfirm } from '@/Context/ConfirmationContext';
 import CopyButton from '@/components/ui/CopyButton';
 import GmailLink from '@/components/ui/GmailLink';
 import CustomDropdown from '@/components/ui/CustomDropdown';
+import { ProfileSkeleton } from '@/components/ui/Skeleton';
 
 const getUserFullName = (user) => {
   if (!user) return '';
@@ -260,10 +261,7 @@ const UserDetails = () => {
 
       {/* Loading & Error States */}
       {loading ? (
-        <div className="h-72 flex flex-col justify-center items-center bg-white/40 dark:bg-slate-950/20 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-xs">
-          <FiLoader className="animate-spin text-3xl text-blue-600 dark:text-blue-400 mb-3" />
-          <p className="text-slate-500 dark:text-slate-400 font-semibold text-sm">Loading user details...</p>
-        </div>
+        <ProfileSkeleton />
       ) : error ? (
         <div className="text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 p-6 rounded-3xl border border-rose-200 dark:border-rose-500/25 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-4">

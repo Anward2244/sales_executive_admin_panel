@@ -19,6 +19,7 @@ import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { createPortal } from 'react-dom';
 import { formatPhone, formatEntityCode } from '@/utils/formatters';
 import { validateEmail, validatePhone, validateEntityCode } from '@/utils/validators';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 const getUserFullName = (user) => {
   if (!user) return '';
@@ -838,10 +839,7 @@ const UsersList = () => {
 
         {/* Content Area */}
         {loading ? (
-          <div className="h-72 flex flex-col justify-center items-center bg-white/40 dark:bg-slate-950/15 border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-xs dark:shadow-none">
-            <FiLoader className="animate-spin text-3xl text-blue-600 dark:text-blue-400 mb-4" />
-            <p className="text-slate-500 dark:text-slate-400 font-medium">Loading users...</p>
-          </div>
+          <TableSkeleton columns={7} rows={7} />
         ) : error ? (
           <div className="text-rose-600 dark:text-red-400 bg-rose-50 dark:bg-red-900/20 p-5 rounded-2xl border border-rose-200 dark:border-red-500/30 flex items-center justify-between">
             <div className="flex items-center gap-3">

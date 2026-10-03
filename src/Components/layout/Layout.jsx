@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
@@ -1613,7 +1613,33 @@ const Layout = () => {
         {/* DYNAMIC PAGE CONTENT */}
         <main ref={mainRef} onScroll={checkScrollState} className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
           <div className="w-full mx-auto p-1 sm:p-2 lg:p-4 min-h-full">
-            <Outlet context={{ setChatUnreadCount, setOrdersUnreadCount, setUsersUnreadCount, setUsersVerifyUnreadCount, setUsersDeletionUnreadCount }} />
+            <Suspense
+              fallback={
+                <div className="w-full space-y-6 animate-pulse p-2 sm:p-4">
+                  <div className="flex flex-col sm:flex-row justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-white/10">
+                    <div className="space-y-2">
+                      <div className="h-8 w-48 bg-slate-200/70 dark:bg-white/[0.06] rounded-xl" />
+                      <div className="h-4 w-72 bg-slate-200/50 dark:bg-white/[0.04] rounded-lg" />
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="h-9 w-24 bg-slate-200/70 dark:bg-white/[0.06] rounded-xl" />
+                      <div className="h-9 w-28 bg-slate-200/70 dark:bg-white/[0.06] rounded-xl" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="h-28 bg-white/40 dark:bg-slate-900/40 border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 space-y-2">
+                        <div className="h-4 w-20 bg-slate-200/70 dark:bg-white/5 rounded" />
+                        <div className="h-7 w-28 bg-slate-200/80 dark:bg-white/10 rounded" />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="h-96 w-full bg-white/40 dark:bg-slate-900/40 border border-slate-200/80 dark:border-white/10 rounded-3xl" />
+                </div>
+              }
+            >
+              <Outlet context={{ setChatUnreadCount, setOrdersUnreadCount, setUsersUnreadCount, setUsersVerifyUnreadCount, setUsersDeletionUnreadCount }} />
+            </Suspense>
           </div>
         </main>
 

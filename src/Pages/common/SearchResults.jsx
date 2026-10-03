@@ -4,6 +4,7 @@ import { FiSearch, FiPackage, FiLoader, FiAlertCircle, FiGrid, FiFileText, FiUse
 import { useAuth } from '@/Context/AuthContext';
 import { getAccessibleMenus } from '@/config/menus';
 import { getProductsApi, getCategoryApi, getUsersApi, getCompaniesApi, getFirmsApi } from '@/api/axios';
+import { CardGridSkeleton } from '@/components/ui/Skeleton';
 
 const SearchResults = () => {
   const { user } = useAuth();
@@ -163,9 +164,7 @@ const SearchResults = () => {
 
       {/* Loading State */}
       {loading && (
-        <div className="flex justify-center items-center py-20 bg-transparent backdrop-blur-2xl border border-white/10 shadow-2xl shadow-black/50 rounded-3xl">
-          <FiLoader className="animate-spin text-4xl text-blue-600" />
-        </div>
+        <CardGridSkeleton cards={6} cols="grid-cols-1 md:grid-cols-2 xl:grid-cols-3" />
       )}
 
       {/* Error State */}

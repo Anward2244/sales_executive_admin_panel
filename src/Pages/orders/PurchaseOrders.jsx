@@ -53,6 +53,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import { BulkActionBar, BatchProgressModal } from '@/components/ui';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 
 const STATUS_TABS = [
@@ -948,7 +949,6 @@ const PurchaseOrders = () => {
       <PageHeader
         title="Purchase Orders"
         subtitle="Issue vendor purchase orders, review incoming procurement, approve orders, and manage warehouse dispatching."
-        badgeText="Procurement Lifecycle"
         badgeIcon={FiShoppingCart}
         actions={
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
@@ -1131,11 +1131,7 @@ const PurchaseOrders = () => {
       <div className="bg-white/40 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
         {/* Loading State */}
         {loading && (
-          <div className="p-16 flex flex-col items-center justify-center text-center">
-            <FiLoader className="text-4xl text-blue-600 animate-spin mb-4" />
-            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Loading purchase orders...</p>
-            <p className="text-xs text-slate-400 mt-1">Connecting to procurement service</p>
-          </div>
+          <TableSkeleton columns={9} rows={8} className="border-0 shadow-none rounded-none" />
         )}
 
         {/* Error State */}
@@ -1544,16 +1540,16 @@ const PurchaseOrders = () => {
             />
 
             {/* Slide-Over Drawer Container (Pinned to Right) */}
-            <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
-              <div className="w-screen max-w-2xl sm:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10">
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
+              <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10">
                 {/* 1. Sticky Drawer Header */}
-                <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20 shrink-0">
+                <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base sm:text-lg border border-blue-500/20 shrink-0">
                       <FiPackage />
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-mono truncate">
                           {selectedOrder.poNumber || selectedOrder.orderNumber || 'Purchase Order'}
                         </h3>
@@ -1579,19 +1575,19 @@ const PurchaseOrders = () => {
                   </div>
 
                   {/* Header Actions: Quick Order Stepping + Close */}
-                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                     {selectedOrderIndex >= 0 && (
-                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-1 text-xs">
+                      <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
                         <button
                           type="button"
                           onClick={handlePrevOrder}
                           disabled={!canGoPrevOrder}
                           title="Previous Order (Left Arrow)"
-                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           <FiChevronLeft size={15} />
                         </button>
-                        <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                        <span className="px-1.5 font-mono text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
                           {selectedOrderIndex + 1} of {filteredOrders.length}
                         </span>
                         <button
@@ -1599,7 +1595,7 @@ const PurchaseOrders = () => {
                           onClick={handleNextOrder}
                           disabled={!canGoNextOrder}
                           title="Next Order (Right Arrow)"
-                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           <FiChevronRight size={15} />
                         </button>
@@ -1617,7 +1613,7 @@ const PurchaseOrders = () => {
                 </div>
 
                 {/* 2. Scrollable Body Content */}
-                <div className="flex-1 overflow-y-auto p-5 sm:p-7 custom-scrollbar space-y-5">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-7 custom-scrollbar space-y-4 sm:space-y-5">
                   {/* Order Overview Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs">
                 {/* Trading Company */}

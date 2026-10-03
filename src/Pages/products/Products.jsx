@@ -726,6 +726,48 @@ const Products = () => {
     setFormError('');
   };
 
+  // Stepping navigation across products in drawer
+  const selectedProductIndex = useMemo(() => {
+    if (!drawerProduct) return -1;
+    return filteredProducts.findIndex((p) => p._id === drawerProduct._id);
+  }, [drawerProduct, filteredProducts]);
+
+  const canGoPrevProduct = selectedProductIndex > 0;
+  const canGoNextProduct = selectedProductIndex >= 0 && selectedProductIndex < filteredProducts.length - 1;
+
+  const handlePrevProduct = useCallback(() => {
+    if (canGoPrevProduct) {
+      const prevProd = filteredProducts[selectedProductIndex - 1];
+      setDrawerProduct(prevProd);
+      populateProductForm(prevProd);
+    }
+  }, [canGoPrevProduct, selectedProductIndex, filteredProducts]);
+
+  const handleNextProduct = useCallback(() => {
+    if (canGoNextProduct) {
+      const nextProd = filteredProducts[selectedProductIndex + 1];
+      setDrawerProduct(nextProd);
+      populateProductForm(nextProd);
+    }
+  }, [canGoNextProduct, selectedProductIndex, filteredProducts]);
+
+  // Keyboard navigation for product drawer (Left/Right arrow keys)
+  useEffect(() => {
+    if (!isDrawerOpen || !drawerProduct) return;
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        if (canGoPrevProduct) handlePrevProduct();
+      } else if (e.key === 'ArrowRight') {
+        if (canGoNextProduct) handleNextProduct();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDrawerOpen, drawerProduct, canGoPrevProduct, canGoNextProduct, handlePrevProduct, handleNextProduct]);
+
   // Lock body scroll when drawer is open
   useEffect(() => {
     if (isDrawerOpen) {
@@ -1985,7 +2027,7 @@ const Products = () => {
         </div>
 
         {/* Filter Dropdowns */}
-        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
+        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-start">
           {/* Company Filter */}
           <div className="min-w-[140px]">
             <CustomDropdown
@@ -2211,8 +2253,7 @@ const Products = () => {
                   return (
                     <tr
                       key={product._id}
-                      onClick={() => handleOpenDetails(product)}
-                      className={`hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer ${
+                      className={`hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors ${
                         isBulkMode && isSelected
                           ? 'bg-blue-50/60 dark:bg-blue-900/10'
                           : ''
@@ -2248,11 +2289,11 @@ const Products = () => {
                                 {product.sku}
                               </span>
                               <CopyButton text={product.sku} size={10} />
-                              {product.price !== undefined && product.price !== null && product.price !== '' && (
+                              {/* {product.price !== undefined && product.price !== null && product.price !== '' && (
                                 <span className="font-semibold text-[11px] text-emerald-600 dark:text-emerald-400 ml-1">
                                   ₹{Number(product.price).toLocaleString('en-IN')}
                                 </span>
-                              )}
+                              )} */}
                             </div>
                           </div>
                         </div>
@@ -2273,11 +2314,6 @@ const Products = () => {
                               <FiTag className="text-[10px]" />
                               <span>{categoryName}</span>
                             </span>
-                            {categoryCode && (
-                              <span className="font-mono text-[10px] text-slate-400">
-                                ({categoryCode})
-                              </span>
-                            )}
                           </div>
                         ) : (
                           <span className="text-xs text-slate-400 italic">Unassigned</span>
@@ -2370,8 +2406,16 @@ const Products = () => {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
+                            onClick={() => handleOpenDetails(product)}
+                            className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                            title="View product details"
+                          >
+                            <FiEye className="text-base" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={(e) => handleOpenEdit(product, e)}
-                            className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border border-amber-200/60 dark:border-amber-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                             title="Edit"
                           >
                             <FiEdit2 className="text-sm" />
@@ -2382,7 +2426,7 @@ const Products = () => {
                               e.stopPropagation();
                               setDeleteConfirmProduct(product);
                             }}
-                            className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200/60 dark:border-rose-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                             title="Delete"
                           >
                             <FiTrash2 className="text-sm" />
@@ -2467,62 +2511,69 @@ const Products = () => {
             />
 
             {/* Slide-over Container (Pinned to Right) */}
-            <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
-              <div className="w-screen max-w-2xl sm:max-w-3xl bg-white/20 dark:bg-slate-900/95 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 text-left">
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
+              <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/20 dark:bg-slate-900/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 text-left">
                 {/* Sticky Drawer Header */}
-                <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 flex items-center justify-between shrink-0 gap-4">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
-                      <FiPackage className="text-2xl" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white line-clamp-1">
-                          {drawerProduct ? drawerProduct.name : 'Add New Product'}
-                        </h2>
-                        {drawerProduct && (
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                              drawerProduct.isActive !== false
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
-                            }`}
-                          >
-                            {drawerProduct.isActive !== false ? 'Active' : 'Inactive'}
-                          </span>
-                        )}
+                <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 shrink-0 space-y-3">
+                  {/* Top Bar: Icon + Title + Close Button */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                      <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
+                        <FiPackage className="text-xl sm:text-2xl" />
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        {drawerProduct ? (
-                          <>
-                            <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
-                              {drawerProduct.sku}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
+                            {drawerProduct ? drawerProduct.name : 'Add New Product'}
+                          </h2>
+                          {drawerProduct && (
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold ${
+                                drawerProduct.isActive !== false
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                  : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
+                              }`}
+                            >
+                              {drawerProduct.isActive !== false ? 'Active' : 'Inactive'}
                             </span>
-                            <CopyButton text={drawerProduct.sku} size={11} />
-                            {drawerProduct.price !== undefined && drawerProduct.price !== null && drawerProduct.price !== '' && (
-                              <span className="font-semibold text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                                ₹{Number(drawerProduct.price).toLocaleString('en-IN')}
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
+                          {drawerProduct ? (
+                            <>
+                              <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
+                                {drawerProduct.sku}
                               </span>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-xs text-slate-400">Configure new hardware catalog product with pricing and routing</p>
-                        )}
+                              <CopyButton text={drawerProduct.sku} size={11} />
+                            </>
+                          ) : (
+                            <p className="text-xs text-slate-400 truncate">Configure new catalog product with pricing and routing</p>
+                          )}
+                        </div>
                       </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={handleCloseDrawer}
+                      className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer shrink-0"
+                      title="Close drawer (Esc)"
+                    >
+                      <FiX size={18} />
+                    </button>
                   </div>
 
-                  {/* Mode Selector Tabs & Close Button */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    {drawerProduct && (
-                      <div className="flex items-center p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
+                  {/* Bottom Sub-Bar: Mode Selector Tabs & Stepper Navigation */}
+                  {drawerProduct && (
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/40 dark:border-white/5 flex-wrap sm:flex-nowrap">
+                      <div className="flex items-center p-0.5 sm:p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
                         <button
                           type="button"
                           onClick={() => {
                             setDrawerTab('overview');
                             setFormError('');
                           }}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             drawerTab === 'overview'
                               ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                               : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -2537,7 +2588,7 @@ const Products = () => {
                             setDrawerTab('edit');
                             setFormError('');
                           }}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             drawerTab === 'edit'
                               ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                               : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -2547,21 +2598,39 @@ const Products = () => {
                           <span>Edit</span>
                         </button>
                       </div>
-                    )}
 
-                    <button
-                      type="button"
-                      onClick={handleCloseDrawer}
-                      className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                      title="Close drawer (Esc)"
-                    >
-                      <FiX size={18} />
-                    </button>
-                  </div>
+                      {/* Product Stepper Navigation */}
+                      {selectedProductIndex >= 0 && filteredProducts.length > 1 && (
+                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
+                          <button
+                            type="button"
+                            onClick={handlePrevProduct}
+                            disabled={!canGoPrevProduct}
+                            title="Previous Product (Left Arrow)"
+                            className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          >
+                            <FiChevronLeft size={15} />
+                          </button>
+                          <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                            {selectedProductIndex + 1} of {filteredProducts.length}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleNextProduct}
+                            disabled={!canGoNextProduct}
+                            title="Next Product (Right Arrow)"
+                            className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          >
+                            <FiChevronRight size={15} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Scrollable Body Content */}
-                <div className="flex-1 overflow-y-auto p-5 sm:p-7 custom-scrollbar space-y-6">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-7 custom-scrollbar space-y-5 sm:space-y-6">
                   {drawerTab === 'overview' && drawerProduct ? (
                     <>
                       {/* Product Specifications Grid */}
@@ -2600,14 +2669,14 @@ const Products = () => {
                             })()}
                           </div>
 
-                          <div>
+                          {/* <div>
                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Price (INR)</p>
                             <p className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
                               {drawerProduct.price !== undefined && drawerProduct.price !== null && drawerProduct.price !== ''
                                 ? `₹${Number(drawerProduct.price).toLocaleString('en-IN')}`
                                 : '₹0'}
                             </p>
-                          </div>
+                          </div> */}
 
                           <div>
                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Measurement Unit</p>
@@ -2940,7 +3009,7 @@ const Products = () => {
                         </div>
 
                         {/* Price (INR) Field */}
-                        <div>
+                        {/* <div>
                           <div className="flex items-center justify-between mb-1">
                             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                               Price (₹)
@@ -2956,7 +3025,7 @@ const Products = () => {
                             placeholder="e.g. 1499"
                             className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
                           />
-                        </div>
+                        </div> */}
 
                         <div>
                           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -3558,8 +3627,8 @@ const Products = () => {
       {/* ================= BULK COMPANY MODAL ================= */}
       {isBulkCompanyModalOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 my-auto">
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 my-auto">
               <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-2xl mb-4 border border-amber-500/20">
                 <FiBriefcase />
               </div>
@@ -3610,8 +3679,8 @@ const Products = () => {
       {/* ================= BULK LOCATION REASSIGNMENT MODAL ================= */}
       {isBulkLocationModalOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-xl p-6 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] my-auto">
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-xl p-6 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] my-auto">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl shrink-0 border border-blue-500/20">
                   <FiMapPin />
@@ -3897,8 +3966,8 @@ const Products = () => {
       {/* ================= BULK PRODUCT EDIT MODAL ================= */}
       {isBulkEditModalOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-xl p-6 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] my-auto">
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-xl p-6 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] my-auto">
               <div className="flex items-center gap-3 mb-4 shrink-0">
                 <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-2xl shrink-0 border border-purple-500/20">
                   <FiEdit2 />
@@ -3975,7 +4044,7 @@ const Products = () => {
                 </div>
 
                 {/* Price */}
-                <div className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
+                {/* <div className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -4014,7 +4083,7 @@ const Products = () => {
                       />
                     </div>
                   )}
-                </div>
+                </div> */}
 
                 {/* Unit */}
                 <div className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">

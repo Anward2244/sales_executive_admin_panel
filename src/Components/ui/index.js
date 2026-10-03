@@ -7,6 +7,7 @@ export { default as GmailLink } from './GmailLink';
 export { default as OptimizedImage } from './OptimizedImage';
 export { default as PageHeader } from './PageHeader';
 export { default as Skeleton } from './Skeleton';
+export * from './Skeleton';
 export { default as BulkActionBar } from './BulkActionBar';
 export { default as BatchProgressModal } from './BatchProgressModal';
 export * from './VisxCharts';

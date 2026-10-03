@@ -862,38 +862,38 @@ const EmailNotifications = () => {
             />
 
             {/* Slide-Over Drawer Container (Pinned to Right) */}
-            <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
-              <div className="w-screen max-w-xl sm:max-w-2xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10">
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
+              <div className="w-screen max-w-full sm:max-w-xl md:max-w-2xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10">
                 {/* 1. Sticky Drawer Header */}
-                <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
-                      <FiMail size={20} />
+                <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <div className="p-2 sm:p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                      <FiMail className="text-lg sm:text-xl" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
                         Email Delivery Details
                       </h3>
-                      <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                      <p className="text-[10px] sm:text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                         Log ID: {selectedLog._id}
                       </p>
                     </div>
                   </div>
 
                   {/* Header Actions: Stepping & Close */}
-                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                     {selectedLogIndex >= 0 && (
-                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-1 text-xs">
+                      <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
                         <button
                           type="button"
                           onClick={handlePrevLog}
                           disabled={!canGoPrevLog}
                           title="Previous Log (Left Arrow)"
-                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           <FiChevronLeft size={15} />
                         </button>
-                        <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                        <span className="px-1.5 font-mono text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
                           {selectedLogIndex + 1} of {filteredLogs.length}
                         </span>
                         <button
@@ -901,7 +901,7 @@ const EmailNotifications = () => {
                           onClick={handleNextLog}
                           disabled={!canGoNextLog}
                           title="Next Log (Right Arrow)"
-                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           <FiChevronRight size={15} />
                         </button>
@@ -919,7 +919,7 @@ const EmailNotifications = () => {
                 </div>
 
                 {/* 2. Scrollable Body Content */}
-                <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-4 text-xs text-slate-600 dark:text-slate-300 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-7 space-y-4 text-xs text-slate-600 dark:text-slate-300 custom-scrollbar">
                 {/* Status & PO Bar */}
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-between">
                   <div>

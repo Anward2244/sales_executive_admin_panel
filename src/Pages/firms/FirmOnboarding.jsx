@@ -1353,21 +1353,21 @@ const FirmOnboarding = () => {
             />
 
             {/* Slide-Over Drawer Container (Pinned to Right) */}
-            <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
-              <div className="w-screen max-w-2xl sm:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10">
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
+              <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10">
                 {/* 1. Sticky Drawer Header */}
-                <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20 shrink-0">
-                      <FiServer size={20} />
+                <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base sm:text-lg border border-blue-500/20 shrink-0">
+                      <FiServer size={18} />
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
                           {selectedRequest.firmName}
                         </h3>
                         {selectedRequest.firmCode && (
-                          <span className="font-mono text-xs text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded font-semibold border border-slate-200 dark:border-white/10">
+                          <span className="font-mono text-[10px] sm:text-xs text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded font-semibold border border-slate-200 dark:border-white/10">
                             {selectedRequest.firmCode}
                           </span>
                         )}
@@ -1380,19 +1380,19 @@ const FirmOnboarding = () => {
                   </div>
 
                   {/* Header Actions: Quick Request Stepping + Close */}
-                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                     {selectedRequestIndex >= 0 && (
-                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-1 text-xs">
+                      <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
                         <button
                           type="button"
                           onClick={handlePrevRequest}
                           disabled={!canGoPrevRequest}
                           title="Previous Request (Left Arrow)"
-                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           <FiChevronLeft size={15} />
                         </button>
-                        <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                        <span className="px-1.5 font-mono text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
                           {selectedRequestIndex + 1} of {sortedRequests.length}
                         </span>
                         <button
@@ -1400,7 +1400,7 @@ const FirmOnboarding = () => {
                           onClick={handleNextRequest}
                           disabled={!canGoNextRequest}
                           title="Next Request (Right Arrow)"
-                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           <FiChevronRight size={15} />
                         </button>
@@ -1418,7 +1418,7 @@ const FirmOnboarding = () => {
                 </div>
 
                 {/* 2. Scrollable Body Content */}
-                <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6 text-xs text-slate-600 dark:text-slate-300 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-7 space-y-5 sm:space-y-6 text-xs text-slate-600 dark:text-slate-300 custom-scrollbar">
                 {/* Rejection Alert if Rejected */}
                 {(selectedRequest.approvalStatus || '').toUpperCase() === 'REJECTED' &&
                   selectedRequest.rejectionReason && (

@@ -24,6 +24,7 @@ import {
   FiActivity
 } from 'react-icons/fi';
 import { api, getProfileApi, updateProfileApi } from '@/api/axios';
+import { ProfileSkeleton } from '@/components/ui/Skeleton';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return 'N/A';
@@ -405,7 +406,10 @@ const Profile = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {loading ? (
+        <ProfileSkeleton />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* ================= LEFT COLUMN: HERO IDENTITY CARD ================= */}
         <div className="lg:col-span-4 space-y-6">
           {/* Main User Card */}
@@ -945,6 +949,7 @@ const Profile = () => {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

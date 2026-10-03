@@ -38,6 +38,7 @@ import {
 import VisxTrendChart from '@/components/dashboard/VisxTrendChart';
 import VisxPipelineDonut from '@/components/dashboard/VisxPipelineDonut';
 import VisxTreemapChart from '@/components/dashboard/VisxTreemapChart';
+import { SkeletonPulse, TableRowSkeleton, ChartCardSkeleton, DonutChartSkeleton, TreemapSkeleton } from '@/components/ui/Skeleton';
 import { useTheme } from '@/Context/ThemeContext';
 import {
   getDashboardMetricsApi,
@@ -354,42 +355,49 @@ const Dashboard = () => {
     return { totalRev, totalOrd, peakRev, avgRev, avgOrderValue };
   }, [processedTrendData]);
 
-  // Construct hierarchical B2B Tree data for all 5 companies:
+  // Construct hierarchical B2B Tree data for existing companies:
   // Root -> Companies -> Linked Firms -> POs -> Products
   const treemapData = useMemo(() => {
-    // 5 registered companies in the Auric ecosystem
-    const KNOWN_5_COMPANIES = [
-      { _id: '6aae75249308c15135f4855f', name: 'Vantiq Retail LLP', code: 'VANTIQ', isActive: false },
-      { _id: '6aae73f39308c15135f48532', name: 'Whatnot Retail LLP', code: 'WHATNOT-RETAIL', isActive: false },
-      { _id: '6aae68f39308c15135f48405', name: 'Inizio Lifestyle Private Limited', code: 'INIZIO', isActive: true },
-      { _id: '6aae685a9308c15135f483fe', name: 'Auric Lifestyle Private Limited', code: 'AURIC', isActive: true },
-      { _id: '6aae67329308c15135f483f2', name: 'Whatnot India Private Limited', code: 'WHATNOT', isActive: true }
-    ];
-
-    // Combine fetched companies from API with KNOWN_5_COMPANIES to ensure ALL 5 are present
-    const combinedCompaniesMap = {};
-    KNOWN_5_COMPANIES.forEach((c) => {
-      combinedCompaniesMap[c.name] = { ...c };
-    });
-    if (Array.isArray(allCompanies) && allCompanies.length > 0) {
-      allCompanies.forEach((c) => {
-        if (c && c.name) {
-          combinedCompaniesMap[c.name] = {
-            ...combinedCompaniesMap[c.name],
-            ...c,
-            code: c.code || combinedCompaniesMap[c.name]?.code || '',
-            isActive: c.isActive !== undefined ? c.isActive : combinedCompaniesMap[c.name]?.isActive
-          };
-        }
-      });
-    }
-
-    const targetCompanies = Object.values(combinedCompaniesMap);
-
     // Pool of all orders
     const sourceOrders = Array.isArray(allPurchaseOrders) && allPurchaseOrders.length > 0
       ? allPurchaseOrders
       : recentOrders;
+
+    // Use only actually existing companies from API/database
+    // Filter out inactive companies (if any marked isActive: false) and deduplicate
+    const seenNames = new Set();
+    const seenIds = new Set();
+    const targetCompanies = [];
+
+    const candidateCompanies = Array.isArray(allCompanies) && allCompanies.length > 0
+      ? allCompanies
+      : [];
+
+    candidateCompanies.forEach((c) => {
+      if (!c || !c.name || c.isActive === false) return;
+      const normName = c.name.trim().toLowerCase();
+      const strId = c._id ? String(c._id) : null;
+      if (seenNames.has(normName) || (strId && seenIds.has(strId))) return;
+      seenNames.add(normName);
+      if (strId) seenIds.add(strId);
+      targetCompanies.push(c);
+    });
+
+    // Fallback: derive dynamically from actual orders/firms if companies list not loaded yet
+    if (targetCompanies.length === 0 && sourceOrders.length > 0) {
+      sourceOrders.forEach((o) => {
+        const c = typeof o.companyId === 'object' ? o.companyId : null;
+        if (c && c.name && c.isActive !== false) {
+          const normName = c.name.trim().toLowerCase();
+          const strId = c._id ? String(c._id) : null;
+          if (!seenNames.has(normName) && (!strId || !seenIds.has(strId))) {
+            seenNames.add(normName);
+            if (strId) seenIds.add(strId);
+            targetCompanies.push(c);
+          }
+        }
+      });
+    }
 
     const companyChildren = targetCompanies.map((company) => {
       const compId = company._id;
@@ -401,14 +409,16 @@ const Dashboard = () => {
       const matchedFirms = (Array.isArray(allFirms) ? allFirms : []).filter((f) => {
         const fCompId = typeof f.companyId === 'object' ? f.companyId?._id : f.companyId;
         const fCompName = typeof f.companyId === 'object' ? f.companyId?.name : '';
-        return (compId && fCompId === compId) || (fCompName && fCompName === compName);
+        return (compId && String(fCompId) === String(compId)) ||
+               (fCompName && compName && fCompName.trim().toLowerCase() === compName.trim().toLowerCase());
       });
 
       // 2. Find all orders linked to this company
       const matchedCompanyOrders = sourceOrders.filter((o) => {
         const oCompId = typeof o.companyId === 'object' ? o.companyId?._id : o.companyId;
         const oCompName = typeof o.companyId === 'object' ? o.companyId?.name : (typeof o.companyId === 'string' ? o.companyId : '');
-        return (compId && oCompId === compId) || (oCompName && oCompName.toLowerCase() === compName.toLowerCase());
+        return (compId && String(oCompId) === String(compId)) ||
+               (oCompName && compName && oCompName.trim().toLowerCase() === compName.trim().toLowerCase());
       });
 
       // Group orders by firm
@@ -748,7 +758,7 @@ const Dashboard = () => {
                 {card.title}
               </p>
               <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate">
-                {loading ? <span className="animate-pulse opacity-50">...</span> : card.value}
+                {loading ? <SkeletonPulse className="h-7 w-28 my-1 inline-block" /> : card.value}
               </p>
               <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 truncate">
                 {card.subtitle}
@@ -981,7 +991,11 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/80 dark:divide-white/5 text-xs">
-              {recentOrders.length > 0 ? (
+              {loading ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <TableRowSkeleton key={idx} cols={8} />
+                ))
+              ) : recentOrders.length > 0 ? (
                 recentOrders.map((order, idx) => {
                   const orderNum = order.poNumber || order.orderNumber || order.orderId || `#ORD-${order._id?.slice(-6) || idx + 1}`;
                   const companyTitle = order.companyId?.name || 'Company';
@@ -1221,12 +1235,7 @@ const Dashboard = () => {
             {/* Chart Canvas */}
             <div className="pt-4 min-h-[320px]">
               {loading ? (
-                <div className="h-[320px] flex items-center justify-center">
-                  <div className="flex flex-col items-center gap-2 text-slate-400">
-                    <FiLoader className="text-2xl animate-spin text-emerald-500" />
-                    <span className="text-xs">Loading analytics trend...</span>
-                  </div>
-                </div>
+                <ChartCardSkeleton height={320} />
               ) : (
                 <VisxTrendChart
                   data={processedTrendData}
@@ -1295,9 +1304,7 @@ const Dashboard = () => {
             {/* Donut Chart Canvas */}
             <div className="py-2 flex items-center justify-center min-h-[220px]">
               {loading ? (
-                <div className="h-[220px] flex items-center justify-center">
-                  <FiLoader className="text-2xl animate-spin text-amber-500" />
-                </div>
+                <DonutChartSkeleton height={220} />
               ) : totalStatusCount === 0 ? (
                 <div className="h-[220px] flex flex-col items-center justify-center text-slate-400 text-xs">
                   <FiPackage className="text-3xl mb-2 opacity-50" />
@@ -1392,7 +1399,7 @@ const Dashboard = () => {
       </div>
       
 
-      {/* 4. B2B Enterprise Hierarchy Tree (All 5 Companies) */}
+      {/* 4. B2B Enterprise Hierarchy Tree */}
       <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col justify-between">
         <div className="absolute -top-12 -right-12 w-64 h-64 bg-cyan-500/10 dark:bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -1409,7 +1416,7 @@ const Dashboard = () => {
                     B2B Enterprise Hierarchy Tree
                   </h2>
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
-                    5 Companies
+                    {treemapData?.children?.length ? `${treemapData.children.length} Companies` : 'Hierarchy'}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -1448,12 +1455,7 @@ const Dashboard = () => {
           {/* Hierarchy Tree Visualization Canvas */}
           <div className="pt-4 min-h-[560px]">
             {loading ? (
-              <div className="h-[560px] flex items-center justify-center">
-                <div className="flex flex-col items-center gap-2 text-slate-400">
-                  <FiLoader className="text-2xl animate-spin text-blue-500" />
-                  <span className="text-xs font-semibold">Generating 5-company hierarchy tree...</span>
-                </div>
-              </div>
+              <TreemapSkeleton height={560} />
             ) : (
               <VisxTreemapChart
                 data={treemapData}
@@ -1507,16 +1509,16 @@ const Dashboard = () => {
           />
 
           {/* Slide-Over Drawer Container (Pinned to Right) */}
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
-            <div className="w-screen max-w-2xl sm:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 backdrop-blur-2xl">
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
+            <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 backdrop-blur-2xl">
               {/* 1. Sticky Drawer Header */}
-              <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl border border-blue-500/20 shrink-0">
+              <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md gap-2 sm:gap-4">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg sm:text-xl border border-blue-500/20 shrink-0">
                     <FiPackage />
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-mono truncate">
                         {selectedOrder.poNumber || selectedOrder.orderNumber || 'Order Details'}
                       </h3>
@@ -1529,19 +1531,19 @@ const Dashboard = () => {
                 </div>
 
                 {/* Header Actions: Stepping & Close */}
-                <div className="flex items-center gap-2 shrink-0 ml-3">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                   {selectedOrderIndex >= 0 && (
-                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-1 text-xs">
+                    <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
                       <button
                         type="button"
                         onClick={handlePrevOrder}
                         disabled={!canGoPrevOrder}
                         title="Previous Order (Left Arrow)"
-                        className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                       >
                         <FiChevronLeft size={15} />
                       </button>
-                      <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                      <span className="px-1.5 font-mono text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
                         {selectedOrderIndex + 1} of {recentOrders.length}
                       </span>
                       <button
@@ -1549,7 +1551,7 @@ const Dashboard = () => {
                         onClick={handleNextOrder}
                         disabled={!canGoNextOrder}
                         title="Next Order (Right Arrow)"
-                        className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                       >
                         <FiChevronRight size={15} />
                       </button>
@@ -1567,7 +1569,7 @@ const Dashboard = () => {
               </div>
 
               {/* 2. Scrollable Body Content */}
-              <div className="flex-1 overflow-y-auto p-5 sm:p-7 custom-scrollbar space-y-5">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-7 custom-scrollbar space-y-4 sm:space-y-5">
 
             {/* Order Entity Metadata Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs">

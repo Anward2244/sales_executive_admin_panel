@@ -842,37 +842,37 @@ const Notifications = () => {
             onClick={() => setSelectedNotification(null)}
           />
 
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10 pointer-events-none">
-            <div className="w-screen max-w-md sm:max-w-xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto animate-in slide-in-from-right duration-300 z-10">
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
+            <div className="w-screen max-w-full sm:max-w-md md:max-w-xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto animate-in slide-in-from-right duration-300 z-10">
               {/* Sticky Drawer Header */}
-              <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20">
+              <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md gap-2 sm:gap-4">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base sm:text-lg border border-blue-500/20 shrink-0">
                     <FiBell />
                   </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Notification Details</h3>
-                    <div className="flex items-center gap-1 font-mono text-[11px] text-slate-400">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">Notification Details</h3>
+                    <div className="flex items-center gap-1 font-mono text-[10px] sm:text-[11px] text-slate-400 truncate">
                       <span>ID: {selectedNotification._id || selectedNotification.id}</span>
                       <CopyButton text={selectedNotification._id || selectedNotification.id} />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                   {/* Stepper Navigation */}
                   {filteredNotifications.length > 1 && (
-                    <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-xl p-0.5 border border-slate-200/60 dark:border-white/10 mr-1">
+                    <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-xl p-0.5 border border-slate-200/60 dark:border-white/10">
                       <button
                         type="button"
                         onClick={handlePrevNotification}
                         disabled={!hasPrev}
                         title="Previous notification (Left arrow)"
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                        className="p-1 sm:p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
                       >
-                        <FiChevronLeft size={16} />
+                        <FiChevronLeft size={15} />
                       </button>
-                      <span className="text-[11px] font-mono px-2 text-slate-500 font-semibold select-none">
+                      <span className="text-[10px] sm:text-[11px] font-mono px-1.5 sm:px-2 text-slate-500 font-semibold select-none">
                         {selectedIndex >= 0 ? `${selectedIndex + 1} of ${filteredNotifications.length}` : ''}
                       </span>
                       <button
@@ -880,9 +880,9 @@ const Notifications = () => {
                         onClick={handleNextNotification}
                         disabled={!hasNext}
                         title="Next notification (Right arrow)"
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                        className="p-1 sm:p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
                       >
-                        <FiChevronRight size={16} />
+                        <FiChevronRight size={15} />
                       </button>
                     </div>
                   )}
@@ -899,7 +899,7 @@ const Notifications = () => {
               </div>
 
               {/* Scrollable Drawer Body */}
-              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar text-xs">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar text-xs">
                 {/* Status and Type Pills */}
                 <div className="flex items-center justify-between p-3.5 bg-slate-50/80 dark:bg-black/20 rounded-2xl border border-slate-100 dark:border-white/5">
                   <div className="flex items-center gap-2">

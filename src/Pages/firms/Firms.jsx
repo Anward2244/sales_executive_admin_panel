@@ -16,7 +16,7 @@ import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import GmailLink from '@/components/ui/GmailLink';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
-import { TableRowSkeleton } from '@/components/ui/Skeleton';
+import { TableRowSkeleton, TableSkeleton } from '@/components/ui/Skeleton';
 import PageHeader from '@/components/ui/PageHeader';
 import { BulkActionBar, BatchProgressModal } from '@/components/ui';
 import {
@@ -1292,10 +1292,7 @@ const Firms = () => {
 
       {/* Content Area (matching Users.jsx) */}
       {loading ? (
-        <div className="h-72 flex flex-col justify-center items-center bg-white/40 dark:bg-slate-950/15 border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-xs dark:shadow-none">
-          <FiLoader className="animate-spin text-3xl text-blue-600 dark:text-blue-400 mb-4" />
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Loading firms...</p>
-        </div>
+        <TableSkeleton columns={8} rows={8} />
       ) : error ? (
         <div className="text-rose-600 dark:text-red-400 bg-rose-50 dark:bg-red-900/20 p-5 rounded-2xl border border-rose-200 dark:border-red-500/30 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1752,7 +1749,7 @@ const Firms = () => {
                             <button
                               type="button"
                               onClick={() => setSelectedFirm(firm)}
-                              className="p-1.5 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                               title="View firm details"
                             >
                               <FiEye className="text-base" />
@@ -1762,7 +1759,7 @@ const Firms = () => {
                             <button
                               type="button"
                               onClick={() => handleOpenEditModal(firm)}
-                              className="p-1.5 text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border border-amber-200/60 dark:border-amber-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                               title="Edit firm details"
                             >
                               <FiEdit2 className="text-base" />
@@ -1773,7 +1770,7 @@ const Firms = () => {
                               type="button"
                               onClick={() => handleDeleteFirm(firm)}
                               disabled={actionLoadingId === firm._id}
-                              className="p-1.5 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-40"
+                              className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200/60 dark:border-rose-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                               title="Delete firm"
                             >
                               {actionLoadingId === firm._id ? (
@@ -2507,44 +2504,44 @@ const Firms = () => {
             />
 
             {/* Slide-Over Drawer Container (Pinned to Right) */}
-            <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
-              <div className="w-screen max-w-2xl sm:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 backdrop-blur-2xl">
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
+              <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 backdrop-blur-2xl">
                 {/* 1. Sticky Drawer Header */}
-                <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-lg font-black shrink-0 shadow-sm">
+                <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-base sm:text-lg font-black shrink-0 shadow-sm">
                       {selectedFirm.firmName ? selectedFirm.firmName.charAt(0).toUpperCase() : 'F'}
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
                           {selectedFirm.firmName}
                         </h3>
-                        <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono text-xs font-bold border border-blue-500/20">
+                        <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono text-[10px] sm:text-xs font-bold border border-blue-500/20">
                           {selectedFirm.firmCode}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-xs text-slate-400 font-mono">ID: {selectedFirm._id}</span>
+                        <span className="text-[10px] sm:text-xs text-slate-400 font-mono">ID: {selectedFirm._id}</span>
                         <CopyButton text={selectedFirm._id} />
                       </div>
                     </div>
                   </div>
 
                   {/* Header Actions: Stepping & Close */}
-                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                     {selectedFirmIndex >= 0 && (
-                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-1 text-xs">
+                      <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
                         <button
                           type="button"
                           onClick={handlePrevFirm}
                           disabled={!canGoPrevFirm}
                           title="Previous Firm (Left Arrow)"
-                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           <FiChevronLeft size={15} />
                         </button>
-                        <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                        <span className="px-1.5 font-mono text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
                           {selectedFirmIndex + 1} of {sortedFirms.length}
                         </span>
                         <button
@@ -2552,7 +2549,7 @@ const Firms = () => {
                           onClick={handleNextFirm}
                           disabled={!canGoNextFirm}
                           title="Next Firm (Right Arrow)"
-                          className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           <FiChevronRight size={15} />
                         </button>
@@ -2570,7 +2567,7 @@ const Firms = () => {
                 </div>
 
                 {/* 2. Scrollable Drawer Body */}
-                <div className="flex-1 p-5 sm:p-7 overflow-y-auto custom-scrollbar space-y-6">
+                <div className="flex-1 p-4 sm:p-7 overflow-y-auto custom-scrollbar space-y-5 sm:space-y-6">
                 {/* Status & Parent Company Banner */}
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
                   <div className="flex items-center gap-3">

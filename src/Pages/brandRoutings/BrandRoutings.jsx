@@ -43,6 +43,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import CopyButton from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { SkeletonPulse } from '@/components/ui/Skeleton';
 
 // Regional presets for fast territory assignment
 const REGION_PRESETS = [
@@ -840,14 +841,29 @@ const BrandRoutings = () => {
 
       {/* ================= MAIN CONTENT ================= */}
       {loading ? (
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 animate-pulse flex items-center justify-between"
+              className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/60 dark:bg-slate-900 overflow-hidden shadow-xs animate-pulse"
             >
-              <div className="h-6 w-36 bg-slate-200 dark:bg-white/10 rounded-lg" />
-              <div className="h-6 w-64 bg-slate-100 dark:bg-white/5 rounded-lg" />
+              <div className="px-5 py-3.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-800/40">
+                <div className="flex items-center gap-3">
+                  <SkeletonPulse className="w-9 h-9 rounded-xl" />
+                  <div className="space-y-1.5">
+                    <SkeletonPulse className="h-4 w-32" />
+                    <SkeletonPulse className="h-3 w-20" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <SkeletonPulse className="h-7 w-20 rounded-lg" />
+                  <SkeletonPulse className="h-7 w-24 rounded-lg" />
+                </div>
+              </div>
+              <div className="p-4 space-y-2.5">
+                <SkeletonPulse className="h-10 w-full rounded-xl" />
+                <SkeletonPulse className="h-10 w-full rounded-xl" />
+              </div>
             </div>
           ))}
         </div>
