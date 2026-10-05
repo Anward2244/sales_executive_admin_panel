@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   FiMail,
   FiSend,
@@ -660,13 +660,36 @@ const EmailNotifications = () => {
                             <FiMail size={14} />
                           </div>
                           <div className="flex items-center gap-1.5">
-                            {logItem.purchaseOrderId ? (
-                              <Link
-                                to={`/purchase-orders`}
-                                className="font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline"
-                              >
-                                {logItem.poNumber || 'N/A'}
-                              </Link>
+                            {logItem.purchaseOrderId || logItem.poNumber ? (
+                              (() => {
+                                const targetPoId =
+                                  typeof logItem.purchaseOrderId === 'object'
+                                    ? logItem.purchaseOrderId?._id || logItem.purchaseOrderId?.id
+                                    : logItem.purchaseOrderId;
+                                const targetPoNumber = logItem.poNumber;
+                                const toUrl = targetPoId
+                                  ? `/purchase-orders?orderId=${encodeURIComponent(targetPoId)}`
+                                  : targetPoNumber
+                                  ? `/purchase-orders?poNumber=${encodeURIComponent(targetPoNumber)}`
+                                  : '/purchase-orders';
+
+                                return (
+                                  <Link
+                                    to={toUrl}
+                                    state={{
+                                      orderId: targetPoId,
+                                      highlightOrderId: targetPoId,
+                                      poId: targetPoId,
+                                      poNumber: targetPoNumber,
+                                      openDrawer: true
+                                    }}
+                                    className="font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                    title="View Purchase Order Details"
+                                  >
+                                    {targetPoNumber || targetPoId || 'View PO'}
+                                  </Link>
+                                );
+                              })()
                             ) : (
                               <span className="font-mono font-bold text-slate-800 dark:text-white">
                                 {logItem.poNumber || 'N/A'}
@@ -925,9 +948,42 @@ const EmailNotifications = () => {
                   <div>
                     <span className="text-[10px] font-bold uppercase text-slate-400">Target Purchase Order</span>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
-                        {selectedLog.poNumber || 'N/A'}
-                      </span>
+                      {selectedLog.purchaseOrderId || selectedLog.poNumber ? (
+                        (() => {
+                          const targetPoId =
+                            typeof selectedLog.purchaseOrderId === 'object'
+                              ? selectedLog.purchaseOrderId?._id || selectedLog.purchaseOrderId?.id
+                              : selectedLog.purchaseOrderId;
+                          const targetPoNumber = selectedLog.poNumber;
+                          const toUrl = targetPoId
+                            ? `/purchase-orders?orderId=${encodeURIComponent(targetPoId)}`
+                            : targetPoNumber
+                            ? `/purchase-orders?poNumber=${encodeURIComponent(targetPoNumber)}`
+                            : '/purchase-orders';
+
+                          return (
+                            <Link
+                              to={toUrl}
+                              state={{
+                                orderId: targetPoId,
+                                highlightOrderId: targetPoId,
+                                poId: targetPoId,
+                                poNumber: targetPoNumber,
+                                openDrawer: true
+                              }}
+                              className="font-mono font-bold text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1.5 cursor-pointer"
+                              title="Open Purchase Order Details"
+                            >
+                              <span>{targetPoNumber || targetPoId || 'View PO'}</span>
+                              <FiArrowRight className="text-xs" />
+                            </Link>
+                          );
+                        })()
+                      ) : (
+                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
+                          {selectedLog.poNumber || 'N/A'}
+                        </span>
+                      )}
                       {selectedLog.poNumber && <CopyButton text={selectedLog.poNumber} />}
                     </div>
                   </div>

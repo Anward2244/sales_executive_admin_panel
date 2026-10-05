@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
 import {
@@ -142,6 +143,45 @@ const PurchaseOrders = () => {
   const { user } = useAuth();
   const { confirm: confirmDialog, showAlert } = useConfirm() || {};
   const isAdmin = !user?.role || String(user?.role).toLowerCase() === 'admin';
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Extract target order identifiers from navigation state or URL query parameters
+  const navTargetId =
+    location.state?.orderId ||
+    location.state?.highlightOrderId ||
+    location.state?.poId ||
+    searchParams.get('orderId') ||
+    searchParams.get('id') ||
+    searchParams.get('poId') ||
+    searchParams.get('highlightOrderId') ||
+    null;
+
+  const navTargetPoNum =
+    location.state?.poNumber ||
+    searchParams.get('poNumber') ||
+    null;
+
+  const isMongoId = useCallback(
+    (val) => typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val.trim()),
+    []
+  );
+
+  const effectiveTargetId = isMongoId(navTargetId) ? String(navTargetId).trim() : null;
+  const effectiveTargetPoNum = navTargetPoNum
+    ? String(navTargetPoNum).trim()
+    : navTargetId && !isMongoId(navTargetId)
+    ? String(navTargetId).trim()
+    : null;
+
+  const handleCloseDetailsDrawer = useCallback(() => {
+    setSelectedOrder(null);
+    if (navTargetId || navTargetPoNum) {
+      navigate('/purchase-orders', { replace: true, state: {} });
+    }
+  }, [navTargetId, navTargetPoNum, navigate]);
 
   // Orders state
   const [orders, setOrders] = useState([]);
@@ -295,25 +335,97 @@ const PurchaseOrders = () => {
   };
 
   // 2. View Order Details with Status History (GET /purchase-orders/{id})
-  const handleViewOrderDetails = async (order) => {
-    if (!order) return;
-    setSelectedOrder(order);
+  const handleViewOrderDetails = useCallback(async (orderOrId, fallbackPoNum = '') => {
+    if (!orderOrId) return;
+
+    const isObj = typeof orderOrId === 'object' && orderOrId !== null;
+    const targetOrder = isObj ? orderOrId : null;
+    const targetId = isObj ? (orderOrId._id || orderOrId.id) : String(orderOrId).trim();
+
+    if (targetOrder) {
+      setSelectedOrder(targetOrder);
+    } else {
+      // Temporary placeholder while loading details
+      setSelectedOrder({
+        _id: targetId,
+        poNumber: fallbackPoNum || 'Loading...',
+        status: 'PENDING'
+      });
+    }
+
     setLoadingDetails(true);
 
-    try {
-      const res = await getPurchaseOrderByIdApi(order._id);
-      const fullData = res.data?.data || res.data;
-      if (fullData && typeof fullData === 'object') {
-        setSelectedOrder(fullData);
-        // Also update the list instance with fresh details
-        setOrders((prev) => prev.map((o) => (o._id === order._id ? fullData : o)));
+    if (targetId && isMongoId(targetId)) {
+      try {
+        const res = await getPurchaseOrderByIdApi(targetId);
+        const fullData = res.data?.data || res.data;
+        if (fullData && typeof fullData === 'object') {
+          setSelectedOrder(fullData);
+          // Also update the list instance with fresh details
+          setOrders((prev) => {
+            const exists = prev.some((o) => (o._id || o.id) === targetId);
+            if (exists) {
+              return prev.map((o) => ((o._id || o.id) === targetId ? fullData : o));
+            }
+            return [fullData, ...prev];
+          });
+        }
+      } catch (err) {
+        console.warn('Could not fetch full order details, displaying cached item:', err);
+      } finally {
+        setLoadingDetails(false);
       }
-    } catch (err) {
-      console.warn('Could not fetch full order details, displaying cached item:', err);
-    } finally {
+    } else {
       setLoadingDetails(false);
     }
-  };
+  }, [isMongoId]);
+
+  // Auto-open drawer when navigating from Notifications, Email Logs, or direct URL with PO param
+  const lastHandledNavRef = useRef(null);
+
+  useEffect(() => {
+    if (!effectiveTargetId && !effectiveTargetPoNum) return;
+
+    const navKey = `${effectiveTargetId || ''}::${effectiveTargetPoNum || ''}`;
+    if (lastHandledNavRef.current === navKey) return;
+
+    // 1. Try finding matching order in current orders state
+    const matchedOrder = orders.find((o) => {
+      const oId = o._id || o.id;
+      const oPo = o.poNumber || o.orderNumber;
+      if (effectiveTargetId && oId === effectiveTargetId) return true;
+      if (
+        effectiveTargetPoNum &&
+        oPo &&
+        String(oPo).trim().toLowerCase() === effectiveTargetPoNum.toLowerCase()
+      ) {
+        return true;
+      }
+      return false;
+    });
+
+    if (matchedOrder) {
+      lastHandledNavRef.current = navKey;
+      setStatusFilter('all');
+      handleViewOrderDetails(matchedOrder);
+      return;
+    }
+
+    // 2. If valid MongoDB ID is available, directly fetch by ID and open drawer
+    if (effectiveTargetId) {
+      lastHandledNavRef.current = navKey;
+      setStatusFilter('all');
+      handleViewOrderDetails(effectiveTargetId, effectiveTargetPoNum);
+      return;
+    }
+
+    // 3. If only PO number is available and initial orders fetch has completed
+    if (effectiveTargetPoNum && !loading) {
+      lastHandledNavRef.current = navKey;
+      setStatusFilter('all');
+      setSearchTerm(effectiveTargetPoNum);
+    }
+  }, [effectiveTargetId, effectiveTargetPoNum, orders, loading, handleViewOrderDetails]);
 
   // 3. Create PO Handler (POST /purchase-orders)
   const handleAddItemRow = () => {
@@ -657,7 +769,7 @@ const PurchaseOrders = () => {
         return;
       }
       if (e.key === 'Escape') {
-        setSelectedOrder(null);
+        handleCloseDetailsDrawer();
       } else if (e.key === 'ArrowLeft') {
         if (canGoPrevOrder) handlePrevOrder();
       } else if (e.key === 'ArrowRight') {
@@ -1536,7 +1648,7 @@ const PurchaseOrders = () => {
             {/* Backdrop Blur Overlay */}
             <div
               className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
-              onClick={() => setSelectedOrder(null)}
+              onClick={handleCloseDetailsDrawer}
             />
 
             {/* Slide-Over Drawer Container (Pinned to Right) */}
@@ -1603,7 +1715,7 @@ const PurchaseOrders = () => {
                     )}
                     <button
                       type="button"
-                      onClick={() => setSelectedOrder(null)}
+                      onClick={handleCloseDetailsDrawer}
                       title="Close drawer (Esc)"
                       className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
                     >

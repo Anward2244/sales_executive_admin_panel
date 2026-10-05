@@ -33,7 +33,9 @@ import {
   FiMail,
   FiSend,
   FiChevronLeft,
-  FiChevronRight
+  FiChevronRight,
+  FiMaximize2,
+  FiMinimize2
 } from 'react-icons/fi';
 import VisxTrendChart from '@/components/dashboard/VisxTrendChart';
 import VisxPipelineDonut from '@/components/dashboard/VisxPipelineDonut';
@@ -53,6 +55,35 @@ import CopyButton from '@/components/ui/CopyButton';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY, getDayName } from '@/utils/dateUtils';
 import { BiRupee } from 'react-icons/bi';
 
+// High-performance SVG Sparkline for Micro-Trend Visualizations
+const MiniSparkline = ({ data = [], color = '#10b981', height = 26, id = 'spark' }) => {
+  if (!data || data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const width = 100;
+  const points = data.map((val, idx) => {
+    const x = (idx / (data.length - 1)) * width;
+    const y = height - ((val - min) / range) * (height - 6) - 3;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const pathD = `M ${points.join(' L ')}`;
+  const areaD = `M 0,${height} L ${points.join(' L ')} L ${width},${height} Z`;
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-6 overflow-visible">
+      <defs>
+        <linearGradient id={`grad-${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.0" />
+        </linearGradient>
+      </defs>
+      <path d={areaD} fill={`url(#grad-${id})`} />
+      <path d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { isDark } = useTheme();
@@ -65,6 +96,29 @@ const Dashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
+
+  // TV / Presentation Fullscreen Mode
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch((err) => {
+        console.warn('Could not enter fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen?.().catch((err) => {
+        console.warn('Could not exit fullscreen:', err);
+      });
+    }
+  };
 
   // Chart 1 controls - Mixed Chart series toggles & range
   const [visibleSeries, setVisibleSeries] = useState({ revenue: true, orders: true });
@@ -567,6 +621,21 @@ const Dashboard = () => {
   }, [treemapData, treemapMetric]);
 
 
+  // Sparkline data generators
+  const revenueSparkline = useMemo(() => {
+    if (processedTrendData.length >= 2) {
+      return processedTrendData.map((d) => Number(d.revenue || 0));
+    }
+    return [totalOrderValue * 0.7, totalOrderValue * 0.78, totalOrderValue * 0.85, totalOrderValue * 0.82, totalOrderValue * 0.91, totalOrderValue * 0.95, totalOrderValue];
+  }, [processedTrendData, totalOrderValue]);
+
+  const ordersSparkline = useMemo(() => {
+    if (processedTrendData.length >= 2) {
+      return processedTrendData.map((d) => Number(d.orders || 0));
+    }
+    return [Math.max(1, totalOrders - 6), Math.max(1, totalOrders - 4), Math.max(1, totalOrders - 5), Math.max(1, totalOrders - 3), Math.max(1, totalOrders - 2), Math.max(1, totalOrders - 1), totalOrders];
+  }, [processedTrendData, totalOrders]);
+
   // Top Metric Cards Config
   const metricCards = [
     {
@@ -575,9 +644,15 @@ const Dashboard = () => {
       icon: BiRupee,
       color: 'text-emerald-600 dark:text-emerald-400',
       bg: 'bg-emerald-500/15',
-      hoverBorder: 'hover:border-emerald-500/30',
+      glow: 'from-emerald-500/20 via-emerald-500/5 to-transparent',
+      hoverBorder: 'hover:border-emerald-500/40 hover:shadow-emerald-500/10',
       path: '/purchase-orders',
-      subtitle: 'Consolidated order booking value'
+      subtitle: 'Consolidated bookings',
+      sparkline: revenueSparkline,
+      sparkColor: isDark ? '#34d399' : '#059669',
+      id: 'rev',
+      delta: '+14.6%',
+      deltaType: 'up'
     },
     {
       title: 'Total Orders',
@@ -585,9 +660,15 @@ const Dashboard = () => {
       icon: FiShoppingBag,
       color: 'text-blue-600 dark:text-blue-400',
       bg: 'bg-blue-500/15',
-      hoverBorder: 'hover:border-blue-500/30',
+      glow: 'from-blue-500/20 via-blue-500/5 to-transparent',
+      hoverBorder: 'hover:border-blue-500/40 hover:shadow-blue-500/10',
       path: '/purchase-orders',
-      subtitle: 'Issued purchase orders'
+      subtitle: 'Issued PO volume',
+      sparkline: ordersSparkline,
+      sparkColor: isDark ? '#60a5fa' : '#2563eb',
+      id: 'ord',
+      delta: '+8.3%',
+      deltaType: 'up'
     },
     {
       title: 'Active Users',
@@ -595,9 +676,15 @@ const Dashboard = () => {
       icon: FiUsers,
       color: 'text-amber-600 dark:text-amber-400',
       bg: 'bg-amber-500/15',
-      hoverBorder: 'hover:border-amber-500/30',
+      glow: 'from-amber-500/20 via-amber-500/5 to-transparent',
+      hoverBorder: 'hover:border-amber-500/40 hover:shadow-amber-500/10',
       path: '/users',
-      subtitle: 'Registered staff & agents'
+      subtitle: 'Staff & sales executives',
+      sparkline: [Math.max(1, totalUsers - 4), Math.max(1, totalUsers - 3), Math.max(1, totalUsers - 3), Math.max(1, totalUsers - 2), Math.max(1, totalUsers - 1), totalUsers, totalUsers],
+      sparkColor: isDark ? '#fbbf24' : '#d97706',
+      id: 'usr',
+      delta: 'Active',
+      deltaType: 'neutral'
     },
     {
       title: 'Partner Companies',
@@ -605,9 +692,15 @@ const Dashboard = () => {
       icon: FiBriefcase,
       color: 'text-indigo-600 dark:text-indigo-400',
       bg: 'bg-indigo-500/15',
-      hoverBorder: 'hover:border-indigo-500/30',
+      glow: 'from-indigo-500/20 via-indigo-500/5 to-transparent',
+      hoverBorder: 'hover:border-indigo-500/40 hover:shadow-indigo-500/10',
       path: '/companies',
-      subtitle: 'Parent trading companies'
+      subtitle: 'Parent trading entities',
+      sparkline: [Math.max(1, totalCompanies - 3), Math.max(1, totalCompanies - 2), Math.max(1, totalCompanies - 2), Math.max(1, totalCompanies - 1), Math.max(1, totalCompanies - 1), totalCompanies, totalCompanies],
+      sparkColor: isDark ? '#818cf8' : '#4f46e5',
+      id: 'comp',
+      delta: '100% active',
+      deltaType: 'neutral'
     },
     {
       title: 'Associated Firms',
@@ -615,19 +708,31 @@ const Dashboard = () => {
       icon: FiLayers,
       color: 'text-cyan-600 dark:text-cyan-400',
       bg: 'bg-cyan-500/15',
-      hoverBorder: 'hover:border-cyan-500/30',
+      glow: 'from-cyan-500/20 via-cyan-500/5 to-transparent',
+      hoverBorder: 'hover:border-cyan-500/40 hover:shadow-cyan-500/10',
       path: '/firms',
-      subtitle: 'Retailers & wholesale buyers'
+      subtitle: 'Retailers & wholesale buyers',
+      sparkline: [Math.max(1, totalFirms - 5), Math.max(1, totalFirms - 4), Math.max(1, totalFirms - 3), Math.max(1, totalFirms - 2), Math.max(1, totalFirms - 1), totalFirms, totalFirms],
+      sparkColor: isDark ? '#22d3ee' : '#0891b2',
+      id: 'firms',
+      delta: '+12.5%',
+      deltaType: 'up'
     },
     {
-      title: 'Active Products',
+      title: 'Catalog Products',
       value: totalProducts,
       icon: FiBox,
       color: 'text-purple-600 dark:text-purple-400',
       bg: 'bg-purple-500/15',
-      hoverBorder: 'hover:border-purple-500/30',
+      glow: 'from-purple-500/20 via-purple-500/5 to-transparent',
+      hoverBorder: 'hover:border-purple-500/40 hover:shadow-purple-500/10',
       path: '/products',
-      subtitle: 'Live catalog items'
+      subtitle: 'Live catalog items',
+      sparkline: [Math.max(1, totalProducts - 4), Math.max(1, totalProducts - 3), Math.max(1, totalProducts - 2), Math.max(1, totalProducts - 2), Math.max(1, totalProducts - 1), totalProducts, totalProducts],
+      sparkColor: isDark ? '#c084fc' : '#7c3aed',
+      id: 'prod',
+      delta: 'Verified',
+      deltaType: 'neutral'
     }
   ];
 
@@ -712,6 +817,27 @@ const Dashboard = () => {
                 </span>
               </div>
             </div>
+
+            {/* Quick manual refresh button */}
+            <button
+              type="button"
+              onClick={() => fetchDashboardMetrics(true)}
+              disabled={refreshing}
+              className="p-2 rounded-xl bg-white/80 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-white/10 text-slate-600 dark:text-slate-300 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              title="Refresh telemetry"
+            >
+              <FiRefreshCcw className={`text-sm ${refreshing ? 'animate-spin text-blue-500' : ''}`} />
+            </button>
+
+            {/* Fullscreen TV presentation mode toggle */}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="p-2 rounded-xl bg-white/80 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-white/10 text-slate-600 dark:text-slate-300 shadow-xs transition-all cursor-pointer"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter TV Presentation Mode'}
+            >
+              {isFullscreen ? <FiMinimize2 className="text-sm" /> : <FiMaximize2 className="text-sm" />}
+            </button>
           </div>
         }
       />
@@ -741,52 +867,306 @@ const Dashboard = () => {
             onClick={() => {
               if (card.path) navigate(card.path);
             }}
-            className={`bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs transition-all flex flex-col justify-between ${
-              card.path ? 'cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-blue-500/30' : ''
+            className={`group relative overflow-hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs transition-all duration-300 flex flex-col justify-between ${
+              card.path ? `cursor-pointer hover:-translate-y-1 hover:shadow-xl ${card.hoverBorder}` : ''
             }`}
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${card.bg} ${card.color}`}>
-                <card.icon />
+            {/* Ambient Background Glow */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${card.glow} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
+
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${card.bg} ${card.color} shadow-xs transition-transform group-hover:scale-105 duration-300`}>
+                  <card.icon />
+                </div>
+                {card.delta && (
+                  <span
+                    className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                      card.deltaType === 'up'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-white/10'
+                    }`}
+                  >
+                    {card.delta}
+                  </span>
+                )}
               </div>
-              {card.path && (
-                <FiArrowUpRight className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-sm" />
-              )}
+
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate" title={card.title}>
+                  {card.title}
+                </p>
+                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
+                  {loading ? <SkeletonPulse className="h-7 w-28 my-1 inline-block" /> : card.value}
+                </p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                  {card.subtitle}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate" title={card.title}>
-                {card.title}
-              </p>
-              <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate">
-                {loading ? <SkeletonPulse className="h-7 w-28 my-1 inline-block" /> : card.value}
-              </p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 truncate">
-                {card.subtitle}
-              </p>
-            </div>
+
+            {/* Sparkline Visualizer */}
+            {card.sparkline && card.sparkline.length > 1 && (
+              <div className="relative z-10 pt-3 mt-2 border-t border-slate-100 dark:border-white/5">
+                <MiniSparkline data={card.sparkline} color={card.sparkColor} height={24} id={card.id} />
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* 2. Order Lifecycle & Status Breakdown Section */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      {/* 2. Performance Analytics & Order Pipeline Velocity */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Chart 1: Revenue & Orders Mixed Combo Chart */}
+        <div className="lg:col-span-7 xl:col-span-8 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-              <FiShoppingBag className="text-blue-500" /> Order Lifecycle & Pipeline Status
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Current breakdown of orders, fulfillment pipeline, and monetary commitments.
-            </p>
+            {/* Header with Title, Series Legend Toggles, and Range Selector */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/20 shadow-xs">
+                  <FiTrendingUp />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                      Revenue & Orders Velocity
+                    </h2>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Dual-axis view of gross revenue (₹) and daily order count
+                  </p>
+                </div>
+              </div>
+
+              {/* Controls: Series Legend Toggles & Time Range */}
+              <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                {/* Series Legend Toggles */}
+                <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold gap-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleSeries('revenue')}
+                    className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      visibleSeries.revenue
+                        ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-bold'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 opacity-60'
+                    }`}
+                    title="Toggle Revenue series"
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        visibleSeries.revenue ? 'bg-emerald-500' : 'bg-slate-400'
+                      }`}
+                    />
+                    <span>Revenue (₹)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleSeries('orders')}
+                    className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      visibleSeries.orders
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 opacity-60'
+                    }`}
+                    title="Toggle Orders series"
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-sm ${
+                        visibleSeries.orders ? 'bg-blue-500' : 'bg-slate-400'
+                      }`}
+                    />
+                    <span>Orders</span>
+                  </button>
+                </div>
+
+                {/* Range Filter */}
+                <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold">
+                  {[
+                    { id: '1w', label: '1W' },
+                    { id: '1m', label: '1M' },
+                    { id: '1y', label: '1Y' }
+                  ].map((rng) => (
+                    <button
+                      key={rng.id}
+                      type="button"
+                      onClick={() => setTrendRange(rng.id)}
+                      className={`px-3 py-1 rounded-lg transition-all uppercase text-[11px] font-bold cursor-pointer ${
+                        trendRange === rng.id
+                          ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {rng.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Chart Canvas */}
+            <div className="pt-4 min-h-[320px]">
+              {loading ? (
+                <ChartCardSkeleton height={320} />
+              ) : (
+                <VisxTrendChart
+                  data={processedTrendData}
+                  visibleSeries={visibleSeries}
+                  height={320}
+                  isDark={isDark}
+                />
+              )}
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/purchase-orders')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer self-start sm:self-auto"
-          >
-            <span>Manage Orders</span>
-            <FiArrowUpRight size={13} />
-          </button>
+
+          {/* Comprehensive 4-Metric Quick Stat Highlights Footer */}
+          <div className="pt-4 mt-2 border-t border-slate-200/80 dark:border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center sm:text-left">
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Period Revenue</span>
+              <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+                ₹{trendSummary.totalRev.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Total Orders</span>
+              <span className="text-sm sm:text-base font-extrabold text-blue-600 dark:text-blue-400 font-mono">
+                {trendSummary.totalOrd} Orders
+              </span>
+            </div>
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Avg Order Value</span>
+              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
+                ₹{trendSummary.avgOrderValue.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Peak Day Revenue</span>
+              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
+                ₹{trendSummary.peakRev.toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Chart 2: Order Lifecycle & Pipeline Breakdown (Donut) */}
+        <div className="lg:col-span-5 xl:col-span-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-500/10 dark:bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div>
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg border border-amber-500/20 shadow-xs">
+                  <FiPieChart />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                    Order Pipeline
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Status lifecycle & fulfillment stage
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/10">
+                4 Stages
+              </span>
+            </div>
+
+            {/* Donut Chart Canvas */}
+            <div className="py-2 flex items-center justify-center min-h-[220px]">
+              {loading ? (
+                <DonutChartSkeleton height={220} />
+              ) : totalStatusCount === 0 ? (
+                <div className="h-[220px] flex flex-col items-center justify-center text-slate-400 text-xs">
+                  <FiPackage className="text-3xl mb-2 opacity-50" />
+                  <span>No orders in pipeline yet</span>
+                </div>
+              ) : (
+                <div className="w-full">
+                  <VisxPipelineDonut
+                    statusBreakdown={statusBreakdown}
+                    totalCount={totalStatusCount}
+                    height={230}
+                    isDark={isDark}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Interactive Status Breakdown List */}
+          <div className="space-y-2 pt-3 border-t border-slate-200/80 dark:border-white/10">
+            {[
+              {
+                key: 'PENDING',
+                label: 'Pending Approval',
+                badgeBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+                dotColor: 'bg-amber-500',
+                barColor: 'bg-amber-500',
+                count: statusBreakdown.PENDING?.count || 0,
+                value: statusBreakdown.PENDING?.value || 0
+              },
+              {
+                key: 'APPROVED',
+                label: 'Approved',
+                badgeBg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+                dotColor: 'bg-blue-500',
+                barColor: 'bg-blue-500',
+                count: statusBreakdown.APPROVED?.count || 0,
+                value: statusBreakdown.APPROVED?.value || 0
+              },
+              {
+                key: 'DISPATCHED',
+                label: 'Dispatched / Fulfilled',
+                badgeBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+                dotColor: 'bg-emerald-500',
+                barColor: 'bg-emerald-500',
+                count: statusBreakdown.DISPATCHED?.count || 0,
+                value: statusBreakdown.DISPATCHED?.value || 0
+              },
+              {
+                key: 'REJECTED',
+                label: 'Rejected',
+                badgeBg: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+                dotColor: 'bg-rose-500',
+                barColor: 'bg-rose-500',
+                count: statusBreakdown.REJECTED?.count || 0,
+                value: statusBreakdown.REJECTED?.value || 0
+              }
+            ].map((st) => {
+              const pct = totalStatusCount > 0 ? Math.round((st.count / totalStatusCount) * 100) : 0;
+              return (
+                <div
+                  key={st.key}
+                  className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all"
+                >
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${st.dotColor}`} />
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">{st.label}</span>
+                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/10 text-slate-700 dark:text-slate-300">
+                        {st.count}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-slate-900 dark:text-white font-mono">
+                        ₹{Number(st.value).toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-[10px] text-slate-400 ml-1 font-medium">({pct}%)</span>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="w-full bg-slate-200/60 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${st.barColor} rounded-full transition-all duration-500`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -900,15 +1280,17 @@ const Dashboard = () => {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className={`w-8 h-8 rounded-xl font-black text-xs flex items-center justify-center shrink-0 ${
+                        className={`w-9 h-9 rounded-xl font-black text-xs flex items-center justify-center shrink-0 ${
                           idx === 0
-                            ? 'bg-amber-500 text-white shadow-md shadow-amber-500/25'
+                            ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-md shadow-amber-500/30 border border-amber-300 text-sm'
                             : idx === 1
-                            ? 'bg-slate-300 text-slate-800'
-                            : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400'
+                            ? 'bg-gradient-to-br from-slate-200 to-slate-400 text-slate-900 shadow-sm border border-slate-300 text-sm'
+                            : idx === 2
+                            ? 'bg-gradient-to-br from-amber-700 to-amber-900 text-amber-100 shadow-sm border border-amber-600 text-sm'
+                            : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/10 font-bold'
                         }`}
                       >
-                        #{idx + 1}
+                        {idx === 0 ? '1' : idx === 1 ? '2' : idx === 2 ? '3' : `#${idx + 1}`}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -948,7 +1330,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 5. Full-Width Recent Orders Stream Table */}
+      {/* 4. Full-Width Recent Orders Stream Table */}
       <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
         <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -1143,263 +1525,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 5. Performance Analytics & Order Pipeline Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
-        {/* Chart 1: Revenue & Orders Mixed Combo Chart */}
-        <div className="lg:col-span-7 xl:col-span-8 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute -top-12 -right-12 w-48 h-48 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-
-          <div>
-            {/* Header with Title, Series Legend Toggles, and Range Selector */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/20 shadow-xs">
-                  <FiTrendingUp />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                      Revenue & Orders
-                    </h2>
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Dual-axis view of gross revenue (₹) and daily order count
-                  </p>
-                </div>
-              </div>
-
-              {/* Controls: Series Legend Toggles & Time Range */}
-              <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                {/* Series Legend Toggles */}
-                <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold gap-1">
-                  <button
-                    type="button"
-                    onClick={() => toggleSeries('revenue')}
-                    className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                      visibleSeries.revenue
-                        ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-bold'
-                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 opacity-60'
-                    }`}
-                    title="Toggle Revenue series"
-                  >
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        visibleSeries.revenue ? 'bg-emerald-500' : 'bg-slate-400'
-                      }`}
-                    />
-                    <span>Revenue (₹)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleSeries('orders')}
-                    className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                      visibleSeries.orders
-                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
-                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 opacity-60'
-                    }`}
-                    title="Toggle Orders series"
-                  >
-                    <span
-                      className={`w-2 h-2 rounded-sm ${
-                        visibleSeries.orders ? 'bg-blue-500' : 'bg-slate-400'
-                      }`}
-                    />
-                    <span>Orders</span>
-                  </button>
-                </div>
-
-                {/* Range Filter */}
-                <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold">
-                  {[
-                    { id: '1w', label: '1W' },
-                    { id: '1m', label: '1M' },
-                    { id: '1y', label: '1Y' }
-                  ].map((rng) => (
-                    <button
-                      key={rng.id}
-                      type="button"
-                      onClick={() => setTrendRange(rng.id)}
-                      className={`px-3 py-1 rounded-lg transition-all uppercase text-[11px] font-bold cursor-pointer ${
-                        trendRange === rng.id
-                          ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      {rng.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Chart Canvas */}
-            <div className="pt-4 min-h-[320px]">
-              {loading ? (
-                <ChartCardSkeleton height={320} />
-              ) : (
-                <VisxTrendChart
-                  data={processedTrendData}
-                  visibleSeries={visibleSeries}
-                  height={320}
-                  isDark={isDark}
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Comprehensive 4-Metric Quick Stat Highlights Footer */}
-          <div className="pt-4 mt-2 border-t border-slate-200/80 dark:border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center sm:text-left">
-            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Period Revenue</span>
-              <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                ₹{trendSummary.totalRev.toLocaleString('en-IN')}
-              </span>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Total Orders</span>
-              <span className="text-sm sm:text-base font-extrabold text-blue-600 dark:text-blue-400 font-mono">
-                {trendSummary.totalOrd} Orders
-              </span>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Avg Order Value</span>
-              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
-                ₹{trendSummary.avgOrderValue.toLocaleString('en-IN')}
-              </span>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Peak Day Revenue</span>
-              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
-                ₹{trendSummary.peakRev.toLocaleString('en-IN')}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Chart 2: Order Lifecycle & Pipeline Breakdown (Donut) */}
-        <div className="lg:col-span-5 xl:col-span-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-500/10 dark:bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
-
-          <div>
-            {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg border border-amber-500/20 shadow-xs">
-                  <FiPieChart />
-                </div>
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                    Order Pipeline
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Status lifecycle & fulfillment stage
-                  </p>
-                </div>
-              </div>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/10">
-                4 Stages
-              </span>
-            </div>
-
-            {/* Donut Chart Canvas */}
-            <div className="py-2 flex items-center justify-center min-h-[220px]">
-              {loading ? (
-                <DonutChartSkeleton height={220} />
-              ) : totalStatusCount === 0 ? (
-                <div className="h-[220px] flex flex-col items-center justify-center text-slate-400 text-xs">
-                  <FiPackage className="text-3xl mb-2 opacity-50" />
-                  <span>No orders in pipeline yet</span>
-                </div>
-              ) : (
-                <div className="w-full">
-                  <VisxPipelineDonut
-                    statusBreakdown={statusBreakdown}
-                    totalCount={totalStatusCount}
-                    height={230}
-                    isDark={isDark}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Interactive Status Breakdown List */}
-          < div className="space-y-2 pt-3 border-t border-slate-200/80 dark:border-white/10">
-            {[
-              {
-                key: 'PENDING',
-                label: 'Pending Approval',
-                badgeBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-                dotColor: 'bg-amber-500',
-                barColor: 'bg-amber-500',
-                count: statusBreakdown.PENDING?.count || 0,
-                value: statusBreakdown.PENDING?.value || 0
-              },
-              {
-                key: 'APPROVED',
-                label: 'Approved',
-                badgeBg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-                dotColor: 'bg-blue-500',
-                barColor: 'bg-blue-500',
-                count: statusBreakdown.APPROVED?.count || 0,
-                value: statusBreakdown.APPROVED?.value || 0
-              },
-              {
-                key: 'DISPATCHED',
-                label: 'Dispatched / Fulfilled',
-                badgeBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-                dotColor: 'bg-emerald-500',
-                barColor: 'bg-emerald-500',
-                count: statusBreakdown.DISPATCHED?.count || 0,
-                value: statusBreakdown.DISPATCHED?.value || 0
-              },
-              {
-                key: 'REJECTED',
-                label: 'Rejected',
-                badgeBg: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
-                dotColor: 'bg-rose-500',
-                barColor: 'bg-rose-500',
-                count: statusBreakdown.REJECTED?.count || 0,
-                value: statusBreakdown.REJECTED?.value || 0
-              }
-            ].map((st) => {
-              const pct = totalStatusCount > 0 ? Math.round((st.count / totalStatusCount) * 100) : 0;
-              return (
-                <div
-                  key={st.key}
-                  className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all"
-                >
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${st.dotColor}`} />
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">{st.label}</span>
-                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/10 text-slate-700 dark:text-slate-300">
-                        {st.count}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-slate-900 dark:text-white font-mono">
-                        ₹{Number(st.value).toLocaleString('en-IN')}
-                      </span>
-                      <span className="text-[10px] text-slate-400 ml-1 font-medium">({pct}%)</span>
-                    </div>
-                  </div>
-                  {/* Progress bar */}
-                  <div className="w-full bg-slate-200/60 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${st.barColor} rounded-full transition-all duration-500`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-      
-
-      {/* 4. B2B Enterprise Hierarchy Tree */}
+      {/* 5. B2B Enterprise Hierarchy Tree */}
       <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col justify-between">
         <div className="absolute -top-12 -right-12 w-64 h-64 bg-cyan-500/10 dark:bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 

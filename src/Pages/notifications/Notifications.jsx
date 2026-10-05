@@ -266,12 +266,75 @@ const Notifications = () => {
     }
   };
 
+  // Helpers for identifying and navigating to Purchase Orders
+  const checkIsPurchaseOrder = (notif) => {
+    if (!notif) return false;
+    const rawType = (notif.type || '').toUpperCase();
+    const relType = (notif.relatedEntityType || '').toUpperCase();
+    return (
+      rawType.includes('PO') ||
+      rawType.includes('PURCHASE') ||
+      relType.includes('PO') ||
+      relType.includes('PURCHASE') ||
+      relType === 'ORDER' ||
+      Boolean(notif.poNumber || notif.data?.poNumber || notif.metadata?.poNumber)
+    );
+  };
+
+  const getNotificationOrderId = (notif) => {
+    if (!notif) return null;
+    return (
+      notif.relatedEntityId ||
+      notif.relatedEntity?._id ||
+      notif.relatedEntity?.id ||
+      notif.data?.purchaseOrderId ||
+      notif.data?.orderId ||
+      notif.data?._id ||
+      notif.metadata?.purchaseOrderId ||
+      notif.metadata?.orderId ||
+      notif.metadata?._id ||
+      notif.purchaseOrderId ||
+      notif.orderId ||
+      null
+    );
+  };
+
+  const getNotificationPoNumber = (notif) => {
+    if (!notif) return null;
+    if (notif.poNumber) return notif.poNumber;
+    if (notif.data?.poNumber) return notif.data.poNumber;
+    if (notif.metadata?.poNumber) return notif.metadata.poNumber;
+    const combinedText = `${notif.title || ''} ${notif.message || ''}`;
+    const poMatch = combinedText.match(/\b(PO[-_#]?[A-Za-z0-9]+)\b/i);
+    return poMatch ? poMatch[1] : null;
+  };
+
+  const handleNavigateToPO = (notif, e) => {
+    if (e) e.stopPropagation();
+    if (!notif) return;
+    const targetId = getNotificationOrderId(notif);
+    const targetPoNum = getNotificationPoNumber(notif);
+    const navUrl = targetId
+      ? `/purchase-orders?orderId=${encodeURIComponent(targetId)}`
+      : targetPoNum
+      ? `/purchase-orders?poNumber=${encodeURIComponent(targetPoNum)}`
+      : '/purchase-orders';
+
+    navigate(navUrl, {
+      state: {
+        highlightOrderId: targetId,
+        orderId: targetId,
+        poId: targetId,
+        poNumber: targetPoNum,
+        openDrawer: true
+      }
+    });
+  };
+
   // Client-side computed stats
   const unreadCount = notifications.filter((n) => !n.isRead).length;
   const readCount = notifications.filter((n) => n.isRead).length;
-  const poCount = notifications.filter((n) =>
-    (n.type || '').toUpperCase().includes('PO') || (n.relatedEntityType || '').toUpperCase() === 'PURCHASEORDER'
-  ).length;
+  const poCount = notifications.filter(checkIsPurchaseOrder).length;
 
   // Extract unique notification types for filter dropdown
   const availableTypes = useMemo(() => {
@@ -627,9 +690,7 @@ const Notifications = () => {
             const isRead = Boolean(item.isRead);
             const isLoadingThis = actionLoadingId === itemId;
             const typeConfig = getTypeConfig(item.type, item.relatedEntityType);
-            const isPurchaseOrder =
-              (item.type || '').toUpperCase().includes('PO') ||
-              (item.relatedEntityType || '').toUpperCase() === 'PURCHASEORDER';
+            const isPurchaseOrder = checkIsPurchaseOrder(item);
 
             return (
               <div
@@ -718,13 +779,9 @@ const Notifications = () => {
                     {isPurchaseOrder && (
                       <button
                         type="button"
-                        onClick={() =>
-                          navigate('/purchase-orders', {
-                            state: { highlightOrderId: item.relatedEntityId }
-                          })
-                        }
+                        onClick={(e) => handleNavigateToPO(item, e)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-xl border border-emerald-500/25 transition-all cursor-pointer shadow-xs"
-                        title="View Purchase Orders page"
+                        title="View Purchase Order details in drawer"
                       >
                         <FiShoppingBag className="text-xs" />
                         <span>View PO</span>
@@ -963,20 +1020,18 @@ const Notifications = () => {
                     </div>
 
                     {/* Quick Action Button for Entity */}
-                    {selectedNotification.relatedEntityType === 'PurchaseOrder' && (
+                    {checkIsPurchaseOrder(selectedNotification) && (
                       <div className="pt-2">
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(e) => {
                             setSelectedNotification(null);
-                            navigate('/purchase-orders', {
-                              state: { highlightOrderId: selectedNotification.relatedEntityId }
-                            });
+                            handleNavigateToPO(selectedNotification, e);
                           }}
                           className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/25"
                         >
                           <FiShoppingBag className="text-sm" />
-                          <span>Navigate to Purchase Orders</span>
+                          <span>View PO Details</span>
                           <FiArrowRight className="text-xs" />
                         </button>
                       </div>

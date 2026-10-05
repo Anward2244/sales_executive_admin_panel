@@ -804,7 +804,7 @@ const FirmOnboarding = () => {
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-        <div className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xs">
+        <div className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-blue-500/30 hover:border-blue-500/60 transition-all group">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-blue-400">Total Requests</span>
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
@@ -857,7 +857,8 @@ const FirmOnboarding = () => {
           <p className="text-[11px] text-slate-400 mt-0.5">Declined or duplicate</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xs">
+        <div
+          className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-indigo-500/30 shadow-xs hover:border-indigo-500/60 transition-all group">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-indigo-400">Credit Demand</span>
             <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">

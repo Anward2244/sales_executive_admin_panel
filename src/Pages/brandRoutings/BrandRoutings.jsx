@@ -95,6 +95,9 @@ const BrandRoutings = () => {
   const [mappings, setMappings] = useState([
     {
       states: ['*'],
+      cities: [],
+      excludedCities: [],
+      companyCode: '',
       companyId: '',
       description: '',
       priority: 10,
@@ -110,6 +113,7 @@ const BrandRoutings = () => {
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   const [simBrand, setSimBrand] = useState('');
   const [simState, setSimState] = useState('*');
+  const [simCity, setSimCity] = useState('');
   const [resolvingApi, setResolvingApi] = useState(false);
   const [liveResolvedResult, setLiveResolvedResult] = useState(null);
   const [liveResolveError, setLiveResolveError] = useState(null);
@@ -125,6 +129,9 @@ const BrandRoutings = () => {
       mappings: [
         {
           states: ['*'],
+          cities: [],
+          excludedCities: [],
+          companyCode: '',
           companyId: '',
           description: '',
           priority: 10,
@@ -155,7 +162,21 @@ const BrandRoutings = () => {
       setMatrixData(rawMatrix);
 
       const compList = companiesRes?.data?.data || (Array.isArray(companiesRes?.data) ? companiesRes.data : []);
-      setCompanies(compList);
+      const compMap = new Map();
+      if (Array.isArray(compList)) {
+        compList.forEach((c) => {
+          if (c?._id) compMap.set(c._id, c);
+        });
+      }
+      rawMatrix.forEach((group) => {
+        const rules = Array.isArray(group.rules) ? group.rules : (Array.isArray(group.mappings) ? group.mappings : []);
+        rules.forEach((r) => {
+          if (typeof r.companyId === 'object' && r.companyId?._id && !compMap.has(r.companyId._id)) {
+            compMap.set(r.companyId._id, r.companyId);
+          }
+        });
+      });
+      setCompanies(Array.from(compMap.values()));
     } catch (err) {
       console.error('Failed to fetch brand routing matrix:', err);
       setError(err.response?.data?.message || 'Failed to load brand routing matrix.');
@@ -191,14 +212,13 @@ const BrandRoutings = () => {
     const list = [];
     matrixData.forEach((group) => {
       const brandName = group.brand;
-      if (Array.isArray(group.rules)) {
-        group.rules.forEach((rule) => {
-          list.push({
-            ...rule,
-            brand: rule.brand || brandName
-          });
+      const rules = Array.isArray(group.rules) ? group.rules : (Array.isArray(group.mappings) ? group.mappings : []);
+      rules.forEach((rule) => {
+        list.push({
+          ...rule,
+          brand: rule.brand || brandName
         });
-      }
+      });
     });
     return list;
   }, [matrixData]);
@@ -218,26 +238,42 @@ const BrandRoutings = () => {
   const filteredMatrix = useMemo(() => {
     return matrixData
       .filter((group) => {
+        const rules = Array.isArray(group.rules) ? group.rules : (Array.isArray(group.mappings) ? group.mappings : []);
+
         if (debouncedSearchBrand.trim()) {
           const q = debouncedSearchBrand.toLowerCase().trim();
           const matchBrand = (group.brand || '').toLowerCase().includes(q);
-          const matchRuleDesc = Array.isArray(group.rules) && group.rules.some((r) =>
-            (r.description || '').toLowerCase().includes(q) ||
-            (typeof r.companyId === 'object' && ((r.companyId?.name || '').toLowerCase().includes(q) || (r.companyId?.code || '').toLowerCase().includes(q)))
-          );
+          const matchRuleDesc = rules.some((r) => {
+            const compObj = typeof r.companyId === 'object' ? r.companyId : null;
+            const cCode = (compObj?.code || r.companyCode || '').toLowerCase();
+            const cName = (compObj?.name || (companies.find((c) => c.code === r.companyCode || c._id === r.companyId)?.name || '')).toLowerCase();
+            const matchCities = Array.isArray(r.cities) && r.cities.some((c) => c.toLowerCase().includes(q));
+            const matchEx = Array.isArray(r.excludedCities) && r.excludedCities.some((c) => c.toLowerCase().includes(q));
+            const matchStates = Array.isArray(r.states) && r.states.some((s) => s.toLowerCase().includes(q));
+            return (
+              (r.description || '').toLowerCase().includes(q) ||
+              cCode.includes(q) ||
+              cName.includes(q) ||
+              matchCities ||
+              matchEx ||
+              matchStates
+            );
+          });
           if (!matchBrand && !matchRuleDesc) return false;
         }
 
         if (selectedCompanyFilter !== 'ALL') {
-          const hasCompany = Array.isArray(group.rules) && group.rules.some((r) => {
-            const cId = typeof r.companyId === 'object' ? r.companyId?._id : r.companyId;
-            return cId === selectedCompanyFilter;
+          const hasCompany = rules.some((r) => {
+            const compObj = typeof r.companyId === 'object' ? r.companyId : null;
+            const cId = compObj?._id || (typeof r.companyId === 'string' ? r.companyId : '');
+            const cCode = compObj?.code || r.companyCode || '';
+            return cId === selectedCompanyFilter || cCode === selectedCompanyFilter;
           });
           if (!hasCompany) return false;
         }
 
         if (selectedStateFilter !== 'ALL') {
-          const hasState = Array.isArray(group.rules) && group.rules.some((r) => {
+          const hasState = rules.some((r) => {
             return Array.isArray(r.states) && r.states.includes(selectedStateFilter);
           });
           if (!hasState) return false;
@@ -250,7 +286,7 @@ const BrandRoutings = () => {
         if (b.brand === 'ALL') return 1;
         return a.brand.localeCompare(b.brand);
       });
-  }, [matrixData, debouncedSearchBrand, selectedCompanyFilter, selectedStateFilter]);
+  }, [matrixData, debouncedSearchBrand, selectedCompanyFilter, selectedStateFilter, companies]);
 
   // Filtered Flat Rules for Table
   const filteredFlatRules = useMemo(() => {
@@ -259,16 +295,23 @@ const BrandRoutings = () => {
         const q = debouncedSearchBrand.toLowerCase().trim();
         const matchBrand = (rule.brand || '').toLowerCase().includes(q);
         const matchDesc = (rule.description || '').toLowerCase().includes(q);
-        const compName = typeof rule.companyId === 'object' ? (rule.companyId?.name || '').toLowerCase() : '';
-        const compCode = typeof rule.companyId === 'object' ? (rule.companyId?.code || '').toLowerCase() : '';
-        if (!matchBrand && !matchDesc && !compName.includes(q) && !compCode.includes(q)) {
+        const compObj = typeof rule.companyId === 'object' ? rule.companyId : null;
+        const cCode = (compObj?.code || rule.companyCode || '').toLowerCase();
+        const cName = (compObj?.name || (companies.find((c) => c.code === rule.companyCode || c._id === rule.companyId)?.name || '')).toLowerCase();
+        const matchCities = Array.isArray(rule.cities) && rule.cities.some((c) => c.toLowerCase().includes(q));
+        const matchEx = Array.isArray(rule.excludedCities) && rule.excludedCities.some((c) => c.toLowerCase().includes(q));
+        const matchStates = Array.isArray(rule.states) && rule.states.some((s) => s.toLowerCase().includes(q));
+
+        if (!matchBrand && !matchDesc && !cCode.includes(q) && !cName.includes(q) && !matchCities && !matchEx && !matchStates) {
           return false;
         }
       }
 
       if (selectedCompanyFilter !== 'ALL') {
-        const cId = typeof rule.companyId === 'object' ? rule.companyId?._id : rule.companyId;
-        if (cId !== selectedCompanyFilter) return false;
+        const compObj = typeof rule.companyId === 'object' ? rule.companyId : null;
+        const cId = compObj?._id || (typeof rule.companyId === 'string' ? rule.companyId : '');
+        const cCode = compObj?.code || rule.companyCode || '';
+        if (cId !== selectedCompanyFilter && cCode !== selectedCompanyFilter) return false;
       }
 
       if (selectedStateFilter !== 'ALL') {
@@ -279,10 +322,10 @@ const BrandRoutings = () => {
 
       return true;
     });
-  }, [allRulesFlat, debouncedSearchBrand, selectedCompanyFilter, selectedStateFilter]);
+  }, [allRulesFlat, debouncedSearchBrand, selectedCompanyFilter, selectedStateFilter, companies]);
 
   // Live Backend Resolution Call
-  const handleResolveLiveRoute = useCallback(async (brand, state) => {
+  const handleResolveLiveRoute = useCallback(async (brand, state, city) => {
     if (!brand || !brand.trim()) {
       setLiveResolvedResult(null);
       setLiveResolveError(null);
@@ -292,7 +335,11 @@ const BrandRoutings = () => {
     setResolvingApi(true);
     setLiveResolveError(null);
     try {
-      const res = await resolveBrandRoutingApi(brand.trim(), state ? state.trim() : '*');
+      const res = await resolveBrandRoutingApi(
+        brand.trim(),
+        state ? state.trim() : '*',
+        city ? city.trim() : undefined
+      );
       const data = res?.data?.data || res?.data;
       setLiveResolvedResult(data || null);
     } catch (err) {
@@ -308,9 +355,10 @@ const BrandRoutings = () => {
     const targetBrand = brand || (allBrands.length > 0 ? (allBrands.find((b) => b !== 'ALL') || allBrands[0]) : '');
     setSimBrand(targetBrand);
     setSimState('*');
+    setSimCity('');
     setIsTestModalOpen(true);
     if (targetBrand) {
-      handleResolveLiveRoute(targetBrand, '*');
+      handleResolveLiveRoute(targetBrand, '*', '');
     }
   };
 
@@ -324,21 +372,43 @@ const BrandRoutings = () => {
       setModalBrand(bName);
       setReplaceExisting(true);
 
-      if (Array.isArray(brandGroup.rules) && brandGroup.rules.length > 0) {
+      const existingRules = Array.isArray(brandGroup.mappings) && brandGroup.mappings.length > 0
+        ? brandGroup.mappings
+        : (Array.isArray(brandGroup.rules) && brandGroup.rules.length > 0 ? brandGroup.rules : []);
+
+      if (existingRules.length > 0) {
         setMappings(
-          brandGroup.rules.map((r) => ({
-            states: Array.isArray(r.states) ? [...r.states] : ['*'],
-            companyId: typeof r.companyId === 'object' ? r.companyId?._id : (r.companyId || ''),
-            description: r.description || '',
-            priority: r.priority !== undefined ? r.priority : 10,
-            isActive: r.isActive !== undefined ? Boolean(r.isActive) : true
-          }))
+          existingRules.map((r) => {
+            const compObj = typeof r.companyId === 'object' ? r.companyId : null;
+            const compCode = r.companyCode || compObj?.code || '';
+            const compId = compObj?._id || (typeof r.companyId === 'string' ? r.companyId : '');
+            const matchedComp = companies.find((c) => (compCode && c.code === compCode) || (compId && c._id === compId));
+
+            return {
+              states: Array.isArray(r.states) ? [...r.states] : ['*'],
+              cities: Array.isArray(r.cities) ? [...r.cities] : [],
+              citiesStr: Array.isArray(r.cities) ? r.cities.join(', ') : '',
+              excludedCities: Array.isArray(r.excludedCities) ? [...r.excludedCities] : [],
+              excludedCitiesStr: Array.isArray(r.excludedCities) ? r.excludedCities.join(', ') : '',
+              companyCode: compCode || matchedComp?.code || '',
+              companyId: compId || matchedComp?._id || '',
+              description: r.description || '',
+              priority: r.priority !== undefined ? r.priority : 10,
+              isActive: r.isActive !== undefined ? Boolean(r.isActive) : true
+            };
+          })
         );
       } else {
+        const defaultComp = companies[0];
         setMappings([
           {
             states: ['*'],
-            companyId: companies[0]?._id || '',
+            cities: [],
+            citiesStr: '',
+            excludedCities: [],
+            excludedCitiesStr: '',
+            companyCode: defaultComp?.code || '',
+            companyId: defaultComp?._id || '',
             description: '',
             priority: 10,
             isActive: true
@@ -352,16 +422,33 @@ const BrandRoutings = () => {
         try {
           const freshRes = await getBrandRoutingByBrandApi(bName);
           const freshData = freshRes?.data?.data || freshRes?.data;
-          const freshRules = freshData?.rules || (Array.isArray(freshData) ? freshData : null);
+          const freshRules = Array.isArray(freshData?.mappings) && freshData.mappings.length > 0
+            ? freshData.mappings
+            : (Array.isArray(freshData?.rules) && freshData.rules.length > 0
+              ? freshData.rules
+              : (Array.isArray(freshData) ? freshData : null));
+
           if (Array.isArray(freshRules) && freshRules.length > 0) {
             setMappings(
-              freshRules.map((r) => ({
-                states: Array.isArray(r.states) ? [...r.states] : ['*'],
-                companyId: typeof r.companyId === 'object' ? r.companyId?._id : (r.companyId || ''),
-                description: r.description || '',
-                priority: r.priority !== undefined ? r.priority : 10,
-                isActive: r.isActive !== undefined ? Boolean(r.isActive) : true
-              }))
+              freshRules.map((r) => {
+                const compObj = typeof r.companyId === 'object' ? r.companyId : null;
+                const compCode = r.companyCode || compObj?.code || '';
+                const compId = compObj?._id || (typeof r.companyId === 'string' ? r.companyId : '');
+                const matchedComp = companies.find((c) => (compCode && c.code === compCode) || (compId && c._id === compId));
+
+                return {
+                  states: Array.isArray(r.states) ? [...r.states] : ['*'],
+                  cities: Array.isArray(r.cities) ? [...r.cities] : [],
+                  citiesStr: Array.isArray(r.cities) ? r.cities.join(', ') : '',
+                  excludedCities: Array.isArray(r.excludedCities) ? [...r.excludedCities] : [],
+                  excludedCitiesStr: Array.isArray(r.excludedCities) ? r.excludedCities.join(', ') : '',
+                  companyCode: compCode || matchedComp?.code || '',
+                  companyId: compId || matchedComp?._id || '',
+                  description: r.description || '',
+                  priority: r.priority !== undefined ? r.priority : 10,
+                  isActive: r.isActive !== undefined ? Boolean(r.isActive) : true
+                };
+              })
             );
           }
         } catch (err) {
@@ -373,10 +460,16 @@ const BrandRoutings = () => {
     } else {
       setModalBrand('');
       setReplaceExisting(true);
+      const defaultComp = companies[0];
       setMappings([
         {
           states: ['*'],
-          companyId: companies[0]?._id || '',
+          cities: [],
+          citiesStr: '',
+          excludedCities: [],
+          excludedCitiesStr: '',
+          companyCode: defaultComp?.code || '',
+          companyId: defaultComp?._id || '',
           description: '',
           priority: 10,
           isActive: true
@@ -397,6 +490,11 @@ const BrandRoutings = () => {
         mappings: [
           {
             states: ['*'],
+            cities: [],
+            citiesStr: '',
+            excludedCities: [],
+            excludedCitiesStr: '',
+            companyCode: companies[0]?.code || '',
             companyId: companies[0]?._id || '',
             description: '',
             priority: 10,
@@ -409,26 +507,29 @@ const BrandRoutings = () => {
     setBulkPayloadJson(
       JSON.stringify(
         {
+          brand: 'Realme',
           replaceExisting: true,
-          brands: [
+          mappings: [
             {
-              brand: 'Realme',
-              mappings: [
-                {
-                  states: ['Andhra Pradesh', 'Telangana', 'Delhi'],
-                  companyId: companies[0]?._id || 'COMPANY_ID_1',
-                  description: 'Realme in AP, TG, Delhi',
-                  priority: 10,
-                  isActive: true
-                },
-                {
-                  states: ['*'],
-                  companyId: companies[1]?._id || companies[0]?._id || 'COMPANY_ID_2',
-                  description: 'Realme in remaining states',
-                  priority: 1,
-                  isActive: true
-                }
-              ]
+              states: ['Andhra Pradesh', 'Telangana', 'Delhi'],
+              companyCode: companies[0]?.code || 'AURIC-HYD'
+            },
+            {
+              states: ['Maharashtra'],
+              cities: ['Mumbai', 'Nagpur'],
+              companyCode: companies[1]?.code || 'INIZIO',
+              priority: 15
+            },
+            {
+              states: ['Maharashtra'],
+              excludedCities: ['Mumbai', 'Nagpur'],
+              companyCode: companies[0]?.code || 'AURIC-HYD',
+              priority: 10
+            },
+            {
+              states: ['*'],
+              companyCode: companies[1]?.code || 'INIZIO',
+              priority: 1
             }
           ]
         },
@@ -441,11 +542,17 @@ const BrandRoutings = () => {
 
   // Rule mutations
   const handleAddMapping = () => {
+    const defaultComp = companies[0];
     setMappings((prev) => [
       ...prev,
       {
         states: ['*'],
-        companyId: companies[0]?._id || '',
+        cities: [],
+        citiesStr: '',
+        excludedCities: [],
+        excludedCitiesStr: '',
+        companyCode: defaultComp?.code || '',
+        companyId: defaultComp?._id || '',
         description: '',
         priority: 10,
         isActive: true
@@ -519,7 +626,9 @@ const BrandRoutings = () => {
 
     for (let i = 0; i < mappings.length; i++) {
       const m = mappings[i];
-      if (!m.companyId) {
+      const comp = companies.find((c) => c._id === m.companyId || c.code === m.companyCode);
+      const code = comp?.code || m.companyCode || (typeof m.companyId === 'string' ? m.companyId : '');
+      if (!code) {
         setModalError(`Rule #${i + 1}: Please select a partner billing company.`);
         return;
       }
@@ -532,13 +641,37 @@ const BrandRoutings = () => {
     const payload = {
       brand: cleanBrand,
       replaceExisting,
-      mappings: mappings.map((m) => ({
-        states: m.states,
-        companyId: m.companyId,
-        description: (m.description || '').trim(),
-        priority: Number(m.priority) || 0,
-        isActive: Boolean(m.isActive)
-      }))
+      mappings: mappings.map((m) => {
+        const comp = companies.find((c) => c._id === m.companyId || c.code === m.companyCode);
+        const companyCode = comp?.code || m.companyCode || m.companyId;
+
+        const cities = m.citiesStr !== undefined
+          ? m.citiesStr.split(',').map((s) => s.trim()).filter(Boolean)
+          : (Array.isArray(m.cities) ? m.cities.filter(Boolean) : []);
+
+        const excludedCities = m.excludedCitiesStr !== undefined
+          ? m.excludedCitiesStr.split(',').map((s) => s.trim()).filter(Boolean)
+          : (Array.isArray(m.excludedCities) ? m.excludedCities.filter(Boolean) : []);
+
+        const item = {
+          states: m.states,
+          companyCode: companyCode
+        };
+
+        if (cities.length > 0) {
+          item.cities = cities;
+        }
+
+        if (excludedCities.length > 0) {
+          item.excludedCities = excludedCities;
+        }
+
+        if (m.priority !== '' && m.priority !== undefined && !isNaN(Number(m.priority))) {
+          item.priority = Number(m.priority);
+        }
+
+        return item;
+      })
     };
 
     setSubmitting(true);
@@ -583,29 +716,50 @@ const BrandRoutings = () => {
         replaceExisting: true,
         brands: validBrands.map((b) => ({
           brand: b.brand.trim(),
-          mappings: b.mappings.map((m) => ({
-            states: m.states,
-            companyId: m.companyId,
-            description: (m.description || '').trim(),
-            priority: Number(m.priority) || 0,
-            isActive: Boolean(m.isActive)
-          }))
+          mappings: b.mappings.map((m) => {
+            const comp = companies.find((c) => c._id === m.companyId || c.code === m.companyCode);
+            const companyCode = comp?.code || m.companyCode || m.companyId;
+
+            const cities = m.citiesStr !== undefined
+              ? m.citiesStr.split(',').map((s) => s.trim()).filter(Boolean)
+              : (Array.isArray(m.cities) ? m.cities.filter(Boolean) : []);
+
+            const excludedCities = m.excludedCitiesStr !== undefined
+              ? m.excludedCitiesStr.split(',').map((s) => s.trim()).filter(Boolean)
+              : (Array.isArray(m.excludedCities) ? m.excludedCities.filter(Boolean) : []);
+
+            const item = {
+              states: m.states,
+              companyCode: companyCode
+            };
+
+            if (cities.length > 0) item.cities = cities;
+            if (excludedCities.length > 0) item.excludedCities = excludedCities;
+            if (m.priority !== '' && m.priority !== undefined && !isNaN(Number(m.priority))) {
+              item.priority = Number(m.priority);
+            }
+            return item;
+          })
         }))
       };
     }
 
     setBulkSubmitting(true);
     try {
-      await bulkUpdateBrandRoutingMatrixApi(payload);
-      setSuccessToast('Bulk brand routing matrix deployed successfully.');
+      if (payload?.brand && Array.isArray(payload?.mappings)) {
+        await updateBrandRoutingMatrixApi(payload);
+      } else {
+        await bulkUpdateBrandRoutingMatrixApi(payload);
+      }
+      setSuccessToast('Brand routing matrix deployed successfully.');
       setIsBulkModalOpen(false);
       await fetchData(true);
     } catch (err) {
-      console.error('Failed to deploy bulk brand routing matrix:', err);
+      console.error('Failed to deploy brand routing matrix:', err);
       setBulkModalError(
         err.response?.data?.message ||
         err.response?.data?.error ||
-        'Failed to deploy bulk matrix.'
+        'Failed to deploy matrix.'
       );
     } finally {
       setBulkSubmitting(false);
@@ -621,9 +775,12 @@ const BrandRoutings = () => {
   // Global default company info
   const globalFallbackCompany = useMemo(() => {
     const allBrand = matrixData.find((g) => g.brand === 'ALL');
-    const comp = allBrand?.rules?.[0]?.companyId;
-    return comp?.name || comp?.code || 'Inizio (Global)';
-  }, [matrixData]);
+    const firstRule = (allBrand?.mappings || allBrand?.rules)?.[0];
+    const comp = typeof firstRule?.companyId === 'object'
+      ? firstRule.companyId
+      : companies.find((c) => c._id === firstRule?.companyId || c.code === firstRule?.companyCode);
+    return comp?.name || firstRule?.companyCode || comp?.code || 'Inizio (Global)';
+  }, [matrixData, companies]);
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200 relative">
@@ -921,7 +1078,7 @@ const BrandRoutings = () => {
                           </span>
                         )}
                         <span className="text-[11px] text-slate-400 font-medium">
-                          ({rules.length} {rules.length === 1 ? 'rule' : 'rules'})
+                          ({brandGroup.rulesCount !== undefined ? brandGroup.rulesCount : rules.length} {(brandGroup.rulesCount !== undefined ? brandGroup.rulesCount : rules.length) === 1 ? 'rule' : 'rules'})
                         </span>
                       </div>
                     </div>
@@ -952,10 +1109,12 @@ const BrandRoutings = () => {
                 {/* Rules Rows inside Brand */}
                 <div className="divide-y divide-slate-100 dark:divide-white/5">
                   {rules.map((rule, idx) => {
-                    const company = rule.companyId;
-                    const compName = typeof company === 'object' ? company?.name : 'Corporate Partner';
-                    const compCode = typeof company === 'object' ? company?.code : '';
-                    const compLogo = typeof company === 'object' ? company?.logo : null;
+                    const company = typeof rule.companyId === 'object'
+                      ? rule.companyId
+                      : companies.find((c) => c._id === rule.companyId || c.code === rule.companyCode);
+                    const compName = company?.name || rule.companyCode || (typeof rule.companyId === 'string' ? rule.companyId : 'Corporate Partner');
+                    const compCode = rule.companyCode || company?.code || '';
+                    const compLogo = company?.logo || null;
                     const states = Array.isArray(rule.states) ? rule.states : [];
                     const isWildcard = states.includes('*');
                     const isAllStates = states.length === INDIAN_STATES.length;
@@ -988,6 +1147,18 @@ const BrandRoutings = () => {
                                 {states.length > 3 && ` +${states.length - 3} more`}
                               </span>
                             </div>
+                          )}
+
+                          {Array.isArray(rule.cities) && rule.cities.length > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20" title={rule.cities.join(', ')}>
+                              <span>Cities: {rule.cities.slice(0, 2).join(', ')}{rule.cities.length > 2 ? ` +${rule.cities.length - 2}` : ''}</span>
+                            </span>
+                          )}
+
+                          {Array.isArray(rule.excludedCities) && rule.excludedCities.length > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20" title={rule.excludedCities.join(', ')}>
+                              <span>Excl: {rule.excludedCities.slice(0, 2).join(', ')}{rule.excludedCities.length > 2 ? ` +${rule.excludedCities.length - 2}` : ''}</span>
+                            </span>
                           )}
 
                           {rule.description && (
@@ -1051,9 +1222,11 @@ const BrandRoutings = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {filteredFlatRules.map((rule, idx) => {
-                  const company = rule.companyId;
-                  const compName = typeof company === 'object' ? company?.name : 'Corporate Partner';
-                  const compCode = typeof company === 'object' ? company?.code : '';
+                  const company = typeof rule.companyId === 'object'
+                    ? rule.companyId
+                    : companies.find((c) => c._id === rule.companyId || c.code === rule.companyCode);
+                  const compName = company?.name || rule.companyCode || (typeof rule.companyId === 'string' ? rule.companyId : 'Corporate Partner');
+                  const compCode = rule.companyCode || company?.code || '';
                   const states = Array.isArray(rule.states) ? rule.states : [];
                   const isWildcard = states.includes('*');
 
@@ -1074,19 +1247,33 @@ const BrandRoutings = () => {
                       </td>
 
                       <td className="py-3 px-4">
-                        {isWildcard ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
-                            ★ Pan-India (*)
-                          </span>
-                        ) : states.length === INDIAN_STATES.length ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                            ✓ All 36 States
-                          </span>
-                        ) : (
-                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            {states.length} {states.length === 1 ? 'state' : 'states'} ({states.slice(0, 2).join(', ')}{states.length > 2 ? '...' : ''})
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {isWildcard ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                              ★ Pan-India (*)
+                            </span>
+                          ) : states.length === INDIAN_STATES.length ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                              ✓ All 36 States
+                            </span>
+                          ) : (
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                              {states.length} {states.length === 1 ? 'state' : 'states'} ({states.slice(0, 2).join(', ')}{states.length > 2 ? '...' : ''})
+                            </span>
+                          )}
+
+                          {Array.isArray(rule.cities) && rule.cities.length > 0 && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                              Cities: {rule.cities.join(', ')}
+                            </span>
+                          )}
+
+                          {Array.isArray(rule.excludedCities) && rule.excludedCities.length > 0 && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
+                              Excl: {rule.excludedCities.join(', ')}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
@@ -1184,7 +1371,7 @@ const BrandRoutings = () => {
                   value={simBrand}
                   onChange={(e) => {
                     setSimBrand(e.target.value);
-                    handleResolveLiveRoute(e.target.value, simState);
+                    handleResolveLiveRoute(e.target.value, simState, simCity);
                   }}
                   placeholder="e.g. Realme"
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
@@ -1199,7 +1386,7 @@ const BrandRoutings = () => {
                   value={simState}
                   onChange={(e) => {
                     setSimState(e.target.value);
-                    handleResolveLiveRoute(simBrand, e.target.value);
+                    handleResolveLiveRoute(simBrand, e.target.value, simCity);
                   }}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 cursor-pointer"
                 >
@@ -1210,6 +1397,22 @@ const BrandRoutings = () => {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Destination City (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={simCity}
+                  onChange={(e) => {
+                    setSimCity(e.target.value);
+                    handleResolveLiveRoute(simBrand, simState, e.target.value);
+                  }}
+                  placeholder="e.g. Mumbai or Nagpur"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                />
               </div>
 
               {/* Result Box */}
@@ -1228,18 +1431,24 @@ const BrandRoutings = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-500">Destination Company:</span>
                       <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                        {typeof liveResolvedResult.company === 'object'
-                          ? liveResolvedResult.company?.name || liveResolvedResult.company?.code
-                          : typeof liveResolvedResult.companyId === 'object'
-                          ? liveResolvedResult.companyId?.name || liveResolvedResult.companyId?.code
-                          : liveResolvedResult.companyName || liveResolvedResult.companyId || 'Partner Entity'}
+                        {liveResolvedResult.companyCode ||
+                          (typeof liveResolvedResult.company === 'object'
+                            ? liveResolvedResult.company?.name || liveResolvedResult.company?.code
+                            : typeof liveResolvedResult.companyId === 'object'
+                            ? liveResolvedResult.companyId?.name || liveResolvedResult.companyId?.code
+                            : liveResolvedResult.companyName || liveResolvedResult.companyId || 'Partner Entity')}
+                        {liveResolvedResult.companyCode && typeof liveResolvedResult.company === 'object' && liveResolvedResult.company?.name && (
+                          <span className="text-[10px] font-mono text-slate-400 font-normal ml-1">
+                            ({liveResolvedResult.company.name})
+                          </span>
+                        )}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-slate-400">
                       <span>Evaluated Priority:</span>
                       <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                        P{liveResolvedResult.priority || 10}
+                        P{liveResolvedResult.priority !== undefined ? liveResolvedResult.priority : 10}
                       </span>
                     </div>
 
@@ -1418,13 +1627,17 @@ const BrandRoutings = () => {
                             Destination Corporate Entity *
                           </label>
                           <CustomDropdown
-                            value={mapping.companyId}
-                            onChange={(val) => handleUpdateMappingField(mIdx, 'companyId', val)}
+                            value={mapping.companyCode || mapping.companyId}
+                            onChange={(val) => {
+                              const comp = companies.find((c) => c.code === val || c._id === val);
+                              handleUpdateMappingField(mIdx, 'companyCode', comp?.code || val);
+                              handleUpdateMappingField(mIdx, 'companyId', comp?._id || val);
+                            }}
                             defaultLabel="Select Corporate Partner..."
                             options={[
                               { value: '', label: 'Select Company...' },
                               ...companies.map((c) => ({
-                                value: c._id,
+                                value: c.code || c._id,
                                 label: getCompanyLabel(c)
                               }))
                             ]}
@@ -1434,15 +1647,50 @@ const BrandRoutings = () => {
 
                         <div className="sm:col-span-4">
                           <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                            Priority
+                            Priority (Optional)
                           </label>
                           <input
                             type="number"
-                            value={mapping.priority}
+                            value={mapping.priority !== undefined ? mapping.priority : ''}
                             onChange={(e) => handleUpdateMappingField(mIdx, 'priority', e.target.value)}
-                            placeholder="10"
+                            placeholder="e.g. 15, 10, 1"
                             className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                           />
+                        </div>
+                      </div>
+
+                      {/* City Restrictions: Specific Cities & Excluded Cities */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Specific Cities (Optional, comma-separated)
+                          </label>
+                          <input
+                            type="text"
+                            value={mapping.citiesStr !== undefined ? mapping.citiesStr : (Array.isArray(mapping.cities) ? mapping.cities.join(', ') : '')}
+                            onChange={(e) => handleUpdateMappingField(mIdx, 'citiesStr', e.target.value)}
+                            placeholder="e.g. Mumbai, Nagpur"
+                            className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                          />
+                          <span className="text-[10px] text-slate-400 block mt-0.5">
+                            Rule applies ONLY to these cities in selected states
+                          </span>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Excluded Cities (Optional, comma-separated)
+                          </label>
+                          <input
+                            type="text"
+                            value={mapping.excludedCitiesStr !== undefined ? mapping.excludedCitiesStr : (Array.isArray(mapping.excludedCities) ? mapping.excludedCities.join(', ') : '')}
+                            onChange={(e) => handleUpdateMappingField(mIdx, 'excludedCitiesStr', e.target.value)}
+                            placeholder="e.g. Mumbai, Nagpur"
+                            className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                          />
+                          <span className="text-[10px] text-slate-400 block mt-0.5">
+                            Rule applies to all cities EXCEPT these in selected states
+                          </span>
                         </div>
                       </div>
 
@@ -1680,14 +1928,21 @@ const BrandRoutings = () => {
                         />
 
                         <CustomDropdown
-                          value={bItem.mappings[0]?.companyId || ''}
+                          value={bItem.mappings[0]?.companyCode || bItem.mappings[0]?.companyId || ''}
                           onChange={(val) => {
+                            const comp = companies.find((c) => c.code === val || c._id === val);
                             setBulkBrands((prev) =>
                               prev.map((item, i) => {
                                 if (i !== bIdx) return item;
                                 return {
                                   ...item,
-                                  mappings: [{ ...item.mappings[0], companyId: val }]
+                                  mappings: [
+                                    {
+                                      ...item.mappings[0],
+                                      companyCode: comp?.code || val,
+                                      companyId: comp?._id || val
+                                    }
+                                  ]
                                 };
                               })
                             );
@@ -1695,7 +1950,7 @@ const BrandRoutings = () => {
                           options={[
                             { value: '', label: 'Select Company...' },
                             ...companies.map((c) => ({
-                              value: c._id,
+                              value: c.code || c._id,
                               label: getCompanyLabel(c)
                             }))
                           ]}
@@ -1716,6 +1971,11 @@ const BrandRoutings = () => {
                           mappings: [
                             {
                               states: ['*'],
+                              cities: [],
+                              citiesStr: '',
+                              excludedCities: [],
+                              excludedCitiesStr: '',
+                              companyCode: companies[0]?.code || '',
                               companyId: companies[0]?._id || '',
                               description: '',
                               priority: 10,

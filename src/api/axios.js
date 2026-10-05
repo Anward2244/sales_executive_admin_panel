@@ -673,10 +673,11 @@ export const bulkUpdateBrandRoutingMatrixApi = async (data) => {
   }
 };
 
-export const resolveBrandRoutingApi = async (brand, state) => {
+export const resolveBrandRoutingApi = async (brand, state, city) => {
   const params = new URLSearchParams();
   if (brand) params.set('brand', brand);
   if (state) params.set('state', state);
+  if (city) params.set('city', city);
   const qStr = params.toString();
 
   try {

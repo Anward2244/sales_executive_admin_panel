@@ -1163,27 +1163,6 @@ const Firms = () => {
 
             <button
               type="button"
-              onClick={() => handleTabChange('active')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                firmTab === 'active'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-              }`}
-            >
-              <span>Active</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-extrabold ${
-                  firmTab === 'active'
-                    ? 'bg-white/20 text-white'
-                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                }`}
-              >
-                {tabCounts.active}
-              </span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => handleTabChange('approved')}
               className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                 firmTab === 'approved'
@@ -1221,6 +1200,27 @@ const Firms = () => {
                 }`}
               >
                 {tabCounts.pending}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('active')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                firmTab === 'active'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+              }`}
+            >
+              <span>Active</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-extrabold ${
+                  firmTab === 'active'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                {tabCounts.active}
               </span>
             </button>
 
