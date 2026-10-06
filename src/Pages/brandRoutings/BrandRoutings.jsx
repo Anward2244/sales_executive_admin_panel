@@ -36,6 +36,7 @@ import {
   updateBrandRoutingMatrixApi,
   bulkUpdateBrandRoutingMatrixApi,
   resolveBrandRoutingApi,
+  deleteBrandRoutingApi,
   getCompaniesApi
 } from '@/api/axios';
 import { INDIAN_STATES } from '@/utils/indianStates';
@@ -117,6 +118,8 @@ const BrandRoutings = () => {
   const [resolvingApi, setResolvingApi] = useState(false);
   const [liveResolvedResult, setLiveResolvedResult] = useState(null);
   const [liveResolveError, setLiveResolveError] = useState(null);
+  const [showTestRawJson, setShowTestRawJson] = useState(false);
+  const [deletingRuleId, setDeletingRuleId] = useState(null);
 
   // Bulk Matrix Modal
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -338,13 +341,22 @@ const BrandRoutings = () => {
       const res = await resolveBrandRoutingApi(
         brand.trim(),
         state ? state.trim() : '*',
-        city ? city.trim() : undefined
+        city && city.trim() ? city.trim() : undefined
       );
       const data = res?.data?.data || res?.data;
-      setLiveResolvedResult(data || null);
+      if (data && (data.success === false || data.error)) {
+        setLiveResolveError(data.message || data.error || 'No matching route found.');
+        setLiveResolvedResult(null);
+      } else {
+        setLiveResolvedResult(data || null);
+      }
     } catch (err) {
       console.warn('Backend live resolve returned error:', err);
-      setLiveResolveError(err.response?.data?.message || 'No matching route found.');
+      setLiveResolveError(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        'No matching route found for this brand and location.'
+      );
       setLiveResolvedResult(null);
     } finally {
       setResolvingApi(false);
@@ -356,11 +368,95 @@ const BrandRoutings = () => {
     setSimBrand(targetBrand);
     setSimState('*');
     setSimCity('');
+    setShowTestRawJson(false);
     setIsTestModalOpen(true);
     if (targetBrand) {
       handleResolveLiveRoute(targetBrand, '*', '');
     }
   };
+
+  // Fetch authoritative rules for brand from GET /brand-routings/matrix/{brand}
+  const fetchBrandRules = useCallback(async (brandName) => {
+    const clean = brandName?.trim();
+    if (!clean) return;
+
+    setLoadingBrandDetails(true);
+    setModalError(null);
+    try {
+      const freshRes = await getBrandRoutingByBrandApi(clean);
+      const freshData = freshRes?.data?.data || freshRes?.data;
+      const freshRules = Array.isArray(freshData?.rules) && freshData.rules.length > 0
+        ? freshData.rules
+        : (Array.isArray(freshData?.mappings) && freshData.mappings.length > 0
+          ? freshData.mappings
+          : (Array.isArray(freshData) ? freshData : null));
+
+      if (freshData?.brand) {
+        setModalBrand(freshData.brand);
+      }
+
+      if (Array.isArray(freshRules) && freshRules.length > 0) {
+        // Register any company objects found in rules into companies list
+        setCompanies((prev) => {
+          const compMap = new Map();
+          prev.forEach((c) => {
+            if (c?._id) compMap.set(c._id, c);
+            if (c?.code) compMap.set(c.code, c);
+          });
+          freshRules.forEach((r) => {
+            const comp = typeof r.companyId === 'object' ? r.companyId : null;
+            if (comp?._id && !compMap.has(comp._id)) compMap.set(comp._id, comp);
+            if (comp?.code && !compMap.has(comp.code)) compMap.set(comp.code, comp);
+          });
+          return Array.from(new Set(compMap.values()));
+        });
+
+        // Update matrixData cache
+        setMatrixData((prev) => {
+          const idx = prev.findIndex((g) => g.brand?.toLowerCase() === clean.toLowerCase());
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], brand: freshData?.brand || clean, rules: freshRules };
+            return copy;
+          }
+          return prev;
+        });
+
+        setMappings(
+          freshRules.map((r) => {
+            const compObj = typeof r.companyId === 'object' ? r.companyId : null;
+            const compCode = r.companyCode || compObj?.code || '';
+            const compId = compObj?._id || (typeof r.companyId === 'string' ? r.companyId : '');
+
+            return {
+              _id: r._id || '',
+              states: Array.isArray(r.states) && r.states.length > 0 ? [...r.states] : ['*'],
+              cities: Array.isArray(r.cities) ? [...r.cities] : [],
+              citiesStr: Array.isArray(r.cities) ? r.cities.join(', ') : '',
+              excludedCities: Array.isArray(r.excludedCities) ? [...r.excludedCities] : [],
+              excludedCitiesStr: Array.isArray(r.excludedCities) ? r.excludedCities.join(', ') : '',
+              companyCode: compCode || '',
+              companyId: compId || '',
+              description: r.description || '',
+              priority: r.priority !== undefined ? r.priority : 10,
+              isActive: r.isActive !== undefined ? Boolean(r.isActive) : true
+            };
+          })
+        );
+      }
+    } catch (err) {
+      console.warn(`GET /brand-routings/matrix/${clean} returned:`, err);
+      if (err.response?.status !== 404) {
+        setModalError(
+          err.response?.data?.message ||
+          err.response?.data?.error ||
+          `Failed to load existing rules for "${clean}".`
+        );
+      }
+    } finally {
+      setLoadingBrandDetails(false);
+    }
+  }, []);
 
   // Open Configure Modal
   const handleOpenConfigure = async (brandGroup = null) => {
@@ -372,9 +468,9 @@ const BrandRoutings = () => {
       setModalBrand(bName);
       setReplaceExisting(true);
 
-      const existingRules = Array.isArray(brandGroup.mappings) && brandGroup.mappings.length > 0
-        ? brandGroup.mappings
-        : (Array.isArray(brandGroup.rules) && brandGroup.rules.length > 0 ? brandGroup.rules : []);
+      const existingRules = Array.isArray(brandGroup.rules) && brandGroup.rules.length > 0
+        ? brandGroup.rules
+        : (Array.isArray(brandGroup.mappings) && brandGroup.mappings.length > 0 ? brandGroup.mappings : []);
 
       if (existingRules.length > 0) {
         setMappings(
@@ -385,13 +481,14 @@ const BrandRoutings = () => {
             const matchedComp = companies.find((c) => (compCode && c.code === compCode) || (compId && c._id === compId));
 
             return {
+              _id: r._id || '',
               states: Array.isArray(r.states) ? [...r.states] : ['*'],
               cities: Array.isArray(r.cities) ? [...r.cities] : [],
               citiesStr: Array.isArray(r.cities) ? r.cities.join(', ') : '',
               excludedCities: Array.isArray(r.excludedCities) ? [...r.excludedCities] : [],
               excludedCitiesStr: Array.isArray(r.excludedCities) ? r.excludedCities.join(', ') : '',
-              companyCode: compCode || matchedComp?.code || '',
-              companyId: compId || matchedComp?._id || '',
+              companyCode: compCode || matchedComp?.code || compObj?.code || '',
+              companyId: compId || matchedComp?._id || compObj?._id || '',
               description: r.description || '',
               priority: r.priority !== undefined ? r.priority : 10,
               isActive: r.isActive !== undefined ? Boolean(r.isActive) : true
@@ -418,44 +515,7 @@ const BrandRoutings = () => {
       setIsModalOpen(true);
 
       if (bName) {
-        setLoadingBrandDetails(true);
-        try {
-          const freshRes = await getBrandRoutingByBrandApi(bName);
-          const freshData = freshRes?.data?.data || freshRes?.data;
-          const freshRules = Array.isArray(freshData?.mappings) && freshData.mappings.length > 0
-            ? freshData.mappings
-            : (Array.isArray(freshData?.rules) && freshData.rules.length > 0
-              ? freshData.rules
-              : (Array.isArray(freshData) ? freshData : null));
-
-          if (Array.isArray(freshRules) && freshRules.length > 0) {
-            setMappings(
-              freshRules.map((r) => {
-                const compObj = typeof r.companyId === 'object' ? r.companyId : null;
-                const compCode = r.companyCode || compObj?.code || '';
-                const compId = compObj?._id || (typeof r.companyId === 'string' ? r.companyId : '');
-                const matchedComp = companies.find((c) => (compCode && c.code === compCode) || (compId && c._id === compId));
-
-                return {
-                  states: Array.isArray(r.states) ? [...r.states] : ['*'],
-                  cities: Array.isArray(r.cities) ? [...r.cities] : [],
-                  citiesStr: Array.isArray(r.cities) ? r.cities.join(', ') : '',
-                  excludedCities: Array.isArray(r.excludedCities) ? [...r.excludedCities] : [],
-                  excludedCitiesStr: Array.isArray(r.excludedCities) ? r.excludedCities.join(', ') : '',
-                  companyCode: compCode || matchedComp?.code || '',
-                  companyId: compId || matchedComp?._id || '',
-                  description: r.description || '',
-                  priority: r.priority !== undefined ? r.priority : 10,
-                  isActive: r.isActive !== undefined ? Boolean(r.isActive) : true
-                };
-              })
-            );
-          }
-        } catch (err) {
-          console.warn(`GET /brand-routings/matrix/${bName} fallback to local:`, err);
-        } finally {
-          setLoadingBrandDetails(false);
-        }
+        fetchBrandRules(bName);
       }
     } else {
       setModalBrand('');
@@ -560,9 +620,88 @@ const BrandRoutings = () => {
     ]);
   };
 
-  const handleRemoveMapping = (index) => {
+  // Delete rule by ID using DELETE /brand-routings/{id}
+  const handleDeleteRule = async (ruleId, label = 'this rule') => {
+    if (!ruleId) return;
+    const confirmed = window.confirm(`Are you sure you want to delete ${label}? This will permanently remove it.`);
+    if (!confirmed) return;
+
+    setDeletingRuleId(ruleId);
+    try {
+      await deleteBrandRoutingApi(ruleId);
+      setSuccessToast('Routing rule deleted successfully.');
+
+      setMatrixData((prev) =>
+        prev
+          .map((group) => {
+            const rules = Array.isArray(group.rules) ? group.rules : (Array.isArray(group.mappings) ? group.mappings : []);
+            const filtered = rules.filter((r) => r._id !== ruleId);
+            return {
+              ...group,
+              rules: filtered,
+              mappings: filtered,
+              rulesCount: filtered.length
+            };
+          })
+          .filter((group) => {
+            const rules = Array.isArray(group.rules) ? group.rules : (Array.isArray(group.mappings) ? group.mappings : []);
+            return rules.length > 0 || group.brand === 'ALL';
+          })
+      );
+
+      setMappings((prev) => prev.filter((m) => m._id !== ruleId));
+      await fetchData(true);
+    } catch (err) {
+      console.error('Failed to delete routing rule:', err);
+      setError(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        'Failed to delete routing rule. Please try again.'
+      );
+    } finally {
+      setDeletingRuleId(null);
+    }
+  };
+
+  const handleRemoveMapping = async (index) => {
+    const m = mappings[index];
+    if (m?._id) {
+      const confirmed = window.confirm(
+        'This rule is saved in the database. Do you want to permanently delete it (DEL /brand-routings/{id})?'
+      );
+      if (!confirmed) return;
+
+      setDeletingRuleId(m._id);
+      try {
+        await deleteBrandRoutingApi(m._id);
+        setSuccessToast('Routing rule permanently deleted from database.');
+        fetchData(true);
+      } catch (err) {
+        console.error('Failed to delete saved rule:', err);
+        setModalError(err.response?.data?.message || 'Failed to delete rule from database.');
+        setDeletingRuleId(null);
+        return;
+      } finally {
+        setDeletingRuleId(null);
+      }
+    }
+
     if (mappings.length === 1) {
-      setModalError('At least one mapping rule is required for this brand.');
+      const defaultComp = companies[0];
+      setMappings([
+        {
+          states: ['*'],
+          cities: [],
+          citiesStr: '',
+          excludedCities: [],
+          excludedCitiesStr: '',
+          companyCode: defaultComp?.code || '',
+          companyId: defaultComp?._id || '',
+          description: '',
+          priority: 10,
+          isActive: true
+        }
+      ]);
       return;
     }
     setMappings((prev) => prev.filter((_, idx) => idx !== index));
@@ -1195,6 +1334,22 @@ const BrandRoutings = () => {
                           <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
                             P{rule.priority !== undefined ? rule.priority : 10}
                           </span>
+
+                          {rule._id && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRule(rule._id, `Rule for ${rule.brand || brandGroup.brand} (${compName})`)}
+                              disabled={deletingRuleId === rule._id}
+                              className="p-1 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                              title="Delete this routing rule"
+                            >
+                              {deletingRuleId === rule._id ? (
+                                <FiRefreshCw className="animate-spin text-xs" />
+                              ) : (
+                                <FiTrash2 size={13} />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -1310,16 +1465,33 @@ const BrandRoutings = () => {
                       </td>
 
                       <td className="py-3 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const group = matrixData.find((g) => g.brand === rule.brand);
-                            handleOpenConfigure(group || { brand: rule.brand, rules: [rule] });
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs transition-colors cursor-pointer"
-                        >
-                          Edit
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const group = matrixData.find((g) => g.brand === rule.brand);
+                              handleOpenConfigure(group || { brand: rule.brand, rules: [rule] });
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs transition-colors cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          {rule._id && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRule(rule._id, `Rule for ${rule.brand} (${compName})`)}
+                              disabled={deletingRuleId === rule._id}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                              title="Delete this routing rule"
+                            >
+                              {deletingRuleId === rule._id ? (
+                                <FiRefreshCw className="animate-spin text-xs" />
+                              ) : (
+                                <FiTrash2 size={13} />
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1334,145 +1506,363 @@ const BrandRoutings = () => {
           TEST ROUTING MODAL (DEDICATED RESOLUTION SANDBOX)
           ======================================================== */}
       {isTestModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white/40 dark:bg-slate-950/25 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 dark:bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+            <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 text-lg">
                   <FiPlay />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
                     Live Route Resolver Sandbox
                   </h3>
-                  <p className="text-[11px] text-slate-400">
-                    Resolves through GET /api/v1/brand-routings/resolve
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    GET /brand-routings/resolve — Real-time rule evaluation engine
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsTestModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
               >
-                <FiX size={16} />
+                <FiX size={18} />
               </button>
             </div>
 
             {/* Body */}
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Brand Name
-                </label>
-                <input
-                  type="text"
-                  value={simBrand}
-                  onChange={(e) => {
-                    setSimBrand(e.target.value);
-                    handleResolveLiveRoute(e.target.value, simState, simCity);
-                  }}
-                  placeholder="e.g. Realme"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Destination State
-                </label>
-                <select
-                  value={simState}
-                  onChange={(e) => {
-                    setSimState(e.target.value);
-                    handleResolveLiveRoute(simBrand, e.target.value, simCity);
-                  }}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                >
-                  <option value="*">* Wildcard / Any Other State</option>
-                  {INDIAN_STATES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Destination City (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={simCity}
-                  onChange={(e) => {
-                    setSimCity(e.target.value);
-                    handleResolveLiveRoute(simBrand, simState, e.target.value);
-                  }}
-                  placeholder="e.g. Mumbai or Nagpur"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Result Box */}
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-                  Resolution Result
-                </span>
-
-                {resolvingApi ? (
-                  <div className="py-2 text-xs font-medium text-blue-500 flex items-center gap-2">
-                    <FiRefreshCw className="animate-spin text-xs" />
-                    <span>Resolving routing rules...</span>
+            <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+              {/* Query Inputs Card */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 shadow-xs space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Brand Name *
+                    </label>
+                    {allBrands.length > 0 && (
+                      <div className="flex items-center gap-1 overflow-x-auto max-w-[260px] pb-0.5">
+                        <span className="text-[10px] text-slate-400 shrink-0">Quick pick:</span>
+                        {allBrands.slice(0, 4).map((b) => (
+                          <button
+                            key={b}
+                            type="button"
+                            onClick={() => {
+                              setSimBrand(b);
+                              handleResolveLiveRoute(b, simState, simCity);
+                            }}
+                            className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-500/20 transition-colors cursor-pointer shrink-0"
+                          >
+                            {b}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ) : liveResolvedResult ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-500">Destination Company:</span>
-                      <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                        {liveResolvedResult.companyCode ||
-                          (typeof liveResolvedResult.company === 'object'
-                            ? liveResolvedResult.company?.name || liveResolvedResult.company?.code
-                            : typeof liveResolvedResult.companyId === 'object'
-                            ? liveResolvedResult.companyId?.name || liveResolvedResult.companyId?.code
-                            : liveResolvedResult.companyName || liveResolvedResult.companyId || 'Partner Entity')}
-                        {liveResolvedResult.companyCode && typeof liveResolvedResult.company === 'object' && liveResolvedResult.company?.name && (
-                          <span className="text-[10px] font-mono text-slate-400 font-normal ml-1">
-                            ({liveResolvedResult.company.name})
+                  <input
+                    type="text"
+                    value={simBrand}
+                    onChange={(e) => {
+                      setSimBrand(e.target.value);
+                      handleResolveLiveRoute(e.target.value, simState, simCity);
+                    }}
+                    placeholder="e.g. Realme"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Destination State
+                    </label>
+                    <select
+                      value={simState}
+                      onChange={(e) => {
+                        setSimState(e.target.value);
+                        handleResolveLiveRoute(simBrand, e.target.value, simCity);
+                      }}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                    >
+                      <option value="*">* Wildcard / Any Other State</option>
+                      {INDIAN_STATES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Destination City (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={simCity}
+                      onChange={(e) => {
+                        setSimCity(e.target.value);
+                        handleResolveLiveRoute(simBrand, simState, e.target.value);
+                      }}
+                      placeholder="e.g. Mumbai or Nagpur"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-1 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => handleResolveLiveRoute(simBrand, simState, simCity)}
+                    disabled={resolvingApi || !simBrand.trim()}
+                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <FiRefreshCw className={`text-xs ${resolvingApi ? 'animate-spin' : ''}`} />
+                    <span>{resolvingApi ? 'Resolving...' : 'Evaluate Route'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Resolution Result Presentation */}
+              {resolvingApi ? (
+                <div className="p-8 text-center rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2">
+                  <FiRefreshCw className="animate-spin text-xl text-blue-500 mx-auto" />
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    Querying routing engine for <span className="text-blue-600 dark:text-blue-400 font-bold">{simBrand || 'brand'}</span>...
+                  </p>
+                </div>
+              ) : liveResolvedResult ? (
+                (() => {
+                  const resolvedComp =
+                    liveResolvedResult?.resolvedCompany ||
+                    (typeof liveResolvedResult?.company === 'object' ? liveResolvedResult.company : null) ||
+                    (typeof liveResolvedResult?.companyId === 'object' ? liveResolvedResult.companyId : null);
+
+                  const compName =
+                    resolvedComp?.name ||
+                    liveResolvedResult?.companyName ||
+                    liveResolvedResult?.companyCode ||
+                    'Partner Entity';
+
+                  const compCode =
+                    resolvedComp?.code ||
+                    liveResolvedResult?.companyCode ||
+                    '';
+
+                  const compLogo = resolvedComp?.logo || '';
+                  const compDescription = resolvedComp?.description || '';
+                  const isCompActive =
+                    resolvedComp?.isActive !== undefined ? Boolean(resolvedComp.isActive) : true;
+
+                  const ruleApplied = liveResolvedResult?.ruleApplied;
+                  const evaluatedPriority =
+                    ruleApplied?.priority !== undefined
+                      ? ruleApplied.priority
+                      : (liveResolvedResult?.priority !== undefined ? liveResolvedResult.priority : 10);
+
+                  const ruleDescription =
+                    ruleApplied?.description ||
+                    liveResolvedResult?.description ||
+                    '';
+
+                  const ruleSource = liveResolvedResult?.source || '';
+                  const ruleStates = Array.isArray(ruleApplied?.states) ? ruleApplied.states : [];
+                  const ruleCities = Array.isArray(ruleApplied?.cities) ? ruleApplied.cities : [];
+                  const ruleExcludedCities = Array.isArray(ruleApplied?.excludedCities) ? ruleApplied.excludedCities : [];
+
+                  return (
+                    <div className="space-y-3 animate-in fade-in duration-200">
+                      {/* Success Bar & Source */}
+                      <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <FiCheckCircle className="text-emerald-600 dark:text-emerald-400 shrink-0 text-base" />
+                          <span className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300">
+                            Route Resolved Successfully
                           </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-700 dark:text-emerald-400">
+                          <span>{liveResolvedResult.brand || simBrand}</span>
+                          <span>•</span>
+                          <span>{liveResolvedResult.state || simState}</span>
+                          {(liveResolvedResult.city || simCity) && (
+                            <>
+                              <span>•</span>
+                              <span>{liveResolvedResult.city || simCity}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {ruleSource && (
+                        <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs flex items-center gap-2">
+                          <FiZap className="shrink-0 text-blue-500 text-sm" />
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold">Match Source:</span>
+                            <span className="font-medium text-slate-800 dark:text-slate-200">{ruleSource}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Resolved Destination Company Card */}
+                      <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 shadow-xs space-y-2.5">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                          <FiBriefcase className="text-blue-500" />
+                          Resolved Billing Partner Entity
+                        </span>
+
+                        <div className="flex items-start gap-3">
+                          {compLogo ? (
+                            <img
+                              src={compLogo}
+                              alt={compName}
+                              className="w-12 h-12 object-contain rounded-xl p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg font-black shrink-0">
+                              <FiBriefcase />
+                            </div>
+                          )}
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">
+                                {compName}
+                              </h4>
+                              {compCode && (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-black bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                  {compCode}
+                                </span>
+                              )}
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  isCompActive
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                }`}
+                              >
+                                {isCompActive ? '✓ Active Entity' : 'Inactive'}
+                              </span>
+                            </div>
+
+                            {compDescription && (
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                                {compDescription}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Rule Applied Card */}
+                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                            <FiShield className="text-purple-500" />
+                            Rule Applied & Evaluation
+                          </span>
+                          <span className="inline-flex items-center gap-1 font-mono text-xs font-black px-2.5 py-0.5 rounded-lg bg-blue-600 text-white shadow-xs">
+                            Priority P{evaluatedPriority}
+                          </span>
+                        </div>
+
+                        {ruleDescription && (
+                          <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                            {ruleDescription}
+                          </div>
                         )}
-                      </span>
-                    </div>
 
-                    <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span>Evaluated Priority:</span>
-                      <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                        P{liveResolvedResult.priority !== undefined ? liveResolvedResult.priority : 10}
-                      </span>
-                    </div>
+                        <div className="space-y-1.5 pt-1 text-[11px]">
+                          {ruleStates.length > 0 && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-slate-400 font-medium shrink-0">States:</span>
+                              {ruleStates.map((st) => (
+                                <span
+                                  key={st}
+                                  className="px-2 py-0.5 rounded-md font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300"
+                                >
+                                  {st === '*' ? '★ Pan-India (*)' : st}
+                                </span>
+                              ))}
+                            </div>
+                          )}
 
-                    <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span>Status:</span>
-                      <span className="text-emerald-600 font-bold">✓ Active Route</span>
+                          {ruleCities.length > 0 && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-slate-400 font-medium shrink-0">Cities:</span>
+                              {ruleCities.map((ct) => (
+                                <span
+                                  key={ct}
+                                  className="px-2 py-0.5 rounded-md font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                                >
+                                  {ct}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {ruleExcludedCities.length > 0 && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-slate-400 font-medium shrink-0">Excluded:</span>
+                              {ruleExcludedCities.map((ect) => (
+                                <span
+                                  key={ect}
+                                  className="px-2 py-0.5 rounded-md font-bold bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20"
+                                >
+                                  {ect}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Raw JSON Debug Inspector */}
+                      <div className="border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setShowTestRawJson((prev) => !prev)}
+                          className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-bold flex items-center justify-between cursor-pointer transition-colors"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <FiFileText />
+                            <span>Inspect Raw API Response</span>
+                          </span>
+                          <span className="text-slate-400">{showTestRawJson ? 'Hide' : 'Show'}</span>
+                        </button>
+                        {showTestRawJson && (
+                          <div className="p-3 bg-slate-900 text-emerald-400 font-mono text-[11px] overflow-x-auto max-h-48">
+                            <pre>{JSON.stringify(liveResolvedResult, null, 2)}</pre>
+                          </div>
+                        )}
+                      </div>
                     </div>
+                  );
+                })()
+              ) : liveResolveError ? (
+                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-start gap-2.5">
+                  <FiAlertCircle className="shrink-0 mt-0.5 text-base" />
+                  <div>
+                    <div className="font-bold">No Matching Route Found</div>
+                    <div className="text-[11px] opacity-90 mt-0.5">{liveResolveError}</div>
                   </div>
-                ) : liveResolveError ? (
-                  <div className="py-2 text-xs text-rose-500 flex items-center gap-1.5 font-semibold">
-                    <FiAlertCircle className="shrink-0" />
-                    <span>{liveResolveError}</span>
-                  </div>
-                ) : (
-                  <span className="text-xs text-slate-400 italic">Enter brand to resolve.</span>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="p-6 text-center rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 text-slate-400 text-xs">
+                  Enter a brand name above to evaluate the real-time routing resolution.
+                </div>
+              )}
             </div>
 
-            <div className="px-6 py-3 border-t border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-800/40 text-right">
+            {/* Footer */}
+            <div className="px-6 py-3.5 border-t border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-800/40 text-right">
               <button
                 type="button"
                 onClick={() => setIsTestModalOpen(false)}
-                className="px-4 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer"
               >
                 Close
               </button>
@@ -1520,12 +1910,33 @@ const BrandRoutings = () => {
                 </div>
               )}
 
+              {loadingBrandDetails && (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-semibold flex items-center gap-2 animate-pulse">
+                  <FiRefreshCw className="shrink-0 text-sm animate-spin" />
+                  <span>Syncing routing rules for {modalBrand || 'brand'} from server...</span>
+                </div>
+              )}
+
               {/* Brand and Policy */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Brand Name *
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Brand Name *
+                    </label>
+                    {modalBrand.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => fetchBrandRules(modalBrand.trim())}
+                        disabled={loadingBrandDetails}
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold hover:bg-purple-500/20 transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                        title="Fetch existing rules from GET /brand-routings/matrix/{brand}"
+                      >
+                        <FiRefreshCw className={loadingBrandDetails ? 'animate-spin' : ''} />
+                        <span>Load Existing Rules</span>
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={modalBrand}
@@ -1534,15 +1945,31 @@ const BrandRoutings = () => {
                     className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                     required
                   />
-                  <div className="flex items-center gap-1.5 mt-1.5">
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     <span className="text-[10px] text-slate-400">Quick set:</span>
                     <button
                       type="button"
-                      onClick={() => setModalBrand('ALL')}
+                      onClick={() => {
+                        setModalBrand('ALL');
+                        fetchBrandRules('ALL');
+                      }}
                       className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-500/20 transition-colors cursor-pointer"
                     >
                       ALL (Global Fallback)
                     </button>
+                    {allBrands.filter((b) => b !== 'ALL').slice(0, 4).map((b) => (
+                      <button
+                        key={b}
+                        type="button"
+                        onClick={() => {
+                          setModalBrand(b);
+                          fetchBrandRules(b);
+                        }}
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-white/20 transition-colors cursor-pointer"
+                      >
+                        {b}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -1607,14 +2034,19 @@ const BrandRoutings = () => {
                             <span className="text-xs font-semibold">Active</span>
                           </label>
 
-                          {mappings.length > 1 && (
+                          {(mappings.length > 1 || mapping._id) && (
                             <button
                               type="button"
                               onClick={() => handleRemoveMapping(mIdx)}
-                              className="p-1 rounded text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                              title="Delete rule"
+                              disabled={deletingRuleId === mapping._id}
+                              className="p-1 rounded text-slate-400 hover:text-rose-500 transition-colors cursor-pointer disabled:opacity-50"
+                              title={mapping._id ? 'Permanently delete this rule from database' : 'Remove rule'}
                             >
-                              <FiTrash2 size={13} />
+                              {deletingRuleId === mapping._id ? (
+                                <FiRefreshCw className="animate-spin text-xs" />
+                              ) : (
+                                <FiTrash2 size={13} />
+                              )}
                             </button>
                           )}
                         </div>
@@ -1643,6 +2075,32 @@ const BrandRoutings = () => {
                             ]}
                             statusColor="!px-3 !py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200"
                           />
+                          {(() => {
+                            const comp = companies.find(
+                              (c) => (mapping.companyCode && c.code === mapping.companyCode) || (mapping.companyId && c._id === mapping.companyId)
+                            );
+                            if (!comp) return null;
+                            return (
+                              <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                                {comp.logo && (
+                                  <img
+                                    src={comp.logo}
+                                    alt={comp.name}
+                                    className="w-4 h-4 rounded object-contain bg-white border border-slate-200 dark:border-white/10 p-0.5 shrink-0"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                )}
+                                <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                  {comp.name}
+                                </span>
+                                {comp.code && (
+                                  <span className="font-mono text-blue-600 dark:text-blue-400 font-bold">
+                                    ({comp.code})
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         <div className="sm:col-span-4">

@@ -424,10 +424,10 @@ export const getProductsApi = async (params = {}) => {
 
 export const createProductApi = async (productData) => {
   try {
-    return await api.post('/v1/products', productData);
+    return await api.post('/v1/products/brands', productData);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.post('/products', productData);
+      return await api.post('/products/brands', productData);
     }
     throw err;
   }
@@ -435,10 +435,10 @@ export const createProductApi = async (productData) => {
 
 export const bulkCreateProductsApi = async (productsArray) => {
   try {
-    return await api.post('/products/bulk', { products: productsArray });
+    return await api.post('/products/brands', { products: productsArray });
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.post('/v1/products/bulk', { products: productsArray });
+      return await api.post('/v1/products/brands', { products: productsArray });
     }
     throw err;
   }
@@ -685,6 +685,18 @@ export const resolveBrandRoutingApi = async (brand, state, city) => {
   } catch (err) {
     if (err.response?.status === 404) {
       return await api.get(`/brand-routings/resolve?${qStr}`);
+    }
+    throw err;
+  }
+};
+
+export const deleteBrandRoutingApi = async (id) => {
+  const enc = encodeURIComponent(id);
+  try {
+    return await api.delete(`/v1/brand-routings/${enc}`);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.delete(`/brand-routings/${enc}`);
     }
     throw err;
   }
