@@ -27,13 +27,15 @@ import {
   FiMail,
   FiSend,
   FiChevronLeft,
-  FiChevronRight
+  FiChevronRight,
+  FiList
 } from 'react-icons/fi';
 import PageHeader from '@/components/ui/PageHeader';
 import Skeleton from '@/components/ui/Skeleton';
 import CopyButton from '@/components/ui/CopyButton';
 import OrderStatusBreakdownChart from '@/components/reports/OrderStatusBreakdownChart';
 import DailyTrendChart from '@/components/reports/DailyTrendChart';
+import ProductPerformanceChart from '@/components/reports/ProductPerformanceChart';
 import { useTheme } from '@/Context/ThemeContext';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { getReportsApi } from '@/api/axios';
@@ -160,6 +162,7 @@ const Reports = () => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [productViewMode, setProductViewMode] = useState('chart'); // 'chart' | 'table'
 
   // Fetch report data (supports server-side range param if provided by backend)
   const fetchReportData = useCallback(async (isSilent = false, rangeParam = selectedRange) => {
@@ -900,15 +903,47 @@ const Reports = () => {
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleExportProductsCSV}
-            disabled={productPerformance.length === 0}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl transition-all cursor-pointer self-start sm:self-auto disabled:opacity-50"
-          >
-            <FiDownload className="text-sm" />
-            <span>Export Product CSV</span>
-          </button>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Interactive Dual-Mode: "Table ⇄ Chart" View Toggle */}
+            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setProductViewMode('chart')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  productViewMode === 'chart'
+                    ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                }`}
+                title="View interactive graphical charts"
+              >
+                <FiBarChart2 className="text-xs" />
+                <span>Chart</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setProductViewMode('table')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  productViewMode === 'table'
+                    ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                }`}
+                title="View detailed paginated data table"
+              >
+                <FiList className="text-xs" />
+                <span>Table</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleExportProductsCSV}
+              disabled={productPerformance.length === 0}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl transition-all cursor-pointer self-start sm:self-auto disabled:opacity-50"
+            >
+              <FiDownload className="text-sm" />
+              <span>Export CSV</span>
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -921,6 +956,14 @@ const Reports = () => {
           <div className="py-16 text-center text-slate-400 text-sm">
             No product performance records found.
           </div>
+        ) : productViewMode === 'chart' ? (
+          <ProductPerformanceChart
+            productPerformance={productPerformance}
+            totalRevenue={summary.totalRevenue}
+            totalUnitsSold={totalUnitsSold}
+            isDark={isDark}
+            loading={loading}
+          />
         ) : (
           <>
             <div className="overflow-x-auto custom-scrollbar">

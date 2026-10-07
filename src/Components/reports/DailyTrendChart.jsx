@@ -7,7 +7,7 @@ import { scaleTime, scaleLinear } from '@visx/scale';
 import { AxisBottom, AxisLeft } from '@visx/axis';
 import { GridRows } from '@visx/grid';
 import { ParentSize } from '@visx/responsive';
-import { useTooltip, TooltipWithBounds, defaultStyles } from '@visx/tooltip';
+import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
 import {
   FiTrendingUp,
@@ -92,6 +92,12 @@ function InnerTrendLineChart({
     showTooltip,
     hideTooltip,
   } = useTooltip();
+
+  const { containerRef, TooltipInPortal } = useTooltipInPortal({
+    detectBounds: true,
+    scroll: true,
+    zIndex: 9999,
+  });
 
   const isMobile = width < 480;
   const margin = isMobile
@@ -189,7 +195,7 @@ function InnerTrendLineChart({
   const axisTextFill = isDark ? '#94a3b8' : '#64748b';
 
   return (
-    <div className="relative w-full h-full select-none">
+    <div ref={containerRef} className="relative w-full h-full select-none">
       <svg width={width} height={height} className="overflow-visible">
         <defs>
           {/* Emerald Gradient for Revenue */}
@@ -346,9 +352,9 @@ function InnerTrendLineChart({
         </Group>
       </svg>
 
-      {/* Floating Tooltip */}
+      {/* Floating Tooltip in Portal */}
       {tooltipOpen && tooltipData && (
-        <TooltipWithBounds
+        <TooltipInPortal
           top={tooltipTop}
           left={tooltipLeft}
           style={{
@@ -365,7 +371,7 @@ function InnerTrendLineChart({
             padding: '12px 14px',
             fontSize: '12px',
             pointerEvents: 'none',
-            zIndex: 999,
+            zIndex: 9999,
             minWidth: '200px',
           }}
         >
@@ -418,7 +424,7 @@ function InnerTrendLineChart({
               </div>
             );
           })()}
-        </TooltipWithBounds>
+        </TooltipInPortal>
       )}
     </div>
   );

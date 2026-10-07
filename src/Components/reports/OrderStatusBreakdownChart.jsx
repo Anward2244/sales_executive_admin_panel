@@ -6,7 +6,7 @@ import { AxisBottom, AxisLeft } from '@visx/axis';
 import { GridRows } from '@visx/grid';
 import { LinearGradient } from '@visx/gradient';
 import { ParentSize } from '@visx/responsive';
-import { useTooltip, TooltipWithBounds, defaultStyles } from '@visx/tooltip';
+import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
 import {
   FiLayers,
@@ -126,6 +126,12 @@ function InnerBarChart({
     hideTooltip,
   } = useTooltip();
 
+  const { containerRef, TooltipInPortal } = useTooltipInPortal({
+    detectBounds: true,
+    scroll: true,
+    zIndex: 9999,
+  });
+
   const [hoveredKey, setHoveredKey] = useState(null);
 
   const isMobile = width < 480;
@@ -170,7 +176,7 @@ function InnerBarChart({
   const axisTextFill = isDark ? '#94a3b8' : '#64748b';
 
   return (
-    <div className="relative w-full h-full select-none">
+    <div ref={containerRef} className="relative w-full h-full select-none">
       <svg width={width} height={height} className="overflow-visible">
         {/* Gradients */}
         <defs>
@@ -355,9 +361,9 @@ function InnerBarChart({
         </Group>
       </svg>
 
-      {/* Interactive Tooltip */}
+      {/* Interactive Tooltip in Portal */}
       {tooltipOpen && tooltipData && (
-        <TooltipWithBounds
+        <TooltipInPortal
           top={tooltipTop}
           left={tooltipLeft}
           style={{
@@ -374,7 +380,7 @@ function InnerBarChart({
             padding: '12px 14px',
             fontSize: '12px',
             pointerEvents: 'none',
-            zIndex: 999,
+            zIndex: 9999,
             minWidth: '190px',
           }}
         >
@@ -436,7 +442,7 @@ function InnerBarChart({
               </div>
             );
           })()}
-        </TooltipWithBounds>
+        </TooltipInPortal>
       )}
     </div>
   );
