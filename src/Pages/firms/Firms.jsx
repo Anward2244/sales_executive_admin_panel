@@ -3210,17 +3210,18 @@ const Firms = () => {
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
                 Target Company
               </label>
-              <select
+              <CustomDropdown
                 value={bulkTargetCompanyId}
-                onChange={(e) => setBulkTargetCompanyId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-              >
-                {allCompanyOptions.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} {c.code ? `(${c.code})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setBulkTargetCompanyId(val)}
+                defaultLabel="Select Target Company"
+                placeholder="Select Target Company"
+                searchable={true}
+                options={allCompanyOptions.map((c) => ({
+                  value: c.id,
+                  label: `${c.name}${c.code ? ` (${c.code})` : ''}`
+                }))}
+                statusColor="!px-3.5 !py-2.5 !bg-slate-50 dark:!bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+              />
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-3">

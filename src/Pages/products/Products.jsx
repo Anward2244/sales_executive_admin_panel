@@ -264,6 +264,30 @@ const Products = () => {
     });
   }, [brandMatrix, uniqueBrands]);
 
+  // Options for brand dropdown in product form
+  const brandOptions = useMemo(() => {
+    const list = allKnownBrands
+      .filter((b) => b.brand && b.brand !== 'ALL')
+      .map((b) => ({
+        value: b.brand,
+        label: b.hasMatrix && b.rulesCount > 0 ? `${b.brand} (${b.rulesCount} routing rules)` : b.brand
+      }));
+    if (formData.brand && !list.some((o) => o.value.trim().toLowerCase() === formData.brand.trim().toLowerCase())) {
+      list.unshift({ value: formData.brand, label: formData.brand });
+    }
+    return list;
+  }, [allKnownBrands, formData.brand]);
+
+  // Options for brand dropdown in bulk edit modal
+  const bulkBrandOptions = useMemo(() => {
+    return allKnownBrands
+      .filter((b) => b.brand && b.brand !== 'ALL')
+      .map((b) => ({
+        value: b.brand,
+        label: b.hasMatrix && b.rulesCount > 0 ? `${b.brand} (${b.rulesCount} routing rules)` : b.brand
+      }));
+  }, [allKnownBrands]);
+
   // Check if current form brand has active rules in the routing matrix
   const activeBrandGroup = useMemo(() => {
     const curBrand = (formData.brand || '').trim().toLowerCase();
@@ -511,7 +535,11 @@ const Products = () => {
 
   // Brand selection handler (triggered when picking a brand or changing brand input)
   const handleBrandSelect = async (newBrand) => {
-    if (!newBrand) return;
+    if (!newBrand) {
+      setFormData((prev) => ({ ...prev, brand: '' }));
+      setAutoMappedBanner(null);
+      return;
+    }
     const targetBrand = newBrand.trim();
 
     // Update form data brand & auto-generate SKU if needed
@@ -2918,8 +2946,8 @@ const Products = () => {
                         />
                       </div>
 
-                      {/* SKU, Brand, Category, Price & Unit Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                      {/* SKU, Brand, Category & Unit Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         <div>
                           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                             SKU Code *
@@ -2947,44 +2975,17 @@ const Products = () => {
                             )}
                           </div>
                           <div className="relative">
-                            <input
-                              type="text"
-                              list="brand-datalist-options"
-                              value={formData.brand}
-                              onChange={(e) => handleBrandSelect(e.target.value)}
-                              placeholder="e.g. Amazon, Realme, Apple"
-                              className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
-                              required
+                            <CustomDropdown
+                              value={formData.brand || ''}
+                              onChange={(val) => handleBrandSelect(val)}
+                              placeholder="Select or enter Brand"
+                              defaultLabel="Select Brand"
+                              searchable={true}
+                              allowCustom={true}
+                              options={brandOptions}
+                              statusColor="!px-3 !py-2 !bg-slate-50 dark:!bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
                             />
-                            <datalist id="brand-datalist-options">
-                              {allKnownBrands.map((b) => (
-                                <option key={b.brand} value={b.brand}>
-                                  {b.hasMatrix ? `${b.brand} (${b.rulesCount} routing rules)` : b.brand}
-                                </option>
-                              ))}
-                            </datalist>
                           </div>
-
-                          {/* Quick Select Brand Chips from Matrix */}
-                          {matrixBrands.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-1 mt-1.5 max-h-16 overflow-y-auto">
-                              <span className="text-[10px] text-slate-400 font-semibold mr-0.5">Quick:</span>
-                              {matrixBrands.slice(0, 6).map((mb) => (
-                                <button
-                                  key={mb.brand}
-                                  type="button"
-                                  onClick={() => handleBrandSelect(mb.brand)}
-                                  className={`px-2 py-0.5 text-[10px] font-semibold rounded-md border transition-all cursor-pointer ${
-                                    (formData.brand || '').trim().toLowerCase() === mb.brand.toLowerCase()
-                                      ? 'bg-blue-600 text-white border-blue-600 shadow-2xs font-bold'
-                                      : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
-                                  }`}
-                                >
-                                  {mb.brand}
-                                </button>
-                              ))}
-                            </div>
-                          )}
                         </div>
 
                         <div>
@@ -2994,18 +2995,21 @@ const Products = () => {
                             </label>
                             <span className="text-[10px] font-mono text-slate-400">categoryId</span>
                           </div>
-                          <select
+                          <CustomDropdown
                             value={formData.categoryId || ''}
-                            onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                            className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 cursor-pointer"
-                          >
-                            <option value="">Select Category (None)</option>
-                            {categories.map((c) => (
-                              <option key={c._id} value={c._id}>
-                                {c.name} {c.code ? `(${c.code})` : ''}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={(val) => setFormData({ ...formData, categoryId: val })}
+                            placeholder="Select Category (None)"
+                            defaultLabel="Select Category (None)"
+                            searchable={true}
+                            options={[
+                              { value: '', label: 'Select Category (None)' },
+                              ...categories.map((c) => ({
+                                value: c._id,
+                                label: `${c.name}${c.code ? ` (${c.code})` : ''}`
+                              }))
+                            ]}
+                            statusColor="!px-3 !py-2 !bg-slate-50 dark:!bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
+                          />
                         </div>
 
                         {/* Price (INR) Field */}
@@ -3641,17 +3645,18 @@ const Products = () => {
                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
                   Target Partner Company
                 </label>
-                <select
+                <CustomDropdown
                   value={bulkTargetCompanyId}
-                  onChange={(e) => setBulkTargetCompanyId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500/30"
-                >
-                  {companies.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.name} {c.code ? `(${c.code})` : ''}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setBulkTargetCompanyId(val)}
+                  defaultLabel="Select Target Partner Company"
+                  placeholder="Select Target Partner Company"
+                  searchable={true}
+                  options={companies.map((c) => ({
+                    value: c._id,
+                    label: `${c.name}${c.code ? ` (${c.code})` : ''}`
+                  }))}
+                  statusColor="!px-3.5 !py-2.5 !bg-slate-50 dark:!bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+                />
               </div>
 
               <div className="mt-6 flex items-center justify-end gap-3">
@@ -3999,19 +4004,20 @@ const Products = () => {
                     </span>
                   </label>
                   {bulkEditFields.updateCategory && (
-                    <select
+                    <CustomDropdown
                       value={bulkEditFields.categoryId}
-                      onChange={(e) =>
-                        setBulkEditFields((prev) => ({ ...prev, categoryId: e.target.value }))
+                      onChange={(val) =>
+                        setBulkEditFields((prev) => ({ ...prev, categoryId: val }))
                       }
-                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-hidden"
-                    >
-                      {categories.map((c) => (
-                        <option key={c._id} value={c._id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Select Category"
+                      defaultLabel="Select Category"
+                      searchable={true}
+                      options={categories.map((c) => ({
+                        value: c._id,
+                        label: `${c.name}${c.code ? ` (${c.code})` : ''}`
+                      }))}
+                      statusColor="!px-3.5 !py-2 !bg-white dark:!bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
+                    />
                   )}
                 </div>
 
@@ -4031,14 +4037,17 @@ const Products = () => {
                     </span>
                   </label>
                   {bulkEditFields.updateBrand && (
-                    <input
-                      type="text"
+                    <CustomDropdown
                       value={bulkEditFields.brand}
-                      onChange={(e) =>
-                        setBulkEditFields((prev) => ({ ...prev, brand: e.target.value }))
+                      onChange={(val) =>
+                        setBulkEditFields((prev) => ({ ...prev, brand: val }))
                       }
-                      placeholder="e.g. Amazon, Realme, Noise..."
-                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+                      placeholder="Select or enter Brand"
+                      defaultLabel="Select Brand"
+                      searchable={true}
+                      allowCustom={true}
+                      options={bulkBrandOptions}
+                      statusColor="!px-3.5 !py-2 !bg-white dark:!bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
                     />
                   )}
                 </div>
@@ -4101,19 +4110,19 @@ const Products = () => {
                     </span>
                   </label>
                   {bulkEditFields.updateUnit && (
-                    <select
+                    <CustomDropdown
                       value={bulkEditFields.unit}
-                      onChange={(e) =>
-                        setBulkEditFields((prev) => ({ ...prev, unit: e.target.value }))
+                      onChange={(val) =>
+                        setBulkEditFields((prev) => ({ ...prev, unit: val }))
                       }
-                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-hidden"
-                    >
-                      {['PCS', 'BOX', 'SET', 'MTR', 'KG', 'L', 'PACK', 'DOZEN'].map((u) => (
-                        <option key={u} value={u}>
-                          {u}
-                        </option>
-                      ))}
-                    </select>
+                      defaultLabel="Select Unit"
+                      placeholder="Select Unit"
+                      options={['PCS', 'BOX', 'SET', 'MTR', 'KG', 'L', 'PACK', 'DOZEN'].map((u) => ({
+                        value: u,
+                        label: u
+                      }))}
+                      statusColor="!px-3.5 !py-2 !bg-white dark:!bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
+                    />
                   )}
                 </div>
 

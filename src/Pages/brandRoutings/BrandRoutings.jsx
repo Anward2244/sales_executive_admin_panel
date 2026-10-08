@@ -22,7 +22,6 @@ import {
   FiChevronDown,
   FiChevronUp,
   FiUploadCloud,
-  FiFileText,
   FiActivity,
   FiFilter,
   FiGlobe,
@@ -118,13 +117,10 @@ const BrandRoutings = () => {
   const [resolvingApi, setResolvingApi] = useState(false);
   const [liveResolvedResult, setLiveResolvedResult] = useState(null);
   const [liveResolveError, setLiveResolveError] = useState(null);
-  const [showTestRawJson, setShowTestRawJson] = useState(false);
   const [deletingRuleId, setDeletingRuleId] = useState(null);
 
   // Bulk Matrix Modal
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-  const [bulkMode, setBulkMode] = useState('interactive'); // 'interactive' | 'json'
-  const [bulkPayloadJson, setBulkPayloadJson] = useState('');
   const [bulkBrands, setBulkBrands] = useState([
     {
       brand: '',
@@ -368,7 +364,6 @@ const BrandRoutings = () => {
     setSimBrand(targetBrand);
     setSimState('*');
     setSimCity('');
-    setShowTestRawJson(false);
     setIsTestModalOpen(true);
     if (targetBrand) {
       handleResolveLiveRoute(targetBrand, '*', '');
@@ -542,7 +537,6 @@ const BrandRoutings = () => {
   // Open Bulk Matrix Modal
   const handleOpenBulkModal = () => {
     setBulkModalError(null);
-    setBulkMode('interactive');
     setBulkBrands([
       {
         brand: '',
@@ -564,39 +558,6 @@ const BrandRoutings = () => {
       }
     ]);
 
-    setBulkPayloadJson(
-      JSON.stringify(
-        {
-          brand: 'Realme',
-          replaceExisting: true,
-          mappings: [
-            {
-              states: ['Andhra Pradesh', 'Telangana', 'Delhi'],
-              companyCode: companies[0]?.code || 'AURIC-HYD'
-            },
-            {
-              states: ['Maharashtra'],
-              cities: ['Mumbai', 'Nagpur'],
-              companyCode: companies[1]?.code || 'INIZIO',
-              priority: 15
-            },
-            {
-              states: ['Maharashtra'],
-              excludedCities: ['Mumbai', 'Nagpur'],
-              companyCode: companies[0]?.code || 'AURIC-HYD',
-              priority: 10
-            },
-            {
-              states: ['*'],
-              companyCode: companies[1]?.code || 'INIZIO',
-              priority: 1
-            }
-          ]
-        },
-        null,
-        2
-      )
-    );
     setIsBulkModalOpen(true);
   };
 
@@ -835,53 +796,43 @@ const BrandRoutings = () => {
   const handleSaveBulkMatrix = async (e) => {
     e.preventDefault();
     setBulkModalError(null);
-    let payload;
 
-    if (bulkMode === 'json') {
-      try {
-        payload = JSON.parse(bulkPayloadJson);
-      } catch (err) {
-        setBulkModalError(`Invalid JSON: ${err.message}`);
-        return;
-      }
-    } else {
-      const validBrands = bulkBrands.filter((b) => b.brand.trim());
-      if (validBrands.length === 0) {
-        setBulkModalError('Please specify at least one brand in the batch.');
-        return;
-      }
-
-      payload = {
-        replaceExisting: true,
-        brands: validBrands.map((b) => ({
-          brand: b.brand.trim(),
-          mappings: b.mappings.map((m) => {
-            const comp = companies.find((c) => c._id === m.companyId || c.code === m.companyCode);
-            const companyCode = comp?.code || m.companyCode || m.companyId;
-
-            const cities = m.citiesStr !== undefined
-              ? m.citiesStr.split(',').map((s) => s.trim()).filter(Boolean)
-              : (Array.isArray(m.cities) ? m.cities.filter(Boolean) : []);
-
-            const excludedCities = m.excludedCitiesStr !== undefined
-              ? m.excludedCitiesStr.split(',').map((s) => s.trim()).filter(Boolean)
-              : (Array.isArray(m.excludedCities) ? m.excludedCities.filter(Boolean) : []);
-
-            const item = {
-              states: m.states,
-              companyCode: companyCode
-            };
-
-            if (cities.length > 0) item.cities = cities;
-            if (excludedCities.length > 0) item.excludedCities = excludedCities;
-            if (m.priority !== '' && m.priority !== undefined && !isNaN(Number(m.priority))) {
-              item.priority = Number(m.priority);
-            }
-            return item;
-          })
-        }))
-      };
+    const validBrands = bulkBrands.filter((b) => b.brand.trim());
+    if (validBrands.length === 0) {
+      setBulkModalError('Please specify at least one brand in the batch.');
+      return;
     }
+
+    const payload = {
+      replaceExisting: true,
+      brands: validBrands.map((b) => ({
+        brand: b.brand.trim(),
+        mappings: b.mappings.map((m) => {
+          const comp = companies.find((c) => c._id === m.companyId || c.code === m.companyCode);
+          const companyCode = comp?.code || m.companyCode || m.companyId;
+
+          const cities = m.citiesStr !== undefined
+            ? m.citiesStr.split(',').map((s) => s.trim()).filter(Boolean)
+            : (Array.isArray(m.cities) ? m.cities.filter(Boolean) : []);
+
+          const excludedCities = m.excludedCitiesStr !== undefined
+            ? m.excludedCitiesStr.split(',').map((s) => s.trim()).filter(Boolean)
+            : (Array.isArray(m.excludedCities) ? m.excludedCities.filter(Boolean) : []);
+
+          const item = {
+            states: m.states,
+            companyCode: companyCode
+          };
+
+          if (cities.length > 0) item.cities = cities;
+          if (excludedCities.length > 0) item.excludedCities = excludedCities;
+          if (m.priority !== '' && m.priority !== undefined && !isNaN(Number(m.priority))) {
+            item.priority = Number(m.priority);
+          }
+          return item;
+        })
+      }))
+    };
 
     setBulkSubmitting(true);
     try {
@@ -1577,21 +1528,19 @@ const BrandRoutings = () => {
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Destination State
                     </label>
-                    <select
+                    <CustomDropdown
                       value={simState}
-                      onChange={(e) => {
-                        setSimState(e.target.value);
-                        handleResolveLiveRoute(simBrand, e.target.value, simCity);
+                      onChange={(val) => {
+                        setSimState(val);
+                        handleResolveLiveRoute(simBrand, val, simCity);
                       }}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                    >
-                      <option value="*">* Wildcard / Any Other State</option>
-                      {INDIAN_STATES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '*', label: '* Wildcard / Any Other State' },
+                        ...INDIAN_STATES.map((s) => ({ value: s, label: s }))
+                      ]}
+                      searchable={true}
+                      statusColor="!px-3 !py-2 !bg-slate-50 dark:!bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
+                    />
                   </div>
 
                   <div>
@@ -1818,26 +1767,6 @@ const BrandRoutings = () => {
                             </div>
                           )}
                         </div>
-                      </div>
-
-                      {/* Raw JSON Debug Inspector */}
-                      <div className="border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={() => setShowTestRawJson((prev) => !prev)}
-                          className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-bold flex items-center justify-between cursor-pointer transition-colors"
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <FiFileText />
-                            <span>Inspect Raw API Response</span>
-                          </span>
-                          <span className="text-slate-400">{showTestRawJson ? 'Hide' : 'Show'}</span>
-                        </button>
-                        {showTestRawJson && (
-                          <div className="p-3 bg-slate-900 text-emerald-400 font-mono text-[11px] overflow-x-auto max-h-48">
-                            <pre>{JSON.stringify(liveResolvedResult, null, 2)}</pre>
-                          </div>
-                        )}
                       </div>
                     </div>
                   );
@@ -2307,32 +2236,6 @@ const BrandRoutings = () => {
               </button>
             </div>
 
-            {/* Mode Selector */}
-            <div className="px-6 pt-3 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setBulkMode('interactive')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  bulkMode === 'interactive'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                Interactive
-              </button>
-              <button
-                type="button"
-                onClick={() => setBulkMode('json')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  bulkMode === 'json'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                JSON Payload
-              </button>
-            </div>
-
             {/* Body */}
             <div className="p-6 overflow-y-auto space-y-3 flex-1">
               {bulkModalError && (
@@ -2342,16 +2245,8 @@ const BrandRoutings = () => {
                 </div>
               )}
 
-              {bulkMode === 'json' ? (
-                <textarea
-                  rows={13}
-                  value={bulkPayloadJson}
-                  onChange={(e) => setBulkPayloadJson(e.target.value)}
-                  className="w-full p-4 bg-slate-900 text-emerald-400 font-mono text-xs rounded-xl border border-slate-700 focus:outline-hidden"
-                />
-              ) : (
-                <div className="space-y-3">
-                  {bulkBrands.map((bItem, bIdx) => (
+              <div className="space-y-3">
+                {bulkBrands.map((bItem, bIdx) => (
                     <div
                       key={bIdx}
                       className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2.5"
@@ -2449,8 +2344,7 @@ const BrandRoutings = () => {
                     <span>Add Brand to Batch</span>
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
 
             {/* Footer */}
             <div className="p-4 sm:px-6 border-t border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-end gap-2">

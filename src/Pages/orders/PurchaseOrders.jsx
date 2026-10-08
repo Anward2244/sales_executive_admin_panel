@@ -209,8 +209,6 @@ const PurchaseOrders = () => {
 
   // Create Order Modal (POST /purchase-orders)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createMode, setCreateMode] = useState('form'); // 'form' | 'raw_json'
-  const [rawJsonText, setRawJsonText] = useState(JSON.stringify(SAMPLE_PO_BODY, null, 2));
   const [companiesList, setCompaniesList] = useState([]);
   const [firmsList, setFirmsList] = useState([]);
   const [productsList, setProductsList] = useState([]);
@@ -239,7 +237,6 @@ const PurchaseOrders = () => {
         skuSnapshot: 'SKU-FEST-50'
       }))
     });
-    setRawJsonText(JSON.stringify(SAMPLE_PO_BODY, null, 2));
     setCreateError(null);
   };
 
@@ -469,61 +466,31 @@ const PurchaseOrders = () => {
     e.preventDefault();
     setCreateError(null);
 
-    let payload;
-
-    if (createMode === 'raw_json') {
-      try {
-        const parsed = JSON.parse(rawJsonText);
-        if (!parsed.companyId) throw new Error('companyId is required in JSON payload.');
-        if (!parsed.firmId) throw new Error('firmId is required in JSON payload.');
-        if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
-          throw new Error('items array with at least one product object is required.');
-        }
-
-        payload = {
-          companyId: String(parsed.companyId).trim(),
-          firmId: String(parsed.firmId).trim(),
-          ...(parsed.notes ? { notes: String(parsed.notes).trim() } : {}),
-          items: parsed.items.map((it, idx) => {
-            if (!it.productId) throw new Error(`Product ID missing in item #${idx + 1}`);
-            return {
-              productId: String(it.productId).trim(),
-              quantity: Number(it.quantity) || 1,
-              unitPrice: Number(it.unitPrice) || 0
-            };
-          })
-        };
-      } catch (parseErr) {
-        setCreateError(parseErr.message || 'Invalid JSON format.');
-        return;
-      }
-    } else {
-      if (!createForm.companyId) {
-        setCreateError('Please select or enter a trading company ID.');
-        return;
-      }
-      if (!createForm.firmId) {
-        setCreateError('Please select or enter a purchasing firm ID.');
-        return;
-      }
-
-      const validItems = createForm.items.filter((it) => it.productId);
-      if (validItems.length === 0) {
-        setCreateError('Please add at least one valid product line item.');
-        return;
-      }
-
-      payload = {
-        companyId: String(createForm.companyId).trim(),
-        firmId: String(createForm.firmId).trim(),
-        ...(createForm.notes?.trim() ? { notes: createForm.notes.trim() } : {}),
-        items: validItems.map((it) => ({
-          productId: String(it.productId).trim(),
-          quantity: Number(it.quantity) || 1,
-          unitPrice: Number(it.unitPrice) || 0
-        }))
-      };
+    if (!createForm.companyId) {
+      setCreateError('Please select or enter a trading company ID.');
+      return;
     }
+    if (!createForm.firmId) {
+      setCreateError('Please select or enter a purchasing firm ID.');
+      return;
+    }
+
+    const validItems = createForm.items.filter((it) => it.productId);
+    if (validItems.length === 0) {
+      setCreateError('Please add at least one valid product line item.');
+      return;
+    }
+
+    const payload = {
+      companyId: String(createForm.companyId).trim(),
+      firmId: String(createForm.firmId).trim(),
+      ...(createForm.notes?.trim() ? { notes: createForm.notes.trim() } : {}),
+      items: validItems.map((it) => ({
+        productId: String(it.productId).trim(),
+        quantity: Number(it.quantity) || 1,
+        unitPrice: Number(it.unitPrice) || 0
+      }))
+    };
 
     setCreateSubmitting(true);
 
@@ -1215,7 +1182,7 @@ const PurchaseOrders = () => {
               }}
               className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                 isBulkMode
-                  ? 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400'
+                  ? 'bg-white dark:bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400'
                   : 'bg-white/80 dark:bg-slate-900/60 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-blue-500/40 shadow-xs'
               }`}
             >
@@ -2158,7 +2125,7 @@ const PurchaseOrders = () => {
                       Create Purchase Order
                     </h3>
                     <p className="text-xs text-slate-400">
-                      POST /purchase-orders with structured line items or raw JSON.
+                      POST /purchase-orders with structured line items.
                     </p>
                   </div>
                 </div>
@@ -2183,49 +2150,6 @@ const PurchaseOrders = () => {
                 </div>
               </div>
 
-              {/* Mode Selector Tabs */}
-              <div className="flex items-center gap-2 mb-4 p-1 rounded-2xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setCreateMode('form')}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                    createMode === 'form'
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  Visual Form Builder
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCreateMode('raw_json');
-                    // Sync current form to raw JSON if needed
-                    const validItems = createForm.items.filter((it) => it.productId);
-                    const currentObj = {
-                      companyId: createForm.companyId || SAMPLE_PO_BODY.companyId,
-                      firmId: createForm.firmId || SAMPLE_PO_BODY.firmId,
-                      ...(createForm.notes ? { notes: createForm.notes } : { notes: SAMPLE_PO_BODY.notes }),
-                      items: validItems.length > 0
-                        ? validItems.map((it) => ({
-                            productId: it.productId,
-                            quantity: Number(it.quantity) || 1,
-                            unitPrice: Number(it.unitPrice) || 0
-                          }))
-                        : SAMPLE_PO_BODY.items
-                    };
-                    setRawJsonText(JSON.stringify(currentObj, null, 2));
-                  }}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                    createMode === 'raw_json'
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  Raw JSON Payload
-                </button>
-              </div>
-
               {createError && (
                 <div className="p-3.5 mb-4 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
                   <FiAlertCircle className="shrink-0" />
@@ -2234,31 +2158,8 @@ const PurchaseOrders = () => {
               )}
 
               <form onSubmit={handleCreateOrderSubmit} className="space-y-4">
-                {createMode === 'raw_json' ? (
-                  /* Raw JSON Editor */
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <label className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                        JSON Request Body (POST /purchase-orders)
-                      </label>
-                      <CopyButton text={rawJsonText} title="Copy JSON" />
-                    </div>
-                    <textarea
-                      rows={14}
-                      value={rawJsonText}
-                      onChange={(e) => setRawJsonText(e.target.value)}
-                      disabled={createSubmitting}
-                      className="w-full p-4 bg-slate-900 text-emerald-400 border border-slate-700 rounded-2xl font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40 custom-scrollbar leading-relaxed"
-                    />
-                    <p className="text-[11px] text-slate-400">
-                      Edit or paste custom payload. Fields: <code>companyId</code>, <code>firmId</code>, <code>items: [productId, quantity, unitPrice]</code>, <code>notes</code>.
-                    </p>
-                  </div>
-                ) : (
-                  /* Visual Form */
-                  <>
-                    {/* Company & Firm selection */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Company & Firm selection */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
@@ -2453,8 +2354,6 @@ const PurchaseOrders = () => {
                         ₹{estimatedCreateTotal.toLocaleString('en-IN')}
                       </span>
                     </div>
-                  </>
-                )}
 
                 {/* Buttons */}
                 <div className="flex gap-3 pt-3 border-t border-slate-200/80 dark:border-white/10">

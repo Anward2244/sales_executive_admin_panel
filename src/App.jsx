@@ -20,7 +20,6 @@ const BrandRoutings = lazy(() => import('@/pages/brandRoutings/BrandRoutings'));
 const PurchaseOrders = lazy(() => import('@/pages/orders/PurchaseOrders'));
 const Reports = lazy(() => import('@/pages/common/Reports'));
 const Users = lazy(() => import('@/pages/users/Users'));
-const UserDetails = lazy(() => import('@/pages/users/UserDetails'));
 const Profile = lazy(() => import('@/pages/common/Profile'));
 const Settings = lazy(() => import('@/pages/settings/Settings'));
 
@@ -62,14 +61,14 @@ function App() {
                     <Route path="/orders" element={<Navigate to="/purchase-orders" replace />} />
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/users" element={<Users />} />
-                    <Route path="/users/:id" element={<UserDetails />} />
+                    <Route path="/users/:id" element={<Users />} />
 
                     {/* Common & Backward-compatible aliases */}
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/panel-settings" element={<Navigate to="/settings" replace />} />
                     <Route path="/users/list" element={<Navigate to="/users" replace />} />
-                    <Route path="/users/list/:id" element={<UserDetails />} />
+                    <Route path="/users/list/:id" element={<Users />} />
                     <Route path="/products/list" element={<Navigate to="/products" replace />} />
                     <Route path="/products/categories" element={<Navigate to="/categories" replace />} />
                   </Route>

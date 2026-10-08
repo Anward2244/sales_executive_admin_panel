@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { getUsersApi, createUserApi, updateUserStatusApi, updateUserApi } from '@/api/axios';
+import { getUsersApi, getUserByIdApi, createUserApi, updateUserStatusApi, updateUserApi } from '@/api/axios';
 import {
   FiCheck, FiLoader, FiAlertCircle,
   FiSearch, FiUser, FiRefreshCcw, FiX,
   FiChevronDown, FiCopy, FiCalendar, FiClock, FiPhone,
   FiMail, FiEye, FiEyeOff, FiExternalLink, FiHash, FiBriefcase,
-  FiLayers, FiUserCheck, FiUserX, FiShield, FiDownload, FiCheckCircle, FiXCircle
+  FiLayers, FiUserCheck, FiUserX, FiShield, FiDownload, FiCheckCircle, FiXCircle,
+  FiEdit2, FiEdit3, FiPower, FiMapPin, FiChevronLeft, FiChevronRight, FiImage, FiTag
 } from 'react-icons/fi';
-import { useOutletContext, useNavigate, useSearchParams } from 'react-router-dom';
+import { useOutletContext, useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import { useConfirm } from '@/Context/ConfirmationContext';
 import CopyButton from '@/components/ui/CopyButton';
@@ -77,6 +78,7 @@ const UsersList = () => {
   const [error, setError] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const navigate = useNavigate();
+  const { id: urlUserId } = useParams();
 
   // Search and Filter Params
   const [searchParams, setSearchParams] = useSearchParams();
@@ -393,6 +395,234 @@ const UsersList = () => {
   const [formError, setFormError] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Right-side User Details & Edit Drawer State
+  const [drawerUser, setDrawerUser] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState('overview'); // 'overview' | 'edit'
+  const [drawerLoading, setDrawerLoading] = useState(false);
+  const [drawerSaving, setDrawerSaving] = useState(false);
+  const [drawerSaveError, setDrawerSaveError] = useState('');
+  const [drawerEditForm, setDrawerEditForm] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    role: 'SALES_EXECUTIVE',
+    employeeCode: '',
+    profileImage: '',
+    reportingManager: '',
+    territory: '',
+    emergencyContact: '',
+    isActive: true
+  });
+
+  // Open User Drawer handler
+  const handleOpenUserDrawer = async (user, targetTab = 'overview') => {
+    if (!user) return;
+    setDrawerUser(user);
+    setDrawerTab(targetTab);
+    setIsDrawerOpen(true);
+    setDrawerSaveError('');
+
+    setDrawerEditForm({
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      phone: user.phone || '',
+      role: user.role || 'SALES_EXECUTIVE',
+      employeeCode: user.employeeCode || '',
+      profileImage: user.profileImage || '',
+      reportingManager: user.reportingManager || '',
+      territory: user.territory || '',
+      emergencyContact: user.emergencyContact || '',
+      isActive: user.isActive !== undefined ? user.isActive : true
+    });
+
+    // Fetch full fresh details (for assignedCompanyIds, reportingManager, etc.)
+    try {
+      setDrawerLoading(true);
+      const res = await getUserByIdApi(user._id);
+      const fetched = res.data?.data || res.data;
+      if (fetched && typeof fetched === 'object' && fetched._id) {
+        setDrawerUser((prev) => (prev && prev._id === user._id ? { ...prev, ...fetched } : fetched));
+        setDrawerEditForm({
+          firstName: fetched.firstName || '',
+          lastName: fetched.lastName || '',
+          phone: fetched.phone || '',
+          role: fetched.role || 'SALES_EXECUTIVE',
+          employeeCode: fetched.employeeCode || '',
+          profileImage: fetched.profileImage || '',
+          reportingManager: fetched.reportingManager || '',
+          territory: fetched.territory || '',
+          emergencyContact: fetched.emergencyContact || '',
+          isActive: fetched.isActive !== undefined ? fetched.isActive : true
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch full user details:', err);
+    } finally {
+      setDrawerLoading(false);
+    }
+  };
+
+  // Close User Drawer handler
+  const handleCloseDrawer = () => {
+    setIsDrawerOpen(false);
+    setDrawerUser(null);
+    setDrawerSaveError('');
+    if (urlUserId) {
+      navigate('/users', { replace: true });
+    }
+  };
+
+  // Sync with URL parameter (/users/:id)
+  useEffect(() => {
+    if (urlUserId) {
+      const match = users.find((u) => u._id === urlUserId);
+      if (match) {
+        handleOpenUserDrawer(match);
+      } else {
+        getUserByIdApi(urlUserId)
+          .then((res) => {
+            const data = res.data?.data || res.data;
+            if (data && data._id) {
+              handleOpenUserDrawer(data);
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to load user from URL param:', err);
+          });
+      }
+    }
+  }, [urlUserId, users]);
+
+  // Stepper navigation among sortedUsers
+  const selectedUserIndex = useMemo(() => {
+    if (!drawerUser) return -1;
+    return sortedUsers.findIndex((u) => u._id === drawerUser._id);
+  }, [drawerUser, sortedUsers]);
+
+  const canGoPrevUser = selectedUserIndex > 0;
+  const canGoNextUser = selectedUserIndex >= 0 && selectedUserIndex < sortedUsers.length - 1;
+
+  const handlePrevUser = () => {
+    if (canGoPrevUser) {
+      handleOpenUserDrawer(sortedUsers[selectedUserIndex - 1], drawerTab);
+    }
+  };
+
+  const handleNextUser = () => {
+    if (canGoNextUser) {
+      handleOpenUserDrawer(sortedUsers[selectedUserIndex + 1], drawerTab);
+    }
+  };
+
+  // Keyboard navigation shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!isDrawerOpen) return;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+      if (e.key === 'Escape') {
+        handleCloseDrawer();
+      } else if (e.key === 'ArrowLeft' && canGoPrevUser && drawerTab === 'overview') {
+        handlePrevUser();
+      } else if (e.key === 'ArrowRight' && canGoNextUser && drawerTab === 'overview') {
+        handleNextUser();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDrawerOpen, canGoPrevUser, canGoNextUser, drawerTab, selectedUserIndex]);
+
+  // Drawer status toggle
+  const handleToggleDrawerUserStatus = async () => {
+    if (!drawerUser) return;
+    const targetId = drawerUser._id;
+    const newStatus = !drawerUser.isActive;
+    const actionText = newStatus ? 'activate' : 'deactivate';
+
+    const isConfirmed = await confirm(`Are you sure you want to ${actionText} user "${getUserFullName(drawerUser)}"?`);
+    if (!isConfirmed) return;
+
+    setActionLoadingId(targetId);
+    try {
+      const res = await updateUserStatusApi(targetId, newStatus);
+      showGlobalAlert(res.data?.message || `User ${actionText}d successfully!`, 'success');
+      setDrawerUser((prev) => (prev ? { ...prev, isActive: newStatus } : null));
+      setUsers((prev) => prev.map((u) => (u._id === targetId ? { ...u, isActive: newStatus } : u)));
+    } catch (err) {
+      console.error('Status toggle error:', err);
+      showGlobalAlert(err.response?.data?.message || `Failed to ${actionText} user.`, 'error');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Drawer edit input change
+  const handleDrawerInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    let formattedValue = value;
+    if (name === 'phone') {
+      formattedValue = formatPhone(value);
+    } else if (name === 'employeeCode') {
+      formattedValue = formatEntityCode(value);
+    }
+    setDrawerEditForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : formattedValue
+    }));
+    if (drawerSaveError) setDrawerSaveError('');
+  };
+
+  // Drawer edit submit handler
+  const handleSaveDrawerUser = async (e) => {
+    e.preventDefault();
+    setDrawerSaveError('');
+
+    if (!drawerEditForm.firstName.trim()) {
+      return setDrawerSaveError('First name is required.');
+    }
+    const phoneVal = validatePhone(drawerEditForm.phone);
+    if (!phoneVal.isValid) {
+      return setDrawerSaveError(phoneVal.error);
+    }
+    if (drawerEditForm.employeeCode) {
+      const codeVal = validateEntityCode(drawerEditForm.employeeCode);
+      if (!codeVal.isValid) {
+        return setDrawerSaveError(`Employee code: ${codeVal.error}`);
+      }
+    }
+
+    setDrawerSaving(true);
+    try {
+      const payload = {
+        firstName: drawerEditForm.firstName.trim(),
+        lastName: drawerEditForm.lastName.trim(),
+        phone: drawerEditForm.phone.trim(),
+        role: drawerEditForm.role,
+        employeeCode: drawerEditForm.employeeCode.trim(),
+        profileImage: drawerEditForm.profileImage.trim(),
+        reportingManager: drawerEditForm.reportingManager.trim(),
+        territory: drawerEditForm.territory.trim(),
+        emergencyContact: drawerEditForm.emergencyContact.trim(),
+        isActive: Boolean(drawerEditForm.isActive)
+      };
+
+      const res = await updateUserApi(drawerUser._id, payload);
+      const updatedUser = res.data?.data ? res.data.data : { ...drawerUser, ...payload };
+
+      showGlobalAlert(res.data?.message || 'User profile updated successfully!', 'success');
+      setDrawerUser(updatedUser);
+      setUsers((prev) => prev.map((u) => (u._id === drawerUser._id ? { ...u, ...updatedUser } : u)));
+      setDrawerTab('overview');
+    } catch (err) {
+      console.error('Update user error:', err);
+      setDrawerSaveError(err.response?.data?.message || 'Failed to update user profile. Please try again.');
+    } finally {
+      setDrawerSaving(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -968,17 +1198,20 @@ const UsersList = () => {
 
                           {/* Name & ID */}
                           <td className="p-4 text-sm text-slate-900 dark:text-white font-medium">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 !text-white flex items-center justify-center text-xs font-extrabold shrink-0 shadow-sm">
+                            <div
+                              onClick={() => handleOpenUserDrawer(user)}
+                              className="flex items-center gap-3 cursor-pointer group"
+                            >
+                              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 !text-white flex items-center justify-center text-xs font-extrabold shrink-0 shadow-sm group-hover:scale-105 transition-transform">
                                 {initials}
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="font-bold text-slate-900 dark:text-white">
+                                  <span className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                     {fullName}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-1 mt-0.5">
+                                <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
                                   <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono font-medium">
                                     {user._id}
                                   </span>
@@ -1097,7 +1330,7 @@ const UsersList = () => {
                             <div className="flex items-center justify-center">
                               <button
                                 type="button"
-                                onClick={() => navigate(`/users/${user._id}`)}
+                                onClick={() => handleOpenUserDrawer(user)}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white dark:text-blue-400 bg-blue-500/75 dark:bg-blue-500/10 hover:bg-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                                 title="View Details"
                               >
@@ -1376,6 +1609,596 @@ const UsersList = () => {
           </div>,
           document.body
         )}
+
+        {/* ================= USER DETAILS & EDIT SLIDE-OVER DRAWER ================= */}
+        {isDrawerOpen && drawerUser &&
+          createPortal(
+            <div className="fixed inset-0 z-[9999] overflow-hidden">
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 dark:bg-slate-950/50 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+                onClick={handleCloseDrawer}
+              />
+
+              {/* Slide-over Container (Pinned to Right) */}
+              <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
+                <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-900/40 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 text-left">
+                  {/* Sticky Drawer Header */}
+                  <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 shrink-0 space-y-3">
+                    {/* Top Bar: User Avatar + Name + Actions + Close */}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                        {drawerUser.profileImage ? (
+                          <img
+                            src={drawerUser.profileImage}
+                            alt={getUserFullName(drawerUser)}
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover border border-slate-200 dark:border-white/10 shadow-xs shrink-0"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-sm sm:text-base font-extrabold shrink-0 border border-blue-500/20 shadow-xs">
+                            {[drawerUser.firstName?.[0], drawerUser.lastName?.[0]].filter(Boolean).join('').toUpperCase() || 'U'}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
+                              {getUserFullName(drawerUser)}
+                            </h2>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold ${
+                                drawerUser.isActive !== false
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full mr-1 ${drawerUser.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                              {drawerUser.isActive !== false ? 'Active' : 'Inactive'}
+                            </span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold border ${getRoleBadgeClass(drawerUser.role)}`}>
+                              {formatRoleName(drawerUser.role)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
+                            <GmailLink email={drawerUser.email} showIcon={true} iconSize={12} className="text-xs text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium" />
+                            {drawerUser.employeeCode && (
+                              <>
+                                <span className="text-slate-300 dark:text-slate-600 text-xs">•</span>
+                                <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
+                                  #{drawerUser.employeeCode}
+                                </span>
+                                <CopyButton text={drawerUser.employeeCode} size={11} title="Copy Employee Code" />
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleToggleDrawerUserStatus}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            drawerUser.isActive !== false
+                              ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                              : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                          }`}
+                          title={drawerUser.isActive !== false ? 'Deactivate Account' : 'Activate Account'}
+                        >
+                          <FiPower size={13} />
+                          <span className="hidden sm:inline">{drawerUser.isActive !== false ? 'Deactivate' : 'Activate'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleCloseDrawer}
+                          className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer shrink-0"
+                          title="Close drawer (Esc)"
+                        >
+                          <FiX size={18} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bottom Sub-Bar: Mode Selector Tabs & Stepper Navigation */}
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/40 dark:border-white/5 flex-wrap sm:flex-nowrap">
+                      <div className="flex items-center p-0.5 sm:p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDrawerTab('overview');
+                            setDrawerSaveError('');
+                          }}
+                          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            drawerTab === 'overview'
+                              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                          }`}
+                        >
+                          <FiEye className="text-xs" />
+                          <span>Overview</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDrawerTab('edit');
+                            setDrawerSaveError('');
+                          }}
+                          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            drawerTab === 'edit'
+                              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                          }`}
+                        >
+                          <FiEdit2 className="text-xs" />
+                          <span>Edit Profile</span>
+                        </button>
+                      </div>
+
+                      {/* User Stepper Navigation */}
+                      {selectedUserIndex >= 0 && sortedUsers.length > 1 && (
+                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
+                          <button
+                            type="button"
+                            onClick={handlePrevUser}
+                            disabled={!canGoPrevUser}
+                            title="Previous User (Left Arrow)"
+                            className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          >
+                            <FiChevronLeft size={15} />
+                          </button>
+                          <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                            {selectedUserIndex + 1} of {sortedUsers.length}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleNextUser}
+                            disabled={!canGoNextUser}
+                            title="Next User (Right Arrow)"
+                            className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          >
+                            <FiChevronRight size={15} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Scrollable Body Content */}
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-7 custom-scrollbar space-y-5 sm:space-y-6">
+                    {drawerLoading && (
+                      <div className="flex items-center justify-center p-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                        <FiLoader className="animate-spin mr-2" />
+                        <span>Refreshing live user profile...</span>
+                      </div>
+                    )}
+
+                    {drawerTab === 'overview' ? (
+                      <>
+                        {/* Hero Info Card */}
+                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                              <FiUser className="text-blue-500" />
+                              <span>Account Details</span>
+                            </h3>
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-[11px] font-bold text-slate-400">User ID:</span>
+                              <span className="font-mono text-xs font-bold text-slate-600 dark:text-slate-300 select-all truncate max-w-[140px]" title={drawerUser._id}>
+                                {drawerUser._id}
+                              </span>
+                              <CopyButton text={drawerUser._id} size={11} title="Copy User ID" />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            <div>
+                              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">First Name</p>
+                              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                                {drawerUser.firstName || '-'}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Last Name</p>
+                              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                                {drawerUser.lastName || '-'}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Role</p>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border ${getRoleBadgeClass(drawerUser.role)}`}>
+                                {formatRoleName(drawerUser.role)}
+                              </span>
+                            </div>
+
+                            <div>
+                              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Employee Code</p>
+                              <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">
+                                {drawerUser.employeeCode || '-'}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Reporting Manager</p>
+                              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                {drawerUser.reportingManager || 'Not Assigned'}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Territory / Region</p>
+                              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                {drawerUser.territory || 'Unassigned'}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Account Status</p>
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold ${
+                                drawerUser.isActive !== false
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                              }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${drawerUser.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                                {drawerUser.isActive !== false ? 'Active Account' : 'Deactivated'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Contact & Media Card */}
+                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
+                          <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                            <FiMail className="text-blue-500" />
+                            <span>Contact Information</span>
+                          </h3>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between">
+                              <div>
+                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Email Address</span>
+                                <div className="mt-1">
+                                  <GmailLink email={drawerUser.email} className="text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 text-xs font-semibold" />
+                                </div>
+                              </div>
+                              <CopyButton text={drawerUser.email} />
+                            </div>
+
+                            <div className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between">
+                              <div>
+                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Phone Number</span>
+                                <p className="text-slate-900 dark:text-white font-semibold text-xs mt-1 font-mono">{drawerUser.phone || 'N/A'}</p>
+                              </div>
+                              {drawerUser.phone && <CopyButton text={drawerUser.phone} />}
+                            </div>
+
+                            <div className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between">
+                              <div>
+                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Emergency Contact</span>
+                                <p className="text-slate-900 dark:text-white font-semibold text-xs mt-1 font-mono">{drawerUser.emergencyContact || 'Not provided'}</p>
+                              </div>
+                              {drawerUser.emergencyContact && <CopyButton text={drawerUser.emergencyContact} />}
+                            </div>
+
+                            <div className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between">
+                              <div className="min-w-0 flex-1 pr-2">
+                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Profile Image URL</span>
+                                <p className="text-slate-700 dark:text-slate-300 text-xs mt-1 truncate font-mono" title={drawerUser.profileImage || 'None'}>
+                                  {drawerUser.profileImage || 'No image URL provided'}
+                                </p>
+                              </div>
+                              {drawerUser.profileImage && (
+                                <img
+                                  src={drawerUser.profileImage}
+                                  alt="Preview"
+                                  className="w-8 h-8 rounded-lg object-cover border border-slate-200 dark:border-white/10 shrink-0"
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Assigned Companies Card */}
+                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                              <FiBriefcase className="text-blue-500" />
+                              <span>Assigned Companies</span>
+                            </h3>
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              {Array.isArray(drawerUser.assignedCompanyIds) ? drawerUser.assignedCompanyIds.length : 0} Assigned
+                            </span>
+                          </div>
+
+                          {Array.isArray(drawerUser.assignedCompanyIds) && drawerUser.assignedCompanyIds.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              {drawerUser.assignedCompanyIds.map((companyId, idx) => {
+                                const cId = typeof companyId === 'object' && companyId !== null ? companyId._id : companyId;
+                                const cName = typeof companyId === 'object' && companyId !== null ? companyId.name : null;
+                                return (
+                                  <div
+                                    key={cId || idx}
+                                    className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-2"
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs shrink-0 font-bold">
+                                        <FiBriefcase size={13} />
+                                      </div>
+                                      <div className="min-w-0">
+                                        {cName && <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{cName}</p>}
+                                        <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate select-all" title={cId}>
+                                          {cId}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <CopyButton text={cId} size={11} title="Copy Company ID" />
+                                      <button
+                                        type="button"
+                                        onClick={() => navigate(`/companies/${cId}`)}
+                                        className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                                        title="View Company"
+                                      >
+                                        <FiExternalLink size={12} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="p-6 text-center bg-white/40 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-white/10 rounded-xl">
+                              <FiBriefcase className="text-2xl text-slate-300 dark:text-slate-600 mx-auto mb-1.5" />
+                              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">No Companies Assigned</p>
+                              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">This user is not mapped to any specific companies.</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Timestamps & Activity Card */}
+                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                          <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                            <FiClock className="text-blue-500" />
+                            <span>Timestamps & Activity</span>
+                          </h3>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Created Date</span>
+                              <p className="text-slate-900 dark:text-white font-semibold text-xs mt-1 font-mono">
+                                {drawerUser.createdAt ? formatDateTimeDDMMYYYY(drawerUser.createdAt) : 'N/A'}
+                              </p>
+                              <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                                {formatRelativeTime(drawerUser.createdAt)}
+                              </span>
+                            </div>
+
+                            <div className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Last Updated</span>
+                              <p className="text-slate-900 dark:text-white font-semibold text-xs mt-1 font-mono">
+                                {drawerUser.updatedAt ? formatDateTimeDDMMYYYY(drawerUser.updatedAt) : 'N/A'}
+                              </p>
+                              <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                                {formatRelativeTime(drawerUser.updatedAt)}
+                              </span>
+                            </div>
+
+                            <div className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Last Login</span>
+                              <p className="text-slate-900 dark:text-white font-semibold text-xs mt-1 font-mono">
+                                {drawerUser.lastLoginAt ? formatDateTimeDDMMYYYY(drawerUser.lastLoginAt) : 'Never logged in'}
+                              </p>
+                              <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                                {formatRelativeTime(drawerUser.lastLoginAt)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      /* Edit Form */
+                      <form onSubmit={handleSaveDrawerUser} className="space-y-4">
+                        {drawerSaveError && (
+                          <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
+                            <FiAlertCircle className="shrink-0 text-sm" />
+                            <span>{drawerSaveError}</span>
+                          </div>
+                        )}
+
+                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
+                          <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                            <FiEdit2 className="text-blue-500" />
+                            <span>Personal & Profile Information</span>
+                          </h3>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                First Name *
+                              </label>
+                              <input
+                                type="text"
+                                name="firstName"
+                                value={drawerEditForm.firstName}
+                                onChange={handleDrawerInputChange}
+                                placeholder="e.g. Rahul"
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Last Name
+                              </label>
+                              <input
+                                type="text"
+                                name="lastName"
+                                value={drawerEditForm.lastName}
+                                onChange={handleDrawerInputChange}
+                                placeholder="e.g. Sharma"
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Phone Number *
+                              </label>
+                              <input
+                                type="tel"
+                                name="phone"
+                                value={drawerEditForm.phone}
+                                onChange={handleDrawerInputChange}
+                                placeholder="+919876543210"
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Role *
+                              </label>
+                              <CustomDropdown
+                                value={drawerEditForm.role}
+                                onChange={(val) => setDrawerEditForm((prev) => ({ ...prev, role: val }))}
+                                options={[
+                                  { value: 'SALES_EXECUTIVE', label: 'Sales Executive' },
+                                  { value: 'SALES_HEAD', label: 'Sales Head' },
+                                  { value: 'ADMIN', label: 'Admin' },
+                                  { value: 'WAREHOUSE', label: 'Warehouse' },
+                                  { value: 'BILLING', label: 'Billing' }
+                                ]}
+                                statusColor="!px-3 !py-2 !bg-white dark:!bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white font-medium"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Employee Code
+                              </label>
+                              <input
+                                type="text"
+                                name="employeeCode"
+                                value={drawerEditForm.employeeCode}
+                                onChange={handleDrawerInputChange}
+                                placeholder="e.g. SE-105"
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 uppercase"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Reporting Manager
+                              </label>
+                              <input
+                                type="text"
+                                name="reportingManager"
+                                value={drawerEditForm.reportingManager}
+                                onChange={handleDrawerInputChange}
+                                placeholder="e.g. Vansh Jain"
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Territory / Region
+                              </label>
+                              <input
+                                type="text"
+                                name="territory"
+                                value={drawerEditForm.territory}
+                                onChange={handleDrawerInputChange}
+                                placeholder="e.g. North Region"
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Emergency Contact
+                              </label>
+                              <input
+                                type="tel"
+                                name="emergencyContact"
+                                value={drawerEditForm.emergencyContact}
+                                onChange={handleDrawerInputChange}
+                                placeholder="+919876543210"
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Profile Image URL
+                            </label>
+                            <input
+                              type="url"
+                              name="profileImage"
+                              value={drawerEditForm.profileImage}
+                              onChange={handleDrawerInputChange}
+                              placeholder="https://example.com/avatar.jpg"
+                              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                            />
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-200/60 dark:border-white/5">
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                name="isActive"
+                                checked={drawerEditForm.isActive}
+                                onChange={handleDrawerInputChange}
+                                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                              />
+                              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                Active Account Status
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Form Actions */}
+                        <div className="flex items-center justify-end gap-3 pt-3">
+                          <button
+                            type="button"
+                            disabled={drawerSaving}
+                            onClick={() => {
+                              setDrawerTab('overview');
+                              setDrawerSaveError('');
+                            }}
+                            className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={drawerSaving}
+                            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                          >
+                            {drawerSaving && <FiLoader className="animate-spin text-xs" />}
+                            <span>{drawerSaving ? 'Saving Changes...' : 'Save Changes'}</span>
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
       </div>
     );
 };
