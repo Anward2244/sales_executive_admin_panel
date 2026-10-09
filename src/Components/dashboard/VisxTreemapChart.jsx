@@ -880,7 +880,7 @@ const InnerHierarchyChart = ({
             left={tooltipLeft}
             style={{
               ...defaultStyles,
-              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
+              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.5)',
               backdropFilter: 'blur(14px)',
               color: isDark ? '#ffffff' : '#0f172a',
               border: isDark ? '1px solid rgba(255, 255, 255, 0.16)' : '1px solid rgba(226, 232, 240, 0.95)',

@@ -359,7 +359,7 @@ function InnerTrendLineChart({
           left={tooltipLeft}
           style={{
             ...defaultStyles,
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.97)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.5)',
             color: isDark ? '#ffffff' : '#0f172a',
             border: isDark
               ? '1px solid rgba(255, 255, 255, 0.15)'

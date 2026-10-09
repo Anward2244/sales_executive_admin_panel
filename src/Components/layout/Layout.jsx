@@ -744,7 +744,7 @@ const Layout = () => {
       )}
 
       {/* MOBILE TOP BAR (Visible only on small screens) */}
-      <div className={`lg:hidden fixed top-0 left-0 right-0 h-16 backdrop-blur-2xl border-b z-40 flex items-center justify-between px-4 transition-colors ${
+      <div className={`lg:hidden fixed top-0 left-0 right-0 h-16 border-b z-40 flex items-center justify-between px-4 transition-colors ${
         isDark 
           ? 'bg-slate-950/80 border-white/10 shadow-xl shadow-black/50' 
           : 'bg-white/85 border-slate-200/80 shadow-md shadow-slate-900/5'
@@ -770,10 +770,10 @@ const Layout = () => {
             </button>
 
             {isNotificationsDropdownOpen && (
-              <div className={`absolute right-0 mt-3 w-72 backdrop-blur-2xl border rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
+              <div className={`absolute right-0 mt-3 w-72 backdrop-blur-md border rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
                 isDark 
                   ? 'bg-slate-900/90 border-white/10 shadow-black/50' 
-                  : 'bg-white/95 border-slate-200 shadow-slate-900/10'
+                  : 'bg-white/40 border-slate-200 shadow-slate-900/10'
               }`}>
                 <div className={`px-3.5 py-2 border-b flex justify-between items-center mb-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
                   <div className="flex items-center gap-1.5 min-w-0">
@@ -1308,10 +1308,10 @@ const Layout = () => {
               </button>
 
               {isNotificationsDropdownOpen && (
-                <div className={`absolute right-0 mt-3 w-80 sm:w-96 backdrop-blur-2xl border rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
+                <div className={`absolute right-0 mt-3 w-80 sm:w-96 backdrop-blur-md border rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
                   isDark 
                     ? 'bg-slate-900/90 border-white/10 shadow-black/50' 
-                    : 'bg-white/80 border-slate-200 shadow-slate-900/10'
+                    : 'bg-white/40 border-slate-200 shadow-slate-900/10'
                 }`}>
                   <div className={`px-4 py-2.5 border-b flex justify-between items-center mb-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
                     <div className="flex items-center gap-2">
