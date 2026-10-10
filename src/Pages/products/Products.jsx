@@ -33,7 +33,7 @@ import {
 import * as XLSX from 'xlsx';
 import BulkProductImportModal, { downloadProductExcelTemplate } from './BulkProductImportModal';
 import PageHeader from '@/components/ui/PageHeader';
-import Skeleton from '@/components/ui/Skeleton';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import { BulkActionBar, BatchProgressModal } from '@/components/ui';
@@ -2193,15 +2193,11 @@ const Products = () => {
 
       {/* Main Content Area */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-white/40 dark:bg-slate-900/60 rounded-2xl p-4 border border-slate-200/80 dark:border-white/10 space-y-3">
-              <Skeleton className="h-32 w-full rounded-xl" />
-              <Skeleton className="h-4 w-3/4 rounded-lg" />
-              <Skeleton className="h-3 w-1/2 rounded-lg" />
-            </div>
-          ))}
-        </div>
+        <TableSkeleton
+          columns={isBulkMode ? 11 : 10}
+          rows={8}
+          tableClassName="min-w-[1200px]"
+        />
       ) : filteredProducts.length === 0 ? (
         <div className="py-20 text-center bg-white/60 dark:bg-slate-900/40 rounded-3xl border border-slate-200/80 dark:border-white/10 p-8">
           <FiPackage className="text-4xl text-slate-300 dark:text-slate-600 mx-auto mb-3" />

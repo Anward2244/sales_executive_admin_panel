@@ -578,9 +578,9 @@ const Notifications = () => {
       {/* Main Split-Screen Inbox Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:h-[calc(100vh-165px)] lg:min-h-[580px] lg:max-h-[calc(100vh-165px)]">
         {/* ================= LEFT COLUMN: MASTER LIST (5 cols) ================= */}
-        <div className="lg:col-span-5 flex flex-col h-full min-h-0 space-y-2.5">
+        <div className="lg:col-span-5 flex flex-col h-full min-h-0 space-y-2.5 bg-white/40 dark:bg-slate-900/25 rounded-2xl shadow-xl">
           {/* Search, Type Filter & Quick Controls (Sticky at top of left pane) */}
-          <div className="shrink-0 p-3 sm:p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 space-y-2.5 shadow-xs">
+          <div className="shrink-0 p-3 sm:p-3.5 rounded-2xl bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 space-y-2.5 shadow-xs">
             <div className="relative w-full">
               <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none" />
               <input

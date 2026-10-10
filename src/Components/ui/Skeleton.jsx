@@ -44,13 +44,13 @@ export const TableRowSkeleton = ({ columns = 5, cols, isTableRow = true }) => {
 };
 
 // Full table skeleton with styled header and multiple rows
-export const TableSkeleton = ({ columns = 6, rows = 6, showHeader = true, className = '' }) => {
+export const TableSkeleton = ({ columns = 6, rows = 6, showHeader = true, className = '', tableClassName = '' }) => {
   const colCount = columns;
 
   return (
     <div className={`w-full overflow-hidden bg-white/40 dark:bg-slate-900/40 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs ${className}`}>
       <div className="overflow-x-auto custom-scrollbar">
-        <table className="w-full text-left border-collapse whitespace-nowrap">
+        <table className={`w-full text-left border-collapse whitespace-nowrap ${tableClassName}`}>
           {showHeader && (
             <thead className="bg-slate-50/70 dark:bg-slate-800/50 border-b border-slate-200/80 dark:border-white/10">
               <tr>

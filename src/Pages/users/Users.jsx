@@ -731,7 +731,7 @@ const UsersList = () => {
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState(new Set());
   const [bulkRoleModalOpen, setBulkRoleModalOpen] = useState(false);
-  const [bulkSelectedRole, setBulkSelectedRole] = useState('TSM');
+  const [bulkSelectedRole, setBulkSelectedRole] = useState('SALES_EXECUTIVE');
   const [batchProgress, setBatchProgress] = useState({
     isOpen: false,
     taskTitle: '',
@@ -772,8 +772,21 @@ const UsersList = () => {
     setSelectedUserIds(new Set(inactiveIds));
   };
 
+  const selectAllActiveUsers = () => {
+    const activeIds = sortedUsers.filter((u) => u.isActive !== false).map((u) => u._id);
+    setSelectedUserIds(new Set(activeIds));
+  };
+
   const selectAllPageUsers = () => {
     setSelectedUserIds(new Set(currentUsers.map((u) => u._id)));
+  };
+
+  const handleSelectAllFiltered = () => {
+    if (sortedUsers.length > 0 && selectedUserIds.size === sortedUsers.length) {
+      setSelectedUserIds(new Set());
+    } else {
+      setSelectedUserIds(new Set(sortedUsers.map((u) => u._id)));
+    }
   };
 
   const runBatchTask = async ({ taskTitle, items, processItemFn }) => {
@@ -849,10 +862,17 @@ const UsersList = () => {
     setBatchProgress((p) => ({ ...p, isFinished: true }));
     await fetchUsers(false);
     setSelectedUserIds(new Set());
+    if (showGlobalAlert) {
+      showGlobalAlert(
+        `Batch operation completed. ${successCount} succeeded, ${failureCount} failed.`,
+        failureCount === 0 ? 'success' : 'info'
+      );
+    }
   };
 
   const handleBulkActivate = async () => {
     const selectedUsers = users.filter((u) => selectedUserIds.has(u._id));
+    if (selectedUsers.length === 0) return;
     const isConfirmed = await confirm(`Are you sure you want to ACTIVATE ${selectedUsers.length} selected user account(s)?`);
     if (!isConfirmed) return;
 
@@ -867,6 +887,7 @@ const UsersList = () => {
 
   const handleBulkDeactivate = async () => {
     const selectedUsers = users.filter((u) => selectedUserIds.has(u._id));
+    if (selectedUsers.length === 0) return;
     const isConfirmed = await confirm(`Are you sure you want to DEACTIVATE ${selectedUsers.length} selected user account(s)?`);
     if (!isConfirmed) return;
 
@@ -881,10 +902,12 @@ const UsersList = () => {
 
   const handleBulkChangeRole = async () => {
     const selectedUsers = users.filter((u) => selectedUserIds.has(u._id));
+    if (selectedUsers.length === 0) return;
+    const roleLabel = formatRoleName(bulkSelectedRole);
     setBulkRoleModalOpen(false);
 
     await runBatchTask({
-      taskTitle: `Bulk Reassign Role (${bulkSelectedRole}) to ${selectedUsers.length} Users`,
+      taskTitle: `Bulk Reassign Role (${roleLabel}) to ${selectedUsers.length} Users`,
       items: selectedUsers,
       processItemFn: async (userItem) => {
         await updateUserApi(userItem._id, { role: bulkSelectedRole });
@@ -1041,7 +1064,7 @@ const UsersList = () => {
                 if (isBulkMode) setSelectedUserIds(new Set());
               }}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer shrink-0 ${isBulkMode
-                ? 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400'
+                ? 'bg-amber-500 border-amber-500/40 text-white dark:text-amber-400'
                 : 'bg-white dark:bg-white/5 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-blue-500/40'
                 }`}
             >
@@ -1070,7 +1093,7 @@ const UsersList = () => {
 
         {/* Content Area */}
         {loading ? (
-          <TableSkeleton columns={7} rows={7} />
+          <TableSkeleton columns={isBulkMode ? 12 : 11} rows={7} />
         ) : error ? (
           <div className="text-rose-600 dark:text-red-400 bg-rose-50 dark:bg-red-900/20 p-5 rounded-2xl border border-rose-200 dark:border-red-500/30 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -1090,6 +1113,24 @@ const UsersList = () => {
               <table className="w-full text-left border-collapse whitespace-nowrap min-w-200">
                 <thead className="sticky top-0 z-20 bg-white/60 dark:bg-slate-900/80 backdrop-blur-md shadow-xs dark:shadow-md border-b border-slate-200/80 dark:border-white/10">
                   <tr className="border-b border-slate-200/80 dark:border-white/10 text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                    {isBulkMode && (
+                      <th className="p-3 text-center w-12">
+                        <input
+                          type="checkbox"
+                          checked={currentUsers.length > 0 && currentUsers.every((u) => selectedUserIds.has(u._id))}
+                          ref={(el) => {
+                            if (el) {
+                              const isAllSelected = currentUsers.length > 0 && currentUsers.every((u) => selectedUserIds.has(u._id));
+                              const isSomeSelected = currentUsers.some((u) => selectedUserIds.has(u._id));
+                              el.indeterminate = isSomeSelected && !isAllSelected;
+                            }
+                          }}
+                          onChange={toggleSelectAllCurrentPageUsers}
+                          className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                          title="Select / deselect all users on current page"
+                        />
+                      </th>
+                    )}
                     <th className="p-3 font-bold text-center w-14">S.No</th>
 
                     {/* Name Sort */}
@@ -1186,12 +1227,27 @@ const UsersList = () => {
                     currentUsers.map((user, index) => {
                       const fullName = getUserFullName(user);
                       const initials = [user.firstName?.[0], user.lastName?.[0]].filter(Boolean).join('').toUpperCase() || 'U';
+                      const isSelected = selectedUserIds.has(user._id);
 
                       return (
                         <tr
                           key={user._id}
-                          className="hover:bg-slate-100/60 dark:hover:bg-white/[0.03] transition-colors group"
+                          className={`hover:bg-slate-100/60 dark:hover:bg-white/[0.03] transition-colors group ${
+                            isBulkMode && isSelected
+                              ? 'bg-blue-50/70 dark:bg-blue-900/15'
+                              : ''
+                          }`}
                         >
+                          {isBulkMode && (
+                            <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectUser(user._id)}
+                                className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                              />
+                            </td>
+                          )}
                           <td className="p-3 text-sm text-slate-500 dark:text-slate-400 text-center font-medium">
                             {indexOfFirstUser + index + 1}
                           </td>
@@ -1344,7 +1400,7 @@ const UsersList = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={11} className="p-12 text-center text-slate-500 dark:text-slate-400 italic">
+                      <td colSpan={isBulkMode ? 12 : 11} className="p-12 text-center text-slate-500 dark:text-slate-400 italic">
                         {searchTerm || selectedRole || selectedStatus || userTab !== 'all'
                           ? 'No matching users found for current filters.'
                           : 'No users found.'}
@@ -2199,6 +2255,145 @@ const UsersList = () => {
             </div>,
             document.body
           )}
+
+        {/* Floating Bulk Action Bar */}
+        {isBulkMode && !batchProgress.isOpen && !bulkRoleModalOpen && !isDrawerOpen && (
+          <BulkActionBar
+            selectedCount={selectedUserIds.size}
+            totalCount={sortedUsers.length}
+            onClearSelection={() => setSelectedUserIds(new Set())}
+            onSelectAll={handleSelectAllFiltered}
+            isAllSelected={sortedUsers.length > 0 && selectedUserIds.size === sortedUsers.length}
+            onExitBulkMode={() => {
+              setIsBulkMode(false);
+              setSelectedUserIds(new Set());
+            }}
+            quickSelectors={[
+              {
+                label: 'Select Page',
+                onClick: selectAllPageUsers
+              },
+              {
+                label: 'Select Inactive',
+                onClick: selectAllInactiveUsers
+              },
+              {
+                label: 'Select Active',
+                onClick: selectAllActiveUsers
+              }
+            ]}
+            actions={[
+              {
+                id: 'activate',
+                label: 'Activate',
+                icon: FiUserCheck,
+                variant: 'success',
+                disabled: selectedUserIds.size === 0,
+                onClick: handleBulkActivate
+              },
+              {
+                id: 'deactivate',
+                label: 'Deactivate',
+                icon: FiUserX,
+                variant: 'danger',
+                disabled: selectedUserIds.size === 0,
+                onClick: handleBulkDeactivate
+              },
+              {
+                id: 'reassign-role',
+                label: 'Change Role',
+                icon: FiShield,
+                variant: 'warning',
+                disabled: selectedUserIds.size === 0,
+                onClick: () => {
+                  setBulkSelectedRole('SALES_EXECUTIVE');
+                  setBulkRoleModalOpen(true);
+                }
+              },
+              {
+                id: 'export',
+                label: 'Export Excel',
+                icon: FiDownload,
+                variant: 'secondary',
+                disabled: selectedUserIds.size === 0 && sortedUsers.length === 0,
+                onClick: handleBulkExport
+              }
+            ]}
+          />
+        )}
+
+        {/* Bulk Role Reassignment Modal */}
+        {bulkRoleModalOpen &&
+          createPortal(
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
+              <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-2xl mb-4 border border-amber-500/20">
+                  <FiShield />
+                </div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Change User Role</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  Reassign role for <span className="font-bold text-slate-800 dark:text-slate-200">{selectedUserIds.size}</span> selected user account(s):
+                </p>
+
+                <div className="mt-4">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                    Target Role
+                  </label>
+                  <CustomDropdown
+                    value={bulkSelectedRole}
+                    onChange={(val) => setBulkSelectedRole(val)}
+                    options={[
+                      { value: 'SALES_EXECUTIVE', label: 'Sales Executive' },
+                      { value: 'SALES_HEAD', label: 'Sales Head' },
+                      { value: 'ADMIN', label: 'Admin' },
+                      { value: 'WAREHOUSE', label: 'Warehouse' },
+                      { value: 'BILLING', label: 'Billing' }
+                    ]}
+                    statusColor="!px-3.5 !py-2.5 !bg-slate-50 dark:!bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="mt-6 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setBulkRoleModalOpen(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBulkChangeRole}
+                    disabled={!bulkSelectedRole}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-600/25 cursor-pointer disabled:opacity-50"
+                  >
+                    Apply Role Change
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
+
+        {/* Batch Progress Modal */}
+        {batchProgress.isOpen && (
+          <BatchProgressModal
+            isOpen={batchProgress.isOpen}
+            title={batchProgress.taskTitle}
+            current={batchProgress.current}
+            total={batchProgress.total}
+            successCount={batchProgress.successCount}
+            failureCount={batchProgress.failureCount}
+            isFinished={batchProgress.isFinished}
+            logs={batchProgress.logs}
+            onAbort={() => {
+              abortBatchRef.current = true;
+            }}
+            onClose={() => {
+              setBatchProgress((p) => ({ ...p, isOpen: false }));
+            }}
+          />
+        )}
       </div>
     );
 };

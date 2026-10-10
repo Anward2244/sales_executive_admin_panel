@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FiGitBranch,
   FiMapPin,
@@ -44,6 +45,7 @@ import CustomDropdown from '@/components/ui/CustomDropdown';
 import CopyButton from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
 import { SkeletonPulse } from '@/components/ui/Skeleton';
+import { useConfirm } from '@/Context/ConfirmationContext';
 
 // Regional presets for fast territory assignment
 const REGION_PRESETS = [
@@ -71,6 +73,8 @@ const REGION_PRESETS = [
 ];
 
 const BrandRoutings = () => {
+  const { confirm } = useConfirm() || {};
+
   // Main Data States
   const [matrixData, setMatrixData] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -584,7 +588,9 @@ const BrandRoutings = () => {
   // Delete rule by ID using DELETE /brand-routings/{id}
   const handleDeleteRule = async (ruleId, label = 'this rule') => {
     if (!ruleId) return;
-    const confirmed = window.confirm(`Are you sure you want to delete ${label}? This will permanently remove it.`);
+    const confirmed = confirm
+      ? await confirm(`Are you sure you want to delete ${label}? This will permanently remove it.`)
+      : window.confirm(`Are you sure you want to delete ${label}? This will permanently remove it.`);
     if (!confirmed) return;
 
     setDeletingRuleId(ruleId);
@@ -627,9 +633,10 @@ const BrandRoutings = () => {
   const handleRemoveMapping = async (index) => {
     const m = mappings[index];
     if (m?._id) {
-      const confirmed = window.confirm(
-        'This rule is saved in the database. Do you want to permanently delete it (DEL /brand-routings/{id})?'
-      );
+      const message = 'This rule is saved in the database. Do you want to permanently delete it (DEL /brand-routings/{id})?';
+      const confirmed = confirm
+        ? await confirm(message)
+        : window.confirm(message);
       if (!confirmed) return;
 
       setDeletingRuleId(m._id);
@@ -873,7 +880,7 @@ const BrandRoutings = () => {
   }, [matrixData, companies]);
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-200 relative">
+    <div className="space-y-6 pb-12 relative">
       {/* Top-Left Ambient Glowing Blob */}
       <div className="absolute -top-16 -left-16 w-80 h-80 sm:w-96 sm:h-96 bg-gradient-to-br from-blue-500/25 via-indigo-500/20 to-sky-400/15 rounded-full blur-[90px] pointer-events-none -z-10" />
 
@@ -1456,9 +1463,14 @@ const BrandRoutings = () => {
       {/* ========================================================
           TEST ROUTING MODAL (DEDICATED RESOLUTION SANDBOX)
           ======================================================== */}
-      {isTestModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 dark:bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      {isTestModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
+            <div
+              className="fixed inset-0"
+              onClick={() => setIsTestModalOpen(false)}
+            />
+            <div className="relative bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200/90 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
             {/* Header */}
             <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
               <div className="flex items-center gap-3">
@@ -1797,15 +1809,21 @@ const BrandRoutings = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================
           SINGLE BRAND MATRIX CONFIGURATION MODAL
           ======================================================== */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 dark:bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      {isModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
+            <div
+              className="fixed inset-0"
+              onClick={() => !submitting && setIsModalOpen(false)}
+            />
+            <div className="relative bg-white/40 dark:bg-slate-950/25 backdrop-blur-2xl rounded-3xl border border-slate-200/90 dark:border-white/10 shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
             {/* Modal Header */}
             <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
               <div className="flex items-center gap-3">
@@ -2203,15 +2221,21 @@ const BrandRoutings = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================
           BULK MATRIX MODAL
           ======================================================== */}
-      {isBulkModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 dark:bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      {isBulkModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
+            <div
+              className="fixed inset-0"
+              onClick={() => !bulkSubmitting && setIsBulkModalOpen(false)}
+            />
+            <div className="relative bg-white/40 dark:bg-slate-950/25 backdrop-blur-2xl rounded-3xl border border-slate-200/90 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
             {/* Header */}
             <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
               <div className="flex items-center gap-3">
@@ -2366,7 +2390,8 @@ const BrandRoutings = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
