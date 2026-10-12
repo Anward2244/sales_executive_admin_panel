@@ -1326,11 +1326,11 @@ const BrandRoutings = () => {
         </div>
       ) : (
         /* ================= FLAT TABLE VIEW ================= */
-        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
+        <div className="rounded-2xl bg-white/60 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <tr className="bg-white/80 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   <th className="py-3 px-4">Brand</th>
                   <th className="py-3 px-4">Territory Coverage</th>
                   <th className="py-3 px-4">Destination Billing Company</th>

@@ -351,15 +351,22 @@ const Products = () => {
         // Search Query (ID, name, sku, brand, description, category, company name, company code, locations)
         if (debouncedSearchQuery.trim()) {
           const q = debouncedSearchQuery.toLowerCase().trim();
-          const prodId = String(product._id || product.id || '').toLowerCase();
-          const catId = typeof product.categoryId === 'object'
-            ? String(product.categoryId?._id || product.categoryId?.id || '').toLowerCase()
-            : String(product.categoryId || '').toLowerCase();
-          const compId = typeof product.companyId === 'object'
-            ? String(product.companyId?._id || product.companyId?.id || '').toLowerCase()
-            : String(product.companyId || '').toLowerCase();
+          const idCandidates = [
+            product._id,
+            product.id,
+            product.productId,
+            product.sku,
+            typeof product.categoryId === 'object' ? product.categoryId?._id : product.categoryId,
+            typeof product.categoryId === 'object' ? product.categoryId?.id : null,
+            typeof product.companyId === 'object' ? product.companyId?._id : product.companyId,
+            typeof product.companyId === 'object' ? product.companyId?.id : null,
+            ...(Array.isArray(product.companyMappings)
+              ? product.companyMappings.map((m) => (typeof m?.companyId === 'object' ? m.companyId?._id : m?.companyId))
+              : [])
+          ];
+          const matchId = idCandidates.some((val) => val && String(val).toLowerCase().includes(q));
+
           const name = String(product.name || '').toLowerCase();
-          const sku = String(product.sku || '').toLowerCase();
           const brand = String(product.brand || '').toLowerCase();
           const desc = String(product.description || '').toLowerCase();
           const hsn = String(product.hsnCode || '').toLowerCase();
@@ -379,11 +386,8 @@ const Products = () => {
           const locsStr = locsList.join(' ').toLowerCase();
 
           return (
-            prodId.includes(q) ||
-            catId.includes(q) ||
-            compId.includes(q) ||
+            matchId ||
             name.includes(q) ||
-            sku.includes(q) ||
             brand.includes(q) ||
             desc.includes(q) ||
             hsn.includes(q) ||
@@ -1898,7 +1902,7 @@ const Products = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search name, SKU, brand, company, location..."
+                placeholder="Search name, SKU, brand, ID, location..."
                 className="w-full pl-9 pr-8 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 transition-all shadow-xs"
               />
               {searchQuery && (
@@ -1944,132 +1948,179 @@ const Products = () => {
       )}
 
       {/* Actions & Filters Bar */}
-      <div className="bg-white/40 dark:bg-slate-900/60 p-4 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl flex flex-col md:flex-row gap-3 items-center justify-between">
-        {/* Action Controls */}
-        <div className="flex items-center gap-2.5 flex-wrap w-full md:w-auto">
-          {/* Actions Dropdown */}
-          <div className="relative" ref={actionsDropdownRef}>
+      <div className="bg-white/40 dark:bg-slate-900/60 p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl space-y-3 backdrop-blur-xl">
+        {/* Top Row: Primary Actions & Sort / Reset */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/60 dark:border-white/5">
+          {/* Action Controls */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Actions Dropdown */}
+            <div className="relative" ref={actionsDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsActionsOpen((prev) => !prev)}
+                className="flex items-center gap-2 px-3.5 py-2.5 bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-95 shrink-0"
+              >
+                <span>Actions</span>
+                <FiChevronDown className={`text-xs transition-transform duration-200 ${isActionsOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isActionsOpen && (
+                <div className="absolute left-0 mt-2 w-64 bg-white/40 dark:bg-slate-900/25 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-from-top-2 duration-150">
+                  {/* Option 1: Import Products via Excel */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsActionsOpen(false);
+                      setIsImportModalOpen(true);
+                    }}
+                    className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 text-left transition-colors cursor-pointer group"
+                  >
+                    <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors shrink-0">
+                      <FiUploadCloud className="text-base" />
+                    </span>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+                        Import Products
+                      </div>
+                      <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                        Bulk import via Excel or CSV
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Option 2: Download Sample File */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsActionsOpen(false);
+                      downloadProductExcelTemplate(companies);
+                      showToast('Sample Excel template downloaded.');
+                    }}
+                    className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-blue-50/80 dark:hover:bg-blue-950/30 text-left transition-colors cursor-pointer group"
+                  >
+                    <span className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
+                      <FiFileText className="text-base" />
+                    </span>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                        Download Sample File
+                      </div>
+                      <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                        Pre-formatted .xlsx with companies
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="my-1 border-t border-slate-100 dark:border-white/5" />
+
+                  {/* Option 3: Export Catalog CSV */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsActionsOpen(false);
+                      handleExportCSV();
+                    }}
+                    disabled={products.length === 0}
+                    className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-left transition-colors cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 group-hover:bg-slate-700 group-hover:text-white transition-colors shrink-0">
+                      <FiDownload className="text-base" />
+                    </span>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Export Catalog CSV
+                      </div>
+                      <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                        Download current inventory list
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Add Product Button */}
             <button
               type="button"
-              onClick={() => setIsActionsOpen((prev) => !prev)}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-95"
+              onClick={handleOpenAdd}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer active:scale-95 shrink-0"
             >
-              <span>Actions</span>
-              <FiChevronDown className={`text-xs transition-transform duration-200 ${isActionsOpen ? 'rotate-180' : ''}`} />
+              <FiPlus className="text-sm" />
+              <span>Add Product</span>
             </button>
 
-            {isActionsOpen && (
-              <div className="absolute left-0 mt-2 w-64 bg-white/40 dark:bg-slate-900/25 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-from-top-2 duration-150">
-                {/* Option 1: Import Products via Excel */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsActionsOpen(false);
-                    setIsImportModalOpen(true);
-                  }}
-                  className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 text-left transition-colors cursor-pointer group"
-                >
-                  <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors shrink-0">
-                    <FiUploadCloud className="text-base" />
-                  </span>
-                  <div>
-                    <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
-                      Import Products
-                    </div>
-                    <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
-                      Bulk import via Excel or CSV
-                    </div>
-                  </div>
-                </button>
-
-                {/* Option 2: Download Sample File */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsActionsOpen(false);
-                    downloadProductExcelTemplate(companies);
-                    showToast('Sample Excel template downloaded.');
-                  }}
-                  className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-blue-50/80 dark:hover:bg-blue-950/30 text-left transition-colors cursor-pointer group"
-                >
-                  <span className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
-                    <FiFileText className="text-base" />
-                  </span>
-                  <div>
-                    <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                      Download Sample File
-                    </div>
-                    <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
-                      Pre-formatted .xlsx with companies
-                    </div>
-                  </div>
-                </button>
-
-                <div className="my-1 border-t border-slate-100 dark:border-white/5" />
-
-                {/* Option 3: Export Catalog CSV */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsActionsOpen(false);
-                    handleExportCSV();
-                  }}
-                  disabled={products.length === 0}
-                  className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-left transition-colors cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 group-hover:bg-slate-700 group-hover:text-white transition-colors shrink-0">
-                    <FiDownload className="text-base" />
-                  </span>
-                  <div>
-                    <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      Export Catalog CSV
-                    </div>
-                    <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
-                      Download current inventory list
-                    </div>
-                  </div>
-                </button>
-              </div>
-            )}
+            {/* Bulk Operations Toggle Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsBulkMode((prev) => !prev);
+                if (isBulkMode) setSelectedProductIds([]);
+              }}
+              className={`flex items-center gap-2 px-3.5 py-2.5 border text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 ${
+                isBulkMode
+                  ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20 shadow-md'
+                  : 'bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200'
+              }`}
+            >
+              <FiLayers className={`text-sm ${isBulkMode ? 'text-white' : 'text-blue-500'}`} />
+              <span>Bulk Operations</span>
+              {selectedProductIds.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 bg-blue-700 text-white text-[10px] rounded-full font-bold">
+                  {selectedProductIds.length}
+                </span>
+              )}
+            </button>
           </div>
 
-          {/* Add Product Button */}
-          <button
-            type="button"
-            onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer active:scale-95"
-          >
-            <FiPlus className="text-base" />
-            <span>Add Product</span>
-          </button>
+          {/* Right Controls: Sort & Reset */}
+          <div className="flex items-center gap-2.5 justify-end flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">Sort:</span>
+              <div className="min-w-[135px]">
+                <CustomDropdown
+                  value={sortBy}
+                  onChange={(val) => setSortBy(val)}
+                  options={[
+                    { value: 'newest', label: 'Newest Added' },
+                    { value: 'oldest', label: 'Oldest First' },
+                    { value: 'name-asc', label: 'Name: A to Z' }
+                  ]}
+                  statusColor="!px-3 !py-2 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                />
+              </div>
+            </div>
 
-          {/* Bulk Operations Toggle Button */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsBulkMode((prev) => !prev);
-              if (isBulkMode) setSelectedProductIds([]);
-            }}
-            className={`flex items-center gap-2 px-3.5 py-2.5 border text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 ${
-              isBulkMode
-                ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20 shadow-md'
-                : 'bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200'
-            }`}
-          >
-            <FiLayers className={`text-sm ${isBulkMode ? 'text-white' : 'text-blue-500'}`} />
-            <span>Bulk Operations</span>
-            {selectedProductIds.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 bg-blue-700 text-white text-[10px] rounded-full font-bold">
-                {selectedProductIds.length}
-              </span>
+            {/* Reset Filters */}
+            {(searchQuery || selectedCompanyFilter !== 'ALL' || selectedCategoryFilter !== 'ALL' || selectedLocationFilter !== 'ALL' || selectedBrandFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || sortBy !== 'newest') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCompanyFilter('ALL');
+                  setSelectedCategoryFilter('ALL');
+                  setSelectedLocationFilter('ALL');
+                  setSelectedBrandFilter('ALL');
+                  setSelectedStatusFilter('ALL');
+                  setSortBy('newest');
+                }}
+                className="px-3 py-2 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-xl transition-all cursor-pointer border border-rose-200/60 dark:border-rose-900/40 shrink-0"
+                title="Reset all filters"
+              >
+                Reset All
+              </button>
             )}
-          </button>
+          </div>
         </div>
 
-        {/* Filter Dropdowns */}
-        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-start">
+        {/* Bottom Row: Filter Dropdowns Strip */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 mr-1 shrink-0">
+            <FiFilter className="text-blue-500 text-sm" />
+            <span>Filters:</span>
+          </div>
+
           {/* Company Filter */}
-          <div className="min-w-[140px]">
+          <div className="min-w-[140px] flex-1 sm:flex-initial">
             <CustomDropdown
               value={selectedCompanyFilter}
               onChange={(val) => setSelectedCompanyFilter(val)}
@@ -2080,13 +2131,13 @@ const Products = () => {
                   label: c.code ? `${c.code} - ${c.name}` : c.name
                 }))
               ]}
-              statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+              statusColor="!px-3 !py-2 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
             />
           </div>
 
           {/* Location Filter */}
           {uniqueLocations.length > 0 && (
-            <div className="min-w-[130px]">
+            <div className="min-w-[130px] flex-1 sm:flex-initial">
               <CustomDropdown
                 value={selectedLocationFilter}
                 onChange={(val) => setSelectedLocationFilter(val)}
@@ -2094,14 +2145,14 @@ const Products = () => {
                   { value: 'ALL', label: 'All Locations' },
                   ...uniqueLocations.map((loc) => ({ value: loc, label: loc }))
                 ]}
-                statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                statusColor="!px-3 !py-2 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
               />
             </div>
           )}
 
           {/* Brand Filter */}
           {uniqueBrands.length > 0 && (
-            <div className="min-w-[120px]">
+            <div className="min-w-[120px] flex-1 sm:flex-initial">
               <CustomDropdown
                 value={selectedBrandFilter}
                 onChange={(val) => setSelectedBrandFilter(val)}
@@ -2109,14 +2160,14 @@ const Products = () => {
                   { value: 'ALL', label: 'All Brands' },
                   ...uniqueBrands.map((b) => ({ value: b, label: b }))
                 ]}
-                statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                statusColor="!px-3 !py-2 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
               />
             </div>
           )}
 
           {/* Category Filter */}
           {categories.length > 0 && (
-            <div className="min-w-[140px]">
+            <div className="min-w-[140px] flex-1 sm:flex-initial">
               <CustomDropdown
                 value={selectedCategoryFilter}
                 onChange={(val) => setSelectedCategoryFilter(val)}
@@ -2127,13 +2178,13 @@ const Products = () => {
                     label: c.name || c.code
                   }))
                 ]}
-                statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                statusColor="!px-3 !py-2 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
               />
             </div>
           )}
 
           {/* Status Filter */}
-          <div className="min-w-[120px]">
+          <div className="min-w-[120px] flex-1 sm:flex-initial">
             <CustomDropdown
               value={selectedStatusFilter}
               onChange={(val) => setSelectedStatusFilter(val)}
@@ -2142,42 +2193,9 @@ const Products = () => {
                 { value: 'ACTIVE', label: 'Active Only' },
                 { value: 'INACTIVE', label: 'Inactive Only' }
               ]}
-              statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+              statusColor="!px-3 !py-2 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
             />
           </div>
-
-          {/* Sort By */}
-          <div className="min-w-[130px]">
-            <CustomDropdown
-              value={sortBy}
-              onChange={(val) => setSortBy(val)}
-              options={[
-                { value: 'newest', label: 'Newest Added' },
-                { value: 'oldest', label: 'Oldest First' },
-                { value: 'name-asc', label: 'Name: A to Z' }
-              ]}
-              statusColor="!px-3 !py-1.5 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
-            />
-          </div>
-
-          {/* Reset Filters */}
-          {(searchQuery || selectedCompanyFilter !== 'ALL' || selectedCategoryFilter !== 'ALL' || selectedLocationFilter !== 'ALL' || selectedBrandFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || sortBy !== 'newest') && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCompanyFilter('ALL');
-                setSelectedCategoryFilter('ALL');
-                setSelectedLocationFilter('ALL');
-                setSelectedBrandFilter('ALL');
-                setSelectedStatusFilter('ALL');
-                setSortBy('newest');
-              }}
-              className="px-2.5 py-2 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all cursor-pointer"
-            >
-              Reset
-            </button>
-          )}
         </div>
       </div>
 
