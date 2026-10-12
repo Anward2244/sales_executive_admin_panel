@@ -144,15 +144,21 @@ const EmailNotifications = () => {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter((l) => {
+        const id = String(l._id || l.id || '').toLowerCase();
         const po = (l.poNumber || '').toLowerCase();
+        const orderId = String(l.orderId || l.purchaseOrderId || l.relatedEntityId || '').toLowerCase();
         const subj = (l.subject || '').toLowerCase();
         const sender = (l.sender?.name || l.sender?.email || '').toLowerCase();
+        const senderId = String(l.sender?._id || l.sender?.id || '').toLowerCase();
         const recipientsStr = Array.isArray(l.recipients)
           ? l.recipients.join(' ').toLowerCase()
           : '';
         const msgId = (l.messageId || '').toLowerCase();
         return (
+          id.includes(q) ||
           po.includes(q) ||
+          orderId.includes(q) ||
+          senderId.includes(q) ||
           subj.includes(q) ||
           sender.includes(q) ||
           recipientsStr.includes(q) ||

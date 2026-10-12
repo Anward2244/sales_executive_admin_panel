@@ -348,13 +348,21 @@ const Products = () => {
           if (pCatId !== selectedCategoryFilter) return false;
         }
 
-        // Search Query (name, sku, brand, description, category, company name, company code, locations)
+        // Search Query (ID, name, sku, brand, description, category, company name, company code, locations)
         if (debouncedSearchQuery.trim()) {
           const q = debouncedSearchQuery.toLowerCase().trim();
+          const prodId = String(product._id || product.id || '').toLowerCase();
+          const catId = typeof product.categoryId === 'object'
+            ? String(product.categoryId?._id || product.categoryId?.id || '').toLowerCase()
+            : String(product.categoryId || '').toLowerCase();
+          const compId = typeof product.companyId === 'object'
+            ? String(product.companyId?._id || product.companyId?.id || '').toLowerCase()
+            : String(product.companyId || '').toLowerCase();
           const name = String(product.name || '').toLowerCase();
           const sku = String(product.sku || '').toLowerCase();
           const brand = String(product.brand || '').toLowerCase();
           const desc = String(product.description || '').toLowerCase();
+          const hsn = String(product.hsnCode || '').toLowerCase();
           const catName = typeof product.categoryId === 'object'
             ? String(product.categoryId?.name || '').toLowerCase()
             : String(categories.find((c) => c._id === product.categoryId)?.name || '').toLowerCase();
@@ -371,10 +379,14 @@ const Products = () => {
           const locsStr = locsList.join(' ').toLowerCase();
 
           return (
+            prodId.includes(q) ||
+            catId.includes(q) ||
+            compId.includes(q) ||
             name.includes(q) ||
             sku.includes(q) ||
             brand.includes(q) ||
             desc.includes(q) ||
+            hsn.includes(q) ||
             catName.includes(q) ||
             catCode.includes(q) ||
             compName.includes(q) ||

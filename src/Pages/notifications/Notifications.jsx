@@ -380,12 +380,45 @@ const Notifications = () => {
 
       // Search query
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = (item.title || '').toLowerCase().includes(q);
-        const matchMessage = (item.message || '').toLowerCase().includes(q);
-        const matchType = (item.type || '').toLowerCase().includes(q);
-        const matchEntity = (item.relatedEntityType || '').toLowerCase().includes(q);
-        const matchId = (item._id || '').toLowerCase().includes(q) || (item.relatedEntityId || '').toLowerCase().includes(q);
+        const q = searchQuery.toLowerCase().trim();
+        const matchTitle = String(item.title || '').toLowerCase().includes(q);
+        const matchMessage = String(item.message || '').toLowerCase().includes(q);
+        const matchType = String(item.type || '').toLowerCase().includes(q);
+        const matchEntity = String(item.relatedEntityType || '').toLowerCase().includes(q);
+
+        const orderId = getNotificationOrderId(item);
+        const poNum = getNotificationPoNumber(item);
+
+        const idCandidates = [
+          item._id,
+          item.id,
+          item.relatedEntityId,
+          item.relatedEntity?._id,
+          item.relatedEntity?.id,
+          item.purchaseOrderId,
+          item.orderId,
+          item.poNumber,
+          item.userId,
+          item.recipientId,
+          item.recipient?._id,
+          item.recipient?.id,
+          orderId,
+          poNum,
+          item.data?.purchaseOrderId,
+          item.data?.orderId,
+          item.data?._id,
+          item.data?.id,
+          item.data?.userId,
+          item.data?.poNumber,
+          item.metadata?.purchaseOrderId,
+          item.metadata?.orderId,
+          item.metadata?._id,
+          item.metadata?.id,
+          item.metadata?.userId,
+          item.metadata?.poNumber
+        ];
+        const matchId = idCandidates.some((val) => val && String(val).toLowerCase().includes(q));
+
         return matchTitle || matchMessage || matchType || matchEntity || matchId;
       }
 

@@ -248,12 +248,13 @@ const Categories = () => {
   // Filter categories by search keyword and status
   const filteredCategories = useMemo(() => {
     return categories.filter((category) => {
+      const catId = String(category._id || category.id || '').toLowerCase();
       const matchSearch =
         debouncedSearchTerm === '' ||
         (category.name || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         (category.code || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         (category.description || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        (category._id || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+        catId.includes(debouncedSearchTerm.toLowerCase().trim());
 
       const matchStatus =
         statusFilter === 'all' ||

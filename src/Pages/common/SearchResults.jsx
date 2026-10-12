@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { FiSearch, FiPackage, FiLoader, FiAlertCircle, FiGrid, FiFileText, FiUser, FiBriefcase, FiServer } from 'react-icons/fi';
+import { FiSearch, FiPackage, FiLoader, FiAlertCircle, FiGrid, FiFileText, FiUser, FiBriefcase, FiServer, FiShoppingCart } from 'react-icons/fi';
 import { useAuth } from '@/Context/AuthContext';
 import { getAccessibleMenus } from '@/config/menus';
-import { getProductsApi, getCategoryApi, getUsersApi, getCompaniesApi, getFirmsApi } from '@/api/axios';
+import { getProductsApi, getCategoryApi, getUsersApi, getCompaniesApi, getFirmsApi, getPurchaseOrdersApi } from '@/api/axios';
 import { CardGridSkeleton } from '@/components/ui/Skeleton';
 
 const SearchResults = () => {
@@ -26,26 +26,33 @@ const SearchResults = () => {
       setError(null);
 
       try {
-        const [prodRes, catRes, userRes, compRes, firmRes] = await Promise.all([
+        const [prodRes, catRes, userRes, compRes, firmRes, orderRes] = await Promise.all([
           getProductsApi().catch(() => ({ data: [] })),
           getCategoryApi().catch(() => ({ data: [] })),
           getUsersApi().catch(() => ({ data: [] })),
           getCompaniesApi().catch(() => ({ data: [] })),
-          getFirmsApi().catch(() => ({ data: [] }))
+          getFirmsApi().catch(() => ({ data: [] })),
+          getPurchaseOrdersApi().catch(() => ({ data: [] }))
         ]);
 
-        const extractList = (res) => {
+        const extractList = (res, ...possibleKeys) => {
           if (!res?.data) return [];
-          if (Array.isArray(res.data.data)) return res.data.data;
-          if (Array.isArray(res.data)) return res.data;
+          const body = res.data;
+          if (Array.isArray(body)) return body;
+          if (Array.isArray(body.data)) return body.data;
+          for (const key of possibleKeys) {
+            if (Array.isArray(body[key])) return body[key];
+            if (body.data && Array.isArray(body.data[key])) return body.data[key];
+          }
           return [];
         };
 
-        const products = extractList(prodRes);
-        const categories = extractList(catRes);
-        const users = extractList(userRes);
-        const companies = extractList(compRes);
-        const firms = extractList(firmRes);
+        const products = extractList(prodRes, 'products');
+        const categories = extractList(catRes, 'categories');
+        const users = extractList(userRes, 'users');
+        const companies = extractList(compRes, 'companies');
+        const firms = extractList(firmRes, 'firms');
+        const orders = extractList(orderRes, 'purchaseOrders', 'orders');
 
         const terms = query.toLowerCase().trim().split(/\s+/);
         let searchResultsList = [];
@@ -77,24 +84,24 @@ const SearchResults = () => {
 
         // 2. Search Companies
         const matchedCompanies = companies.filter(c => {
-          const text = `${c.name || ''} ${c.code || ''} ${c.description || ''}`.toLowerCase();
+          const text = `${c._id || ''} ${c.id || ''} ${c.name || ''} ${c.code || ''} ${c.description || ''}`.toLowerCase();
           return terms.every(term => text.includes(term));
         });
         searchResultsList = searchResultsList.concat(matchedCompanies.map(c => ({
-          _id: `comp-${c._id}`,
+          _id: `comp-${c._id || c.id}`,
           title: c.name,
           subtitle: `Company • Code: ${c.code || 'N/A'}`,
           type: 'Company',
-          url: `/companies`
+          url: (c._id || c.id) ? `/companies/${c._id || c.id}` : `/companies`
         })));
 
         // 3. Search Firms
         const matchedFirms = firms.filter(f => {
-          const text = `${f.firmName || ''} ${f.firmCode || ''} ${f.contactPerson || ''} ${f.city || ''} ${f.phone || ''}`.toLowerCase();
+          const text = `${f._id || ''} ${f.id || ''} ${f.firmName || ''} ${f.firmCode || ''} ${f.contactPerson || ''} ${f.city || ''} ${f.phone || ''}`.toLowerCase();
           return terms.every(term => text.includes(term));
         });
         searchResultsList = searchResultsList.concat(matchedFirms.map(f => ({
-          _id: `firm-${f._id}`,
+          _id: `firm-${f._id || f.id}`,
           title: f.firmName,
           subtitle: `Firm • Code: ${f.firmCode || 'N/A'}${f.city ? ` • ${f.city}` : ''}`,
           type: 'Firm',
@@ -103,11 +110,11 @@ const SearchResults = () => {
 
         // 4. Search Products
         const matchedProducts = products.filter(product => {
-          const text = `${product.name || ''} ${product.sku || ''} ${product.brand || ''} ${product.description || ''}`.toLowerCase();
+          const text = `${product._id || ''} ${product.id || ''} ${product.name || ''} ${product.sku || ''} ${product.brand || ''} ${product.description || ''}`.toLowerCase();
           return terms.every(term => text.includes(term));
         });
         searchResultsList = searchResultsList.concat(matchedProducts.map(p => ({
-          _id: `prod-${p._id}`,
+          _id: `prod-${p._id || p.id}`,
           title: p.name,
           subtitle: `Product • SKU: ${p.sku || 'N/A'}${p.brand ? ` • ${p.brand}` : ''}`,
           type: 'Product',
@@ -116,11 +123,11 @@ const SearchResults = () => {
 
         // 5. Search Categories
         const matchedCategories = categories.filter(c => {
-          const text = `${c.name || ''} ${c.code || ''} ${c.description || ''}`.toLowerCase();
+          const text = `${c._id || ''} ${c.id || ''} ${c.name || ''} ${c.code || ''} ${c.description || ''}`.toLowerCase();
           return terms.every(term => text.includes(term));
         });
         searchResultsList = searchResultsList.concat(matchedCategories.map(c => ({
-          _id: `cat-${c._id}`,
+          _id: `cat-${c._id || c.id}`,
           title: c.name,
           subtitle: `Category • Code: ${c.code || 'N/A'}`,
           type: 'Category',
@@ -129,16 +136,35 @@ const SearchResults = () => {
 
         // 6. Search Users
         const matchedUsers = users.filter(u => {
-          const text = `${u.name || ''} ${u.firstName || ''} ${u.lastName || ''} ${u.email || ''} ${u.phone || ''} ${u.employeeCode || ''}`.toLowerCase();
+          const text = `${u._id || ''} ${u.id || ''} ${u.name || ''} ${u.firstName || ''} ${u.lastName || ''} ${u.email || ''} ${u.phone || ''} ${u.employeeCode || ''}`.toLowerCase();
           return terms.every(term => text.includes(term));
         });
         searchResultsList = searchResultsList.concat(matchedUsers.map(u => ({
-          _id: `user-${u._id}`,
+          _id: `user-${u._id || u.id}`,
           title: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.name || 'User',
           subtitle: `${u.email || ''}${u.role ? ` • ${u.role}` : ''}`,
           type: 'User',
-          url: `/users`
+          url: (u._id || u.id) ? `/users/${u._id || u.id}` : `/users`
         })));
+
+        // 7. Search Orders
+        const matchedOrders = orders.filter(o => {
+          const compName = typeof o.companyId === 'object' ? (o.companyId?.name || '') : '';
+          const firmName = typeof o.firmId === 'object' ? (o.firmId?.firmName || '') : '';
+          const text = `${o._id || ''} ${o.id || ''} ${o.poNumber || ''} ${o.orderNumber || ''} ${compName} ${firmName}`.toLowerCase();
+          return terms.every(term => text.includes(term));
+        });
+        searchResultsList = searchResultsList.concat(matchedOrders.map(o => {
+          const poNum = o.poNumber || o.orderNumber || (o._id ? o._id.slice(-8).toUpperCase() : 'N/A');
+          return {
+            _id: `order-${o._id || o.id}`,
+            title: `PO #${poNum}`,
+            subtitle: `Purchase Order • Status: ${o.status || 'PENDING'}`,
+            type: 'Order',
+            url: `/purchase-orders`,
+            state: { orderId: o._id || o.id, poNumber: poNum }
+          };
+        }));
 
         setResults(searchResultsList);
       } catch (err) {
@@ -187,6 +213,7 @@ const SearchResults = () => {
                 else if (item.type === 'Firm') Icon = FiServer;
                 else if (item.type === 'Category') Icon = FiGrid;
                 else if (item.type === 'User') Icon = FiUser;
+                else if (item.type === 'Order') Icon = FiShoppingCart;
 
                 return (
                   <Link

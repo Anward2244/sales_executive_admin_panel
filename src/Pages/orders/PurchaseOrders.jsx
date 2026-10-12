@@ -637,7 +637,12 @@ const PurchaseOrders = () => {
       const companyId = o.companyId?._id || o.companyId;
       const companyMatch = companyFilter === 'all' || companyId === companyFilter;
 
-      const poNum = (o.poNumber || o.orderNumber || o._id || '').toLowerCase();
+      const orderId = String(o._id || o.id || o.orderId || '').toLowerCase();
+      const poNum = String(o.poNumber || '').toLowerCase();
+      const orderNum = String(o.orderNumber || '').toLowerCase();
+      const companyIdStr = String(o.companyId?._id || o.companyId?.id || (typeof o.companyId === 'string' ? o.companyId : '')).toLowerCase();
+      const firmIdStr = String(o.firmId?._id || o.firmId?.id || (typeof o.firmId === 'string' ? o.firmId : '')).toLowerCase();
+      const repIdStr = String(o.salesExecutiveId?._id || o.salesExecutiveId?.id || (typeof o.salesExecutiveId === 'string' ? o.salesExecutiveId : '')).toLowerCase();
       const compName = (o.companyId?.name || '').toLowerCase();
       const compCode = (o.companyId?.code || '').toLowerCase();
       const firmName = (o.firmId?.firmName || '').toLowerCase();
@@ -652,10 +657,22 @@ const PurchaseOrders = () => {
       const repEmail = (o.salesExecutiveId?.email || '').toLowerCase();
       const emailStatus = (o.emailStatus?.status || '').toLowerCase();
 
-      const term = searchTerm.toLowerCase();
+      const term = searchTerm.toLowerCase().trim();
+      const itemsMatch = Array.isArray(o.items) && o.items.some((it) => {
+        const itId = String(it._id || it.id || it.productId?._id || it.productId || '').toLowerCase();
+        const itSku = String(it.sku || it.skuSnapshot || '').toLowerCase();
+        const itName = String(it.productName || it.productNameSnapshot || '').toLowerCase();
+        return itId.includes(term) || itSku.includes(term) || itName.includes(term);
+      });
+
       const searchMatch =
         !term ||
+        orderId.includes(term) ||
         poNum.includes(term) ||
+        orderNum.includes(term) ||
+        companyIdStr.includes(term) ||
+        firmIdStr.includes(term) ||
+        repIdStr.includes(term) ||
         compName.includes(term) ||
         compCode.includes(term) ||
         firmName.includes(term) ||
@@ -665,7 +682,8 @@ const PurchaseOrders = () => {
         repName.includes(term) ||
         repEmpCode.includes(term) ||
         repEmail.includes(term) ||
-        emailStatus.includes(term);
+        emailStatus.includes(term) ||
+        itemsMatch;
 
       return statusMatch && companyMatch && searchMatch;
     });

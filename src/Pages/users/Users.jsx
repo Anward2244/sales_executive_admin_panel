@@ -284,7 +284,7 @@ const UsersList = () => {
         const lastName = (user.lastName || '').toLowerCase();
         const email = (user.email || '').toLowerCase();
         const phone = (user.phone || '').toLowerCase();
-        const id = (user._id || '').toLowerCase();
+        const id = String(user._id || user.id || user.userId || '').toLowerCase();
         const employeeCode = (user.employeeCode || '').toLowerCase();
         const role = (user.role || '').toLowerCase();
         const statusText = user.isActive ? 'active' : 'inactive';

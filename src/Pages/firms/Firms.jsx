@@ -433,7 +433,9 @@ const Firms = () => {
         const contactPerson = (firm.contactPerson || '').toLowerCase();
         const email = (firm.email || '').toLowerCase();
         const phone = (firm.phone || '').toLowerCase();
-        const id = (firm._id || '').toLowerCase();
+        const id = String(firm._id || firm.id || firm.firmId || '').toLowerCase();
+        const compId = String(firm.companyId?._id || firm.companyId?.id || (typeof firm.companyId === 'string' ? firm.companyId : '')).toLowerCase();
+        const submitterId = String(firm.submittedBy?._id || firm.submittedBy?.id || '').toLowerCase();
         const city = (firm.city || '').toLowerCase();
         const state = (firm.state || '').toLowerCase();
         const gstin = (firm.gstin || '').toLowerCase();
@@ -464,6 +466,8 @@ const Firms = () => {
           phone.includes(term) ||
           alternatePhone.includes(term) ||
           id.includes(term) ||
+          compId.includes(term) ||
+          submitterId.includes(term) ||
           city.includes(term) ||
           state.includes(term) ||
           gstin.includes(term) ||

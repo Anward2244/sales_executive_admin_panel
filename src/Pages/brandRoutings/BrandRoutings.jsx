@@ -246,14 +246,19 @@ const BrandRoutings = () => {
         if (debouncedSearchBrand.trim()) {
           const q = debouncedSearchBrand.toLowerCase().trim();
           const matchBrand = (group.brand || '').toLowerCase().includes(q);
+          const matchGroupId = String(group._id || group.id || '').toLowerCase().includes(q);
           const matchRuleDesc = rules.some((r) => {
+            const ruleId = String(r._id || r.id || '').toLowerCase();
             const compObj = typeof r.companyId === 'object' ? r.companyId : null;
+            const cId = String(compObj?._id || compObj?.id || (typeof r.companyId === 'string' ? r.companyId : '')).toLowerCase();
             const cCode = (compObj?.code || r.companyCode || '').toLowerCase();
             const cName = (compObj?.name || (companies.find((c) => c.code === r.companyCode || c._id === r.companyId)?.name || '')).toLowerCase();
             const matchCities = Array.isArray(r.cities) && r.cities.some((c) => c.toLowerCase().includes(q));
             const matchEx = Array.isArray(r.excludedCities) && r.excludedCities.some((c) => c.toLowerCase().includes(q));
             const matchStates = Array.isArray(r.states) && r.states.some((s) => s.toLowerCase().includes(q));
             return (
+              ruleId.includes(q) ||
+              cId.includes(q) ||
               (r.description || '').toLowerCase().includes(q) ||
               cCode.includes(q) ||
               cName.includes(q) ||
@@ -262,7 +267,7 @@ const BrandRoutings = () => {
               matchStates
             );
           });
-          if (!matchBrand && !matchRuleDesc) return false;
+          if (!matchBrand && !matchGroupId && !matchRuleDesc) return false;
         }
 
         if (selectedCompanyFilter !== 'ALL') {
@@ -296,16 +301,18 @@ const BrandRoutings = () => {
     return allRulesFlat.filter((rule) => {
       if (debouncedSearchBrand.trim()) {
         const q = debouncedSearchBrand.toLowerCase().trim();
+        const ruleId = String(rule._id || rule.id || '').toLowerCase();
         const matchBrand = (rule.brand || '').toLowerCase().includes(q);
         const matchDesc = (rule.description || '').toLowerCase().includes(q);
         const compObj = typeof rule.companyId === 'object' ? rule.companyId : null;
+        const cId = String(compObj?._id || compObj?.id || (typeof rule.companyId === 'string' ? rule.companyId : '')).toLowerCase();
         const cCode = (compObj?.code || rule.companyCode || '').toLowerCase();
         const cName = (compObj?.name || (companies.find((c) => c.code === rule.companyCode || c._id === rule.companyId)?.name || '')).toLowerCase();
         const matchCities = Array.isArray(rule.cities) && rule.cities.some((c) => c.toLowerCase().includes(q));
         const matchEx = Array.isArray(rule.excludedCities) && rule.excludedCities.some((c) => c.toLowerCase().includes(q));
         const matchStates = Array.isArray(rule.states) && rule.states.some((s) => s.toLowerCase().includes(q));
 
-        if (!matchBrand && !matchDesc && !cCode.includes(q) && !cName.includes(q) && !matchCities && !matchEx && !matchStates) {
+        if (!ruleId.includes(q) && !cId.includes(q) && !matchBrand && !matchDesc && !cCode.includes(q) && !cName.includes(q) && !matchCities && !matchEx && !matchStates) {
           return false;
         }
       }

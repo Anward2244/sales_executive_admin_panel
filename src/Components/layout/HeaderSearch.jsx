@@ -214,40 +214,40 @@ const HeaderSearch = () => {
 
       // 2. Search Companies
       const matchedCompanies = (searchData.companies || []).filter((c) => {
-        const text = `${c.name || ''} ${c.code || ''} ${c.description || ''} ${c.email || ''} ${c.phone || ''} ${c.city || ''} ${c.address || ''}`.toLowerCase();
+        const text = `${c._id || ''} ${c.id || ''} ${c.name || ''} ${c.code || ''} ${c.description || ''} ${c.email || ''} ${c.phone || ''} ${c.city || ''} ${c.address || ''}`.toLowerCase();
         return terms.every((term) => text.includes(term));
       });
       results = results.concat(matchedCompanies.map((c) => ({
-        _id: `comp-${c._id}`,
+        _id: `comp-${c._id || c.id}`,
         title: c.name || 'Unnamed Company',
         subtitle: `Company • Code: ${c.code || 'N/A'}${c.city ? ` • ${c.city}` : ''}${c.isActive === false ? ' • Inactive' : ''}`,
         type: 'Company',
-        url: c._id ? `/companies/${c._id}` : '/companies'
+        url: (c._id || c.id) ? `/companies/${c._id || c.id}` : '/companies'
       })));
 
       // 3. Search Firms
       const matchedFirms = (searchData.firms || []).filter((f) => {
-        const text = `${f.firmName || ''} ${f.firmCode || ''} ${f.contactPerson || ''} ${f.city || ''} ${f.phone || ''} ${f.email || ''} ${f.address || ''}`.toLowerCase();
+        const text = `${f._id || ''} ${f.id || ''} ${f.firmName || ''} ${f.firmCode || ''} ${f.contactPerson || ''} ${f.city || ''} ${f.phone || ''} ${f.email || ''} ${f.address || ''}`.toLowerCase();
         return terms.every((term) => text.includes(term));
       });
       results = results.concat(matchedFirms.map((f) => ({
-        _id: `firm-${f._id}`,
+        _id: `firm-${f._id || f.id}`,
         title: f.firmName || 'Unnamed Firm',
         subtitle: `Firm • Code: ${f.firmCode || 'N/A'}${f.contactPerson ? ` • Contact: ${f.contactPerson}` : ''}${f.city ? ` • ${f.city}` : ''}`,
         type: 'Firm',
         url: f.firmName ? `/firms?search=${encodeURIComponent(f.firmName)}` : '/firms'
       })));
 
-      // 4. Search Products (Name, SKU, Brand, Category, Description, Unit, HSN)
+      // 4. Search Products (ID, Name, SKU, Brand, Category, Description, Unit, HSN)
       const matchedProducts = (searchData.products || []).filter((product) => {
         const catName = typeof product.categoryId === 'object' ? (product.categoryId?.name || '') : '';
-        const text = `${product.name || ''} ${product.sku || ''} ${product.brand || ''} ${product.description || ''} ${product.hsnCode || ''} ${product.unit || ''} ${product.subCategory || ''} ${catName}`.toLowerCase();
+        const text = `${product._id || ''} ${product.id || ''} ${product.name || ''} ${product.sku || ''} ${product.brand || ''} ${product.description || ''} ${product.hsnCode || ''} ${product.unit || ''} ${product.subCategory || ''} ${catName}`.toLowerCase();
         return terms.every((term) => text.includes(term));
       });
       results = results.concat(matchedProducts.map((p) => {
         const catName = typeof p.categoryId === 'object' ? (p.categoryId?.name || '') : '';
         return {
-          _id: `prod-${p._id}`,
+          _id: `prod-${p._id || p.id}`,
           title: p.name || 'Unnamed Product',
           subtitle: `Product • SKU: ${p.sku || 'N/A'}${p.brand ? ` • ${p.brand}` : ''}${catName ? ` • ${catName}` : ''}${p.unit ? ` • ${p.unit}` : ''}`,
           type: 'Product',
@@ -258,11 +258,11 @@ const HeaderSearch = () => {
 
       // 5. Search Categories
       const matchedCategories = (searchData.categories || []).filter((c) => {
-        const text = `${c.name || ''} ${c.code || ''} ${c.description || ''} ${c._id || ''}`.toLowerCase();
+        const text = `${c._id || ''} ${c.id || ''} ${c.name || ''} ${c.code || ''} ${c.description || ''}`.toLowerCase();
         return terms.every((term) => text.includes(term));
       });
       results = results.concat(matchedCategories.map((c) => ({
-        _id: `cat-${c._id}`,
+        _id: `cat-${c._id || c.id}`,
         title: c.name || 'Unnamed Category',
         subtitle: `Category • Code: ${c.code || 'N/A'}${c.description ? ` • ${c.description}` : ''}`,
         type: 'Category',
@@ -272,18 +272,18 @@ const HeaderSearch = () => {
       // 6. Search Users
       const matchedUsers = (searchData.users || []).filter((u) => {
         const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ') || u.name || '';
-        const text = `${fullName} ${u.firstName || ''} ${u.lastName || ''} ${u.email || ''} ${u.phone || ''} ${u.employeeCode || ''} ${u.designation || ''} ${u.role || ''}`.toLowerCase();
+        const text = `${u._id || ''} ${u.id || ''} ${fullName} ${u.firstName || ''} ${u.lastName || ''} ${u.email || ''} ${u.phone || ''} ${u.employeeCode || ''} ${u.designation || ''} ${u.role || ''}`.toLowerCase();
         return terms.every((term) => text.includes(term));
       });
       results = results.concat(matchedUsers.map((u) => {
         const displayName = [u.firstName, u.lastName].filter(Boolean).join(' ') || u.name || 'User';
         const role = (u.role || '').replace(/_/g, ' ');
         return {
-          _id: `user-${u._id}`,
+          _id: `user-${u._id || u.id}`,
           title: displayName,
           subtitle: `${u.email || u.phone || 'User'}${role ? ` • ${role}` : ''}${u.employeeCode ? ` • Emp: ${u.employeeCode}` : ''}`,
           type: 'User',
-          url: u._id ? `/users/${u._id}` : `/users?search=${encodeURIComponent(displayName)}`
+          url: (u._id || u.id) ? `/users/${u._id || u.id}` : `/users?search=${encodeURIComponent(displayName)}`
         };
       }));
 
@@ -294,8 +294,8 @@ const HeaderSearch = () => {
         const repName = typeof o.salesExecutiveId === 'object' 
           ? ([o.salesExecutiveId?.firstName, o.salesExecutiveId?.lastName].filter(Boolean).join(' ') || o.salesExecutiveId?.name || '')
           : '';
-        const itemsText = Array.isArray(o.items) ? o.items.map((it) => `${it.productNameSnapshot || ''} ${it.skuSnapshot || ''}`).join(' ') : '';
-        const text = `${o.poNumber || ''} ${o.orderNumber || ''} ${o._id || ''} ${compName} ${firmName} ${repName} ${o.status || ''} ${itemsText}`.toLowerCase();
+        const itemsText = Array.isArray(o.items) ? o.items.map((it) => `${it._id || ''} ${it.productId?._id || ''} ${it.productNameSnapshot || ''} ${it.skuSnapshot || ''}`).join(' ') : '';
+        const text = `${o._id || ''} ${o.id || ''} ${o.poNumber || ''} ${o.orderNumber || ''} ${compName} ${firmName} ${repName} ${o.status || ''} ${itemsText}`.toLowerCase();
         return terms.every((term) => text.includes(term));
       });
       results = results.concat(matchedOrders.map((o) => {

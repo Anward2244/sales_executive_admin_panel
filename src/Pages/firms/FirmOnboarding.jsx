@@ -291,7 +291,10 @@ const FirmOnboarding = () => {
 
       // Search Term
       if (searchTerm) {
-        const term = searchTerm.toLowerCase();
+        const term = searchTerm.toLowerCase().trim();
+        const id = String(item._id || item.id || '').toLowerCase();
+        const compId = String(item.companyId?._id || item.companyId?.id || (typeof item.companyId === 'string' ? item.companyId : '')).toLowerCase();
+        const submitterId = String(item.submittedBy?._id || item.submittedBy?.id || '').toLowerCase();
         const firmName = (item.firmName || '').toLowerCase();
         const firmCode = (item.firmCode || '').toLowerCase();
         const contactPerson = (item.contactPerson || '').toLowerCase();
@@ -311,6 +314,9 @@ const FirmOnboarding = () => {
         const submitter = (item.submittedBy?.email || item.submittedBy?.phone || '').toLowerCase();
 
         return (
+          id.includes(term) ||
+          compId.includes(term) ||
+          submitterId.includes(term) ||
           firmName.includes(term) ||
           firmCode.includes(term) ||
           contactPerson.includes(term) ||

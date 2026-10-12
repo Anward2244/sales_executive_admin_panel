@@ -309,11 +309,24 @@ const Companies = () => {
   // Derived filtered companies (debounced)
   const filteredCompanies = useMemo(() => {
     return companies.filter((company) => {
+      const term = (debouncedSearchTerm || '').toLowerCase().trim();
+      const compId = String(company._id || company.id || '').toLowerCase();
+      const compName = (company.name || '').toLowerCase();
+      const compCode = (company.code || '').toLowerCase();
+      const compDesc = (company.description || '').toLowerCase();
+      const compEmail = (company.email || '').toLowerCase();
+      const compPhone = (company.phone || '').toLowerCase();
+      const compGstin = (company.gstin || '').toLowerCase();
+
       const matchesSearch =
-        !debouncedSearchTerm ||
-        company.name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        company.code?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        company.description?.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+        !term ||
+        compId.includes(term) ||
+        compName.includes(term) ||
+        compCode.includes(term) ||
+        compDesc.includes(term) ||
+        compEmail.includes(term) ||
+        compPhone.includes(term) ||
+        compGstin.includes(term);
 
       const matchesStatus =
         statusFilter === 'all' ||

@@ -445,18 +445,35 @@ const Reports = () => {
       if (!searchQuery.trim()) return true;
 
       const q = searchQuery.toLowerCase().trim();
+      const orderId = String(order._id || order.id || order.orderId || '').toLowerCase();
       const poNum = String(order.poNumber || '').toLowerCase();
+      const orderNum = String(order.orderNumber || '').toLowerCase();
+      const compId = String(order.companyId?._id || order.companyId?.id || (typeof order.companyId === 'string' ? order.companyId : '')).toLowerCase();
+      const firmId = String(order.firmId?._id || order.firmId?.id || (typeof order.firmId === 'string' ? order.firmId : '')).toLowerCase();
       const compName = String(order.companyId?.name || '').toLowerCase();
       const compCode = String(order.companyId?.code || '').toLowerCase();
       const firmName = String(order.firmId?.firmName || '').toLowerCase();
       const firmCode = String(order.firmId?.firmCode || '').toLowerCase();
       const firmCity = String(order.firmId?.city || '').toLowerCase();
+      const execId = String(order.salesExecutiveId?._id || order.salesExecutiveId?.id || (typeof order.salesExecutiveId === 'string' ? order.salesExecutiveId : '')).toLowerCase();
       const execName = `${order.salesExecutiveId?.firstName || ''} ${order.salesExecutiveId?.lastName || ''}`.toLowerCase();
       const execCode = String(order.salesExecutiveId?.employeeCode || '').toLowerCase();
       const execEmail = String(order.salesExecutiveId?.email || '').toLowerCase();
 
+      const itemsMatch = Array.isArray(order.items) && order.items.some((it) => {
+        const itId = String(it._id || it.id || it.productId?._id || it.productId || '').toLowerCase();
+        const itSku = String(it.sku || it.skuSnapshot || '').toLowerCase();
+        const itName = String(it.productName || it.productNameSnapshot || '').toLowerCase();
+        return itId.includes(q) || itSku.includes(q) || itName.includes(q);
+      });
+
       return (
+        orderId.includes(q) ||
         poNum.includes(q) ||
+        orderNum.includes(q) ||
+        compId.includes(q) ||
+        firmId.includes(q) ||
+        execId.includes(q) ||
         compName.includes(q) ||
         compCode.includes(q) ||
         firmName.includes(q) ||
@@ -464,7 +481,8 @@ const Reports = () => {
         firmCity.includes(q) ||
         execName.includes(q) ||
         execCode.includes(q) ||
-        execEmail.includes(q)
+        execEmail.includes(q) ||
+        itemsMatch
       );
     });
   }, [rangeFilteredOrders, searchQuery, statusFilter]);
