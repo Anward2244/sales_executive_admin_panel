@@ -60,7 +60,7 @@ const Card = ({ children, className = '', onClick, hoverable = false, glowing = 
   return (
     <div
       onClick={onClick}
-      className={`relative overflow-hidden bg-white/70 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xs rounded-2xl p-3 transition-all duration-300 ${hoverable ? ' hover:border-blue-500/40 hover:shadow-md' : ''
+      className={`relative overflow-hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xs rounded-2xl p-3 transition-all duration-300 ${hoverable ? ' hover:border-blue-500/40 hover:shadow-md' : ''
         } ${onClick ? 'cursor-pointer hover:-translate-y-0.5 active:translate-y-0' : ''} ${className}`}
       {...props}
     >

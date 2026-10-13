@@ -157,7 +157,7 @@ const Reports = () => {
   const [error, setError] = useState(null);
 
   // Filters & State
-  const [selectedRange, setSelectedRange] = useState('1w'); // '1w' | '1m' | '1y' | 'all'
+  const [selectedRange, setSelectedRange] = useState('1m'); // '1w' | '1m' | '1y' | 'all'
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedOrder, setSelectedOrder] = useState(null);
