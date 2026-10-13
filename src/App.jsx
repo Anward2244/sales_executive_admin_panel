@@ -1,10 +1,10 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from '@/Context/AuthContext';
+import { AuthProvider } from '@/context/AuthContext';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import Layout from '@/components/layout/Layout';
-import { ConfirmationProvider } from '@/Context/ConfirmationContext';
-import { ThemeProvider } from '@/Context/ThemeContext';
+import { ConfirmationProvider } from '@/context/ConfirmationContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 
 // Lazy Loaded Pages (Clean Architecture)
 const Login = lazy(() => import('@/pages/auth/Login'));

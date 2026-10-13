@@ -10,16 +10,15 @@ const __dirname = path.dirname(__filename)
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
-    alias: [
-      // Direct exact case-match aliases for Windows file-system watchers
-      { find: /^@\/components\/(.*)/, replacement: path.resolve(__dirname, './src/Components/$1') },
-      { find: /^@\/Components\/(.*)/, replacement: path.resolve(__dirname, './src/Components/$1') },
-      { find: /^@\/pages\/(.*)/, replacement: path.resolve(__dirname, './src/Pages/$1') },
-      { find: /^@\/Pages\/(.*)/, replacement: path.resolve(__dirname, './src/Pages/$1') },
-      { find: /^@\/context\/(.*)/, replacement: path.resolve(__dirname, './src/Context/$1') },
-      { find: /^@\/Context\/(.*)/, replacement: path.resolve(__dirname, './src/Context/$1') },
-      { find: '@', replacement: path.resolve(__dirname, './src') },
-    ],
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@/components': path.resolve(__dirname, './src/components'),
+      '@/Components': path.resolve(__dirname, './src/components'),
+      '@/pages': path.resolve(__dirname, './src/pages'),
+      '@/Pages': path.resolve(__dirname, './src/pages'),
+      '@/context': path.resolve(__dirname, './src/context'),
+      '@/Context': path.resolve(__dirname, './src/context'),
+    },
   },
 
   server: {
