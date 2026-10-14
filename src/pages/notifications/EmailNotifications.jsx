@@ -19,7 +19,8 @@ import {
   FiRotateCw,
   FiPlus,
   FiTrash2,
-  FiLoader
+  FiLoader,
+  FiHash
 } from 'react-icons/fi';
 import {
   MdNotificationsNone
@@ -135,7 +136,7 @@ const EmailNotifications = () => {
     if (log.data?.poNumber) return log.data.poNumber;
     if (log.metadata?.poNumber) return log.metadata.poNumber;
     const combinedText = `${log.subject || ''} ${log.messageId || ''}`;
-    const poMatch = combinedText.match(/\b(PO[-_#]?[A-Za-z0-9]+)\b/i);
+    const poMatch = combinedText.match(/\b(PO[-_A-Za-z0-9]+)\b/i);
     return poMatch ? poMatch[1] : null;
   };
 
@@ -583,7 +584,7 @@ const EmailNotifications = () => {
 
       {/* Page Header */}
       <PageHeader
-        title="Email Notifications & Logs"
+        title="Email Notifications"
         icon={FiMail}
         description="Streamlined delivery inbox for automated Purchase Order emails, dispatch tracking, and direct recipient management."
         badgeText={
@@ -741,7 +742,7 @@ const EmailNotifications = () => {
           )}
 
           {/* Master List Feed - Dedicated Scroll Container */}
-          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+          <div className="flex-1 min-h-0 px-2.5 overflow-y-auto custom-scrollbar space-y-2 pr-1">
             {loading && !refreshing ? (
               <div className="space-y-2.5">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -863,25 +864,18 @@ const EmailNotifications = () => {
 
                     {/* Bottom Quick Row */}
                     <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 dark:border-white/5 text-[10px] text-slate-400">
-                      <span className="font-mono truncate max-w-[150px]">
-                        ID: ...{String(itemId).slice(-6)}
+                      <span>
+                        {item.attemptCount && item.attemptCount > 1 ? `Attempts: ${item.attemptCount}` : 'Standard Dispatch'}
                       </span>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={(e) => handleOpenResendModal(item, e)}
-                          className="text-blue-600 dark:text-blue-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
-                        >
-                          <FiRotateCw className="text-[10px]" />
-                          <span>Resend</span>
-                        </button>
-                        <span className="text-slate-300 dark:text-slate-700">•</span>
-                        <span className="group-hover:text-blue-500 font-semibold flex items-center gap-0.5">
-                          <span>View</span>
-                          <FiArrowRight className="text-[9px]" />
-                        </span>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenResendModal(item, e)}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <FiRotateCw className="text-[10px]" />
+                        <span>Resend</span>
+                      </button>
                     </div>
                   </div>
                 );
@@ -935,7 +929,7 @@ const EmailNotifications = () => {
                   <div className="flex flex-col h-full min-h-0">
                     {/* Detail Sticky Header */}
                     <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 dark:bg-black/20 flex items-center justify-between gap-3 shrink-0">
-                      <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20 shrink-0">
                           <FiMail />
                         </div>
@@ -951,10 +945,11 @@ const EmailNotifications = () => {
                               Attempts: {selectedLog.attemptCount || 1}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1 text-[11px] font-mono text-slate-400 mt-1 truncate">
-                            <span>ID: {selId}</span>
-                            <CopyButton text={selId} title="Copy Log ID" />
-                          </div>
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
+                            {selectedLog.createdAt || selectedLog.lastAttemptAt
+                              ? `Dispatched ${getRelativeTime(selectedLog.createdAt || selectedLog.lastAttemptAt)} • ${formatDateTimeDDMMYYYY(selectedLog.createdAt || selectedLog.lastAttemptAt, true)}`
+                              : 'Recent delivery'}
+                          </p>
                         </div>
                       </div>
 
@@ -1000,26 +995,11 @@ const EmailNotifications = () => {
 
                     {/* Scrollable Detail Body */}
                     <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar text-xs">
-                      {/* Timestamps ribbon */}
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 p-2.5 bg-slate-50/70 dark:bg-black/20 rounded-xl border border-slate-100 dark:border-white/5">
-                        <div className="flex items-center gap-1.5">
-                          <FiClock className="text-slate-400" />
-                          <span>
-                            Dispatched:{' '}
-                            <strong className="text-slate-700 dark:text-slate-300 font-semibold">
-                              {selectedLog.createdAt || selectedLog.lastAttemptAt
-                                ? formatDateTimeDDMMYYYY(selectedLog.createdAt || selectedLog.lastAttemptAt, true)
-                                : 'Recent'}
-                            </strong>
-                          </span>
-                        </div>
-                        <span className="font-semibold text-blue-600 dark:text-blue-400">
-                          {getRelativeTime(selectedLog.createdAt || selectedLog.lastAttemptAt)}
-                        </span>
-                      </div>
-
                       {/* Main Subject */}
                       <div className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                          Email Subject
+                        </span>
                         <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-snug">
                           {selectedLog.subject || 'Purchase Order Email Notification'}
                         </h2>
@@ -1027,31 +1007,32 @@ const EmailNotifications = () => {
 
                       {/* Direct PO Hero Banner (if purchase order attached) */}
                       {isPO && (
-                        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/30 space-y-3">
-                          <div className="flex items-center justify-between flex-wrap gap-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm font-bold shrink-0">
-                                <FiShoppingBag />
-                              </div>
-                              <div>
-                                <h4 className="text-xs font-black text-slate-900 dark:text-white">
-                                  Purchase Order Attached
-                                </h4>
-                                <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium font-mono">
-                                  {poNum ? `Order Reference: #${poNum}` : 'Direct purchase order notification'}
-                                </p>
-                              </div>
+                        <div className="p-4 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-base font-bold shrink-0">
+                              <FiShoppingBag />
                             </div>
-
-                            <button
-                              type="button"
-                              onClick={(e) => handleNavigateToPO(selectedLog, e)}
-                              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer ml-auto"
-                            >
-                              <span>Open PO in Management</span>
-                              <FiExternalLink className="text-xs" />
-                            </button>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
+                                  #{poNum || 'Purchase Order'}
+                                </span>
+                                {poNum && <CopyButton text={poNum} />}
+                              </div>
+                              <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium">
+                                Direct purchase order dispatch
+                              </p>
+                            </div>
                           </div>
+
+                          <button
+                            type="button"
+                            onClick={(e) => handleNavigateToPO(selectedLog, e)}
+                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer ml-auto shrink-0"
+                          >
+                            <span>Open Purchase Order</span>
+                            <FiExternalLink className="text-xs" />
+                          </button>
                         </div>
                       )}
 
@@ -1068,80 +1049,94 @@ const EmailNotifications = () => {
                         </div>
                       )}
 
-                      {/* Sender & Delivery Metadata */}
-                      <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-black/20 border border-slate-200/60 dark:border-white/5 space-y-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                          Sender & Dispatch Details
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                          <div>
-                            <span className="text-[11px] text-slate-400 block">Sender Name / Email</span>
-                            <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200 mt-0.5">
-                              <span>{selectedLog.sender?.name || 'Automated System'}</span>
-                              {selectedLog.sender?.email && (
-                                <span className="font-normal font-mono text-[11px] text-slate-500">
-                                  (<GmailLink email={selectedLog.sender.email} />)
+                      {/* Addressing & Dispatch Card (Recipients & Sender) */}
+                      <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-black/20 border border-slate-200/60 dark:border-white/5 space-y-3.5">
+                        {/* Recipients */}
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                            Recipients ({recipientsList.length})
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {recipientsList.length === 0 ? (
+                              <span className="text-slate-400 italic">No recipients logged</span>
+                            ) : (
+                              recipientsList.map((email, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white dark:bg-white/10 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-800 dark:text-slate-200 shadow-xs"
+                                >
+                                  <GmailLink email={email} />
+                                  <CopyButton text={email} />
                                 </span>
-                              )}
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        {/* CC List (if any) */}
+                        {Array.isArray(selectedLog.cc) && selectedLog.cc.length > 0 && (
+                          <div className="pt-2.5 border-t border-slate-200/50 dark:border-white/5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                              Carbon Copy (CC) ({selectedLog.cc.length})
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {selectedLog.cc.map((ccEmail, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white dark:bg-white/10 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-700 dark:text-slate-300"
+                                >
+                                  <GmailLink email={ccEmail} />
+                                  <CopyButton text={ccEmail} />
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Sender info */}
+                        <div className="pt-2.5 border-t border-slate-200/50 dark:border-white/5 flex items-center justify-between text-xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Sender
+                          </span>
+                          <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-200 font-semibold">
+                            <span>{selectedLog.sender?.name || 'Automated Dispatch'}</span>
+                            {selectedLog.sender?.email && (
+                              <span className="font-normal font-mono text-[11px] text-slate-400">
+                                (<GmailLink email={selectedLog.sender.email} />)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Technical & Debug Identifiers (Accordion) */}
+                      <details className="group rounded-2xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-black/20 p-3.5 text-xs transition-colors">
+                        <summary className="flex items-center justify-between cursor-pointer list-none font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 select-none">
+                          <span className="flex items-center gap-2">
+                            <FiHash className="text-xs" />
+                            <span>System & Debug Identifiers</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono group-open:rotate-180 transition-transform">▼</span>
+                        </summary>
+                        <div className="pt-3 mt-3 border-t border-slate-200/50 dark:border-white/5 space-y-2 font-mono text-[11px] text-slate-500">
+                          <div className="flex items-center justify-between">
+                            <span>Log Record ID:</span>
+                            <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                              <span>{selId}</span>
+                              <CopyButton text={selId} />
                             </div>
                           </div>
                           {selectedLog.messageId && (
-                            <div>
-                              <span className="text-[11px] text-slate-400 block">Message-ID</span>
-                              <div className="flex items-center gap-1 font-mono text-[11px] text-slate-800 dark:text-slate-200 mt-0.5">
-                                <span className="truncate max-w-[170px]">{selectedLog.messageId}</span>
+                            <div className="flex items-center justify-between">
+                              <span>Message-ID:</span>
+                              <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                                <span className="truncate max-w-[220px]">{selectedLog.messageId}</span>
                                 <CopyButton text={selectedLog.messageId} />
                               </div>
                             </div>
                           )}
                         </div>
-                      </div>
-
-                      {/* Recipients List */}
-                      <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-black/20 border border-slate-200/60 dark:border-white/5 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                            Target Recipients ({recipientsList.length})
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {recipientsList.length === 0 ? (
-                            <span className="text-slate-400 italic">No recipients logged</span>
-                          ) : (
-                            recipientsList.map((email, idx) => (
-                              <span
-                                key={idx}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white dark:bg-white/10 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-800 dark:text-slate-200 shadow-xs"
-                              >
-                                <GmailLink email={email} />
-                                <CopyButton text={email} />
-                              </span>
-                            ))
-                          )}
-                        </div>
-                      </div>
-
-                      {/* CC List (if any) */}
-                      {Array.isArray(selectedLog.cc) && selectedLog.cc.length > 0 && (
-                        <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-black/20 border border-slate-200/60 dark:border-white/5 space-y-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                            Carbon Copy (CC) ({selectedLog.cc.length})
-                          </span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {selectedLog.cc.map((ccEmail, idx) => (
-                              <span
-                                key={idx}
-                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white dark:bg-white/10 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-700 dark:text-slate-300"
-                              >
-                                <GmailLink email={ccEmail} />
-                                <CopyButton text={ccEmail} />
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-
+                      </details>
                     </div>
 
                     {/* Detail Sticky Footer - Permanently Anchored at the Bottom */}

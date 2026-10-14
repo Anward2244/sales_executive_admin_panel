@@ -36,6 +36,7 @@ import CopyButton from '@/components/ui/CopyButton';
 import OrderStatusBreakdownChart from '@/components/reports/OrderStatusBreakdownChart';
 import DailyTrendChart from '@/components/reports/DailyTrendChart';
 import ProductPerformanceChart from '@/components/reports/ProductPerformanceChart';
+import CustomDatePicker from '@/components/ui/CustomDatePicker';
 import { useTheme } from '@/context/ThemeContext';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { getReportsApi } from '@/api/axios';
@@ -157,7 +158,15 @@ const Reports = () => {
   const [error, setError] = useState(null);
 
   // Filters & State
-  const [selectedRange, setSelectedRange] = useState('1m'); // '1w' | '1m' | '1y' | 'all'
+  const [selectedRange, setSelectedRange] = useState('1m'); // '1w' | '1m' | '1y' | 'all' | 'custom'
+  const [customStartDate, setCustomStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 29);
+    return d.toISOString().split('T')[0];
+  });
+  const [customEndDate, setCustomEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -196,7 +205,9 @@ const Reports = () => {
 
   const handleRangeChange = (newRange) => {
     setSelectedRange(newRange);
-    fetchReportData(true, newRange);
+    if (newRange !== 'custom') {
+      fetchReportData(true, newRange);
+    }
   };
 
   // Base raw orders strictly deduplicated by _id to avoid any false inflated counts
@@ -219,6 +230,17 @@ const Reports = () => {
     const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     let start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
+    if (selectedRange === 'custom') {
+      const start = customStartDate ? new Date(`${customStartDate}T00:00:00`) : new Date(0);
+      const end = customEndDate ? new Date(`${customEndDate}T23:59:59.999`) : new Date();
+      return rawOrders.filter((order) => {
+        const dateVal = order.createdAt || order.orderDate || order.date;
+        if (!dateVal) return false;
+        const d = new Date(dateVal);
+        return d >= start && d <= end;
+      });
+    }
+
     if (selectedRange === '1w' || selectedRange === 'week' || selectedRange === '7d') {
       // 1 Week: past 7 days (today - 6 to today)
       start.setDate(now.getDate() - 6);
@@ -236,7 +258,7 @@ const Reports = () => {
       const d = new Date(dateVal);
       return d >= start && d <= end;
     });
-  }, [rawOrders, selectedRange]);
+  }, [rawOrders, selectedRange, customStartDate, customEndDate]);
 
   // Derived KPI Summaries dynamically and accurately calculated for the active range
   const summary = useMemo(() => {
@@ -294,6 +316,25 @@ const Reports = () => {
 
     const today = new Date();
 
+    if (selectedRange === 'custom') {
+      const res = [];
+      const start = customStartDate ? new Date(`${customStartDate}T00:00:00`) : new Date(Date.now() - 29 * 86400000);
+      const end = customEndDate ? new Date(`${customEndDate}T23:59:59.999`) : new Date();
+
+      const curr = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+      while (curr <= last) {
+        const yyyy = curr.getFullYear();
+        const mm = String(curr.getMonth() + 1).padStart(2, '0');
+        const dd = String(curr.getDate()).padStart(2, '0');
+        const key = `${yyyy}-${mm}-${dd}`;
+        res.push(dateMap[key] || { _id: key, date: key, totalAmount: 0, orderCount: 0 });
+        curr.setDate(curr.getDate() + 1);
+      }
+      return res;
+    }
+
     if (selectedRange === '1w' || selectedRange === 'week' || selectedRange === '7d') {
       const res = [];
       for (let i = 6; i >= 0; i--) {
@@ -347,7 +388,7 @@ const Reports = () => {
     }
 
     return Array.isArray(reportData?.dailyTrend) ? reportData.dailyTrend : [];
-  }, [rangeFilteredOrders, selectedRange, reportData?.dailyTrend]);
+  }, [rangeFilteredOrders, selectedRange, reportData?.dailyTrend, customStartDate, customEndDate]);
 
   // Derived Product Performance for the active range
   const productPerformance = useMemo(() => {
@@ -486,6 +527,28 @@ const Reports = () => {
       );
     });
   }, [rangeFilteredOrders, searchQuery, statusFilter]);
+
+  // Orders Audit Ledger Pagination
+  const [ordersPage, setOrdersPage] = useState(1);
+  const ordersRowsPerPage = displayPrefs.rowsPerPage || 10;
+
+  const totalOrdersPages = Math.ceil(filteredOrders.length / ordersRowsPerPage) || 1;
+  const indexOfLastOrder = ordersPage * ordersRowsPerPage;
+  const indexOfFirstOrder = indexOfLastOrder - ordersRowsPerPage;
+  const paginatedOrders = useMemo(() => {
+    return filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+  }, [filteredOrders, indexOfFirstOrder, indexOfLastOrder]);
+
+  useEffect(() => {
+    if (ordersPage > totalOrdersPages && totalOrdersPages > 0) {
+      setOrdersPage(1);
+    }
+  }, [totalOrdersPages, ordersPage]);
+
+  // Reset orders page when filters or reporting window change
+  useEffect(() => {
+    setOrdersPage(1);
+  }, [searchQuery, statusFilter, selectedRange, customStartDate, customEndDate]);
 
   // Stepper calculations for Order Details Drawer
   const selectedOrderIndex = selectedOrder
@@ -738,37 +801,67 @@ const Reports = () => {
       )}
 
       {/* Date Range Selector Banner */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs">
-        <div className="flex items-center gap-2">
-          <FiCalendar className="text-blue-500 text-sm" />
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Reporting Window:</span>
-          {selectedRange !== 'all' && (
-            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-              {rangeFilteredOrders.length} {rangeFilteredOrders.length === 1 ? 'order' : 'orders'} in period
+      <div className="flex flex-col gap-3 bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="flex items-center gap-2 flex-wrap">
+            <FiCalendar className="text-blue-500 text-sm" />
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Reporting Window:</span>
+            {selectedRange !== 'all' && (
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                {rangeFilteredOrders.length} {rangeFilteredOrders.length === 1 ? 'order' : 'orders'} in period
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {[
+              { id: '1w', label: '1W' },
+              { id: '1m', label: '1M' },
+              { id: '1y', label: '1Y' },
+              { id: 'all', label: 'All' },
+              { id: 'custom', label: 'Custom' }
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleRangeChange(item.id)}
+                className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  selectedRange === item.id
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom Date Pickers when 'Custom' Reporting Window is active */}
+        {selectedRange === 'custom' && (
+          <div className="flex items-center gap-2 pt-2 border-t border-slate-200/60 dark:border-white/5 flex-wrap animate-in fade-in duration-200">
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1">
+              <FiCalendar className="text-xs text-blue-500" />
+              Custom Window:
             </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {[
-            { id: '1w', label: '1W' },
-            { id: '1m', label: '1M' },
-            { id: '1y', label: '1Y' },
-            { id: 'all', label: 'All' }
-          ].map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => handleRangeChange(item.id)}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                selectedRange === item.id
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <CustomDatePicker
+                label="From"
+                value={customStartDate}
+                onChange={setCustomStartDate}
+                max={customEndDate}
+                align="left"
+              />
+              <CustomDatePicker
+                label="To"
+                value={customEndDate}
+                onChange={setCustomEndDate}
+                min={customStartDate}
+                max={new Date().toISOString().split('T')[0]}
+                align="left"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Top 4 KPI Metrics */}
@@ -1292,7 +1385,8 @@ const Reports = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto custom-scrollbar">
+          <>
+            <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left text-sm whitespace-nowrap min-w-[1100px]">
               <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5">
                 <tr>
@@ -1309,7 +1403,7 @@ const Reports = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
-                {filteredOrders.map((order) => {
+                {paginatedOrders.map((order) => {
                   const badge = getStatusBadge(order.status);
                   const StatusIcon = badge.icon;
                   const emailBadge = getEmailStatusBadge(order.emailStatus);
@@ -1467,6 +1561,73 @@ const Reports = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Orders Audit Ledger Attached Pagination Bar */}
+          {filteredOrders.length > 0 && (
+            <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-white/[0.02] text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-3">
+                <span>
+                  Showing <strong className="text-slate-800 dark:text-slate-200">{indexOfFirstOrder + 1}</strong> to{' '}
+                  <strong className="text-slate-800 dark:text-slate-200">
+                    {Math.min(indexOfLastOrder, filteredOrders.length)}
+                  </strong>{' '}
+                  of <strong className="text-slate-800 dark:text-slate-200">{filteredOrders.length}</strong> orders
+                </span>
+              </div>
+
+              {totalOrdersPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setOrdersPage((p) => Math.max(1, p - 1))}
+                    disabled={ordersPage === 1}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                  >
+                    <FiChevronLeft size={13} />
+                    <span>Prev</span>
+                  </button>
+
+                  {Array.from({ length: totalOrdersPages }, (_, i) => i + 1).map((pg) => {
+                    if (
+                      pg === 1 ||
+                      pg === totalOrdersPages ||
+                      (pg >= ordersPage - 1 && pg <= ordersPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={pg}
+                          type="button"
+                          onClick={() => setOrdersPage(pg)}
+                          className={`w-7 h-7 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            ordersPage === pg
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
+                          }`}
+                        >
+                          {pg}
+                        </button>
+                      );
+                    }
+                    if (pg === ordersPage - 2 || pg === ordersPage + 2) {
+                      return <span key={pg} className="px-1 text-slate-400">...</span>;
+                    }
+                    return null;
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => setOrdersPage((p) => Math.min(totalOrdersPages, p + 1))}
+                    disabled={ordersPage === totalOrdersPages}
+                    className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                  >
+                    <span>Next</span>
+                    <FiChevronRight size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          </>
         )}
       </div>
 

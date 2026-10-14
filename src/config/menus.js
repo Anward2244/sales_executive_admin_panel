@@ -27,8 +27,8 @@ const PAGES = {
     name: 'Notifications',
     icon: FiBell,
     subMenus: [
-      { path: '/notifications', name: 'In-App Alerts', icon: FiBell },
-      { path: '/notifications/emails', name: 'Email Delivery Logs', icon: FiMail },
+      { path: '/notifications', name: 'In-App Notifications', icon: FiBell },
+      { path: '/notifications/emails', name: 'Email Notifications', icon: FiMail },
     ]
   },
   REPORTS: { path: '/reports', name: 'Reports', icon: FiPieChart },

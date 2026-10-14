@@ -40,6 +40,7 @@ import {
 import VisxTrendChart from '@/components/dashboard/VisxTrendChart';
 import VisxPipelineDonut from '@/components/dashboard/VisxPipelineDonut';
 import VisxTreemapChart from '@/components/dashboard/VisxTreemapChart';
+import CustomDatePicker from '@/components/ui/CustomDatePicker';
 import { SkeletonPulse, TableRowSkeleton, ChartCardSkeleton, DonutChartSkeleton, TreemapSkeleton } from '@/components/ui/Skeleton';
 import { useTheme } from '@/context/ThemeContext';
 import {
@@ -122,7 +123,15 @@ const Dashboard = () => {
 
   // Chart 1 controls - Mixed Chart series toggles & range
   const [visibleSeries, setVisibleSeries] = useState({ revenue: true, orders: true });
-  const [trendRange, setTrendRange] = useState('1w'); // '1w' | '1m' | '1y'
+  const [trendRange, setTrendRange] = useState('1w'); // '1w' | '1m' | '1y' | 'custom'
+  const [trendStartDate, setTrendStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 29);
+    return d.toISOString().split('T')[0];
+  });
+  const [trendEndDate, setTrendEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
 
   // Tree controls - Revenue vs PO Volume
   const [treemapMetric, setTreemapMetric] = useState('revenue'); // 'revenue' | 'orders'
@@ -339,6 +348,25 @@ const Dashboard = () => {
 
     const today = new Date();
 
+    if (trendRange === 'custom') {
+      const result = [];
+      const start = trendStartDate ? new Date(`${trendStartDate}T00:00:00`) : new Date(Date.now() - 29 * 86400000);
+      const end = trendEndDate ? new Date(`${trendEndDate}T23:59:59.999`) : new Date();
+
+      const curr = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+      while (curr <= last) {
+        const yyyy = curr.getFullYear();
+        const mm = String(curr.getMonth() + 1).padStart(2, '0');
+        const dd = String(curr.getDate()).padStart(2, '0');
+        const key = `${yyyy}-${mm}-${dd}`;
+        result.push(dateMap[key] || { date: key, revenue: 0, orders: 0 });
+        curr.setDate(curr.getDate() + 1);
+      }
+      return result;
+    }
+
     if (trendRange === '1w' || trendRange === '7d') {
       // 1 Week: Exactly last 7 consecutive calendar days (Today - 6 to Today)
       const result = [];
@@ -397,7 +425,7 @@ const Dashboard = () => {
       fallback.push({ date: key, revenue: 0, orders: 0 });
     }
     return fallback;
-  }, [allPurchaseOrders, recentOrders, reportsData, trendRange]);
+  }, [allPurchaseOrders, recentOrders, reportsData, trendRange, trendStartDate, trendEndDate]);
 
   // Aggregate metrics for Chart 1 stat footer
   const trendSummary = useMemo(() => {
@@ -943,7 +971,7 @@ const Dashboard = () => {
               {/* Controls: Series Legend Toggles & Time Range */}
               <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
                 {/* Series Legend Toggles */}
-                <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold gap-1">
+                {/* <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold gap-1">
                   <button
                     type="button"
                     onClick={() => toggleSeries('revenue')}
@@ -978,14 +1006,15 @@ const Dashboard = () => {
                     />
                     <span>Orders</span>
                   </button>
-                </div>
+                </div> */}
 
                 {/* Range Filter */}
                 <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold">
                   {[
                     { id: '1w', label: '1W' },
                     { id: '1m', label: '1M' },
-                    { id: '1y', label: '1Y' }
+                    { id: '1y', label: '1Y' },
+                    { id: 'custom', label: 'Custom' }
                   ].map((rng) => (
                     <button
                       key={rng.id}
@@ -1003,6 +1032,33 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
+
+            {/* Custom Date Range Pickers for Velocity Trend Chart */}
+            {trendRange === 'custom' && (
+              <div className="flex items-center gap-2 pt-3 pb-1 flex-wrap sm:justify-end animate-in fade-in duration-200 border-b border-slate-200/60 dark:border-white/5">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  <FiCalendar className="text-xs text-blue-500" />
+                  Custom Range:
+                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <CustomDatePicker
+                    label="From"
+                    value={trendStartDate}
+                    onChange={(val) => setTrendStartDate(val)}
+                    max={trendEndDate}
+                    align="left"
+                  />
+                  <CustomDatePicker
+                    label="To"
+                    value={trendEndDate}
+                    onChange={(val) => setTrendEndDate(val)}
+                    min={trendStartDate}
+                    max={new Date().toISOString().split('T')[0]}
+                    align="right"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Chart Canvas */}
             <div className="pt-4 min-h-[320px]">

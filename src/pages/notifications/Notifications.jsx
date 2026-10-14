@@ -328,8 +328,36 @@ const Notifications = () => {
     if (notif.data?.poNumber) return notif.data.poNumber;
     if (notif.metadata?.poNumber) return notif.metadata.poNumber;
     const combinedText = `${notif.title || ''} ${notif.message || ''}`;
-    const poMatch = combinedText.match(/\b(PO[-_#]?[A-Za-z0-9]+)\b/i);
+    const poMatch = combinedText.match(/\b(PO[-_A-Za-z0-9]+)\b/i);
     return poMatch ? poMatch[1] : null;
+  };
+
+  // Helper to parse key business entities (Firm name, full PO number, and Amount)
+  const parseNotificationDetails = (notif) => {
+    if (!notif) return {};
+    const text = `${notif.title || ''} ${notif.message || ''}`;
+
+    let poNumber = notif.poNumber || notif.data?.poNumber || notif.metadata?.poNumber;
+    if (!poNumber) {
+      const poMatch = text.match(/\b(PO[-_A-Za-z0-9]+)\b/i);
+      if (poMatch) poNumber = poMatch[1];
+    }
+
+    let firmName = notif.firmName || notif.data?.firmName || notif.metadata?.firmName;
+    if (!firmName) {
+      const firmMatch = text.match(/for\s+([^()]+?)(?:\s*\((?:₹|INR)?[\d,]+\)|\s+submitted|\s*$)/i);
+      if (firmMatch) firmName = firmMatch[1].trim();
+    }
+
+    let amount = notif.totalAmount || notif.data?.totalAmount || notif.metadata?.totalAmount;
+    if (!amount) {
+      const amtMatch = text.match(/(?:₹|INR|\$)\s?([\d,]+(?:\.\d{2})?)/i);
+      if (amtMatch) amount = `₹${amtMatch[1]}`;
+    } else if (typeof amount === 'number') {
+      amount = `₹${amount.toLocaleString('en-IN')}`;
+    }
+
+    return { poNumber, firmName, amount };
   };
 
   const handleNavigateToPO = (notif, e) => {
@@ -548,7 +576,7 @@ const Notifications = () => {
 
       {/* Page Header */}
       <PageHeader
-        title="Notifications Inbox"
+        title="In-App Notifications"
         icon={FiBell}
         description="Streamlined split inbox for instant triage, real-time alerts, and direct purchase order shortcuts."
         badgeText={
@@ -710,7 +738,7 @@ const Notifications = () => {
           )}
 
           {/* Master List Feed - Dedicated Scroll Container */}
-          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+          <div className="flex-1 px-2.5 min-h-0 overflow-y-auto custom-scrollbar space-y-2 pr-1">
             {loading && !refreshing ? (
               <div className="space-y-2.5">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -754,9 +782,9 @@ const Notifications = () => {
                 const isSelected = selectedNotificationId === itemId;
                 const isRead = Boolean(item.isRead);
                 const typeConfig = getTypeConfig(item.type, item.relatedEntityType);
-                const TypeIcon = typeConfig.icon;
-                const isPurchaseOrder = checkIsPurchaseOrder(item);
-                const poNumber = isPurchaseOrder ? getNotificationPoNumber(item) : null;
+                const { poNumber, firmName, amount } = parseNotificationDetails(item);
+
+                const displayTitle = firmName || item.title || 'Notification';
 
                 return (
                   <div
@@ -766,93 +794,77 @@ const Notifications = () => {
                       isSelected
                         ? 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-500/80 ring-2 ring-blue-500/30 shadow-md'
                         : isRead
-                        ? 'bg-white/70 dark:bg-slate-900/50 border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50/50 dark:hover:bg-slate-800/30'
+                        ? 'bg-white/60 dark:bg-slate-900/40 border-slate-200/70 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 opacity-80 hover:opacity-100'
                         : 'bg-white dark:bg-slate-900 border-blue-200/80 dark:border-blue-500/30 shadow-xs hover:border-blue-300'
                     }`}
                   >
                     {/* Left Accent indicator for unread items */}
                     {!isRead && (
-                      <span
-                        className={`absolute left-0 top-3.5 bottom-3.5 w-1 rounded-r-full ${typeConfig.accentBar}`}
-                      />
+                      <span className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-blue-500" />
                     )}
 
-                    {/* Top Row: Type badge, unread dot, timestamp */}
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                    {/* Top Row: Primary Title & Time */}
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        {/* Unread beacon */}
-                        {!isRead ? (
-                          <span className="relative flex h-2 w-2 shrink-0" title="Unread">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
-                          </span>
-                        ) : (
-                          <FiCheckCircle className="text-[11px] text-emerald-500 shrink-0" title="Read" />
+                        {!isRead && (
+                          <span className="h-2 w-2 rounded-full bg-blue-600 shrink-0" title="Unread" />
                         )}
-
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider shrink-0 ${typeConfig.badgeClass}`}
+                        <h4
+                          className={`text-xs truncate leading-snug ${
+                            !isRead
+                              ? 'font-bold text-slate-900 dark:text-white'
+                              : 'font-semibold text-slate-700 dark:text-slate-300'
+                          } ${isSelected ? 'text-blue-700 dark:text-blue-300 font-bold' : ''}`}
                         >
-                          <TypeIcon className="text-[10px]" />
-                          <span className="truncate max-w-[100px]">{typeConfig.label}</span>
-                        </span>
-
-                        {poNumber && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold shrink-0">
-                            #{poNumber}
-                          </span>
-                        )}
+                          {displayTitle}
+                        </h4>
                       </div>
 
-                      <div className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500 shrink-0 font-medium">
-                        <FiClock className="text-[10px]" />
-                        <span>{getRelativeTime(item.createdAt)}</span>
-                      </div>
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium shrink-0 whitespace-nowrap">
+                        {getRelativeTime(item.createdAt)}
+                      </span>
                     </div>
 
-                    {/* Notification Title */}
-                    <h4
-                      className={`text-xs leading-snug truncate transition-colors ${
-                        !isRead
-                          ? 'font-bold text-slate-900 dark:text-white'
-                          : 'font-semibold text-slate-700 dark:text-slate-300'
-                      } ${isSelected ? 'text-blue-700 dark:text-blue-300' : ''}`}
-                    >
-                      {item.title || 'Untitled Notification'}
-                    </h4>
+                    {/* Secondary Row: PO Number & Amount pill tags */}
+                    <div className="flex items-center gap-2 flex-wrap mb-1 text-[11px]">
+                      {poNumber && (
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 shrink-0">
+                          #{poNumber}
+                        </span>
+                      )}
 
-                    {/* Message Snippet */}
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-1 leading-relaxed">
+                      {amount && (
+                        <span className="font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-xs shrink-0">
+                          {amount}
+                        </span>
+                      )}
+
+                      {!poNumber && !amount && (
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {typeConfig.label}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Message snippet */}
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-normal">
                       {item.message || 'No additional details provided.'}
                     </p>
 
-                    {/* Bottom Quick Row */}
-                    <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 dark:border-white/5 text-[10px] text-slate-400">
-                      <span className="font-mono truncate max-w-[160px]">
-                        {item.relatedEntityId
-                          ? `ID: ...${String(item.relatedEntityId).slice(-6)}`
-                          : ''}
-                      </span>
-
-                      <div className="flex items-center gap-2">
-                        {!isRead && (
-                          <button
-                            type="button"
-                            onClick={(e) => handleMarkAsRead(itemId, e)}
-                            disabled={actionLoadingId === itemId}
-                            className="text-blue-600 dark:text-blue-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
-                          >
-                            <FiCheck className="text-[10px]" />
-                            <span>Mark read</span>
-                          </button>
-                        )}
-                        <span className="text-slate-300 dark:text-slate-700">•</span>
-                        <span className="group-hover:text-blue-500 font-semibold flex items-center gap-0.5">
-                          <span>View</span>
-                          <FiArrowRight className="text-[9px]" />
-                        </span>
+                    {/* Quick Mark Read button for unread items */}
+                    {!isRead && (
+                      <div className="flex justify-end pt-1.5 mt-1.5 border-t border-slate-100 dark:border-white/5">
+                        <button
+                          type="button"
+                          onClick={(e) => handleMarkAsRead(itemId, e)}
+                          disabled={actionLoadingId === itemId}
+                          className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <FiCheck className="text-[10px]" />
+                          <span>Mark read</span>
+                        </button>
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })
@@ -903,51 +915,49 @@ const Notifications = () => {
                 const TypeIcon = typeConfig.icon;
                 const isPO = checkIsPurchaseOrder(selectedNotification);
                 const poNum = getNotificationPoNumber(selectedNotification);
+                const { poNumber: parsedPo, firmName: parsedFirm, amount: parsedAmt } = parseNotificationDetails(selectedNotification);
                 const rawData = selectedNotification.data || selectedNotification.metadata;
+
+                const primaryTitle = parsedFirm || selectedNotification.title || 'Notification';
+                const effectivePo = parsedPo || poNum;
 
                 return (
                   <div className="flex flex-col h-full min-h-0">
                     {/* Detail Sticky Header */}
                     <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 dark:bg-black/20 flex items-center justify-between gap-3 shrink-0">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20 shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base border border-blue-500/20 shrink-0">
                           <TypeIcon />
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${typeConfig.badgeClass}`}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${typeConfig.badgeClass}`}
                             >
-                              <TypeIcon className="text-[10px]" />
                               <span>{typeConfig.label}</span>
                             </span>
                             <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                                 isRead
-                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
-                                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
+                                  ? 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400'
+                                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                               }`}
                             >
                               {isRead ? 'Read' : 'Unread'}
                             </span>
-                          </div>
-                          <div className="flex items-center gap-1 text-[11px] font-mono text-slate-400 mt-1 truncate">
-                            <span>ID: {selId}</span>
-                            <CopyButton text={selId} title="Copy Notification ID" />
                           </div>
                         </div>
                       </div>
 
                       {/* Header Controls: Stepper & Mark Read */}
                       <div className="flex items-center gap-2 shrink-0">
-                        {/* Stepper Navigation */}
                         {filteredNotifications.length > 1 && (
                           <div className="flex items-center bg-white dark:bg-slate-800 rounded-xl p-0.5 border border-slate-200/80 dark:border-white/10 shadow-xs">
                             <button
                               type="button"
                               onClick={handlePrevNotification}
                               disabled={!hasPrev}
-                              title="Previous (or 'k' / up arrow)"
+                              title="Previous (k)"
                               className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/10 transition-all cursor-pointer"
                             >
                               <FiChevronLeft size={14} />
@@ -959,7 +969,7 @@ const Notifications = () => {
                               type="button"
                               onClick={handleNextNotification}
                               disabled={!hasNext}
-                              title="Next (or 'j' / down arrow)"
+                              title="Next (j)"
                               className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/10 transition-all cursor-pointer"
                             >
                               <FiChevronRight size={14} />
@@ -983,122 +993,114 @@ const Notifications = () => {
 
                     {/* Scrollable Detail Body */}
                     <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar text-xs">
-                      {/* Timestamps ribbon */}
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 p-2.5 bg-slate-50/70 dark:bg-black/20 rounded-xl border border-slate-100 dark:border-white/5">
-                        <div className="flex items-center gap-1.5">
-                          <FiClock className="text-slate-400" />
+                      {/* Hero Section */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2 flex-wrap text-[11px] text-slate-400 dark:text-slate-500">
                           <span>
-                            Delivered:{' '}
-                            <strong className="text-slate-700 dark:text-slate-300 font-semibold">
-                              {selectedNotification.createdAt
-                                ? formatDateTimeDDMMYYYY(selectedNotification.createdAt, true)
-                                : 'Recent'}
-                            </strong>
+                            Delivered: {selectedNotification.createdAt ? formatDateTimeDDMMYYYY(selectedNotification.createdAt, true) : 'Recent'}
+                          </span>
+                          <span className="font-semibold text-blue-600 dark:text-blue-400">
+                            {getRelativeTime(selectedNotification.createdAt)}
                           </span>
                         </div>
-                        <span className="font-semibold text-blue-600 dark:text-blue-400">
-                          {getRelativeTime(selectedNotification.createdAt)}
-                        </span>
-                      </div>
-
-                      {/* Main Title */}
-                      <div className="space-y-1">
-                        <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-snug">
-                          {selectedNotification.title || 'Untitled Notification'}
+                        <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-snug">
+                          {primaryTitle}
                         </h2>
+                        {parsedFirm && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {selectedNotification.title}
+                          </p>
+                        )}
                       </div>
 
-                      {/* Main Message Body */}
-                      <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-black/30 border border-slate-200/60 dark:border-white/5 space-y-1.5">
+                      {/* PO Primary Details & CTA Card (if PO) */}
+                      {isPO && (
+                        <div className="p-4 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg font-bold shrink-0">
+                              <FiShoppingBag />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
+                                  #{effectivePo || 'Order Reference'}
+                                </span>
+                                {effectivePo && <CopyButton text={effectivePo} />}
+                              </div>
+                              {parsedAmt && (
+                                <p className="text-xs font-mono font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                  Amount: {parsedAmt}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={(e) => handleNavigateToPO(selectedNotification, e)}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                          >
+                            <span>Open Purchase Order</span>
+                            <FiExternalLink className="text-xs" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Message Content */}
+                      <div className="p-4 rounded-2xl bg-white/60 dark:bg-slate-900/40 border border-slate-200/80 dark:border-white/10 space-y-1">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                          Notification Content
+                          Message Content
                         </span>
-                        <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
                           {selectedNotification.message || 'No additional details provided.'}
                         </p>
                       </div>
 
-                      {/* Direct PO Hero Banner (if purchase order) */}
-                      {isPO && (
-                        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/30 space-y-3">
-                          <div className="flex items-center justify-between flex-wrap gap-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm font-bold shrink-0">
-                                <FiShoppingBag />
-                              </div>
-                              <div>
-                                <h4 className="text-xs font-black text-slate-900 dark:text-white">
-                                  Purchase Order Detected
-                                </h4>
-                                <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium font-mono">
-                                  {poNum ? `Order Reference: #${poNum}` : 'Direct order event'}
-                                </p>
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={(e) => handleNavigateToPO(selectedNotification, e)}
-                              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer ml-auto"
-                            >
-                              <span>Open PO in Management</span>
-                              <FiExternalLink className="text-xs" />
-                            </button>
+                      {/* Collapsible Technical Details */}
+                      <div className="border border-slate-200/60 dark:border-white/10 rounded-2xl overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setShowRawPayload((prev) => !prev)}
+                          className="w-full px-4 py-2.5 bg-slate-50/80 dark:bg-slate-900/40 flex items-center justify-between text-slate-600 dark:text-slate-400 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <FiCode className="text-slate-400" />
+                            <span>Technical Details & Entity IDs</span>
                           </div>
-                        </div>
-                      )}
-
-                      {/* Linked Entity Details */}
-                      {(selectedNotification.relatedEntityType || selectedNotification.relatedEntityId) && (
-                        <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-black/20 border border-slate-200/60 dark:border-white/5 space-y-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                            Linked Entity Information
+                          <span className="text-[11px] text-blue-600 dark:text-blue-400 font-mono">
+                            {showRawPayload ? 'Collapse' : 'Expand'}
                           </span>
-                          <div className="grid grid-cols-2 gap-3 text-xs">
-                            <div>
-                              <span className="text-[11px] text-slate-400 block">Entity Type</span>
-                              <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
-                                {selectedNotification.relatedEntityType || 'N/A'}
-                              </span>
-                            </div>
-                            {selectedNotification.relatedEntityId && (
+                        </button>
+                        {showRawPayload && (
+                          <div className="p-4 space-y-3 bg-slate-50/50 dark:bg-black/30 border-t border-slate-200/60 dark:border-white/5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                               <div>
-                                <span className="text-[11px] text-slate-400 block">Entity ID</span>
-                                <div className="flex items-center gap-1 font-mono text-slate-800 dark:text-slate-200">
-                                  <span className="truncate max-w-[150px]">
-                                    {selectedNotification.relatedEntityId}
+                                <span className="text-[10px] uppercase font-bold text-slate-400 block">Notification ID</span>
+                                <div className="flex items-center gap-1 font-mono text-slate-700 dark:text-slate-300">
+                                  <span className="truncate">{selId}</span>
+                                  <CopyButton text={selId} />
+                                </div>
+                              </div>
+                              {selectedNotification.relatedEntityType && (
+                                <div>
+                                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Linked Entity</span>
+                                  <span className="font-mono text-slate-700 dark:text-slate-300">
+                                    {selectedNotification.relatedEntityType} ({selectedNotification.relatedEntityId || 'N/A'})
                                   </span>
-                                  <CopyButton text={selectedNotification.relatedEntityId} />
+                                </div>
+                              )}
+                            </div>
+                            {rawData && (
+                              <div className="pt-2 border-t border-slate-200/40 dark:border-white/5">
+                                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Raw Payload JSON</span>
+                                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-xl overflow-x-auto max-h-48 custom-scrollbar">
+                                  <pre>{JSON.stringify(rawData, null, 2)}</pre>
                                 </div>
                               </div>
                             )}
                           </div>
-                        </div>
-                      )}
-
-                      {/* Additional Technical Metadata (Accordion) */}
-                      {rawData && (
-                        <div className="border border-slate-200/60 dark:border-white/5 rounded-2xl overflow-hidden">
-                          <button
-                            type="button"
-                            onClick={() => setShowRawPayload((prev) => !prev)}
-                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-black/20 flex items-center justify-between text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                          >
-                            <div className="flex items-center gap-2">
-                              <FiCode className="text-slate-400" />
-                              <span>Raw Payload / Metadata</span>
-                            </div>
-                            <span className="text-[11px] text-blue-600 dark:text-blue-400 font-mono">
-                              {showRawPayload ? 'Hide JSON' : 'View JSON'}
-                            </span>
-                          </button>
-                          {showRawPayload && (
-                            <div className="p-3 bg-slate-900 text-slate-200 font-mono text-[11px] overflow-x-auto max-h-48 custom-scrollbar">
-                              <pre>{JSON.stringify(rawData, null, 2)}</pre>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
 
                     {/* Detail Sticky Footer - Permanently Anchored at the Bottom */}
