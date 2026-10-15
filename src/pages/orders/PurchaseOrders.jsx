@@ -53,9 +53,10 @@ import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import PageHeader from '@/components/ui/PageHeader';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
-import { BulkActionBar, BatchProgressModal } from '@/components/ui';
+import { BulkActionBar, BatchProgressModal, TableToolbar } from '@/components/ui';
 import { TableSkeleton } from '@/components/ui/Skeleton';
-import { useDisplayPreferences } from '@/utils/displayPreferences';
+import { useDisplayPreferences, getDensityStyles } from '@/utils/displayPreferences';
+import { useToast } from '@/context/ToastContext';
 
 const STATUS_TABS = [
   { key: 'all', label: 'All Orders' },
@@ -63,6 +64,20 @@ const STATUS_TABS = [
   { key: 'APPROVED', label: 'Approved' },
   { key: 'DISPATCHED', label: 'Dispatched' },
   { key: 'REJECTED', label: 'Rejected' }
+];
+
+const PO_COLUMNS = [
+  { id: 'poNumber', label: 'PO Number', alwaysVisible: true },
+  { id: 'entityId', label: 'Entity ID', optional: true },
+  { id: 'company', label: 'Company' },
+  { id: 'firm', label: 'Purchasing Firm' },
+  { id: 'salesRep', label: 'Sales Executive' },
+  { id: 'items', label: 'Items' },
+  { id: 'totalAmount', label: 'Total Amount' },
+  { id: 'status', label: 'Status' },
+  { id: 'email', label: 'Email' },
+  { id: 'date', label: 'Date' },
+  { id: 'actions', label: 'Actions', alwaysVisible: true }
 ];
 
 const getStatusBadge = (status) => {
@@ -141,7 +156,8 @@ const SAMPLE_PO_BODY = {
 
 const PurchaseOrders = () => {
   const { user } = useAuth();
-  const { confirm: confirmDialog, showAlert } = useConfirm() || {};
+  const { confirm: confirmDialog } = useConfirm() || {};
+  const { toast } = useToast();
   const isAdmin = !user?.role || String(user?.role).toLowerCase() === 'admin';
 
   const location = useLocation();
@@ -194,8 +210,22 @@ const PurchaseOrders = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState('all');
 
-  // Pagination
-  const { preferences: displayPrefs } = useDisplayPreferences();
+  // Display Preferences & Table UX (Density, Columns, Sticky)
+  const {
+    preferences: displayPrefs,
+    updatePreference,
+    updateTableColumnVisibility,
+    resetTableColumnVisibility
+  } = useDisplayPreferences();
+  const density = displayPrefs.density || 'comfortable';
+  const densityStyles = getDensityStyles(density);
+  const poColumnVisibility = displayPrefs.columnVisibility?.purchaseOrders || { entityId: false };
+  const isColVisible = (colId) => {
+    if (poColumnVisibility[colId] !== undefined) return poColumnVisibility[colId];
+    if (colId === 'entityId') return false;
+    return true;
+  };
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = displayPrefs.rowsPerPage || 10;
 
@@ -205,7 +235,6 @@ const PurchaseOrders = () => {
 
   // Action Loading tracking
   const [actionLoadingId, setActionLoadingId] = useState(null);
-  const [successToast, setSuccessToast] = useState(null);
 
   // Create Order Modal (POST /purchase-orders)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -251,12 +280,6 @@ const PurchaseOrders = () => {
   const [dispatchModalOrder, setDispatchModalOrder] = useState(null);
   const [dispatchNotes, setDispatchNotes] = useState('');
   const [dispatchSubmitting, setDispatchSubmitting] = useState(false);
-
-  // Show Toast Helper
-  const triggerToast = (msg) => {
-    setSuccessToast(msg);
-    setTimeout(() => setSuccessToast(null), 4000);
-  };
 
   // 1. Fetch Orders (GET /purchase-orders)
   const fetchOrders = useCallback(async (isSilent = false) => {
@@ -499,7 +522,7 @@ const PurchaseOrders = () => {
       const newOrder = response.data?.data || response.data || payload;
       setOrders((prev) => [newOrder, ...prev]);
       setIsCreateModalOpen(false);
-      triggerToast(`Purchase Order created successfully!`);
+      toast.success('Purchase Order created successfully!');
     } catch (err) {
       console.error('Failed to create purchase order:', err);
       setCreateError(err.response?.data?.message || err.message || 'Failed to create purchase order.');
@@ -534,12 +557,11 @@ const PurchaseOrders = () => {
       if (selectedOrder?._id === order._id) {
         setSelectedOrder((prev) => ({ ...prev, ...updatedOrder, status: 'APPROVED' }));
       }
-      triggerToast(`Purchase Order "${poNum}" approved successfully!`);
+      toast.success(`Purchase Order "${poNum}" approved successfully!`);
     } catch (err) {
       console.error('Approve order error:', err);
       const errMsg = err.response?.data?.message || err.message || 'Failed to approve order.';
-      if (showAlert) showAlert(errMsg, 'error');
-      else alert(errMsg);
+      toast.error(errMsg);
     } finally {
       setActionLoadingId(null);
     }
@@ -582,7 +604,7 @@ const PurchaseOrders = () => {
         setSelectedOrder((prev) => ({ ...prev, ...updatedOrder, status: 'REJECTED', rejectionReason: reasonTrimmed }));
       }
       setRejectModalOrder(null);
-      triggerToast(`Purchase Order "${poNum}" was rejected.`);
+      toast.success(`Purchase Order "${poNum}" was rejected.`);
     } catch (err) {
       console.error('Reject order error:', err);
       setRejectError(err.response?.data?.message || err.message || 'Failed to reject purchase order.');
@@ -617,12 +639,11 @@ const PurchaseOrders = () => {
         setSelectedOrder((prev) => ({ ...prev, ...updatedOrder, status: 'DISPATCHED' }));
       }
       setDispatchModalOrder(null);
-      triggerToast(`Purchase Order "${poNum}" marked as dispatched!`);
+      toast.success(`Purchase Order "${poNum}" marked as dispatched!`);
     } catch (err) {
       console.error('Dispatch order error:', err);
       const errMsg = err.response?.data?.message || err.message || 'Failed to dispatch purchase order.';
-      if (showAlert) showAlert(errMsg, 'error');
-      else alert(errMsg);
+      toast.error(errMsg);
     } finally {
       setDispatchSubmitting(false);
     }
@@ -923,8 +944,7 @@ const PurchaseOrders = () => {
     const selectedOrders = orders.filter((o) => selectedOrderIds.has(o._id));
     const pendingOrders = selectedOrders.filter((o) => (o.status || '').toUpperCase() === 'PENDING');
     if (pendingOrders.length === 0) {
-      if (showAlert) showAlert('None of the selected orders are in PENDING status.', 'error');
-      else alert('None of the selected orders are in PENDING status.');
+      toast.error('None of the selected orders are in PENDING status.');
       return;
     }
     setBulkActionModal(null);
@@ -942,8 +962,7 @@ const PurchaseOrders = () => {
     const selectedOrders = orders.filter((o) => selectedOrderIds.has(o._id));
     const approvedOrders = selectedOrders.filter((o) => (o.status || '').toUpperCase() === 'APPROVED');
     if (approvedOrders.length === 0) {
-      if (showAlert) showAlert('Only orders in APPROVED status can be dispatched.', 'error');
-      else alert('Only orders in APPROVED status can be dispatched.');
+      toast.error('Only orders in APPROVED status can be dispatched.');
       return;
     }
     setBulkActionModal(null);
@@ -964,8 +983,7 @@ const PurchaseOrders = () => {
   // Bulk Reject Execution
   const executeBulkReject = async () => {
     if (!bulkRejectReason.trim()) {
-      if (showAlert) showAlert('A rejection reason is required.', 'error');
-      else alert('A rejection reason is required.');
+      toast.error('A rejection reason is required.');
       return;
     }
     const selectedOrders = orders.filter((o) => selectedOrderIds.has(o._id));
@@ -984,8 +1002,7 @@ const PurchaseOrders = () => {
     const listToExport =
       selectedOrderIds.size > 0 ? orders.filter((o) => selectedOrderIds.has(o._id)) : filteredOrders;
     if (listToExport.length === 0) {
-      if (showAlert) showAlert('No orders available to export.', 'info');
-      else alert('No orders available to export.');
+      toast.info('No orders available to export.');
       return;
     }
     const rows = listToExport.map((o, idx) => ({
@@ -1026,31 +1043,16 @@ const PurchaseOrders = () => {
   }, [createForm.items]);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Toast Notification */}
-      {successToast && (
-        <div className="fixed bottom-6 right-6 z-[10001] flex items-center gap-2.5 px-4 py-3 bg-emerald-600 text-white text-xs font-bold rounded-2xl shadow-xl shadow-emerald-600/30 animate-in fade-in slide-in-from-bottom-5">
-          <FiCheckCircle className="text-base shrink-0" />
-          <span>{successToast}</span>
-          <button
-            type="button"
-            onClick={() => setSuccessToast(null)}
-            className="ml-2 hover:bg-emerald-700/50 p-1 rounded-lg transition-colors cursor-pointer"
-          >
-            <FiX className="text-sm" />
-          </button>
-        </div>
-      )}
-
+    <div className="space-y-3.5 max-w-7xl mx-auto pb-12">
       {/* Page Header */}
       <PageHeader
         title="Purchase Orders"
         subtitle="Issue vendor purchase orders, review incoming procurement, approve orders, and manage warehouse dispatching."
         badgeIcon={FiShoppingCart}
         actions={
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
-            <div className="relative w-full sm:w-80">
-              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative w-full sm:w-72">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
               <input
                 type="text"
                 placeholder="Search PO #, company, firm, rep..."
@@ -1059,15 +1061,15 @@ const PurchaseOrders = () => {
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-10 pr-9 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 shadow-xs"
+                className="w-full pl-8 pr-7 py-1.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 shadow-xs"
               />
               {searchTerm && (
                 <button
                   type="button"
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
                 >
-                  <FiX size={14} />
+                  <FiX size={12} />
                 </button>
               )}
             </div>
@@ -1076,7 +1078,7 @@ const PurchaseOrders = () => {
               type="button"
               onClick={() => fetchOrders(true)}
               disabled={refreshing}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-white/80 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-200/80 dark:border-white/10 transition-all shadow-xs cursor-pointer disabled:opacity-50 shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-200/80 dark:border-white/10 transition-all shadow-xs cursor-pointer disabled:opacity-50 shrink-0"
               title="Refresh Orders"
             >
               <FiRefreshCcw className={`text-sm ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
@@ -1086,75 +1088,75 @@ const PurchaseOrders = () => {
       />
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {/* Total POs */}
-        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xl">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Total POs</p>
-            <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <FiShoppingCart className="text-base" />
+            <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Total POs</p>
+            <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <FiShoppingCart className="text-sm" />
             </span>
           </div>
-          <p className="text-2xl font-black text-blue-600 mt-2 font-mono">
+          <p className="text-xl font-black text-blue-600 mt-1 font-mono">
             {stats.total}
           </p>
-          <p className="text-[11px] text-slate-400 mt-1">All recorded procurement orders</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">All recorded procurement</p>
         </div>
 
         {/* Pending Review */}
-        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-amber-500/20 dark:border-amber-500/20 shadow-xl">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-amber-500/20 dark:border-amber-500/20 shadow-md">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-amber-400 uppercase tracking-wider">Pending</p>
-            <span className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <FiClock className="text-base" />
+            <p className="text-[11px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider">Pending</p>
+            <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <FiClock className="text-sm" />
             </span>
           </div>
-          <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-2 font-mono">
+          <p className="text-xl font-black text-amber-600 dark:text-amber-400 mt-1 font-mono">
             {stats.pending}
           </p>
-          <p className="text-[11px] text-slate-400 mt-1">Awaiting manager approval</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Awaiting manager approval</p>
         </div>
 
         {/* Approved */}
-        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-blue-500/20 dark:border-blue-500/20 shadow-xl">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-blue-500/20 dark:border-blue-500/20 shadow-md">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Approved</p>
-            <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <FiCheckCircle className="text-base" />
+            <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Approved</p>
+            <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <FiCheckCircle className="text-sm" />
             </span>
           </div>
-          <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-2 font-mono">
+          <p className="text-xl font-black text-blue-600 dark:text-blue-400 mt-1 font-mono">
             {stats.approved}
           </p>
-          <p className="text-[11px] text-slate-400 mt-1">Ready for warehouse dispatch</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Ready for dispatch</p>
         </div>
 
         {/* Dispatched */}
-        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-emerald-500/20 dark:border-emerald-500/20 shadow-xl">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-emerald-500/20 dark:border-emerald-500/20 shadow-md">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Dispatched</p>
-            <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <FiTruck className="text-base" />
+            <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Dispatched</p>
+            <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <FiTruck className="text-sm" />
             </span>
           </div>
-          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-2 font-mono">
+          <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
             {stats.dispatched}
           </p>
-          <p className="text-[11px] text-slate-400 mt-1">Shipped & in transit to firms</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Shipped & in transit</p>
         </div>
 
         {/* Total PO Value */}
-        <div className="col-span-2 sm:col-span-1 lg:col-span-1 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xl">
+        <div className="col-span-2 sm:col-span-1 lg:col-span-1 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Total Value</p>
-            <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <FiActivity className="text-base" />
+            <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Total Value</p>
+            <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <FiActivity className="text-sm" />
             </span>
           </div>
-          <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-2 font-mono truncate">
+          <p className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 font-mono truncate">
             ₹{stats.totalValue.toLocaleString('en-IN')}
           </p>
-          <p className="text-[11px] text-slate-400 mt-1">Total procurement volume</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Total procurement</p>
         </div>
       </div>
 
@@ -1226,6 +1228,17 @@ const PurchaseOrders = () => {
 
       {/* Orders Table Card */}
       <div className="bg-white/40 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
+        {/* Table UX Toolbar: Column Visibility & Counts */}
+        <TableToolbar
+          columns={PO_COLUMNS}
+          visibleColumns={poColumnVisibility}
+          onToggleColumn={(colId, val) => updateTableColumnVisibility('purchaseOrders', colId, val)}
+          onResetColumns={() => resetTableColumnVisibility('purchaseOrders')}
+          totalCount={filteredOrders.length}
+          selectedCount={selectedOrderIds.size}
+          className="border-b rounded-b-none border-x-0 border-t-0"
+        />
+
         {/* Loading State */}
         {loading && (
           <TableSkeleton columns={9} rows={8} className="border-0 shadow-none rounded-none" />
@@ -1254,10 +1267,10 @@ const PurchaseOrders = () => {
           <>
             <div className="overflow-x-auto custom-scrollbar max-h-[70vh]">
               <table className="w-full text-left border-collapse whitespace-nowrap min-w-[900px]">
-                <thead className="sticky top-0 z-20 bg-white/70 dark:bg-slate-900/80 backdrop-blur-md shadow-xs border-b border-slate-200/80 dark:border-white/10">
+                <thead className="sticky top-0 z-10 bg-white/60 dark:bg-slate-900/90 backdrop-blur-md shadow-xs border-b border-slate-200/80 dark:border-white/10 select-none">
                   <tr className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold">
                     {isBulkMode && (
-                      <th className="px-4 py-3.5 pl-5 w-10 text-center">
+                      <th className={`${densityStyles.th} pl-5 w-10 text-center`}>
                         <input
                           type="checkbox"
                           checked={currentOrders.length > 0 && currentOrders.every((o) => selectedOrderIds.has(o._id))}
@@ -1266,16 +1279,17 @@ const PurchaseOrders = () => {
                         />
                       </th>
                     )}
-                    <th className="px-5 py-3.5">PO Number</th>
-                    <th className="px-5 py-3.5">Company</th>
-                    <th className="px-5 py-3.5">Purchasing Firm</th>
-                    <th className="px-4 py-3.5">Sales Executive</th>
-                    <th className="px-4 py-3.5 text-center">Items</th>
-                    <th className="px-4 py-3.5 text-right">Total Amount</th>
-                    <th className="px-4 py-3.5 text-center">Status</th>
-                    <th className="px-4 py-3.5 text-center">Email</th>
-                    <th className="px-5 py-3.5 text-center">Date</th>
-                    <th className="px-5 py-3.5 text-center">Actions</th>
+                    {isColVisible('poNumber') && <th className={densityStyles.th}>PO Number</th>}
+                    {isColVisible('entityId') && <th className={densityStyles.th}>Entity ID</th>}
+                    {isColVisible('company') && <th className={densityStyles.th}>Company</th>}
+                    {isColVisible('firm') && <th className={densityStyles.th}>Purchasing Firm</th>}
+                    {isColVisible('salesRep') && <th className={densityStyles.th}>Sales Executive</th>}
+                    {isColVisible('items') && <th className={`${densityStyles.th} text-center`}>Items</th>}
+                    {isColVisible('totalAmount') && <th className={`${densityStyles.th} text-right`}>Total Amount</th>}
+                    {isColVisible('status') && <th className={`${densityStyles.th} text-center`}>Status</th>}
+                    {isColVisible('email') && <th className={`${densityStyles.th} text-center`}>Email</th>}
+                    {isColVisible('date') && <th className={`${densityStyles.th} text-center`}>Date</th>}
+                    {isColVisible('actions') && <th className={`${densityStyles.th} text-center`}>Actions</th>}
                   </tr>
                 </thead>
 
@@ -1316,7 +1330,7 @@ const PurchaseOrders = () => {
                           }`}
                         >
                           {isBulkMode && (
-                            <td className="px-4 py-3.5 pl-5 text-center">
+                            <td className={`${densityStyles.td} pl-5 text-center`}>
                               <input
                                 type="checkbox"
                                 checked={selectedOrderIds.has(order._id)}
@@ -1325,161 +1339,193 @@ const PurchaseOrders = () => {
                               />
                             </td>
                           )}
+
                           {/* PO Number */}
-                          <td className="px-5 py-3.5 font-mono font-bold text-slate-900 dark:text-white">
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                onClick={() => handleViewOrderDetails(order)}
-                                className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                                title="Click to view full PO details"
-                              >
-                                {poNum}
-                              </span>
-                              <CopyButton text={poNum} />
-                            </div>
-                          </td>
+                          {isColVisible('poNumber') && (
+                            <td className={`${densityStyles.td} font-mono font-bold text-slate-900 dark:text-white`}>
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  onClick={() => handleViewOrderDetails(order)}
+                                  className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                  title="Click to view full PO details"
+                                >
+                                  {poNum}
+                                </span>
+                                <CopyButton text={poNum} size={11} />
+                              </div>
+                            </td>
+                          )}
+
+                          {/* Entity ID (Optional) */}
+                          {isColVisible('entityId') && (
+                            <td className={`${densityStyles.td} font-mono text-[11px] text-slate-500 dark:text-slate-400`}>
+                              <div className="flex items-center gap-1">
+                                <span className="truncate max-w-[90px] font-mono text-[10px]" title={order._id}>
+                                  {order._id}
+                                </span>
+                                <CopyButton text={order._id} size={10} />
+                              </div>
+                            </td>
+                          )}
 
                           {/* Company */}
-                          <td className="px-5 py-3.5">
-                            <div className="flex items-center gap-2">
-                              {companyLogo ? (
-                                <img
-                                  src={companyLogo}
-                                  alt={companyName}
-                                  className="w-6 h-6 rounded-md object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-white/10 shrink-0"
-                                />
-                              ) : (
-                                <FiBriefcase className="text-slate-400 text-xs shrink-0" />
-                              )}
-                              <div>
-                                <span className="font-semibold text-slate-800 dark:text-slate-200 block">
-                                  {companyName}
-                                </span>
-                                {companyCode && (
-                                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                                    {companyCode}
-                                  </span>
+                          {isColVisible('company') && (
+                            <td className={densityStyles.td}>
+                              <div className="flex items-center gap-2">
+                                {companyLogo ? (
+                                  <img
+                                    src={companyLogo}
+                                    alt={companyName}
+                                    className="w-6 h-6 rounded-md object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-white/10 shrink-0"
+                                  />
+                                ) : (
+                                  <FiBriefcase className="text-slate-400 text-xs shrink-0" />
                                 )}
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Purchasing Firm */}
-                          <td className="px-5 py-3.5">
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-semibold text-slate-900 dark:text-white">
-                                  {firmName}
-                                </span>
-                                {firmCode && (
-                                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                                    {firmCode}
+                                <div>
+                                  <span className="font-semibold text-slate-800 dark:text-slate-200 block">
+                                    {companyName}
                                   </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
-                                {firmCity && (
-                                  <span className="flex items-center gap-0.5">
-                                    <FiMapPin className="text-[10px]" /> {firmCity}
-                                  </span>
-                                )}
-                                {contactPerson && (
-                                  <span className="truncate max-w-[120px]">• {contactPerson}</span>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Sales Executive */}
-                          <td className="px-4 py-3.5">
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                  {repName}
-                                </span>
-                                {repEmpCode && (
-                                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                                    {repEmpCode}
-                                  </span>
-                                )}
-                              </div>
-                              {repEmail && (
-                                <span className="text-[10px] text-slate-400 truncate max-w-[140px]" title={repEmail}>
-                                  {repEmail}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Items Count & Units */}
-                          <td className="px-4 py-3.5 text-center">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                              <FiBox className="text-blue-500 text-[10px]" />
-                              <span>
-                                {itemCount} {itemCount === 1 ? 'item' : 'items'} ({totalUnits})
-                              </span>
-                            </span>
-                          </td>
-
-                          {/* Total Amount */}
-                          <td className="px-4 py-3.5 text-right font-mono font-black text-slate-900 dark:text-white text-sm">
-                            ₹{(order.totalAmount || order.totalValue || order.subtotal || 0).toLocaleString('en-IN')}
-                          </td>
-
-                          {/* Status */}
-                          <td className="px-4 py-3.5 text-center">
-                            <div className="flex flex-col items-center">
-                              <span
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${badge.className}`}
-                              >
-                                <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                                <BadgeIcon className="text-[11px]" />
-                                <span>{badge.label}</span>
-                              </span>
-                              {order.approvedBy && (
-                                <span className="text-[9px] text-slate-400 mt-0.5 truncate max-w-[110px]" title={`Approved by ${order.approvedBy.firstName || ''} ${order.approvedBy.lastName || ''}`}>
-                                  by {order.approvedBy.firstName}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Email Status */}
-                          <td className="px-4 py-3.5 text-center">
-                            {(() => {
-                              const eb = getEmailStatusBadge(order.emailStatus);
-                              const EbIcon = eb.icon;
-                              const recCount = order.emailStatus?.recipients?.length || 0;
-                              return (
-                                <div className="flex flex-col items-center">
-                                  <span
-                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${eb.className}`}
-                                    title={
-                                      order.emailStatus?.lastSentAt
-                                        ? `Last sent: ${formatDateTimeDDMMYYYY(order.emailStatus.lastSentAt)} (${recCount} recipients)`
-                                        : `Email ${eb.label}`
-                                    }
-                                  >
-                                    <EbIcon className="text-[10px]" />
-                                    <span>{eb.label}</span>
-                                  </span>
-                                  {recCount > 0 && (
-                                    <span className="text-[9px] text-slate-400 font-mono mt-0.5">
-                                      {recCount} recipient{recCount === 1 ? '' : 's'}
+                                  {companyCode && (
+                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                                      {companyCode}
                                     </span>
                                   )}
                                 </div>
-                              );
-                            })()}
-                          </td>
+                              </div>
+                            </td>
+                          )}
+
+                          {/* Purchasing Firm */}
+                          {isColVisible('firm') && (
+                            <td className={densityStyles.td}>
+                              <div className="flex flex-col">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-semibold text-slate-900 dark:text-white">
+                                    {firmName}
+                                  </span>
+                                  {firmCode && (
+                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                                      {firmCode}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                                  {firmCity && (
+                                    <span className="flex items-center gap-0.5">
+                                      <FiMapPin className="text-[10px]" /> {firmCity}
+                                    </span>
+                                  )}
+                                  {contactPerson && (
+                                    <span className="truncate max-w-[120px]">• {contactPerson}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                          )}
+
+                          {/* Sales Executive */}
+                          {isColVisible('salesRep') && (
+                            <td className={densityStyles.td}>
+                              <div className="flex flex-col">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                    {repName}
+                                  </span>
+                                  {repEmpCode && (
+                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                      {repEmpCode}
+                                    </span>
+                                  )}
+                                </div>
+                                {repEmail && (
+                                  <span className="text-[10px] text-slate-400 truncate max-w-[140px]" title={repEmail}>
+                                    {repEmail}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          )}
+
+                          {/* Items Count & Units */}
+                          {isColVisible('items') && (
+                            <td className={`${densityStyles.td} text-center`}>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                                <FiBox className="text-blue-500 text-[10px]" />
+                                <span>
+                                  {itemCount} {itemCount === 1 ? 'item' : 'items'} ({totalUnits})
+                                </span>
+                              </span>
+                            </td>
+                          )}
+
+                          {/* Total Amount */}
+                          {isColVisible('totalAmount') && (
+                            <td className={`${densityStyles.td} text-right font-mono font-black text-slate-900 dark:text-white`}>
+                              ₹{(order.totalAmount || order.totalValue || order.subtotal || 0).toLocaleString('en-IN')}
+                            </td>
+                          )}
+
+                          {/* Status */}
+                          {isColVisible('status') && (
+                            <td className={`${densityStyles.td} text-center`}>
+                              <div className="flex flex-col items-center">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${badge.className}`}
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                                  <BadgeIcon className="text-[11px]" />
+                                  <span>{badge.label}</span>
+                                </span>
+                                {order.approvedBy && (
+                                  <span className="text-[9px] text-slate-400 mt-0.5 truncate max-w-[110px]" title={`Approved by ${order.approvedBy.firstName || ''} ${order.approvedBy.lastName || ''}`}>
+                                    by {order.approvedBy.firstName}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          )}
+
+                          {/* Email Status */}
+                          {isColVisible('email') && (
+                            <td className={`${densityStyles.td} text-center`}>
+                              {(() => {
+                                const eb = getEmailStatusBadge(order.emailStatus);
+                                const EbIcon = eb.icon;
+                                const recCount = order.emailStatus?.recipients?.length || 0;
+                                return (
+                                  <div className="flex flex-col items-center">
+                                    <span
+                                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${eb.className}`}
+                                      title={
+                                        order.emailStatus?.lastSentAt
+                                          ? `Last sent: ${formatDateTimeDDMMYYYY(order.emailStatus.lastSentAt)} (${recCount} recipients)`
+                                          : `Email ${eb.label}`
+                                      }
+                                    >
+                                      <EbIcon className="text-[10px]" />
+                                      <span>{eb.label}</span>
+                                    </span>
+                                    {recCount > 0 && (
+                                      <span className="text-[9px] text-slate-400 font-mono mt-0.5">
+                                        {recCount} recipient{recCount === 1 ? '' : 's'}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </td>
+                          )}
 
                           {/* Date */}
-                          <td className="px-5 py-3.5 text-center text-slate-500 dark:text-slate-400 text-xs font-mono">
-                            {formatDateDDMMYYYY(order.createdAt)}
-                          </td>
+                          {isColVisible('date') && (
+                            <td className={`${densityStyles.td} text-center text-slate-500 dark:text-slate-400 font-mono`}>
+                              {formatDateDDMMYYYY(order.createdAt)}
+                            </td>
+                          )}
 
                           {/* Action Buttons */}
-                          <td className="px-5 py-3.5 text-center">
+                          {isColVisible('actions') && (
+                            <td className={`${densityStyles.td} text-center`}>
                             <div className="flex items-center justify-center gap-1.5">
                               {/* Details (GET /purchase-orders/{id}) */}
                               <button
@@ -1540,6 +1586,7 @@ const PurchaseOrders = () => {
                               )}
                             </div>
                           </td>
+                        )}
                         </tr>
                       );
                     })

@@ -1642,9 +1642,25 @@ const Dashboard = () => {
               <VisxTreemapChart
                 data={treemapData}
                 metric={treemapMetric}
-                height={560}
+                height={580}
                 isDark={isDark}
-                onNodeClick={() => navigate('/purchase-orders')}
+                onNodeClick={(node) => {
+                  if (node?.nodeType === 'po' || node?.poNumber) {
+                    const poNum = node.poNumber || node.name;
+                    const found =
+                      (Array.isArray(allPurchaseOrders) ? allPurchaseOrders : []).find(
+                        (o) => o.poNumber === poNum || o._id === node._id
+                      ) ||
+                      (Array.isArray(recentOrders) ? recentOrders : []).find(
+                        (o) => o.poNumber === poNum || o._id === node._id
+                      );
+                    if (found) {
+                      setSelectedOrder(found);
+                      return;
+                    }
+                  }
+                  navigate('/purchase-orders');
+                }}
               />
             )}
           </div>

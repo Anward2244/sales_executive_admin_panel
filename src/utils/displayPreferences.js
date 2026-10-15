@@ -1,6 +1,6 @@
 /**
  * Utility for handling display preferences across the application.
- * Manages ambient glow fluid animations, floating scroll-to-top button, density, etc.
+ * Manages ambient glow fluid animations, floating scroll-to-top button, density (comfortable, compact, dense), column visibility, etc.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -9,11 +9,50 @@ export const DISPLAY_PREFS_KEY = 'inizio_display_preferences';
 export const DISPLAY_PREFS_EVENT = 'inizio:display-preferences-changed';
 
 export const DEFAULT_DISPLAY_PREFERENCES = {
-  density: 'comfortable', // 'comfortable' | 'compact'
+  density: 'comfortable', // 'comfortable' | 'compact' | 'dense'
   ambientGlow: true,
   timeFormat: '12h',      // '12h' | '24h'
   autoScrollToTop: true,
-  rowsPerPage: 10         // Default pagination rows per page
+  rowsPerPage: 10,        // Default pagination rows per page
+  columnVisibility: {}    // Map of tableKey -> { [colKey]: boolean }
+};
+
+/**
+ * Density style lookup helper for table headers and body cells.
+ * Dense mode strictly satisfies requirement of reducing cell padding to py-2 px-3
+ * for users working on standard 13-14" laptop screens who want to view more rows without excessive scrolling.
+ */
+export const getDensityStyles = (density = 'comfortable') => {
+  switch (density) {
+    case 'dense':
+      return {
+        th: 'py-2 px-3 text-[11px] font-bold tracking-wider uppercase',
+        td: 'py-2 px-3 text-xs',
+        badge: 'py-0.5 px-2 text-[10px]',
+        button: 'p-1 text-xs',
+        rowGap: 'gap-1',
+        spacing: 'dense'
+      };
+    case 'compact':
+      return {
+        th: 'py-2.5 px-3.5 text-xs font-bold tracking-wider uppercase',
+        td: 'py-2.5 px-3.5 text-xs',
+        badge: 'py-1 px-2.5 text-xs',
+        button: 'p-1.5 text-xs',
+        rowGap: 'gap-1.5',
+        spacing: 'compact'
+      };
+    case 'comfortable':
+    default:
+      return {
+        th: 'py-3.5 px-4 sm:px-5 text-xs font-bold tracking-wider uppercase',
+        td: 'py-3.5 px-4 sm:px-5 text-sm',
+        badge: 'py-1 px-3 text-xs',
+        button: 'p-2 text-sm',
+        rowGap: 'gap-2',
+        spacing: 'comfortable'
+      };
+  }
 };
 
 /**
@@ -27,7 +66,11 @@ export const getDisplayPreferences = () => {
         const parsed = JSON.parse(saved);
         return {
           ...DEFAULT_DISPLAY_PREFERENCES,
-          ...parsed
+          ...parsed,
+          columnVisibility: {
+            ...DEFAULT_DISPLAY_PREFERENCES.columnVisibility,
+            ...(parsed.columnVisibility || {})
+          }
         };
       }
     }
@@ -55,7 +98,11 @@ export const saveDisplayPreferences = (newPrefs) => {
     const current = getDisplayPreferences();
     const updated = {
       ...current,
-      ...newPrefs
+      ...newPrefs,
+      columnVisibility: {
+        ...(current.columnVisibility || {}),
+        ...(newPrefs.columnVisibility || {})
+      }
     };
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(DISPLAY_PREFS_KEY, JSON.stringify(updated));
@@ -118,5 +165,35 @@ export const useDisplayPreferences = () => {
     return updated;
   }, []);
 
-  return { preferences, updatePreference, setPreferences };
+  const updateTableColumnVisibility = useCallback((tableKey, colKey, isVisible) => {
+    const current = getDisplayPreferences();
+    const currentTableCols = current.columnVisibility?.[tableKey] || {};
+    const updatedColumnVisibility = {
+      ...(current.columnVisibility || {}),
+      [tableKey]: {
+        ...currentTableCols,
+        [colKey]: isVisible
+      }
+    };
+    const updated = saveDisplayPreferences({ columnVisibility: updatedColumnVisibility });
+    setPreferences(updated);
+    return updated;
+  }, []);
+
+  const resetTableColumnVisibility = useCallback((tableKey) => {
+    const current = getDisplayPreferences();
+    const updatedColumnVisibility = { ...(current.columnVisibility || {}) };
+    delete updatedColumnVisibility[tableKey];
+    const updated = saveDisplayPreferences({ columnVisibility: updatedColumnVisibility });
+    setPreferences(updated);
+    return updated;
+  }, []);
+
+  return {
+    preferences,
+    updatePreference,
+    setPreferences,
+    updateTableColumnVisibility,
+    resetTableColumnVisibility
+  };
 };

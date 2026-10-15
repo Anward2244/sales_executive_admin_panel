@@ -36,8 +36,9 @@ import PageHeader from '@/components/ui/PageHeader';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
-import { BulkActionBar, BatchProgressModal } from '@/components/ui';
-import { useDisplayPreferences } from '@/utils/displayPreferences';
+import { BulkActionBar, BatchProgressModal, TableToolbar } from '@/components/ui';
+import { useDisplayPreferences, getDensityStyles } from '@/utils/displayPreferences';
+import { useToast } from '@/context/ToastContext';
 import {
   getProductsApi,
   createProductApi,
@@ -54,6 +55,20 @@ import { formatEntityCode } from '@/utils/formatters';
 import { validateEntityCode } from '@/utils/validators';
 import { INDIAN_STATES, POPULAR_STATES, isAllKeyword } from '@/utils/indianStates';
 
+
+// Columns definition for Products table visibility selector
+const PRODUCT_COLUMNS = [
+  { id: 'serialNo', label: 'S.No.' },
+  { id: 'productDetails', label: 'Product Details', alwaysVisible: true },
+  { id: 'brand', label: 'Brand' },
+  { id: 'category', label: 'Category' },
+  { id: 'company', label: 'Partner Company' },
+  { id: 'locations', label: 'Covered Locations' },
+  { id: 'unit', label: 'Unit' },
+  { id: 'description', label: 'Description' },
+  { id: 'status', label: 'Status' },
+  { id: 'actions', label: 'Actions', alwaysVisible: true }
+];
 
 // Initial form state for Add/Edit product according to new schema
 const INITIAL_PRODUCT_FORM = {
@@ -90,8 +105,22 @@ const Products = () => {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'name-asc'
 
-  // Pagination State
-  const { preferences: displayPrefs } = useDisplayPreferences();
+  // Table UX & Preferences State (Density, Column Visibility, Pagination)
+  const { toast } = useToast();
+  const {
+    preferences: displayPrefs,
+    updatePreference,
+    updateTableColumnVisibility,
+    resetTableColumnVisibility
+  } = useDisplayPreferences();
+  const density = displayPrefs.density || 'comfortable';
+  const densityStyles = getDensityStyles(density);
+  const prodColumnVisibility = displayPrefs.columnVisibility?.products || {};
+  const isColVisible = (colId) => {
+    if (prodColumnVisibility[colId] !== undefined) return prodColumnVisibility[colId];
+    return true;
+  };
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = displayPrefs.rowsPerPage || 10;
 
@@ -101,6 +130,7 @@ const Products = () => {
   const [drawerProduct, setDrawerProduct] = useState(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
+  const [isFiltersVisible, setIsFiltersVisible] = useState(true);
   const actionsDropdownRef = useRef(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState(INITIAL_PRODUCT_FORM);
@@ -144,12 +174,16 @@ const Products = () => {
   const [batchProgress, setBatchProgress] = useState(null);
   const abortBatchRef = useRef(false);
 
-  // Toast State
-  const [toast, setToast] = useState(null);
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  };
+  // Toast State (Unified via ToastContext)
+  const showToast = useCallback((message, type = 'success') => {
+    if (type === 'error') {
+      toast.error(message);
+    } else if (type === 'info') {
+      toast.info(message);
+    } else {
+      toast.success(message);
+    }
+  }, [toast]);
 
   const handleImportComplete = (count) => {
     fetchData(true);
@@ -418,6 +452,17 @@ const Products = () => {
     });
     return { activeCount: active, inactiveCount: inactive };
   }, [products]);
+
+  // Count active non-default filters
+  const activeFiltersCount = useMemo(() => {
+    return [
+      selectedCompanyFilter !== 'ALL',
+      selectedLocationFilter !== 'ALL',
+      selectedBrandFilter !== 'ALL',
+      selectedCategoryFilter !== 'ALL',
+      selectedStatusFilter !== 'ALL'
+    ].filter(Boolean).length;
+  }, [selectedCompanyFilter, selectedLocationFilter, selectedBrandFilter, selectedCategoryFilter, selectedStatusFilter]);
 
   // Reset pagination on filter or search change
   useEffect(() => {
@@ -1880,36 +1925,28 @@ const Products = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xl border border-slate-700/50 dark:border-slate-200 animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <FiCheckCircle className="text-emerald-500 text-lg shrink-0" />
-          <span className="text-xs font-semibold">{toast.message}</span>
-        </div>
-      )}
-
+    <div className="space-y-3 max-w-7xl mx-auto pb-12">
       {/* Header */}
       <PageHeader
         title="Products Catalog"
         subtitle="Manage product portfolio, SKU inventory, brand collections, and distribution territories."
         badgeIcon={FiPackage}
         actions={
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
-            <div className="relative w-full sm:w-80">
-              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative w-full sm:w-72">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search name, SKU, brand, ID, location..."
-                className="w-full pl-9 pr-8 py-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 transition-all shadow-xs"
+                className="w-full pl-8 pr-7 py-1.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 transition-all shadow-xs"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
                 >
                   <FiX size={12} />
                 </button>
@@ -1922,9 +1959,9 @@ const Products = () => {
               onClick={() => fetchData(true)}
               disabled={loading || refreshing}
               title="Refresh Products"
-              className="p-2.5 bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:border-blue-500/40 transition-all cursor-pointer shadow-xs disabled:opacity-50 shrink-0"
+              className="p-2 bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:border-blue-500/40 transition-all cursor-pointer shadow-xs disabled:opacity-50 shrink-0"
             >
-              <FiRefreshCw className={`text-base ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
+              <FiRefreshCw className={`text-sm ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
             </button>
           </div>
         }
@@ -1932,40 +1969,40 @@ const Products = () => {
 
       {/* Error Alert */}
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <FiAlertCircle className="text-xl shrink-0" />
-            <span className="text-sm font-medium">{error}</span>
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <FiAlertCircle className="text-base shrink-0" />
+            <span className="font-medium">{error}</span>
           </div>
           <button
             type="button"
             onClick={() => fetchData()}
-            className="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition-colors cursor-pointer"
+            className="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 transition-colors cursor-pointer"
           >
             Retry
           </button>
         </div>
       )}
 
-      {/* Actions & Filters Bar */}
-      <div className="bg-white/40 dark:bg-slate-900/60 p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl space-y-3 backdrop-blur-xl">
-        {/* Top Row: Primary Actions & Sort / Reset */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/60 dark:border-white/5">
+      {/* Actions & Filters Bar - Ultra Compact */}
+      <div className="bg-white/50 dark:bg-slate-900/60 p-2 sm:px-3 sm:py-2 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-1.5 backdrop-blur-xl">
+        {/* Top Row: Primary Actions, Filter Toggle & Sort / Reset */}
+        <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 ${isFiltersVisible ? 'pb-1.5 border-b border-slate-200/60 dark:border-white/5' : ''}`}>
           {/* Action Controls */}
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Actions Dropdown */}
             <div className="relative" ref={actionsDropdownRef}>
               <button
                 type="button"
                 onClick={() => setIsActionsOpen((prev) => !prev)}
-                className="flex items-center gap-2 px-3.5 py-2.5 bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-95 shrink-0"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg transition-all shadow-xs hover:shadow-sm cursor-pointer active:scale-95 shrink-0"
               >
                 <span>Actions</span>
                 <FiChevronDown className={`text-xs transition-transform duration-200 ${isActionsOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {isActionsOpen && (
-                <div className="absolute left-0 mt-2 w-64 bg-white/40 dark:bg-slate-900/25 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-from-top-2 duration-150">
+                <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-slate-900 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-from-top-2 duration-150">
                   {/* Option 1: Import Products via Excel */}
                   <button
                     type="button"
@@ -1973,16 +2010,16 @@ const Products = () => {
                       setIsActionsOpen(false);
                       setIsImportModalOpen(true);
                     }}
-                    className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 text-left transition-colors cursor-pointer group"
+                    className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 text-left transition-colors cursor-pointer group"
                   >
-                    <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors shrink-0">
-                      <FiUploadCloud className="text-base" />
+                    <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors shrink-0">
+                      <FiUploadCloud className="text-sm" />
                     </span>
                     <div>
                       <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
                         Import Products
                       </div>
-                      <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                      <div className="text-[10px] text-slate-400 leading-tight">
                         Bulk import via Excel or CSV
                       </div>
                     </div>
@@ -1996,16 +2033,16 @@ const Products = () => {
                       downloadProductExcelTemplate(companies);
                       showToast('Sample Excel template downloaded.');
                     }}
-                    className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-blue-50/80 dark:hover:bg-blue-950/30 text-left transition-colors cursor-pointer group"
+                    className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-blue-50/80 dark:hover:bg-blue-950/30 text-left transition-colors cursor-pointer group"
                   >
-                    <span className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
-                      <FiFileText className="text-base" />
+                    <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
+                      <FiFileText className="text-sm" />
                     </span>
                     <div>
                       <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">
                         Download Sample File
                       </div>
-                      <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                      <div className="text-[10px] text-slate-400 leading-tight">
                         Pre-formatted .xlsx with companies
                       </div>
                     </div>
@@ -2021,16 +2058,16 @@ const Products = () => {
                       handleExportCSV();
                     }}
                     disabled={products.length === 0}
-                    className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-left transition-colors cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-left transition-colors cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 group-hover:bg-slate-700 group-hover:text-white transition-colors shrink-0">
-                      <FiDownload className="text-base" />
+                    <span className="p-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 group-hover:bg-slate-700 group-hover:text-white transition-colors shrink-0">
+                      <FiDownload className="text-sm" />
                     </span>
                     <div>
                       <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
                         Export Catalog CSV
                       </div>
-                      <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                      <div className="text-[10px] text-slate-400 leading-tight">
                         Download current inventory list
                       </div>
                     </div>
@@ -2043,9 +2080,9 @@ const Products = () => {
             <button
               type="button"
               onClick={handleOpenAdd}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer active:scale-95 shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
             >
-              <FiPlus className="text-sm" />
+              <FiPlus className="text-xs" />
               <span>Add Product</span>
             </button>
 
@@ -2056,13 +2093,13 @@ const Products = () => {
                 setIsBulkMode((prev) => !prev);
                 if (isBulkMode) setSelectedProductIds([]);
               }}
-              className={`flex items-center gap-2 px-3.5 py-2.5 border text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 border text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 ${
                 isBulkMode
-                  ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20 shadow-md'
+                  ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20'
                   : 'bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200'
               }`}
             >
-              <FiLayers className={`text-sm ${isBulkMode ? 'text-white' : 'text-blue-500'}`} />
+              <FiLayers className={`text-xs ${isBulkMode ? 'text-white' : 'text-blue-500'}`} />
               <span>Bulk Operations</span>
               {selectedProductIds.length > 0 && (
                 <span className="ml-1 px-1.5 py-0.2 bg-blue-700 text-white text-[10px] rounded-full font-bold">
@@ -2072,11 +2109,33 @@ const Products = () => {
             </button>
           </div>
 
-          {/* Right Controls: Sort & Reset */}
-          <div className="flex items-center gap-2.5 justify-end flex-wrap sm:flex-nowrap">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">Sort:</span>
-              <div className="min-w-[135px]">
+          {/* Right Controls: Filters Toggle, Sort & Reset */}
+          <div className="flex items-center gap-2 justify-end flex-wrap sm:flex-nowrap">
+            {/* Toggle Filters Visibility Button */}
+            <button
+              type="button"
+              onClick={() => setIsFiltersVisible((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer shrink-0 ${
+                isFiltersVisible
+                  ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                  : 'bg-white dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-white/10 hover:border-slate-300'
+              }`}
+              title={isFiltersVisible ? 'Collapse filter dropdowns' : 'Show filter dropdowns'}
+            >
+              <FiFilter className="text-xs" />
+              <span>Filters</span>
+              {activeFiltersCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
+                  {activeFiltersCount}
+                </span>
+              )}
+              <FiChevronDown className={`text-[10px] transition-transform duration-200 ${isFiltersVisible ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Sort:</span>
+              <div className="min-w-[125px]">
                 <CustomDropdown
                   value={sortBy}
                   onChange={(val) => setSortBy(val)}
@@ -2085,7 +2144,7 @@ const Products = () => {
                     { value: 'oldest', label: 'Oldest First' },
                     { value: 'name-asc', label: 'Name: A to Z' }
                   ]}
-                  statusColor="!px-3 !py-2 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                  statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
                 />
               </div>
             </div>
@@ -2103,122 +2162,102 @@ const Products = () => {
                   setSelectedStatusFilter('ALL');
                   setSortBy('newest');
                 }}
-                className="px-3 py-2 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-xl transition-all cursor-pointer border border-rose-200/60 dark:border-rose-900/40 shrink-0"
+                className="px-2.5 py-1 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg transition-all cursor-pointer border border-rose-200/60 dark:border-rose-900/40 shrink-0"
                 title="Reset all filters"
               >
-                Reset All
+                Reset
               </button>
             )}
           </div>
         </div>
 
-        {/* Bottom Row: Filter Dropdowns Strip */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 mr-1 shrink-0">
-            <FiFilter className="text-blue-500 text-sm" />
-            <span>Filters:</span>
-          </div>
+        {/* Bottom Row: Filter Dropdowns Strip (Collapsible) */}
+        {isFiltersVisible && (
+          <div className="flex items-center gap-2 flex-wrap pt-0.5 animate-in fade-in duration-150">
+            <div className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400 mr-0.5 shrink-0">
+              <FiFilter className="text-blue-500 text-xs" />
+              <span>Filters:</span>
+            </div>
 
-          {/* Company Filter */}
-          <div className="min-w-[140px] flex-1 sm:flex-initial">
-            <CustomDropdown
-              value={selectedCompanyFilter}
-              onChange={(val) => setSelectedCompanyFilter(val)}
-              options={[
-                { value: 'ALL', label: 'All Companies' },
-                ...companies.map((c) => ({
-                  value: c._id,
-                  label: c.code ? `${c.code} - ${c.name}` : c.name
-                }))
-              ]}
-              statusColor="!px-3 !py-2 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
-            />
-          </div>
-
-          {/* Location Filter */}
-          {uniqueLocations.length > 0 && (
+            {/* Company Filter */}
             <div className="min-w-[130px] flex-1 sm:flex-initial">
               <CustomDropdown
-                value={selectedLocationFilter}
-                onChange={(val) => setSelectedLocationFilter(val)}
+                value={selectedCompanyFilter}
+                onChange={(val) => setSelectedCompanyFilter(val)}
                 options={[
-                  { value: 'ALL', label: 'All Locations' },
-                  ...uniqueLocations.map((loc) => ({ value: loc, label: loc }))
-                ]}
-                statusColor="!px-3 !py-2 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
-              />
-            </div>
-          )}
-
-          {/* Brand Filter */}
-          {uniqueBrands.length > 0 && (
-            <div className="min-w-[120px] flex-1 sm:flex-initial">
-              <CustomDropdown
-                value={selectedBrandFilter}
-                onChange={(val) => setSelectedBrandFilter(val)}
-                options={[
-                  { value: 'ALL', label: 'All Brands' },
-                  ...uniqueBrands.map((b) => ({ value: b, label: b }))
-                ]}
-                statusColor="!px-3 !py-2 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
-              />
-            </div>
-          )}
-
-          {/* Category Filter */}
-          {categories.length > 0 && (
-            <div className="min-w-[140px] flex-1 sm:flex-initial">
-              <CustomDropdown
-                value={selectedCategoryFilter}
-                onChange={(val) => setSelectedCategoryFilter(val)}
-                options={[
-                  { value: 'ALL', label: 'All Categories' },
-                  ...categories.map((c) => ({
+                  { value: 'ALL', label: 'All Companies' },
+                  ...companies.map((c) => ({
                     value: c._id,
-                    label: c.name || c.code
+                    label: c.code ? `${c.code} - ${c.name}` : c.name
                   }))
                 ]}
-                statusColor="!px-3 !py-2 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
               />
             </div>
-          )}
 
-          {/* Status Filter */}
-          <div className="min-w-[120px] flex-1 sm:flex-initial">
-            <CustomDropdown
-              value={selectedStatusFilter}
-              onChange={(val) => setSelectedStatusFilter(val)}
-              options={[
-                { value: 'ALL', label: 'All Statuses' },
-                { value: 'ACTIVE', label: 'Active Only' },
-                { value: 'INACTIVE', label: 'Inactive Only' }
-              ]}
-              statusColor="!px-3 !py-2 text-xs font-semibold rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
-            />
+            {/* Location Filter */}
+            {uniqueLocations.length > 0 && (
+              <div className="min-w-[120px] flex-1 sm:flex-initial">
+                <CustomDropdown
+                  value={selectedLocationFilter}
+                  onChange={(val) => setSelectedLocationFilter(val)}
+                  options={[
+                    { value: 'ALL', label: 'All Locations' },
+                    ...uniqueLocations.map((loc) => ({ value: loc, label: loc }))
+                  ]}
+                  statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                />
+              </div>
+            )}
+
+            {/* Brand Filter */}
+            {uniqueBrands.length > 0 && (
+              <div className="min-w-[110px] flex-1 sm:flex-initial">
+                <CustomDropdown
+                  value={selectedBrandFilter}
+                  onChange={(val) => setSelectedBrandFilter(val)}
+                  options={[
+                    { value: 'ALL', label: 'All Brands' },
+                    ...uniqueBrands.map((b) => ({ value: b, label: b }))
+                  ]}
+                  statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                />
+              </div>
+            )}
+
+            {/* Category Filter */}
+            {categories.length > 0 && (
+              <div className="min-w-[125px] flex-1 sm:flex-initial">
+                <CustomDropdown
+                  value={selectedCategoryFilter}
+                  onChange={(val) => setSelectedCategoryFilter(val)}
+                  options={[
+                    { value: 'ALL', label: 'All Categories' },
+                    ...categories.map((c) => ({
+                      value: c._id,
+                      label: c.name || c.code
+                    }))
+                  ]}
+                  statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                />
+              </div>
+            )}
+
+            {/* Status Filter */}
+            <div className="min-w-[110px] flex-1 sm:flex-initial">
+              <CustomDropdown
+                value={selectedStatusFilter}
+                onChange={(val) => setSelectedStatusFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Statuses' },
+                  { value: 'ACTIVE', label: 'Active Only' },
+                  { value: 'INACTIVE', label: 'Inactive Only' }
+                ]}
+                statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+              />
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Product Counts & Summary Info */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 px-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-slate-800 dark:text-slate-200">
-            Total: {products.length} products
-          </span>
-          <span className="inline-block w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
-          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-            {activeCount} Active
-          </span>
-          <span className="inline-block w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
-          <span className="text-slate-500 font-semibold">
-            {inactiveCount} Inactive
-          </span>
-          {filteredProducts.length !== products.length && (
-            <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-bold">
-              {filteredProducts.length} filtered
-            </span>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Main Content Area */}
@@ -2229,19 +2268,19 @@ const Products = () => {
           tableClassName="min-w-[1200px]"
         />
       ) : filteredProducts.length === 0 ? (
-        <div className="py-20 text-center bg-white/60 dark:bg-slate-900/40 rounded-3xl border border-slate-200/80 dark:border-white/10 p-8">
-          <FiPackage className="text-4xl text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">No products found</h3>
+        <div className="py-16 text-center bg-white/60 dark:bg-slate-900/40 rounded-2xl border border-slate-200/80 dark:border-white/10 p-6">
+          <FiPackage className="text-3xl text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No products found</h3>
           <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
             {searchQuery || selectedCompanyFilter !== 'ALL' || selectedLocationFilter !== 'ALL' || selectedBrandFilter !== 'ALL' || selectedStatusFilter !== 'ALL'
               ? 'No products match your current search filters. Try clearing some filters.'
               : 'There are currently no products registered in your catalog.'}
           </p>
-          <div className="mt-5 flex items-center justify-center gap-3 flex-wrap">
+          <div className="mt-4 flex items-center justify-center gap-2.5 flex-wrap">
             <button
               type="button"
               onClick={() => setIsImportModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-lg shadow-emerald-600/25"
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-md shadow-emerald-600/25"
             >
               <FiUploadCloud />
               <span>Import via Excel</span>
@@ -2249,7 +2288,7 @@ const Products = () => {
             <button
               type="button"
               onClick={handleOpenAdd}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-600/25"
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-md shadow-blue-600/25"
             >
               <FiPlus />
               <span>Add First Product</span>
@@ -2257,13 +2296,41 @@ const Products = () => {
           </div>
         </div>
       ) : (
-        <div className="bg-white/40 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto custom-scrollbar">
+        <div className="bg-white/40 dark:bg-slate-900/60 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
+          {/* Table UX Toolbar: Column Visibility, Counts & Active Badges */}
+          <TableToolbar
+            columns={PRODUCT_COLUMNS}
+            visibleColumns={prodColumnVisibility}
+            onToggleColumn={(colId, val) => updateTableColumnVisibility('products', colId, val)}
+            onResetColumns={() => resetTableColumnVisibility('products')}
+            totalCount={products.length}
+            selectedCount={selectedProductIds.length}
+            summary={
+              <div className="flex items-center gap-2 text-xs flex-wrap">
+                <span className="inline-block w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                  {activeCount} Active
+                </span>
+                <span className="inline-block w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                <span className="text-slate-500 font-semibold">
+                  {inactiveCount} Inactive
+                </span>
+                {filteredProducts.length !== products.length && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-500/20">
+                    {filteredProducts.length} shown
+                  </span>
+                )}
+              </div>
+            }
+            className="border-b rounded-b-none border-x-0 border-t-0"
+          />
+
+          <div className="overflow-x-auto custom-scrollbar max-h-[calc(100vh-230px)]">
             <table className="w-full text-left text-sm whitespace-nowrap min-w-[1200px]">
-              <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5 select-none">
+              <thead className="sticky top-0 z-10 bg-white/60 dark:bg-slate-900/90 backdrop-blur-md shadow-xs text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200/80 dark:border-white/10 select-none">
                 <tr>
                   {isBulkMode && (
-                    <th className="py-4 px-3 text-center w-12 whitespace-nowrap">
+                    <th className={`${densityStyles.th} text-center w-12 whitespace-nowrap`}>
                       <input
                         type="checkbox"
                         checked={filteredProducts.length > 0 && selectedProductIds.length === filteredProducts.length}
@@ -2272,16 +2339,36 @@ const Products = () => {
                       />
                     </th>
                   )}
-                  <th className="py-4 px-5 text-center w-16 whitespace-nowrap">S.No.</th>
-                  <th className="py-4 px-5 whitespace-nowrap">Product Details</th>
-                  <th className="py-4 px-5 whitespace-nowrap">Brand</th>
-                  <th className="py-4 px-5 whitespace-nowrap">Category</th>
-                  <th className="py-4 px-5 whitespace-nowrap">Partner Company</th>
-                  <th className="py-4 px-5 whitespace-nowrap">Covered Locations</th>
-                  <th className="py-4 px-5 text-center whitespace-nowrap">Unit</th>
-                  <th className="py-4 px-5 whitespace-nowrap">Description</th>
-                  <th className="py-4 px-5 text-center whitespace-nowrap">Status</th>
-                  <th className="py-4 px-5 text-right whitespace-nowrap">Actions</th>
+                  {isColVisible('serialNo') && (
+                    <th className={`${densityStyles.th} text-center w-16 whitespace-nowrap`}>S.No.</th>
+                  )}
+                  {isColVisible('productDetails') && (
+                    <th className={`${densityStyles.th} whitespace-nowrap`}>Product Details</th>
+                  )}
+                  {isColVisible('brand') && (
+                    <th className={`${densityStyles.th} whitespace-nowrap`}>Brand</th>
+                  )}
+                  {isColVisible('category') && (
+                    <th className={`${densityStyles.th} whitespace-nowrap`}>Category</th>
+                  )}
+                  {isColVisible('company') && (
+                    <th className={`${densityStyles.th} whitespace-nowrap`}>Partner Company</th>
+                  )}
+                  {isColVisible('locations') && (
+                    <th className={`${densityStyles.th} whitespace-nowrap`}>Covered Locations</th>
+                  )}
+                  {isColVisible('unit') && (
+                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Unit</th>
+                  )}
+                  {isColVisible('description') && (
+                    <th className={`${densityStyles.th} whitespace-nowrap`}>Description</th>
+                  )}
+                  {isColVisible('status') && (
+                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Status</th>
+                  )}
+                  {isColVisible('actions') && (
+                    <th className={`${densityStyles.th} text-right whitespace-nowrap`}>Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
@@ -2314,7 +2401,7 @@ const Products = () => {
                       }`}
                     >
                       {isBulkMode && (
-                        <td className="py-4 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td className={`${densityStyles.td} text-center`} onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -2323,170 +2410,186 @@ const Products = () => {
                           />
                         </td>
                       )}
+
                       {/* S.No. */}
-                      <td className="py-4 px-5 text-center font-mono text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                        {serialNumber}
-                      </td>
+                      {isColVisible('serialNo') && (
+                        <td className={`${densityStyles.td} text-center font-mono text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap`}>
+                          {serialNumber}
+                        </td>
+                      )}
 
                       {/* Product Name & SKU */}
-                      <td className="py-4 px-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20">
-                            <FiPackage className="text-base" />
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900 dark:text-white text-xs whitespace-nowrap">
-                              {product.name}
+                      {isColVisible('productDetails') && (
+                        <td className={densityStyles.td}>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20">
+                              <FiPackage className="text-sm" />
                             </div>
-                            <div className="flex items-center gap-1.5 mt-0.5" onClick={(e) => e.stopPropagation()}>
-                              <span className="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                                {product.sku}
-                              </span>
-                              <CopyButton text={product.sku} size={10} />
-                              {/* {product.price !== undefined && product.price !== null && product.price !== '' && (
-                                <span className="font-semibold text-[11px] text-emerald-600 dark:text-emerald-400 ml-1">
-                                  ₹{Number(product.price).toLocaleString('en-IN')}
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white text-xs whitespace-nowrap">
+                                {product.name}
+                              </div>
+                              <div className="flex items-center gap-1.5 mt-0.5" onClick={(e) => e.stopPropagation()}>
+                                <span className="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                  {product.sku}
                                 </span>
-                              )} */}
+                                <CopyButton text={product.sku} size={10} />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
+                      )}
 
                       {/* Brand */}
-                      <td className="py-4 px-5 whitespace-nowrap">
-                        <span className="font-semibold text-slate-700 dark:text-slate-300 text-xs">
-                          {product.brand || 'N/A'}
-                        </span>
-                      </td>
+                      {isColVisible('brand') && (
+                        <td className={`${densityStyles.td} whitespace-nowrap`}>
+                          <span className="font-semibold text-slate-700 dark:text-slate-300 text-xs">
+                            {product.brand || 'N/A'}
+                          </span>
+                        </td>
+                      )}
 
                       {/* Category */}
-                      <td className="py-4 px-5 whitespace-nowrap">
-                        {categoryName ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20">
-                              <FiTag className="text-[10px]" />
-                              <span>{categoryName}</span>
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">Unassigned</span>
-                        )}
-                      </td>
+                      {isColVisible('category') && (
+                        <td className={`${densityStyles.td} whitespace-nowrap`}>
+                          {categoryName ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20">
+                                <FiTag className="text-[10px]" />
+                                <span>{categoryName}</span>
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Unassigned</span>
+                          )}
+                        </td>
+                      )}
 
                       {/* Partner Company */}
-                      <td className="py-4 px-5 whitespace-nowrap">
-                        {compName ? (
-                          <div className="space-y-1">
+                      {isColVisible('company') && (
+                        <td className={`${densityStyles.td} whitespace-nowrap`}>
+                          {compName ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                  {compName}
+                                </span>
+                                {compCode && (
+                                  <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                    {compCode}
+                                  </span>
+                                )}
+                              </div>
+                              {Array.isArray(product.companyMappings) && product.companyMappings.length > 1 && (
+                                <div className="flex items-center gap-1">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                    +{product.companyMappings.length - 1} more partner{product.companyMappings.length > 2 ? 's' : ''}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Unassigned</span>
+                          )}
+                        </td>
+                      )}
+
+                      {/* Covered Locations */}
+                      {isColVisible('locations') && (
+                        <td className={`${densityStyles.td} whitespace-nowrap`}>
+                          {locations.length > 0 ? (
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                                {compName}
-                              </span>
-                              {compCode && (
-                                <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                  {compCode}
+                              {locations.slice(0, 3).map((loc, i) => (
+                                <span
+                                  key={i}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 whitespace-nowrap"
+                                >
+                                  <FiMapPin className="text-[10px] text-blue-500 shrink-0" />
+                                  <span>{loc}</span>
+                                </span>
+                              ))}
+                              {locations.length > 3 && (
+                                <span
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 cursor-help whitespace-nowrap"
+                                  title={locations.join(', ')}
+                                >
+                                  +{locations.length - 3} more
                                 </span>
                               )}
                             </div>
-                            {Array.isArray(product.companyMappings) && product.companyMappings.length > 1 && (
-                              <div className="flex items-center gap-1">
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                                  +{product.companyMappings.length - 1} more partner{product.companyMappings.length > 2 ? 's' : ''}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">Unassigned</span>
-                        )}
-                      </td>
-
-                      {/* Covered Locations */}
-                      <td className="py-4 px-5 whitespace-nowrap">
-                        {locations.length > 0 ? (
-                          <div className="flex items-center gap-1.5">
-                            {locations.slice(0, 3).map((loc, i) => (
-                              <span
-                                key={i}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 whitespace-nowrap"
-                              >
-                                <FiMapPin className="text-[10px] text-blue-500 shrink-0" />
-                                <span>{loc}</span>
-                              </span>
-                            ))}
-                            {locations.length > 3 && (
-                              <span
-                                className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 cursor-help whitespace-nowrap"
-                                title={locations.join(', ')}
-                              >
-                                +{locations.length - 3} more
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">All Territories</span>
-                        )}
-                      </td>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">All Territories</span>
+                          )}
+                        </td>
+                      )}
 
                       {/* Unit */}
-                      <td className="py-4 px-5 text-center whitespace-nowrap">
-                        <span className="font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
-                          {product.unit || 'PCS'}
-                        </span>
-                      </td>
+                      {isColVisible('unit') && (
+                        <td className={`${densityStyles.td} text-center whitespace-nowrap`}>
+                          <span className="font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
+                            {product.unit || 'PCS'}
+                          </span>
+                        </td>
+                      )}
 
                       {/* Description */}
-                      <td className="py-4 px-5 max-w-[220px]">
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[220px]" title={product.description}>
-                          {product.description || '—'}
-                        </p>
-                      </td>
+                      {isColVisible('description') && (
+                        <td className={`${densityStyles.td} max-w-[220px]`}>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[220px]" title={product.description}>
+                            {product.description || '—'}
+                          </p>
+                        </td>
+                      )}
 
                       {/* Status */}
-                      <td className="py-4 px-5 text-center whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                            product.isActive
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                              : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
-                          }`}
-                        >
-                          {product.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
+                      {isColVisible('status') && (
+                        <td className={`${densityStyles.td} text-center whitespace-nowrap`}>
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                              product.isActive
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
+                            }`}
+                          >
+                            {product.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                      )}
 
                       {/* Actions */}
-                      <td className="py-4 px-5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenDetails(product)}
-                            className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                            title="View product details"
-                          >
-                            <FiEye className="text-base" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => handleOpenEdit(product, e)}
-                            className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border border-amber-200/60 dark:border-amber-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                            title="Edit"
-                          >
-                            <FiEdit2 className="text-sm" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirmProduct(product);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200/60 dark:border-rose-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                            title="Delete"
-                          >
-                            <FiTrash2 className="text-sm" />
-                          </button>
-                        </div>
-                      </td>
+                      {isColVisible('actions') && (
+                        <td className={`${densityStyles.td} text-right whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDetails(product)}
+                              className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                              title="View product details"
+                            >
+                              <FiEye className="text-base" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenEdit(product, e)}
+                              className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border border-amber-200/60 dark:border-amber-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                              title="Edit"
+                            >
+                              <FiEdit2 className="text-sm" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirmProduct(product);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200/60 dark:border-rose-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                              title="Delete"
+                            >
+                              <FiTrash2 className="text-sm" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}

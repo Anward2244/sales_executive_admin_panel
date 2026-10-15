@@ -2090,7 +2090,7 @@ const Settings = () => {
                 <label className="block text-sm font-bold text-slate-900 dark:text-white mb-2">
                   Table & Card Spacing Density
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl">
                   <div
                     onClick={() => updateDisplayPref('density', 'comfortable')}
                     className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
@@ -2102,11 +2102,11 @@ const Settings = () => {
                     <div>
                       <p className={`text-xs font-bold text-slate-900 dark:text-white ${displayPrefs.density === 'comfortable' ? 'text-white' : ''}`}>Comfortable</p>
                       <p className={`text-[11px] text-slate-500 dark:text-slate-400 ${displayPrefs.density === 'comfortable' ? 'text-white' : ''}`}>
-                        Generous padding for easier reading
+                        Generous padding for reading
                       </p>
                     </div>
                     {displayPrefs.density === 'comfortable' && (
-                      <FiCheck className="text-blue-600 font-bold" />
+                      <FiCheck className="text-white font-bold" />
                     )}
                   </div>
 
@@ -2121,11 +2121,30 @@ const Settings = () => {
                     <div>
                       <p className={`text-xs font-bold text-slate-900 dark:text-white ${displayPrefs.density === 'compact' ? 'text-white' : ''}`}>Compact</p>
                       <p className={`text-[11px] text-slate-500 dark:text-slate-400 ${displayPrefs.density === 'compact' ? 'text-white' : ''}`}>
-                        Dense rows for maximum data density
+                        Balanced spacing
                       </p>
                     </div>
                     {displayPrefs.density === 'compact' && (
-                      <FiCheck className="text-blue-600 font-bold" />
+                      <FiCheck className="text-white font-bold" />
+                    )}
+                  </div>
+
+                  <div
+                    onClick={() => updateDisplayPref('density', 'dense')}
+                    className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
+                      displayPrefs.density === 'dense'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                        : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
+                    }`}
+                  >
+                    <div>
+                      <p className={`text-xs font-bold text-slate-900 dark:text-white ${displayPrefs.density === 'dense' ? 'text-white' : ''}`}>Dense</p>
+                      <p className={`text-[11px] text-slate-500 dark:text-slate-400 ${displayPrefs.density === 'dense' ? 'text-white' : ''}`}>
+                        Reduced py-2 px-3 for 13-14" laptops
+                      </p>
+                    </div>
+                    {displayPrefs.density === 'dense' && (
+                      <FiCheck className="text-white font-bold" />
                     )}
                   </div>
                 </div>

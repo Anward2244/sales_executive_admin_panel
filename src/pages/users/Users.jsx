@@ -19,8 +19,8 @@ import { BulkActionBar, BatchProgressModal } from '@/components/ui';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { createPortal } from 'react-dom';
 import { formatPhone, formatEntityCode } from '@/utils/formatters';
-import { validateEmail, validatePhone, validateEntityCode } from '@/utils/validators';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { useToast } from '@/context/ToastContext';
 
 const getUserFullName = (user) => {
   if (!user) return '';
@@ -72,7 +72,8 @@ const formatRelativeTime = (dateString) => {
 };
 
 const UsersList = () => {
-  const { showAlert: showGlobalAlert, confirm } = useConfirm();
+  const { confirm } = useConfirm();
+  const { toast } = useToast();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -548,12 +549,12 @@ const UsersList = () => {
     setActionLoadingId(targetId);
     try {
       const res = await updateUserStatusApi(targetId, newStatus);
-      showGlobalAlert(res.data?.message || `User ${actionText}d successfully!`, 'success');
+      toast.success(res.data?.message || `User ${actionText}d successfully!`);
       setDrawerUser((prev) => (prev ? { ...prev, isActive: newStatus } : null));
       setUsers((prev) => prev.map((u) => (u._id === targetId ? { ...u, isActive: newStatus } : u)));
     } catch (err) {
       console.error('Status toggle error:', err);
-      showGlobalAlert(err.response?.data?.message || `Failed to ${actionText} user.`, 'error');
+      toast.error(err.response?.data?.message || `Failed to ${actionText} user.`);
     } finally {
       setActionLoadingId(null);
     }
@@ -612,7 +613,7 @@ const UsersList = () => {
       const res = await updateUserApi(drawerUser._id, payload);
       const updatedUser = res.data?.data ? res.data.data : { ...drawerUser, ...payload };
 
-      showGlobalAlert(res.data?.message || 'User profile updated successfully!', 'success');
+      toast.success(res.data?.message || 'User profile updated successfully!');
       setDrawerUser(updatedUser);
       setUsers((prev) => prev.map((u) => (u._id === drawerUser._id ? { ...u, ...updatedUser } : u)));
       setDrawerTab('overview');
@@ -687,7 +688,7 @@ const UsersList = () => {
       const response = await createUserApi(payload);
 
       // 3. User feedback
-      showGlobalAlert(response.data?.message || 'User created successfully!', 'success');
+      toast.success(response.data?.message || 'User created successfully!');
 
       // 4. Reset form & close modal
       setFormData(initialFormstate);
@@ -717,11 +718,20 @@ const UsersList = () => {
     setActionLoadingId(targetId);
     try {
       const res = await updateUserStatusApi(targetId, newStatus);
-      showGlobalAlert(res.data?.message || `User ${actionText}d successfully!`, 'success');
+      toast.success(res.data?.message || `User ${actionText}d successfully!`, {
+        onUndo: () => {
+          updateUserStatusApi(targetId, !newStatus).then(() => {
+            setUsers(prev => prev.map(u => u._id === targetId ? { ...u, isActive: !newStatus } : u));
+            toast.info(`Reverted status for user "${getUserFullName(user)}".`);
+          }).catch(err => {
+            toast.error(err.response?.data?.message || 'Failed to revert user status.');
+          });
+        }
+      });
       setUsers(prev => prev.map(u => u._id === targetId ? { ...u, isActive: newStatus } : u));
     } catch (err) {
       console.error('Status toggle error:', err);
-      showGlobalAlert(err.response?.data?.message || `Failed to ${actionText} user.`, 'error');
+      toast.error(err.response?.data?.message || `Failed to ${actionText} user.`);
     } finally {
       setActionLoadingId(null);
     }
@@ -862,11 +872,10 @@ const UsersList = () => {
     setBatchProgress((p) => ({ ...p, isFinished: true }));
     await fetchUsers(false);
     setSelectedUserIds(new Set());
-    if (showGlobalAlert) {
-      showGlobalAlert(
-        `Batch operation completed. ${successCount} succeeded, ${failureCount} failed.`,
-        failureCount === 0 ? 'success' : 'info'
-      );
+    if (failureCount === 0) {
+      toast.success(`Batch operation completed. ${successCount} succeeded.`);
+    } else {
+      toast.info(`Batch operation completed. ${successCount} succeeded, ${failureCount} failed.`);
     }
   };
 

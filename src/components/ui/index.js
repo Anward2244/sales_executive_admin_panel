@@ -12,5 +12,6 @@ export { default as StatusBadge } from './StatusBadge';
 export { default as EmptyState } from './EmptyState';
 export { default as BulkActionBar } from './BulkActionBar';
 export { default as BatchProgressModal } from './BatchProgressModal';
+export { default as TableToolbar } from './TableToolbar';
 export * from './VisxCharts';
 

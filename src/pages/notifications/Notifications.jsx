@@ -34,10 +34,12 @@ import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
+import { useToast } from '@/context/ToastContext';
 
 const Notifications = () => {
   const navigate = useNavigate();
   const searchInputRef = useRef(null);
+  const { toast } = useToast();
 
   // Notifications State
   const [notifications, setNotifications] = useState([]);
@@ -74,15 +76,6 @@ const Notifications = () => {
   const [deviceTokenSuccess, setDeviceTokenSuccess] = useState(null);
   const [deviceTokenError, setDeviceTokenError] = useState(null);
 
-  // Toast feedback
-  const [toastMessage, setToastMessage] = useState(null);
-
-  const showToast = (text, type = 'success') => {
-    setToastMessage({ text, type });
-    setTimeout(() => {
-      setToastMessage((curr) => (curr?.text === text ? null : curr));
-    }, 4000);
-  };
 
   // Helper for human-friendly relative time
   const getRelativeTime = (dateInput) => {
@@ -245,11 +238,11 @@ const Notifications = () => {
           return nId === id ? { ...n, isRead: true } : n;
         })
       );
-      showToast('Notification marked as read.', 'success');
+      toast.success('Notification marked as read.');
       window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch (err) {
       console.error('Failed to mark notification as read:', err);
-      showToast(err.response?.data?.message || err.message || 'Failed to mark as read.', 'error');
+      toast.error(err.response?.data?.message || err.message || 'Failed to mark as read.');
     } finally {
       setActionLoadingId(null);
     }
@@ -263,11 +256,11 @@ const Notifications = () => {
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, isRead: true }))
       );
-      showToast('All notifications marked as read.', 'success');
+      toast.success('All notifications marked as read.');
       window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch (err) {
       console.error('Failed to mark all notifications as read:', err);
-      showToast(err.response?.data?.message || err.message || 'Failed to mark all as read.', 'error');
+      toast.error(err.response?.data?.message || err.message || 'Failed to mark all as read.');
     } finally {
       setMarkingAllRead(false);
     }
@@ -290,7 +283,7 @@ const Notifications = () => {
       });
       const msg = response.data?.message || 'Device token registered successfully!';
       setDeviceTokenSuccess(msg);
-      showToast(msg, 'success');
+      toast.success(msg);
       setTimeout(() => {
         setIsDeviceTokenModalOpen(false);
         setDeviceTokenSuccess(null);
@@ -549,31 +542,6 @@ const Notifications = () => {
 
   return (
     <div className="relative space-y-5 min-h-full w-full pb-10">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div
-          className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl border text-xs font-semibold backdrop-blur-xl animate-in fade-in slide-in-from-top-3 ${
-            toastMessage.type === 'error'
-              ? 'bg-rose-600/90 text-white border-rose-500 shadow-rose-600/30'
-              : 'bg-emerald-600/90 text-white border-emerald-500 shadow-emerald-600/30'
-          }`}
-        >
-          {toastMessage.type === 'error' ? (
-            <FiAlertCircle className="text-base shrink-0" />
-          ) : (
-            <FiCheckCircle className="text-base shrink-0" />
-          )}
-          <span>{toastMessage.text}</span>
-          <button
-            type="button"
-            onClick={() => setToastMessage(null)}
-            className="ml-2 hover:opacity-75 cursor-pointer p-0.5"
-          >
-            <FiX className="text-sm" />
-          </button>
-        </div>
-      )}
-
       {/* Page Header */}
       <PageHeader
         title="In-App Notifications"

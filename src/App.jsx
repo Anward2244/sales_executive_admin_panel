@@ -4,6 +4,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import Layout from '@/components/layout/Layout';
 import { ConfirmationProvider } from '@/context/ConfirmationContext';
+import { ToastProvider } from '@/context/ToastContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 
 // Lazy Loaded Pages (Clean Architecture)
@@ -27,8 +28,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ConfirmationProvider>
-          <BrowserRouter>
+        <ToastProvider>
+          <ConfirmationProvider>
+            <BrowserRouter>
             <Suspense fallback={null}>
               <Routes>
                 {/* Public Auth Route */}
@@ -80,6 +82,7 @@ function App() {
             </Suspense>
           </BrowserRouter>
         </ConfirmationProvider>
+        </ToastProvider>
       </AuthProvider>
     </ThemeProvider>
   );
