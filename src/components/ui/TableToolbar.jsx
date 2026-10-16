@@ -54,7 +54,7 @@ export const TableToolbar = ({
 
   return (
     <div
-      className={`flex flex-wrap items-center justify-between gap-2.5 py-1.5 px-3 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs ${className}`}
+      className={`relative z-25 flex flex-wrap items-center justify-between gap-2.5 py-1.5 px-3 bg-white/60 dark:bg-slate-900/60 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs ${className}`}
     >
       {/* Left section: counts & extra custom controls */}
       <div className="flex items-center gap-2.5 flex-wrap">
@@ -87,7 +87,7 @@ export const TableToolbar = ({
               className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-xl border transition-all cursor-pointer ${
                 columnsDropdownOpen
                   ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400 shadow-xs'
-                  : 'bg-white dark:bg-white/5 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/10'
+                  : 'bg-white dark:bg-white/5 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/10 shadow-sm'
               }`}
             >
               <FiSliders className="text-sm" />
@@ -99,7 +99,7 @@ export const TableToolbar = ({
 
             {/* Dropdown Popover */}
             {columnsDropdownOpen && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-3 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white/40 dark:bg-slate-950/25 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-3 z-50 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-white/10">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white">
                     <FiEye className="text-blue-500" />

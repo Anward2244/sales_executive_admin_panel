@@ -636,7 +636,7 @@ const EmailNotifications = () => {
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                     statusFilter === 'ALL'
                       ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-white/10'
                   }`}
                 >
                   All ({metrics.total})
@@ -647,7 +647,7 @@ const EmailNotifications = () => {
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                     statusFilter === 'SENT'
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-white/10'
                   }`}
                 >
                   Sent ({metrics.sent})
@@ -658,7 +658,7 @@ const EmailNotifications = () => {
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                     statusFilter === 'FAILED'
                       ? 'bg-rose-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-white/10'
                   }`}
                 >
                   Failed ({metrics.failed})
@@ -669,7 +669,7 @@ const EmailNotifications = () => {
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                     statusFilter === 'QUEUED'
                       ? 'bg-amber-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-white/10'
                   }`}
                 >
                   Queued ({metrics.queued})

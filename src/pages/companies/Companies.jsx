@@ -552,7 +552,7 @@ const Companies = () => {
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10 w-full sm:w-auto justify-center">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-white/5 rounded-xl shadow-md border border-slate-200/80 dark:border-white/10 w-full sm:w-auto justify-center">
           {[
             { id: 'all', label: 'All', count: totalCount },
             { id: 'active', label: 'Active', count: activeCount },

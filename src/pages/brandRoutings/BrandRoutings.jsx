@@ -1071,7 +1071,7 @@ const BrandRoutings = () => {
           </div>
 
           {/* View Toggle */}
-          <div className="flex items-center bg-slate-100 dark:bg-white/5 p-1 rounded-xl border border-slate-200/80 dark:border-white/10 text-xs">
+          <div className="flex items-center bg-slate-100 dark:bg-white/5 p-1 rounded-xl shadow-md border border-slate-200/80 dark:border-white/10 text-xs">
             <button
               type="button"
               onClick={() => setViewMode('grouped')}

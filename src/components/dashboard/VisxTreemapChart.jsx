@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { useTheme } from '@/context/ThemeContext';
 import { Group } from '@visx/group';
 import { Tree, hierarchy } from '@visx/hierarchy';
 import { LinkHorizontal } from '@visx/shape';
@@ -952,9 +953,17 @@ const InnerHierarchyChart = ({
   height,
   data,
   metric = 'revenue',
-  isDark = false,
+  isDark: isDarkProp,
   onNodeClick
 }) => {
+  let themeIsDark = false;
+  try {
+    const themeContext = useTheme();
+    themeIsDark = themeContext?.isDark ?? false;
+  } catch {
+    themeIsDark = false;
+  }
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
   const [collapsedIds, setCollapsedIds] = useState(() => new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -1130,8 +1139,19 @@ const InnerHierarchyChart = ({
     <div
       ref={chartContainerRef}
       className={`relative select-none w-full h-full flex flex-col ${
-        isChartFullscreen ? 'p-6 bg-slate-900 z-[99999]' : ''
+        isChartFullscreen
+          ? `p-4 sm:p-6 ${
+              isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+            } dark:bg-slate-950 dark:text-slate-100 z-[99999]`
+          : ''
       }`}
+      style={
+        isChartFullscreen
+          ? {
+              backgroundColor: isDark ? '#020617' : '#f8fafc',
+            }
+          : undefined
+      }
     >
       {/* 1. Quick Search & Interactive Level Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 px-3 py-2 mb-2 bg-slate-50/90 dark:bg-slate-900/80 border border-slate-200/70 dark:border-white/10 rounded-2xl text-xs backdrop-blur-md shadow-xs">
@@ -1171,21 +1191,21 @@ const InnerHierarchyChart = ({
           <button
             type="button"
             onClick={handleExpandAll}
-            className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 shadow-xs border border-slate-200/70 dark:border-white/10 transition-all cursor-pointer text-xs font-semibold whitespace-nowrap"
+            className="px-2.5 py-1 rounded-lg bg-blue-200/40 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 shadow-md border border-slate-200/70 dark:border-white/10 transition-all cursor-pointer text-xs font-semibold whitespace-nowrap"
           >
             All Levels
           </button>
           <button
             type="button"
             onClick={handleCollapseToFirms}
-            className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 shadow-xs border border-slate-200/70 dark:border-white/10 transition-all cursor-pointer text-xs font-semibold whitespace-nowrap"
+            className="px-2.5 py-1 rounded-lg bg-blue-200/40 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 shadow-xs border border-slate-200/70 dark:border-white/10 transition-all cursor-pointer text-xs font-semibold whitespace-nowrap"
           >
             To Firms
           </button>
           <button
             type="button"
             onClick={handleCollapseToCompanies}
-            className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 shadow-xs border border-slate-200/70 dark:border-white/10 transition-all cursor-pointer text-xs font-semibold whitespace-nowrap"
+            className="px-2.5 py-1 rounded-lg bg-blue-200/40 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 shadow-xs border border-slate-200/70 dark:border-white/10 transition-all cursor-pointer text-xs font-semibold whitespace-nowrap"
           >
             Companies Only
           </button>
@@ -1295,7 +1315,7 @@ const InnerHierarchyChart = ({
       </div>
 
       {/* 3. Footer Legend Bar */}
-      <div className="flex items-center justify-between gap-2 px-3 py-1.5 mt-2 text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50/60 dark:bg-white/[0.02] rounded-xl border border-slate-200/50 dark:border-white/5 flex-wrap">
+      <div className="flex items-center justify-between gap-2 px-3 py-1.5 mt-2 text-[11px] text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-white/10 shadow-xs flex-wrap">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-md bg-indigo-500" />
@@ -1326,9 +1346,17 @@ export default function VisxTreemapChart({
   data,
   metric = 'revenue',
   height = 560,
-  isDark = false,
+  isDark: isDarkProp,
   onNodeClick
 }) {
+  let themeIsDark = false;
+  try {
+    const themeContext = useTheme();
+    themeIsDark = themeContext?.isDark ?? false;
+  } catch {
+    themeIsDark = false;
+  }
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   return (
     <div style={{ width: '100%', height }} className="relative">
       <ParentSize>

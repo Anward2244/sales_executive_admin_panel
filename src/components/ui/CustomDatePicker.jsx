@@ -206,7 +206,7 @@ const CustomDatePicker = ({ value, onChange, min, max, label, align = 'right', c
     <div ref={containerRef} className={`relative select-none ${className}`}>
       <div
         onClick={toggleOpen}
-        className="flex items-center justify-between gap-2 bg-white/90 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer rounded-xl px-3 py-2 w-full h-[38px] shadow-xs"
+        className="flex items-center justify-between gap-2 bg-white/90 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer rounded-xl px-3 py-2 w-full h-[38px] shadow-md"
       >
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase select-none">{label}:</span>

@@ -376,7 +376,7 @@ function InnerBarChart({
             borderRadius: '16px',
             boxShadow:
               '0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            backdropFilter: 'blur(16px)',
+            backdropFilter: 'blur(8px)',
             padding: '12px 14px',
             fontSize: '12px',
             pointerEvents: 'none',

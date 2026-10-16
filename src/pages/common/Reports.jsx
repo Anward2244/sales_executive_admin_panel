@@ -620,6 +620,7 @@ const Reports = () => {
     const targetOrders = filteredOrders.length > 0 ? filteredOrders : rangeFilteredOrders;
     if (!targetOrders.length) return;
     const headers = [
+      'S.No',
       'PO Number',
       'Status',
       'Email Status',
@@ -639,12 +640,13 @@ const Reports = () => {
       'Approved At',
     ];
     const rows = [headers];
-    targetOrders.forEach((o) => {
+    targetOrders.forEach((o, idx) => {
       const itemsCount = (o.items || []).reduce((acc, i) => acc + (i.quantity || 0), 0);
       const salesRep = `${o.salesExecutiveId?.firstName || ''} ${o.salesExecutiveId?.lastName || ''}`.trim();
       const emailStatus = o.emailStatus?.status || (o.emailStatus?.isSent ? 'SENT' : 'PENDING');
       const recipients = Array.isArray(o.emailStatus?.recipients) ? o.emailStatus.recipients.join('; ') : '';
       rows.push([
+        idx + 1,
         o.poNumber || '',
         o.status || '',
         emailStatus,
@@ -669,7 +671,7 @@ const Reports = () => {
 
   const handleExportProductsCSV = () => {
     if (!productPerformance.length) return;
-    const headers = ['Rank', 'Product Name', 'SKU', 'Orders Count', 'Units Sold', 'Avg Unit Price (INR)', 'Total Revenue (INR)', 'Volume Share (%)', 'Revenue Share (%)'];
+    const headers = ['S.No', 'Product Name', 'SKU', 'Orders Count', 'Units Sold', 'Avg Unit Price (INR)', 'Total Revenue (INR)', 'Volume Share (%)', 'Revenue Share (%)'];
     const rows = [headers];
     const totalRev = Number(summary.totalRevenue) || 1;
     productPerformance.forEach((p, idx) => {
@@ -801,7 +803,7 @@ const Reports = () => {
       )}
 
       {/* Date Range Selector Banner */}
-      <div className="flex flex-col gap-3 bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs">
+      <div className="flex flex-col gap-3 bg-white/40 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-lg">
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           <div className="flex items-center gap-2 flex-wrap">
             <FiCalendar className="text-blue-500 text-sm" />
@@ -826,8 +828,8 @@ const Reports = () => {
                 onClick={() => handleRangeChange(item.id)}
                 className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                   selectedRange === item.id
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500'
+                    : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 shadow-md hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 {item.label}
@@ -867,7 +869,7 @@ const Reports = () => {
       {/* Top 4 KPI Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Orders */}
-        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs relative overflow-hidden group">
+        <div className="bg-white/60 dark:bg-slate-900/60 p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -893,7 +895,7 @@ const Reports = () => {
         </div>
 
         {/* Gross Revenue */}
-        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs relative overflow-hidden group">
+        <div className="bg-white/60 dark:bg-slate-900/60 p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -918,7 +920,7 @@ const Reports = () => {
         </div>
 
         {/* Average Order Value (AOV) */}
-        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs relative overflow-hidden group">
+        <div className="bg-white/60 dark:bg-slate-900/60 p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -943,7 +945,7 @@ const Reports = () => {
         </div>
 
         {/* Units Sold */}
-        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs relative overflow-hidden group">
+        <div className="bg-white/60 dark:bg-slate-900/60 p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -1081,7 +1083,7 @@ const Reports = () => {
             <table className="w-full text-left text-sm whitespace-nowrap min-w-[1100px]">
               <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5 select-none">
                 <tr>
-                  <th className="py-3.5 px-4 w-14 text-center">Rank</th>
+                  <th className="py-3.5 px-4 w-14 text-center">S.No</th>
                   <th className="py-3.5 px-4 min-w-[240px]">Product Details</th>
                   <th className="py-3.5 px-4 text-center">Orders</th>
                   <th className="py-3.5 px-4 text-center">Units Sold</th>
@@ -1388,9 +1390,10 @@ const Reports = () => {
           <>
             <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left text-sm whitespace-nowrap min-w-[1100px]">
-              <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5">
+              <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-extrabold text-slate-700 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5">
                 <tr>
-                  <th className="py-3.5 px-4 font-mono">PO Number</th>
+                  <th className="py-3.5 px-4 text-center w-14">S.No</th>
+                  <th className="py-3.5 px-4">PO Number</th>
                   <th className="py-3.5 px-4">Trading Company</th>
                   <th className="py-3.5 px-4">Purchasing Firm</th>
                   <th className="py-3.5 px-4">Sales Executive</th>
@@ -1403,7 +1406,7 @@ const Reports = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
-                {paginatedOrders.map((order) => {
+                {paginatedOrders.map((order, index) => {
                   const badge = getStatusBadge(order.status);
                   const StatusIcon = badge.icon;
                   const emailBadge = getEmailStatusBadge(order.emailStatus);
@@ -1421,6 +1424,11 @@ const Reports = () => {
                       key={order._id}
                       className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors"
                     >
+                      {/* S.No */}
+                      <td className="py-4 px-4 text-center font-mono font-medium text-slate-500 dark:text-slate-400 text-xs">
+                        {indexOfFirstOrder + index + 1}
+                      </td>
+
                       {/* PO Number */}
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900 dark:text-white text-xs">
@@ -1841,6 +1849,7 @@ const Reports = () => {
                     <table className="w-full text-left text-xs">
                       <thead className="bg-slate-50 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 uppercase border-b border-slate-200/60 dark:border-white/5">
                         <tr>
+                          <th className="py-2.5 px-3 text-center w-12">S.No</th>
                           <th className="py-2.5 px-3">Item / SKU</th>
                           <th className="py-2.5 px-3 text-center">Qty</th>
                           <th className="py-2.5 px-3 text-right">Unit Price</th>
@@ -1850,6 +1859,9 @@ const Reports = () => {
                       <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
                         {(selectedOrder.items || []).map((item, i) => (
                           <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02]">
+                            <td className="py-3 px-3 text-center font-mono text-slate-500 dark:text-slate-400 font-medium">
+                              {i + 1}
+                            </td>
                             <td className="py-3 px-3">
                               <div className="font-bold text-slate-900 dark:text-white">
                                 {item.productNameSnapshot || 'Product Item'}

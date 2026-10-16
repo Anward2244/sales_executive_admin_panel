@@ -1014,7 +1014,7 @@ const UsersList = () => {
           {/* Status Segmented Filter, Role Filter & Actions */}
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             {/* Segmented Status Pill Filter */}
-            <div className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10">
+            <div className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-white/5 rounded-2xl shadow-md border border-slate-200/80 dark:border-white/10">
               {[
                 { id: 'all', label: 'All', count: users.length },
                 { id: 'active', label: 'Active', count: activeCount },

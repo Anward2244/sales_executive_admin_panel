@@ -1164,7 +1164,7 @@ const PurchaseOrders = () => {
       <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-4 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl space-y-3">
         <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
           {/* Status Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar w-full md:w-auto pb-1 md:pb-0">
+          <div className="flex items-center bg-white/60 shadow-md gap-1.5 rounded-full overflow-x-auto custom-scrollbar w-full md:w-auto pb-1 md:pb-0">
             {STATUS_TABS.map((tab) => {
               const active = statusFilter === tab.key;
               return (
@@ -1175,7 +1175,7 @@ const PurchaseOrders = () => {
                     setStatusFilter(tab.key);
                     setCurrentPage(1);
                   }}
-                  className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer shrink-0 ${
+                  className={`px-3.5 py-2 text-xs font-bold rounded-full transition-all cursor-pointer shrink-0 ${
                     active
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
                       : 'bg-slate-100/80 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10'
@@ -1227,7 +1227,7 @@ const PurchaseOrders = () => {
       </div>
 
       {/* Orders Table Card */}
-      <div className="bg-white/40 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
+      <div className="bg-white/60 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
         {/* Table UX Toolbar: Column Visibility & Counts */}
         <TableToolbar
           columns={PO_COLUMNS}

@@ -516,7 +516,7 @@ const Categories = () => {
           {/* Action and Filter Toolbar */}
           <div className="flex items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs">
             {/* Status Tabs */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5 shadow-md rounded-xl flex-wrap">
               {[
                 { id: 'all', label: 'All', count: countsByTab.all },
                 { id: 'active', label: 'Active', count: countsByTab.active },

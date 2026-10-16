@@ -640,7 +640,7 @@ const Notifications = () => {
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                     statusFilter === 'all'
                       ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-sm hover:bg-slate-200 dark:hover:bg-white/10'
                   }`}
                 >
                   All
@@ -651,7 +651,7 @@ const Notifications = () => {
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                     statusFilter === 'unread'
                       ? 'bg-rose-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-sm hover:bg-slate-200 dark:hover:bg-white/10'
                   }`}
                 >
                   Unread ({unreadCount})
@@ -662,7 +662,7 @@ const Notifications = () => {
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                     statusFilter === 'read'
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-sm hover:bg-slate-200 dark:hover:bg-white/10'
                   }`}
                 >
                   Read
@@ -762,14 +762,15 @@ const Notifications = () => {
                       isSelected
                         ? 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-500/80 ring-2 ring-blue-500/30 shadow-md'
                         : isRead
-                        ? 'bg-white/60 dark:bg-slate-900/40 border-slate-200/70 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 opacity-80 hover:opacity-100'
-                        : 'bg-white dark:bg-slate-900 border-blue-200/80 dark:border-blue-500/30 shadow-xs hover:border-blue-300'
+                        ? 'bg-white dark:bg-slate-900/40 border-slate-200/70 dark:border-white/5 shadow-md hover:border-slate-300 dark:hover:border-white/15 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 opacity-80 hover:opacity-100'
+                        : 'bg-white dark:bg-slate-900 border-blue-200/80 dark:border-blue-500/30 shadow-sm hover:border-blue-300'
                     }`}
                   >
-                    {/* Left Accent indicator for unread items */}
-                    {!isRead && (
+                    {/*Left Accent indicator for read & unread items */}
+                    {!isRead ?
                       <span className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-blue-500" />
-                    )}
+                      : <span className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-emerald-500" />
+                    }
 
                     {/* Top Row: Primary Title & Time */}
                     <div className="flex items-start justify-between gap-2 mb-1.5">

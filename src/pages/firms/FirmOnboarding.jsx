@@ -881,7 +881,7 @@ const FirmOnboarding = () => {
       {/* Clean, Non-Clumsy Filter Bar */}
       <div className="p-2.5 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
         {/* Status Segmented Tabs */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-xl border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start lg:self-auto">
+        <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-xl shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start lg:self-auto">
           {[
             {
               id: 'ALL',

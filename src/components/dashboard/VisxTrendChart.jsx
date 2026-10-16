@@ -420,7 +420,7 @@ const InnerTrendChart = ({
             border: isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(226, 232, 240, 0.9)',
             borderRadius: '16px',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            backdropFilter: 'blur(16px)',
+            backdropFilter: 'blur(8px)',
             padding: '10px 14px',
             fontSize: '12px',
             pointerEvents: 'none',

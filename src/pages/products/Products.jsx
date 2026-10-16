@@ -1985,13 +1985,13 @@ const Products = () => {
       )}
 
       {/* Actions & Filters Bar - Ultra Compact */}
-      <div className="bg-white/50 dark:bg-slate-900/60 p-2 sm:px-3 sm:py-2 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-1.5 backdrop-blur-xl">
+      <div className="relative z-30 bg-white/50 dark:bg-slate-900/60 p-2 sm:px-3 sm:py-2 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-1.5">
         {/* Top Row: Primary Actions, Filter Toggle & Sort / Reset */}
         <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 ${isFiltersVisible ? 'pb-1.5 border-b border-slate-200/60 dark:border-white/5' : ''}`}>
           {/* Action Controls */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* Actions Dropdown */}
-            <div className="relative" ref={actionsDropdownRef}>
+            <div className="relative z-30" ref={actionsDropdownRef}>
               <button
                 type="button"
                 onClick={() => setIsActionsOpen((prev) => !prev)}
@@ -2002,7 +2002,7 @@ const Products = () => {
               </button>
 
               {isActionsOpen && (
-                <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-slate-900 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-from-top-2 duration-150">
+                <div className="absolute left-0 mt-2 w-64 bg-white/20 dark:bg-slate-900 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in slide-from-top-2 duration-150">
                   {/* Option 1: Import Products via Excel */}
                   <button
                     type="button"
@@ -2343,31 +2343,31 @@ const Products = () => {
                     <th className={`${densityStyles.th} text-center w-16 whitespace-nowrap`}>S.No.</th>
                   )}
                   {isColVisible('productDetails') && (
-                    <th className={`${densityStyles.th} whitespace-nowrap`}>Product Details</th>
+                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Product Details</th>
                   )}
                   {isColVisible('brand') && (
-                    <th className={`${densityStyles.th} whitespace-nowrap`}>Brand</th>
+                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Brand</th>
                   )}
                   {isColVisible('category') && (
-                    <th className={`${densityStyles.th} whitespace-nowrap`}>Category</th>
+                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Category</th>
                   )}
                   {isColVisible('company') && (
-                    <th className={`${densityStyles.th} whitespace-nowrap`}>Partner Company</th>
+                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Partner Company</th>
                   )}
                   {isColVisible('locations') && (
-                    <th className={`${densityStyles.th} whitespace-nowrap`}>Covered Locations</th>
+                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Covered Locations</th>
                   )}
                   {isColVisible('unit') && (
                     <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Unit</th>
                   )}
                   {isColVisible('description') && (
-                    <th className={`${densityStyles.th} whitespace-nowrap`}>Description</th>
+                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Description</th>
                   )}
                   {isColVisible('status') && (
                     <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Status</th>
                   )}
                   {isColVisible('actions') && (
-                    <th className={`${densityStyles.th} text-right whitespace-nowrap`}>Actions</th>
+                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Actions</th>
                   )}
                 </tr>
               </thead>

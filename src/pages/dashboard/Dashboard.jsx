@@ -1416,6 +1416,7 @@ const Dashboard = () => {
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-white/60 dark:bg-white/[0.02] border-b border-slate-200/80 dark:border-white/10 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-4 py-3.5 text-center w-14">S.No</th>
                 <th className="px-5 py-3.5">PO Number</th>
                 <th className="px-5 py-3.5">Company</th>
                 <th className="px-5 py-3.5">Purchasing Firm</th>
@@ -1431,7 +1432,7 @@ const Dashboard = () => {
             <tbody className="divide-y divide-slate-200/80 dark:divide-white/5 text-xs">
               {loading ? (
                 Array.from({ length: 5 }).map((_, idx) => (
-                  <TableRowSkeleton key={idx} cols={8} />
+                  <TableRowSkeleton key={idx} cols={11} />
                 ))
               ) : recentOrders.length > 0 ? (
                 recentOrders.map((order, idx) => {
@@ -1457,6 +1458,11 @@ const Dashboard = () => {
 
                   return (
                     <tr key={order._id || idx} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                      {/* S.No */}
+                      <td className="px-4 py-3.5 text-center font-mono font-medium text-slate-500 dark:text-slate-400">
+                        {idx + 1}
+                      </td>
+
                       {/* PO Number */}
                       <td className="px-5 py-3.5 font-mono font-bold text-slate-900 dark:text-white">
                         <div className="flex items-center gap-1.5">
@@ -1567,7 +1573,7 @@ const Dashboard = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="10" className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan="11" className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                     <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3 text-slate-400">
                       <FiPackage className="text-xl" />
                     </div>
@@ -1608,7 +1614,7 @@ const Dashboard = () => {
             </div>
 
             {/* Metric Switcher: Revenue vs Orders */}
-            <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold gap-1 self-start sm:self-auto">
+            {/* <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold gap-1 self-start sm:self-auto">
               <button
                 type="button"
                 onClick={() => setTreemapMetric('revenue')}
@@ -1631,7 +1637,7 @@ const Dashboard = () => {
               >
                 <span>PO Volume</span>
               </button>
-            </div>
+            </div> */}
           </div>
 
           {/* Hierarchy Tree Visualization Canvas */}
@@ -1911,6 +1917,7 @@ const Dashboard = () => {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead className="bg-slate-100 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-[10px] font-bold uppercase text-slate-500">
                     <tr>
+                      <th className="p-2.5 text-center w-10">S.No</th>
                       <th className="p-2.5">Product & SKU</th>
                       <th className="p-2.5 text-center">Qty</th>
                       <th className="p-2.5 text-right">Unit Price</th>
@@ -1921,6 +1928,7 @@ const Dashboard = () => {
                     {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
                       selectedOrder.items.map((item, i) => (
                         <tr key={item.productId || i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
+                          <td className="p-2.5 text-center font-mono text-slate-500 dark:text-slate-400 font-medium">{i + 1}</td>
                           <td className="p-2.5">
                             <p className="font-bold text-slate-900 dark:text-white">{item.productNameSnapshot || 'Product'}</p>
                             <p className="font-mono text-[10px] text-blue-600 dark:text-blue-400">{item.skuSnapshot}</p>
@@ -1934,7 +1942,7 @@ const Dashboard = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="4" className="p-4 text-center text-slate-400">No snapshot items found.</td>
+                        <td colSpan="5" className="p-4 text-center text-slate-400">No snapshot items found.</td>
                       </tr>
                     )}
                   </tbody>

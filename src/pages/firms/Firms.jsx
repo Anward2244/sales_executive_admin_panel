@@ -1143,7 +1143,7 @@ const Firms = () => {
         {/* Right: Segmented Status Tabs + Company Selector + Reset */}
         <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap justify-between lg:justify-end">
           {/* Status Segmented Tabs */}
-          <div className="flex items-center p-1 bg-slate-100/80 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10 shrink-0">
+          <div className="flex items-center p-1 bg-slate-100/80 dark:bg-white/5 rounded-xl shadow-md border border-slate-200/80 dark:border-white/10 shrink-0">
             <button
               type="button"
               onClick={() => handleTabChange('all')}

@@ -1098,15 +1098,15 @@ const Layout = () => {
                       w-full h-12 flex items-center justify-between px-3.5 transition-all duration-200 group rounded-xl relative cursor-pointer
                       ${isChildActive
                         ? isDark
-                          ? 'bg-gradient-to-r from-blue-600/25 to-blue-500/15 text-white font-semibold border border-blue-500/40 shadow-sm shadow-blue-500/10 hover:shadow-md hover:shadow-blue-500/20'
-                          : 'bg-gradient-to-r from-blue-600/15 to-indigo-600/10 text-blue-700 font-bold border border-blue-400/30 shadow-sm shadow-blue-500/5 hover:shadow-md hover:shadow-blue-500/15'
+                          ? 'bg-gradient-to-r from-blue-600/25 to-blue-500/15 text-white font-semibold border border-blue-500/40 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-500/25'
+                          : 'bg-gradient-to-r from-blue-600/15 to-indigo-600/10 text-blue-700 font-bold border border-blue-400/30 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-500/25'
                         : isExpanded
                           ? isDark
                             ? 'text-slate-300 border border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/10 hover:translate-x-0.5 hover:shadow-md hover:shadow-black/30'
                             : 'text-slate-600 border border-transparent hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200/80 hover:translate-x-0.5 hover:shadow-md hover:shadow-slate-900/10'
                           : isDark
-                            ? 'bg-white/[0.02] border border-white/5 text-slate-300 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03] hover:shadow-md hover:shadow-black/30'
-                            : 'bg-slate-100/60 border border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03] hover:shadow-md hover:shadow-slate-900/10'
+                            ? 'bg-white/[0.02] border border-white/5 text-slate-300 shadow-sm shadow-black/20 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03] hover:shadow-md hover:shadow-black/30'
+                            : 'bg-slate-100/60 border border-slate-200/80 text-slate-600 shadow-sm hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03] hover:shadow-md hover:shadow-slate-900/10'
                       }
                     `}
                   >
@@ -1220,15 +1220,15 @@ const Layout = () => {
                   w-full h-12 flex items-center justify-between px-3.5 transition-all duration-200 group rounded-xl relative cursor-pointer
                   ${isActive
                     ? isDark
-                      ? 'bg-gradient-to-r from-blue-600/25 to-blue-500/15 text-white font-semibold border border-blue-500/40 shadow-sm shadow-blue-500/10 hover:shadow-md hover:shadow-blue-500/20'
-                      : 'bg-gradient-to-r from-blue-600/15 to-indigo-600/10 text-blue-700 font-bold border border-blue-400/40 shadow-sm shadow-blue-500/5 hover:shadow-md hover:shadow-blue-500/15'
+                      ? 'bg-gradient-to-r from-blue-600/25 to-blue-500/15 text-white font-semibold border border-blue-500/40 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-500/25'
+                      : 'bg-gradient-to-r from-blue-600/15 to-indigo-600/10 text-blue-700 font-bold border border-blue-400/40 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-500/25'
                     : isExpanded
                       ? isDark
                         ? 'text-slate-300 border border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/10 hover:translate-x-0.5 hover:shadow-md hover:shadow-black/30'
                         : 'text-slate-600 border border-transparent hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200/80 hover:translate-x-0.5 hover:shadow-md hover:shadow-slate-900/10'
                       : isDark
-                        ? 'bg-white/[0.02] border border-white/5 text-slate-300 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03] hover:shadow-md hover:shadow-black/30'
-                        : 'bg-slate-100/60 border border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03] hover:shadow-md hover:shadow-slate-900/10'
+                        ? 'bg-white/[0.02] border border-white/5 text-slate-300 shadow-sm shadow-black/20 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03] hover:shadow-md hover:shadow-black/30'
+                        : 'bg-slate-100/60 border border-slate-200/80 text-slate-600 shadow-sm hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03] hover:shadow-md hover:shadow-slate-900/10'
                   }
                 `}
               >

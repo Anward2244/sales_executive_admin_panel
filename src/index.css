@@ -85,6 +85,31 @@ table td:not(:last-child) {
 }
 
 /* ========================================================
+   FULLSCREEN & BACKDROP THEME OVERRIDES
+   ======================================================== */
+:fullscreen {
+  background-color: #f8fafc;
+}
+
+.dark:fullscreen,
+:fullscreen.dark,
+[data-theme="dark"]:fullscreen,
+:fullscreen[data-theme="dark"],
+.dark :fullscreen,
+[data-theme="dark"] :fullscreen {
+  background-color: #020617;
+}
+
+::backdrop {
+  background-color: rgba(15, 23, 42, 0.4);
+}
+
+.dark::backdrop,
+[data-theme="dark"]::backdrop {
+  background-color: rgba(2, 6, 23, 0.85);
+}
+
+/* ========================================================
    GLOBAL APP LAYOUT SIZING
    ======================================================== */
 html,
