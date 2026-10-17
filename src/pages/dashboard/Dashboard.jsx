@@ -239,14 +239,40 @@ const Dashboard = () => {
     (statusBreakdown.DISPATCHED?.count || 0) +
     (statusBreakdown.REJECTED?.count || 0) || totalOrders || 1;
 
-  // Company Breakdown & Top Sales Executives
-  const companyBreakdown = Array.isArray(dashboardData?.companyBreakdown)
-    ? dashboardData.companyBreakdown
-    : [];
+  // Company Breakdown & Top Sales Executives (sorted stably so rows don't shift on polling)
+  const companyBreakdown = useMemo(() => {
+    if (!Array.isArray(dashboardData?.companyBreakdown)) return [];
+    return [...dashboardData.companyBreakdown].sort((a, b) => {
+      const valA = Number(a.totalValue || 0);
+      const valB = Number(b.totalValue || 0);
+      if (valB !== valA) return valB - valA;
 
-  const topSalesExecutives = Array.isArray(dashboardData?.topSalesExecutives)
-    ? dashboardData.topSalesExecutives
-    : [];
+      const orderNumA = a.orderCount !== undefined ? Number(a.orderCount) : Number(a.ordersCount || 0);
+      const orderNumB = b.orderCount !== undefined ? Number(b.orderCount) : Number(b.ordersCount || 0);
+      if (orderNumB !== orderNumA) return orderNumB - orderNumA;
+
+      const nameA = String(a.companyName || a.name || '');
+      const nameB = String(b.companyName || b.name || '');
+      return nameA.localeCompare(nameB);
+    });
+  }, [dashboardData?.companyBreakdown]);
+
+  const topSalesExecutives = useMemo(() => {
+    if (!Array.isArray(dashboardData?.topSalesExecutives)) return [];
+    return [...dashboardData.topSalesExecutives].sort((a, b) => {
+      const valA = a.totalValue !== undefined ? Number(a.totalValue) : Number(a.totalSales || 0);
+      const valB = b.totalValue !== undefined ? Number(b.totalValue) : Number(b.totalSales || 0);
+      if (valB !== valA) return valB - valA;
+
+      const orderNumA = a.orderCount !== undefined ? Number(a.orderCount) : Number(a.ordersCount || 0);
+      const orderNumB = b.orderCount !== undefined ? Number(b.orderCount) : Number(b.ordersCount || 0);
+      if (orderNumB !== orderNumA) return orderNumB - orderNumA;
+
+      const nameA = String(a.name || `${a.firstName || ''} ${a.lastName || ''}`.trim() || '');
+      const nameB = String(b.name || `${b.firstName || ''} ${b.lastName || ''}`.trim() || '');
+      return nameA.localeCompare(nameB);
+    });
+  }, [dashboardData?.topSalesExecutives]);
 
   const recentOrders = Array.isArray(dashboardData?.recentOrders)
     ? dashboardData.recentOrders
@@ -1009,7 +1035,7 @@ const Dashboard = () => {
                 </div> */}
 
                 {/* Range Filter */}
-                <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold">
+                <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 shadow-md border border-slate-200/60 dark:border-white/10 text-xs font-semibold">
                   {[
                     { id: '1w', label: '1W' },
                     { id: '1m', label: '1M' },
@@ -1256,7 +1282,7 @@ const Dashboard = () => {
 
                 return (
                   <div
-                    key={comp._id || comp.companyId || idx}
+                    key={comp._id || comp.companyId || comp.companyCode || comp.companyName || idx}
                     className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/70 dark:border-white/5 flex flex-col gap-2.5 transition-all hover:border-blue-500/30"
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -1331,7 +1357,7 @@ const Dashboard = () => {
 
                 return (
                   <div
-                    key={exec._id || exec.salesExecutiveId || idx}
+                    key={exec._id || exec.salesExecutiveId || exec.employeeCode || exec.email || idx}
                     className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/70 dark:border-white/5 flex items-center justify-between gap-3 hover:border-amber-500/30 transition-all"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -1641,14 +1667,14 @@ const Dashboard = () => {
           </div>
 
           {/* Hierarchy Tree Visualization Canvas */}
-          <div className="pt-4 min-h-[560px]">
+          <div className="pt-4 min-h-[460px]">
             {loading ? (
-              <TreemapSkeleton height={560} />
+              <TreemapSkeleton height={460} />
             ) : (
               <VisxTreemapChart
                 data={treemapData}
                 metric={treemapMetric}
-                height={580}
+                height={460}
                 isDark={isDark}
                 onNodeClick={(node) => {
                   if (node?.nodeType === 'po' || node?.poNumber) {

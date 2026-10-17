@@ -4,7 +4,7 @@ import { Group } from '@visx/group';
 import { Tree, hierarchy } from '@visx/hierarchy';
 import { LinkHorizontal } from '@visx/shape';
 import { ParentSize } from '@visx/responsive';
-import { useTooltip, TooltipWithBounds, defaultStyles } from '@visx/tooltip';
+import { useTooltip } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
 import {
   FiPackage,
@@ -60,6 +60,109 @@ const getStatusDetails = (status = '') => {
   return { color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', label: 'Pending', icon: FiClock };
 };
 
+// Clean hierarchical vertical layout ensuring:
+// 1. Dedicated, non-overlapping vertical space for each company and all its descendants.
+// 2. Each parent (company, firm, PO) is vertically centered relative to its direct children.
+// 3. Companies without children appear in distinct sequential slots below active companies.
+// 4. Clean gaps between firms and company sections.
+const applyTidyVerticalLayout = (root) => {
+  if (!root) return 360;
+
+  const ITEM_GAP = 14;      // Gap between sibling leaves (e.g. products)
+  const PROD_HEIGHT = 26;   // Product capsule height
+  const PO_HEIGHT = 32;     // PO card height
+  const FIRM_HEIGHT = 36;   // Firm card height
+  const COMP_HEIGHT = 40;   // Company card height
+  const COMP_GAP = 42;      // Generous section gap between different companies
+  const FIRM_GAP = 22;      // Clear gap between different firms under same company
+
+  let currentY = 20;
+
+  const layoutSubtree = (node) => {
+    const children = node.children;
+
+    if (!children || children.length === 0) {
+      let h = PROD_HEIGHT;
+      if (node.depth === 1) h = COMP_HEIGHT;
+      else if (node.depth === 2) h = FIRM_HEIGHT;
+      else if (node.depth === 3) h = PO_HEIGHT;
+
+      node.x = currentY + h / 2;
+      currentY += h + ITEM_GAP;
+      return;
+    }
+
+    children.forEach((child, idx) => {
+      layoutSubtree(child);
+      if (child.depth === 2 && idx < children.length - 1) {
+        currentY += FIRM_GAP;
+      }
+      if (child.depth === 1 && idx < children.length - 1) {
+        currentY += COMP_GAP;
+      }
+    });
+
+    const firstChild = children[0];
+    const lastChild = children[children.length - 1];
+    node.x = (firstChild.x + lastChild.x) / 2;
+  };
+
+  if (root.children && root.children.length > 0) {
+    root.children.forEach((comp, idx) => {
+      layoutSubtree(comp);
+      if (idx < root.children.length - 1) {
+        currentY += COMP_GAP;
+      }
+    });
+    const firstComp = root.children[0];
+    const lastComp = root.children[root.children.length - 1];
+    root.x = (firstComp.x + lastComp.x) / 2;
+  } else {
+    root.x = currentY + 20;
+    currentY += 40;
+  }
+
+  return currentY;
+};
+
+const getNodeHalfWidth = (depth) => {
+  if (depth === 0) return 18;   // Root circle radius
+  if (depth === 1) return 90;   // Company (180 / 2)
+  if (depth === 2) return 87.5; // Firm (175 / 2)
+  if (depth === 3) return 80;   // PO (160 / 2)
+  return 72.5;                  // Product (145 / 2)
+};
+
+// Generate high-end connector curves (Runway Bezier or Rounded Orthogonal Step)
+const generateConnectorPath = (sourceX, sourceY, targetX, targetY, style = 'curved') => {
+  const dx = targetX - sourceX;
+  const dy = targetY - sourceY;
+
+  // Clean horizontal line if vertically aligned
+  if (Math.abs(dy) < 2) {
+    return `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
+  }
+
+  if (style === 'step') {
+    // Professional Rounded Orthogonal Step Line
+    const midX = sourceX + dx * 0.5;
+    const r = Math.min(12, Math.abs(dy) / 2, Math.max(3, dx / 4));
+    const dir = dy > 0 ? 1 : -1;
+
+    return `M ${sourceX} ${sourceY} ` +
+           `L ${midX - r} ${sourceY} ` +
+           `Q ${midX} ${sourceY} ${midX} ${sourceY + r * dir} ` +
+           `L ${midX} ${targetY - r * dir} ` +
+           `Q ${midX} ${targetY} ${midX + r} ${targetY} ` +
+           `L ${targetX} ${targetY}`;
+  }
+
+  // High-End Runway Bezier with Gentle Horizontal Easing
+  const cp1X = sourceX + dx * 0.48;
+  const cp2X = targetX - dx * 0.48;
+  return `M ${sourceX} ${sourceY} C ${cp1X} ${sourceY}, ${cp2X} ${targetY}, ${targetX} ${targetY}`;
+};
+
 // 1. Node-Link Tree View (Multi-level Company -> Firm -> PO -> Product)
 const NodeLinkTreeView = ({
   width,
@@ -76,18 +179,25 @@ const NodeLinkTreeView = ({
   collapsedIds,
   onToggleCollapse,
   searchQuery = '',
-  matchingIds = new Set()
+  matchingIds = new Set(),
+  connectorStyle = 'curved',
+  containerRef
 }) => {
   const leafCount = useMemo(() => {
     if (!rootNode) return 1;
     return rootNode.leaves().length;
   }, [rootNode]);
 
-  const margin = { top: 40, left: 60, right: 140, bottom: 40 };
+  const totalNodesCount = useMemo(() => {
+    if (!rootNode) return 1;
+    return rootNode.descendants().length;
+  }, [rootNode]);
 
-  // Calculate generous canvas bounds to prevent truncation
+  const margin = { top: 24, left: 60, right: 140, bottom: 24 };
+
+  // Calculate canvas bounds to fit exact tree height
   const canvasWidth = Math.max(width - 20, 1180);
-  const canvasHeight = Math.max(height - 20, leafCount * 46 + 100, 560);
+  const canvasHeight = Math.max(320, Math.round(height || 400));
 
   const innerWidth = Math.max(100, canvasWidth - margin.left - margin.right);
   const innerHeight = Math.max(100, canvasHeight - margin.top - margin.bottom);
@@ -97,48 +207,168 @@ const NodeLinkTreeView = ({
   return (
     <Tree root={rootNode} size={[innerHeight, innerWidth]}>
       {(tree) => {
+        // Tidy vertical positioning to guarantee company branches never interleave or overlap
+        applyTidyVerticalLayout(tree);
+
         const links = tree.links();
         const nodes = tree.descendants();
 
+        // Tag each node with unique nodeId for reactive hover tracking
+        nodes.forEach((n, i) => {
+          n.nodeId = `node-${n.depth}-${i}`;
+        });
+
         return (
           <Group top={margin.top} left={margin.left}>
-            {/* SVG Gradients Definition */}
+            {/* SVG Gradients & Filters Definition */}
             <defs>
               <linearGradient id="tree-root-grad" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#ec4899" />
                 <stop offset="100%" stopColor="#8b5cf6" />
               </linearGradient>
+
+              {/* Hierarchy Flow Gradients */}
+              <linearGradient id="link-grad-root-company" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#ec4899" stopOpacity={isDark ? 0.9 : 0.8} />
+                <stop offset="100%" stopColor="#6366f1" stopOpacity={isDark ? 0.9 : 0.8} />
+              </linearGradient>
+
+              <linearGradient id="link-grad-company-firm" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#6366f1" stopOpacity={isDark ? 0.85 : 0.75} />
+                <stop offset="100%" stopColor="#0d9488" stopOpacity={isDark ? 0.85 : 0.75} />
+              </linearGradient>
+
+              <linearGradient id="link-grad-firm-po" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#0d9488" stopOpacity={isDark ? 0.8 : 0.7} />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity={isDark ? 0.8 : 0.7} />
+              </linearGradient>
+
+              <linearGradient id="link-grad-po-product" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity={isDark ? 0.75 : 0.65} />
+                <stop offset="100%" stopColor="#8b5cf6" stopOpacity={isDark ? 0.75 : 0.65} />
+              </linearGradient>
+
+              {/* Interactive Glow Filter on Hover */}
+              <filter id="link-hover-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#6366f1" floodOpacity="0.65" />
+              </filter>
             </defs>
 
-            {/* Curved Connector Links */}
+            {/* High-Performance Precision Connector Links */}
             {links.map((link, i) => {
-              const linkKey = `link-${i}`;
+              const sourceNode = link.source;
               const targetNode = link.target;
               const targetData = targetNode?.data || {};
+              const sourceData = sourceNode?.data || {};
               const targetId = targetData._id || targetData.id || targetData.name || targetData.poNumber;
               const isTargetMatch = isSearchActive && matchingIds.has(targetId);
 
-              const strokeColor = isTargetMatch
-                ? '#f59e0b'
-                : isDark
-                ? '#334155'
-                : '#cbd5e1';
+              const linkKey = `link-${sourceNode.depth}-${sourceData.name || i}-${targetNode.depth}-${targetData.name || i}`;
 
-              const strokeWidth = isTargetMatch ? 2.5 : 1.5;
-              const strokeOpacity = isSearchActive && !isTargetMatch ? 0.2 : isDark ? 0.75 : 0.65;
+              const sourceHalfWidth = getNodeHalfWidth(sourceNode.depth);
+              const targetHalfWidth = getNodeHalfWidth(targetNode.depth);
+
+              const sourceX = sourceNode.y + sourceHalfWidth;
+              const sourceY = sourceNode.x;
+              const targetX = targetNode.y - targetHalfWidth;
+              const targetY = targetNode.x;
+
+              const pathD = generateConnectorPath(sourceX, sourceY, targetX, targetY, connectorStyle);
+
+              // Hierarchy-based color gradients & anchor colors
+              let strokeColor = 'url(#link-grad-company-firm)';
+              let sourceDotColor = '#6366f1';
+              let targetDotColor = '#0d9488';
+
+              if (sourceNode.depth === 0) {
+                strokeColor = 'url(#link-grad-root-company)';
+                sourceDotColor = '#ec4899';
+                targetDotColor = '#6366f1';
+              } else if (sourceNode.depth === 1) {
+                strokeColor = 'url(#link-grad-company-firm)';
+                sourceDotColor = '#6366f1';
+                targetDotColor = '#0d9488';
+              } else if (sourceNode.depth === 2) {
+                strokeColor = 'url(#link-grad-firm-po)';
+                sourceDotColor = '#0d9488';
+                targetDotColor = '#3b82f6';
+              } else if (sourceNode.depth === 3) {
+                strokeColor = 'url(#link-grad-po-product)';
+                sourceDotColor = '#3b82f6';
+                targetDotColor = '#8b5cf6';
+              }
+
+              // Reactive hover lineage highlight
+              const isLinkActive = Boolean(
+                hoveredNodeId &&
+                (sourceNode.nodeId === hoveredNodeId || targetNode.nodeId === hoveredNodeId)
+              );
+              const isDimmed = Boolean(hoveredNodeId && !isLinkActive && !isSearchActive);
+
+              let strokeWidth = isLinkActive ? 2.5 : sourceNode.depth <= 1 ? 1.8 : 1.5;
+              let strokeOpacity = isDimmed ? 0.2 : isLinkActive ? 1 : isDark ? 0.75 : 0.65;
+
+              if (isSearchActive) {
+                if (isTargetMatch) {
+                  strokeColor = '#f59e0b';
+                  sourceDotColor = '#f59e0b';
+                  targetDotColor = '#f59e0b';
+                  strokeWidth = 2.5;
+                  strokeOpacity = 1;
+                } else {
+                  strokeOpacity = 0.12;
+                }
+              }
 
               return (
-                <LinkHorizontal
-                  key={linkKey}
-                  data={link}
-                  x={(d) => d.y}
-                  y={(d) => d.x}
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  strokeOpacity={strokeOpacity}
-                  fill="none"
-                  className="transition-all duration-200"
-                />
+                <g key={linkKey} className="transition-all duration-200">
+                  {/* Subtle ambient shadow path for physical depth */}
+                  <path
+                    d={pathD}
+                    stroke={isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)'}
+                    strokeWidth={strokeWidth + 2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+
+                  {/* Main Gradient Flow Line */}
+                  <path
+                    d={pathD}
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth}
+                    strokeOpacity={strokeOpacity}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    filter={isLinkActive ? 'url(#link-hover-glow)' : undefined}
+                    fill="none"
+                    className="transition-all duration-200"
+                  />
+
+                  {/* Precision Source Anchor Port Dot */}
+                  <circle
+                    cx={sourceX}
+                    cy={sourceY}
+                    r={isLinkActive ? 3.5 : 2.5}
+                    fill={isDark ? '#0b1120' : '#ffffff'}
+                    stroke={isLinkActive ? '#f59e0b' : sourceDotColor}
+                    strokeWidth={1.5}
+                    strokeOpacity={strokeOpacity}
+                    className="transition-all duration-200"
+                  />
+
+                  {/* Precision Target Anchor Port Dot */}
+                  <circle
+                    cx={targetX}
+                    cy={targetY}
+                    r={isLinkActive ? 3.5 : 2.5}
+                    fill={isDark ? '#0b1120' : '#ffffff'}
+                    stroke={isLinkActive ? '#f59e0b' : targetDotColor}
+                    strokeWidth={1.5}
+                    strokeOpacity={strokeOpacity}
+                    className="transition-all duration-200"
+                  />
+                </g>
               );
             })}
 
@@ -175,25 +405,27 @@ const NodeLinkTreeView = ({
                   ? 'po'
                   : 'product');
 
-              // Common tooltip handler
+              // Common tooltip handler - coordinates measured relative to chartContainerRef
               const handleMouseEnter = (e) => {
                 setHoveredNodeId(nodeId);
+                const containerRect = containerRef?.current?.getBoundingClientRect();
                 const point = localPoint(e);
-                if (point) {
-                  showTooltip({
-                    tooltipData: {
-                      ...nodeData,
-                      nodeType,
-                      depth,
-                      revenue: revenueVal,
-                      orders: ordersVal,
-                      share,
-                      totalValue
-                    },
-                    tooltipLeft: point.x,
-                    tooltipTop: point.y
-                  });
-                }
+                const mouseX = containerRect ? e.clientX - containerRect.left : point?.x || 0;
+                const mouseY = containerRect ? e.clientY - containerRect.top : point?.y || 0;
+
+                showTooltip({
+                  tooltipData: {
+                    ...nodeData,
+                    nodeType,
+                    depth,
+                    revenue: revenueVal,
+                    orders: ordersVal,
+                    share,
+                    totalValue
+                  },
+                  tooltipLeft: mouseX,
+                  tooltipTop: mouseY
+                });
               };
 
               const handleMouseLeave = () => {
@@ -203,6 +435,7 @@ const NodeLinkTreeView = ({
 
               const handleClick = (e) => {
                 e.stopPropagation();
+                hideTooltip();
                 if (depth === 3 && onNodeClick) {
                   // Direct PO Drawer Click
                   onNodeClick(nodeData);
@@ -968,6 +1201,7 @@ const InnerHierarchyChart = ({
   const [collapsedIds, setCollapsedIds] = useState(() => new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [connectorStyle, setConnectorStyle] = useState('step'); // 'curved' | 'step'
   const [isChartFullscreen, setIsChartFullscreen] = useState(false);
   const chartContainerRef = useRef(null);
 
@@ -1061,7 +1295,13 @@ const InnerHierarchyChart = ({
 
     const root = hierarchy(filteredData)
       .sum(valueAccessor)
-      .sort((a, b) => (b.value || 0) - (a.value || 0));
+      .sort((a, b) => {
+        const diff = (b.value || 0) - (a.value || 0);
+        if (diff !== 0) return diff;
+        const nameA = a.data?.name || '';
+        const nameB = b.data?.name || '';
+        return nameA.localeCompare(nameB);
+      });
 
     return { rootNode: root, totalValue: root.value || 0 };
   }, [data, metric, collapsedIds, matchingIds]);
@@ -1120,20 +1360,50 @@ const InnerHierarchyChart = ({
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
-  if (!rootNode || width < 100 || height < 100) {
+  // Calculate dynamic dimensions tailored to exact tree content (called unconditionally before any early returns)
+  const contentHeight = useMemo(() => {
+    if (!rootNode) return 360;
+    return applyTidyVerticalLayout(rootNode);
+  }, [rootNode]);
+
+  if (!rootNode || width < 100) {
     return (
-      <div className="h-full flex items-center justify-center text-slate-400 text-xs">
+      <div className="h-full flex items-center justify-center text-slate-400 text-xs py-10">
         <span>No hierarchical data available</span>
       </div>
     );
   }
 
-  // Calculate dynamic dimensions scaled by zoom
-  const leavesCount = rootNode.leaves().length;
-  const baseSvgWidth = Math.max(width, 1180);
-  const baseSvgHeight = Math.max(height, leavesCount * 46 + 100, 560);
-  const svgWidth = baseSvgWidth * zoomLevel;
-  const svgHeight = baseSvgHeight * zoomLevel;
+  const baseSvgWidth = Math.max(width || 1180, 1180);
+  const baseSvgHeight = Math.max(320, Number(contentHeight) ? Math.round(contentHeight + 52) : 420);
+  const svgWidth = baseSvgWidth * (Number(zoomLevel) || 1);
+  const svgHeight = baseSvgHeight * (Number(zoomLevel) || 1);
+
+  // Dynamic collision-safe tooltip boundary constraints within chartContainerRef
+  const containerW = chartContainerRef.current?.clientWidth || width || 1000;
+  const containerH = chartContainerRef.current?.clientHeight || height || 460;
+  const TOOLTIP_WIDTH = 280;
+  const TOOLTIP_HEIGHT = 185;
+
+  // Horizontal: prefer right (+14px), flip left if clipped, strictly clamp [12, containerW - TOOLTIP_WIDTH - 12]
+  let calcLeft = tooltipLeft + 14;
+  if (calcLeft + TOOLTIP_WIDTH > containerW - 12) {
+    calcLeft = tooltipLeft - TOOLTIP_WIDTH - 14;
+  }
+  const safeLeft = Math.max(12, Math.min(Math.max(12, containerW - TOOLTIP_WIDTH - 12), calcLeft));
+
+  // Vertical: if cursor is near upper edge (< 220px), opening upwards causes cutoff by top boundary or header.
+  // In that case, open downwards (+14px). Otherwise open upwards (- TOOLTIP_HEIGHT - 14px).
+  // Strictly clamp [8, containerH - TOOLTIP_HEIGHT - 8].
+  let calcTop;
+  if (tooltipTop < TOOLTIP_HEIGHT + 35) {
+    calcTop = tooltipTop + 14;
+  } else if (tooltipTop + 14 + TOOLTIP_HEIGHT > containerH - 12) {
+    calcTop = tooltipTop - TOOLTIP_HEIGHT - 14;
+  } else {
+    calcTop = tooltipTop - TOOLTIP_HEIGHT - 14;
+  }
+  const safeTop = Math.max(8, Math.min(Math.max(8, containerH - TOOLTIP_HEIGHT - 8), calcTop));
 
   return (
     <div
@@ -1211,6 +1481,34 @@ const InnerHierarchyChart = ({
           </button>
         </div>
 
+        {/* Lines Style Switcher */}
+        <div className="inline-flex items-center rounded-xl bg-slate-100/90 dark:bg-white/5 p-0.5 border border-slate-200/70 dark:border-white/10 text-xs font-semibold shrink-0">
+          <button
+            type="button"
+            onClick={() => setConnectorStyle('curved')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              connectorStyle === 'curved'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            title="Smooth Flow Curved Connectors"
+          >
+            Curved
+          </button>
+          <button
+            type="button"
+            onClick={() => setConnectorStyle('step')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              connectorStyle === 'step'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            title="Clean Orthogonal Step Lines"
+          >
+            Step
+          </button>
+        </div>
+
         {/* Right: Zoom & Fullscreen Controls */}
         <div className="flex items-center gap-1.5 justify-end">
           <div className="inline-flex items-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200/70 dark:border-white/10 p-0.5 shadow-xs">
@@ -1257,7 +1555,15 @@ const InnerHierarchyChart = ({
       </div>
 
       {/* 2. Visual Canvas (Scrollable for complex branching) */}
-      <div className="relative flex-1 overflow-x-auto overflow-y-auto custom-scrollbar rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-inner">
+      <div
+        className="relative overflow-x-auto overflow-y-auto custom-scrollbar rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-inner"
+        style={{
+          height: isChartFullscreen ? undefined : Math.min(baseSvgHeight * zoomLevel + 4, 620),
+          minHeight: 320
+        }}
+        onScroll={hideTooltip}
+        onMouseLeave={hideTooltip}
+      >
         <svg
           width={svgWidth}
           height={svgHeight}
@@ -1285,37 +1591,39 @@ const InnerHierarchyChart = ({
               onToggleCollapse={handleToggleCollapse}
               searchQuery={searchQuery}
               matchingIds={matchingIds}
+              connectorStyle={connectorStyle}
+              containerRef={chartContainerRef}
             />
           </g>
         </svg>
-
-        {/* Floating Interactive Tooltip */}
-        {tooltipOpen && tooltipData && (
-          <TooltipWithBounds
-            top={tooltipTop}
-            left={tooltipLeft}
-            style={{
-              ...defaultStyles,
-              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(16px)',
-              color: isDark ? '#ffffff' : '#0f172a',
-              border: isDark ? '1px solid rgba(255, 255, 255, 0.16)' : '1px solid rgba(226, 232, 240, 0.95)',
-              borderRadius: '16px',
-              padding: '12px 14px',
-              boxShadow: isDark
-                ? '0 20px 25px -5px rgba(0, 0, 0, 0.65), 0 8px 10px -6px rgba(0, 0, 0, 0.5)'
-                : '0 20px 25px -5px rgba(15, 23, 42, 0.14), 0 8px 10px -6px rgba(15, 23, 42, 0.08)',
-              zIndex: 100,
-              pointerEvents: 'none'
-            }}
-          >
-            <HierarchyTooltipContent data={tooltipData} isDark={isDark} />
-          </TooltipWithBounds>
-        )}
       </div>
 
+      {/* Floating Interactive Tooltip positioned safely within chartContainerRef */}
+      {tooltipOpen && tooltipData && (
+        <div
+          className="absolute z-50 pointer-events-none transition-all duration-75 ease-out"
+          style={{
+            left: `${Math.round(safeLeft)}px`,
+            top: `${Math.round(safeTop)}px`,
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.96)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            color: isDark ? '#ffffff' : '#0f172a',
+            border: isDark ? '1px solid rgba(255, 255, 255, 0.16)' : '1px solid rgba(226, 232, 240, 0.95)',
+            borderRadius: '16px',
+            padding: '12px 14px',
+            boxShadow: isDark
+              ? '0 20px 25px -5px rgba(0, 0, 0, 0.65), 0 8px 10px -6px rgba(0, 0, 0, 0.5)'
+              : '0 20px 25px -5px rgba(15, 23, 42, 0.14), 0 8px 10px -6px rgba(15, 23, 42, 0.08)',
+            willChange: 'left, top'
+          }}
+        >
+          <HierarchyTooltipContent data={tooltipData} isDark={isDark} />
+        </div>
+      )}
+
       {/* 3. Footer Legend Bar */}
-      <div className="flex items-center justify-between gap-2 px-3 py-1.5 mt-2 text-[11px] text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-white/10 shadow-xs flex-wrap">
+      {/* <div className="flex items-center justify-between gap-2 px-3 py-1.5 mt-2 text-[11px] text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-white/10 shadow-xs flex-wrap">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-md bg-indigo-500" />
@@ -1337,7 +1645,7 @@ const InnerHierarchyChart = ({
         <div className="text-[10px] text-slate-400">
           Tip: Click on PO cards to view slide-over order drawer
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
@@ -1345,7 +1653,7 @@ const InnerHierarchyChart = ({
 export default function VisxTreemapChart({
   data,
   metric = 'revenue',
-  height = 560,
+  height = 460,
   isDark: isDarkProp,
   onNodeClick
 }) {
@@ -1357,13 +1665,15 @@ export default function VisxTreemapChart({
     themeIsDark = false;
   }
   const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
+  const containerHeight = Number(height) > 0 ? height : 460;
+
   return (
-    <div style={{ width: '100%', height }} className="relative">
-      <ParentSize>
+    <div style={{ width: '100%', height: containerHeight }} className="relative">
+      <ParentSize debounceTime={10}>
         {({ width, height: pHeight }) => (
           <InnerHierarchyChart
             width={width}
-            height={pHeight}
+            height={pHeight || containerHeight}
             data={data}
             metric={metric}
             isDark={isDark}

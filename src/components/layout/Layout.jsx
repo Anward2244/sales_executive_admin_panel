@@ -921,10 +921,10 @@ const Layout = () => {
 
             {/* Dropdown Menu */}
             {isProfileDropdownOpen && (
-              <div className={`absolute right-0 mt-3 w-52 backdrop-blur-xl border rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
+              <div className={`absolute right-0 mt-3 w-52 backdrop-blur-[16px] border rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
                 isDark 
                   ? 'bg-slate-900/90 border-white/10 shadow-black/50' 
-                  : 'bg-white/95 border-slate-200 shadow-slate-900/10'
+                  : 'bg-white/40 border-slate-200 shadow-slate-900/60'
               }`}>
                 <div className={`px-4 py-2 border-b mb-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
                   <p className={`text-sm font-semibold line-clamp-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>{user.email || 'User'}</p>
@@ -1311,7 +1311,7 @@ const Layout = () => {
                 <div className={`absolute right-0 mt-3 w-80 sm:w-96 backdrop-blur-md border rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
                   isDark 
                     ? 'bg-slate-900/90 border-white/10 shadow-black/50' 
-                    : 'bg-white/40 border-slate-200 shadow-slate-900/10'
+                    : 'bg-white/40 border-slate-200 shadow-slate-900/40'
                 }`}>
                   <div className={`px-4 py-2.5 border-b flex justify-between items-center mb-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
                     <div className="flex items-center gap-2">
@@ -1508,10 +1508,10 @@ const Layout = () => {
 
               {/* Dropdown Menu */}
               {isProfileDropdownOpen && (
-                <div className={`absolute right-0 mt-3 w-52 backdrop-blur-xl border rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
+                <div className={`absolute right-0 mt-3 w-52 backdrop-blur-lg border rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
                   isDark 
                     ? 'bg-slate-900/50 border-white/10 shadow-black/50' 
-                    : 'bg-white/40 border-slate-200 shadow-slate-900/10'
+                    : 'bg-white/40 border-slate-200 shadow-slate-900/40'
                 }`}>
                   <div className={`px-4 py-2 border-b mb-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
                     <p className={`text-sm font-semibold line-clamp-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>{user.email || 'User'}</p>
