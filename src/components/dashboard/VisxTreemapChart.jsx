@@ -1424,7 +1424,7 @@ const InnerHierarchyChart = ({
       }
     >
       {/* 1. Quick Search & Interactive Level Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 px-3 py-2 mb-2 bg-slate-50/90 dark:bg-slate-900/80 border border-slate-200/70 dark:border-white/10 rounded-2xl text-xs backdrop-blur-md shadow-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 px-3 py-2 mb-2 bg-white/95 dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 rounded-2xl text-xs shadow-xs isolate">
         {/* Left: Search Input */}
         <div className="flex items-center gap-2 flex-1 max-w-xs">
           <div className="relative w-full">

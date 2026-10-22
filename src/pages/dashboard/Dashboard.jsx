@@ -518,7 +518,7 @@ const Dashboard = () => {
         const fCompId = typeof f.companyId === 'object' ? f.companyId?._id : f.companyId;
         const fCompName = typeof f.companyId === 'object' ? f.companyId?.name : '';
         return (compId && String(fCompId) === String(compId)) ||
-               (fCompName && compName && fCompName.trim().toLowerCase() === compName.trim().toLowerCase());
+          (fCompName && compName && fCompName.trim().toLowerCase() === compName.trim().toLowerCase());
       });
 
       // 2. Find all orders linked to this company
@@ -526,7 +526,7 @@ const Dashboard = () => {
         const oCompId = typeof o.companyId === 'object' ? o.companyId?._id : o.companyId;
         const oCompName = typeof o.companyId === 'object' ? o.companyId?.name : (typeof o.companyId === 'string' ? o.companyId : '');
         return (compId && String(oCompId) === String(compId)) ||
-               (oCompName && compName && oCompName.trim().toLowerCase() === compName.trim().toLowerCase());
+          (oCompName && compName && oCompName.trim().toLowerCase() === compName.trim().toLowerCase());
       });
 
       // Group orders by firm
@@ -609,17 +609,17 @@ const Dashboard = () => {
       // If company has no firms in DB, firmChildren is null (no fake data)
       const firmChildren = Object.keys(firmMap).length > 0
         ? Object.values(firmMap).map((firm) => {
-            const poChildren = firm.pos.length > 0 ? firm.pos : null;
-            const firmRevenue = poChildren ? poChildren.reduce((s, p) => s + (p.revenue || 0), 0) : 0;
-            const firmOrders = poChildren ? poChildren.length : 0;
+          const poChildren = firm.pos.length > 0 ? firm.pos : null;
+          const firmRevenue = poChildren ? poChildren.reduce((s, p) => s + (p.revenue || 0), 0) : 0;
+          const firmOrders = poChildren ? poChildren.length : 0;
 
-            return {
-              ...firm,
-              revenue: firmRevenue,
-              orders: firmOrders,
-              children: poChildren
-            };
-          })
+          return {
+            ...firm,
+            revenue: firmRevenue,
+            orders: firmOrders,
+            children: poChildren
+          };
+        })
         : null;
 
       const companyRevenue = firmChildren ? firmChildren.reduce((s, f) => s + (f.revenue || 0), 0) : 0;
@@ -921,9 +921,8 @@ const Dashboard = () => {
             onClick={() => {
               if (card.path) navigate(card.path);
             }}
-            className={`group relative overflow-hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs transition-all duration-300 flex flex-col justify-between ${
-              card.path ? `cursor-pointer hover:-translate-y-1 hover:shadow-xl ${card.hoverBorder}` : ''
-            }`}
+            className={`group relative overflow-hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs transition-all duration-300 flex flex-col justify-between ${card.path ? `cursor-pointer hover:-translate-y-1 hover:shadow-xl ${card.hoverBorder}` : ''
+              }`}
           >
             {/* Ambient Background Glow */}
             <div className={`absolute inset-0 bg-gradient-to-br ${card.glow} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
@@ -935,11 +934,10 @@ const Dashboard = () => {
                 </div>
                 {card.delta && (
                   <span
-                    className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                      card.deltaType === 'up'
+                    className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${card.deltaType === 'up'
                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                         : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-white/10'
-                    }`}
+                      }`}
                   >
                     {card.delta}
                   </span>
@@ -1046,11 +1044,10 @@ const Dashboard = () => {
                       key={rng.id}
                       type="button"
                       onClick={() => setTrendRange(rng.id)}
-                      className={`px-3 py-1 rounded-lg transition-all uppercase text-[11px] font-bold cursor-pointer ${
-                        trendRange === rng.id
+                      className={`px-3 py-1 rounded-lg transition-all uppercase text-[11px] font-bold cursor-pointer ${trendRange === rng.id
                           ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
                           : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                      }`}
+                        }`}
                     >
                       {rng.label}
                     </button>
@@ -1362,15 +1359,14 @@ const Dashboard = () => {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className={`w-9 h-9 rounded-xl font-black text-xs flex items-center justify-center shrink-0 ${
-                          idx === 0
+                        className={`w-9 h-9 rounded-xl font-black text-xs flex items-center justify-center shrink-0 ${idx === 0
                             ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-md shadow-amber-500/30 border border-amber-300 text-sm'
                             : idx === 1
-                            ? 'bg-gradient-to-br from-slate-200 to-slate-400 text-slate-900 shadow-sm border border-slate-300 text-sm'
-                            : idx === 2
-                            ? 'bg-gradient-to-br from-amber-700 to-amber-900 text-amber-100 shadow-sm border border-amber-600 text-sm'
-                            : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/10 font-bold'
-                        }`}
+                              ? 'bg-gradient-to-br from-slate-200 to-slate-400 text-slate-900 shadow-sm border border-slate-300 text-sm'
+                              : idx === 2
+                                ? 'bg-gradient-to-br from-amber-700 to-amber-900 text-amber-100 shadow-sm border border-amber-600 text-sm'
+                                : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/10 font-bold'
+                          }`}
                       >
                         {idx === 0 ? '1' : idx === 1 ? '2' : idx === 2 ? '3' : `#${idx + 1}`}
                       </div>
@@ -1801,200 +1797,200 @@ const Dashboard = () => {
               {/* 2. Scrollable Body Content */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-7 custom-scrollbar space-y-4 sm:space-y-5">
 
-            {/* Order Entity Metadata Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs">
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Trading Company</span>
-                <span className="font-bold text-slate-900 dark:text-white text-sm">
-                  {selectedOrder.companyId?.name || 'Whatnot India'}
-                </span>
-                {selectedOrder.companyId?.code && (
-                  <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 block">
-                    Code: {selectedOrder.companyId.code}
-                  </span>
-                )}
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Purchasing Firm</span>
-                <span className="font-bold text-slate-900 dark:text-white text-sm">
-                  {selectedOrder.firmId?.firmName || 'Retailer Firm'}
-                </span>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  {selectedOrder.firmId?.firmCode && (
-                    <span className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                      Code: {selectedOrder.firmId.firmCode}
+                {/* Order Entity Metadata Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Trading Company</span>
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">
+                      {selectedOrder.companyId?.name || 'Whatnot India'}
                     </span>
-                  )}
-                  {selectedOrder.firmId?.city && (
-                    <span className="text-[10px] text-slate-400">
-                      {selectedOrder.firmId?.firmCode ? '• ' : ''}City: {selectedOrder.firmId.city}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Sales Executive</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedOrder.salesExecutiveId
-                    ? `${selectedOrder.salesExecutiveId.firstName || ''} ${selectedOrder.salesExecutiveId.lastName || ''}`.trim() || selectedOrder.salesExecutiveId.name
-                    : 'N/A'}
-                </span>
-                {selectedOrder.salesExecutiveId?.email && (
-                  <span className="text-[10px] text-slate-400 block">
-                    {selectedOrder.salesExecutiveId.email}
-                  </span>
-                )}
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Current Status</span>
-                <div className="mt-1 flex items-center gap-2 flex-wrap">
-                  {(() => {
-                    const badge = getStatusBadge(selectedOrder.status);
-                    const BadgeIcon = badge.icon;
-                    return (
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${badge.className}`}>
-                        <BadgeIcon className="text-[11px]" />
-                        <span>{badge.label}</span>
+                    {selectedOrder.companyId?.code && (
+                      <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 block">
+                        Code: {selectedOrder.companyId.code}
                       </span>
-                    );
-                  })()}
-                  {selectedOrder.approvedAt && (
-                    <span className="text-[10px] font-mono text-slate-400">
-                      Approved: {formatDateTimeDDMMYYYY(selectedOrder.approvedAt)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Email Dispatch Details Card */}
-            <div className="mb-5 p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10">
-              <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-200/60 dark:border-white/10">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm border border-blue-500/20">
-                    <FiMail />
-                  </div>
-                  <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
-                    Notification Email Delivery
-                  </span>
-                </div>
-                {(() => {
-                  const eb = getEmailStatusBadge(selectedOrder.emailStatus);
-                  const EbIcon = eb.icon;
-                  return (
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${eb.className}`}>
-                      <EbIcon className="text-[10px]" />
-                      <span>{eb.label}</span>
-                    </span>
-                  );
-                })()}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div>
-                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Sent Timestamp</span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">
-                    {selectedOrder.emailStatus?.lastSentAt
-                      ? formatDateTimeDDMMYYYY(selectedOrder.emailStatus.lastSentAt)
-                      : 'Not Dispatched Yet'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Message ID</span>
-                  <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate block max-w-full" title={selectedOrder.emailStatus?.messageId}>
-                    {selectedOrder.emailStatus?.messageId || '-'}
-                  </span>
-                </div>
-              </div>
-              {Array.isArray(selectedOrder.emailStatus?.recipients) && selectedOrder.emailStatus.recipients.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
-                  <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1.5">
-                    Recipients ({selectedOrder.emailStatus.recipients.length})
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedOrder.emailStatus.recipients.map((rec, rIdx) => (
-                      <span
-                        key={rIdx}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-700 dark:text-slate-300"
-                      >
-                        <FiMail className="text-slate-400 text-[10px]" />
-                        <span>{rec}</span>
-                        <CopyButton text={rec} />
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Delivery Notes */}
-            {selectedOrder.notes && (
-              <div className="mb-5 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs">
-                <span className="font-bold text-amber-700 dark:text-amber-300 block mb-0.5">Order Notes:</span>
-                <p className="text-slate-700 dark:text-slate-200 italic">"{selectedOrder.notes}"</p>
-              </div>
-            )}
-
-            {/* Line Items Snapshot Table */}
-            <div className="space-y-2 mb-5">
-              <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <FiFileText /> Item Snapshots ({Array.isArray(selectedOrder.items) ? selectedOrder.items.length : 0})
-              </h4>
-              <div className="border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead className="bg-slate-100 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-[10px] font-bold uppercase text-slate-500">
-                    <tr>
-                      <th className="p-2.5 text-center w-10">S.No</th>
-                      <th className="p-2.5">Product & SKU</th>
-                      <th className="p-2.5 text-center">Qty</th>
-                      <th className="p-2.5 text-right">Unit Price</th>
-                      <th className="p-2.5 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-                    {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
-                      selectedOrder.items.map((item, i) => (
-                        <tr key={item.productId || i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
-                          <td className="p-2.5 text-center font-mono text-slate-500 dark:text-slate-400 font-medium">{i + 1}</td>
-                          <td className="p-2.5">
-                            <p className="font-bold text-slate-900 dark:text-white">{item.productNameSnapshot || 'Product'}</p>
-                            <p className="font-mono text-[10px] text-blue-600 dark:text-blue-400">{item.skuSnapshot}</p>
-                          </td>
-                          <td className="p-2.5 text-center font-mono font-bold">{item.quantity}</td>
-                          <td className="p-2.5 text-right font-mono">₹{(item.unitPrice || 0).toLocaleString('en-IN')}</td>
-                          <td className="p-2.5 text-right font-mono font-bold text-slate-900 dark:text-white">
-                            ₹{(item.totalPrice || 0).toLocaleString('en-IN')}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="5" className="p-4 text-center text-slate-400">No snapshot items found.</td>
-                      </tr>
                     )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Financial Summary */}
-            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-2">
-              {selectedOrder.subtotal !== undefined &&
-                selectedOrder.totalAmount !== undefined &&
-                Number(selectedOrder.subtotal) !== Number(selectedOrder.totalAmount) && (
-                  <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
-                    <span className="font-semibold uppercase tracking-wider text-[11px]">Subtotal</span>
-                    <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                      ₹{Number(selectedOrder.subtotal).toLocaleString('en-IN')}
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Purchasing Firm</span>
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">
+                      {selectedOrder.firmId?.firmName || 'Retailer Firm'}
                     </span>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {selectedOrder.firmId?.firmCode && (
+                        <span className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                          Code: {selectedOrder.firmId.firmCode}
+                        </span>
+                      )}
+                      {selectedOrder.firmId?.city && (
+                        <span className="text-[10px] text-slate-400">
+                          {selectedOrder.firmId?.firmCode ? '• ' : ''}City: {selectedOrder.firmId.city}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Sales Executive</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {selectedOrder.salesExecutiveId
+                        ? `${selectedOrder.salesExecutiveId.firstName || ''} ${selectedOrder.salesExecutiveId.lastName || ''}`.trim() || selectedOrder.salesExecutiveId.name
+                        : 'N/A'}
+                    </span>
+                    {selectedOrder.salesExecutiveId?.email && (
+                      <span className="text-[10px] text-slate-400 block">
+                        {selectedOrder.salesExecutiveId.email}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Current Status</span>
+                    <div className="mt-1 flex items-center gap-2 flex-wrap">
+                      {(() => {
+                        const badge = getStatusBadge(selectedOrder.status);
+                        const BadgeIcon = badge.icon;
+                        return (
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${badge.className}`}>
+                            <BadgeIcon className="text-[11px]" />
+                            <span>{badge.label}</span>
+                          </span>
+                        );
+                      })()}
+                      {selectedOrder.approvedAt && (
+                        <span className="text-[10px] font-mono text-slate-400">
+                          Approved: {formatDateTimeDDMMYYYY(selectedOrder.approvedAt)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email Dispatch Details Card */}
+                <div className="mb-5 p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10">
+                  <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-200/60 dark:border-white/10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm border border-blue-500/20">
+                        <FiMail />
+                      </div>
+                      <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                        Notification Email Delivery
+                      </span>
+                    </div>
+                    {(() => {
+                      const eb = getEmailStatusBadge(selectedOrder.emailStatus);
+                      const EbIcon = eb.icon;
+                      return (
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${eb.className}`}>
+                          <EbIcon className="text-[10px]" />
+                          <span>{eb.label}</span>
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-400 text-[10px] uppercase font-bold block">Sent Timestamp</span>
+                      <span className="font-mono text-slate-800 dark:text-slate-200">
+                        {selectedOrder.emailStatus?.lastSentAt
+                          ? formatDateTimeDDMMYYYY(selectedOrder.emailStatus.lastSentAt)
+                          : 'Not Dispatched Yet'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[10px] uppercase font-bold block">Message ID</span>
+                      <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate block max-w-full" title={selectedOrder.emailStatus?.messageId}>
+                        {selectedOrder.emailStatus?.messageId || '-'}
+                      </span>
+                    </div>
+                  </div>
+                  {Array.isArray(selectedOrder.emailStatus?.recipients) && selectedOrder.emailStatus.recipients.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
+                      <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1.5">
+                        Recipients ({selectedOrder.emailStatus.recipients.length})
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedOrder.emailStatus.recipients.map((rec, rIdx) => (
+                          <span
+                            key={rIdx}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-700 dark:text-slate-300"
+                          >
+                            <FiMail className="text-slate-400 text-[10px]" />
+                            <span>{rec}</span>
+                            <CopyButton text={rec} />
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Delivery Notes */}
+                {selectedOrder.notes && (
+                  <div className="mb-5 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs">
+                    <span className="font-bold text-amber-700 dark:text-amber-300 block mb-0.5">Order Notes:</span>
+                    <p className="text-slate-700 dark:text-slate-200 italic">"{selectedOrder.notes}"</p>
                   </div>
                 )}
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Total Order Amount</span>
-                <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
-                  ₹{(selectedOrder.totalAmount || selectedOrder.totalValue || selectedOrder.subtotal || 0).toLocaleString('en-IN')}
-                </span>
-              </div>
-            </div>
+
+                {/* Line Items Snapshot Table */}
+                <div className="space-y-2 mb-5">
+                  <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <FiFileText /> Item Snapshots ({Array.isArray(selectedOrder.items) ? selectedOrder.items.length : 0})
+                  </h4>
+                  <div className="border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead className="bg-slate-100 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-[10px] font-bold uppercase text-slate-500">
+                        <tr>
+                          <th className="p-2.5 text-center w-10">S.No</th>
+                          <th className="p-2.5">Product & SKU</th>
+                          <th className="p-2.5 text-center">Qty</th>
+                          <th className="p-2.5 text-right">Unit Price</th>
+                          <th className="p-2.5 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-white/5">
+                        {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
+                          selectedOrder.items.map((item, i) => (
+                            <tr key={item.productId || i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
+                              <td className="p-2.5 text-center font-mono text-slate-500 dark:text-slate-400 font-medium">{i + 1}</td>
+                              <td className="p-2.5">
+                                <p className="font-bold text-slate-900 dark:text-white">{item.productNameSnapshot || 'Product'}</p>
+                                <p className="font-mono text-[10px] text-blue-600 dark:text-blue-400">{item.skuSnapshot}</p>
+                              </td>
+                              <td className="p-2.5 text-center font-mono font-bold">{item.quantity}</td>
+                              <td className="p-2.5 text-right font-mono">₹{(item.unitPrice || 0).toLocaleString('en-IN')}</td>
+                              <td className="p-2.5 text-right font-mono font-bold text-slate-900 dark:text-white">
+                                ₹{(item.totalPrice || 0).toLocaleString('en-IN')}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="5" className="p-4 text-center text-slate-400">No snapshot items found.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Financial Summary */}
+                <div className="p-4 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-2">
+                  {selectedOrder.subtotal !== undefined &&
+                    selectedOrder.totalAmount !== undefined &&
+                    Number(selectedOrder.subtotal) !== Number(selectedOrder.totalAmount) && (
+                      <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
+                        <span className="font-semibold uppercase tracking-wider text-[11px]">Subtotal</span>
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                          ₹{Number(selectedOrder.subtotal).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Total Order Amount</span>
+                    <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+                      ₹{(selectedOrder.totalAmount || selectedOrder.totalValue || selectedOrder.subtotal || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
 
               </div>
 

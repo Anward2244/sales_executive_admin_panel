@@ -72,6 +72,37 @@ const REGION_PRESETS = [
   }
 ];
 
+// Deterministic vibrant color palettes for brand avatars and badges
+const BRAND_COLOR_PALETTES = [
+  { bg: 'bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' },
+  { bg: 'bg-violet-500/15 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-500/30' },
+  { bg: 'bg-amber-500/15 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30' },
+  { bg: 'bg-sky-500/15 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/30' },
+  { bg: 'bg-rose-500/15 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30' },
+  { bg: 'bg-indigo-500/15 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/30' },
+  { bg: 'bg-teal-500/15 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border-teal-500/30' },
+  { bg: 'bg-fuchsia-500/15 dark:bg-fuchsia-500/20 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-500/30' },
+  { bg: 'bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border-cyan-500/30' },
+  { bg: 'bg-orange-500/15 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-500/30' }
+];
+
+export const getBrandColor = (brand) => {
+  if (!brand || brand === 'ALL') {
+    return {
+      bg: 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white border-blue-500/40 shadow-blue-500/20'
+    };
+  }
+  let hash = 0;
+  for (let i = 0; i < brand.length; i++) {
+    hash = (hash << 5) - hash + brand.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % BRAND_COLOR_PALETTES.length;
+  return {
+    bg: `${BRAND_COLOR_PALETTES[index].bg} border`
+  };
+};
+
 const BrandRoutings = () => {
   const { confirm } = useConfirm() || {};
 
@@ -89,8 +120,15 @@ const BrandRoutings = () => {
   const [selectedStateFilter, setSelectedStateFilter] = useState('ALL');
   const [viewMode, setViewMode] = useState('grouped'); // 'grouped' | 'table'
 
-  // Expand state for state chips in grouped view
+  // Expand state for state chips in grouped view (keyed by rule identifier)
   const [expandedStatesByBrand, setExpandedStatesByBrand] = useState({});
+
+  const toggleRuleStatesExpansion = (ruleKey) => {
+    setExpandedStatesByBrand((prev) => ({
+      ...prev,
+      [ruleKey]: !prev[ruleKey]
+    }));
+  };
 
   // Single Brand Configuration Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -974,41 +1012,103 @@ const BrandRoutings = () => {
         </div>
       )}
 
-      {/* ================= COMPACT EXECUTIVE KPI STRIP ================= */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-white/70 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 shadow-xs">
-        <div className="px-2 border-r border-slate-100 dark:border-white/5 last:border-none">
-          <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
-            Brand Keys
-          </span>
-          <div className="text-xl font-extrabold text-slate-900 dark:text-white mt-0.5">
-            {matrixData.length}
+      {/* ================= EXECUTIVE KPI STRIP (INTERACTIVE METRIC CARDS) ================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {/* Metric 1: Brand Keys (Click to clear filters & show all) */}
+        <button
+          type="button"
+          onClick={() => {
+            setSearchBrand('');
+            setSelectedCompanyFilter('ALL');
+            setSelectedStateFilter('ALL');
+          }}
+          className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-left transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-0.5 hover:border-blue-500/30 flex items-center justify-between group"
+          title="Click to reset all filters and view all brands"
+        >
+          <div className="space-y-0.5">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
+              Brand Keys
+            </span>
+            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              {matrixData.length}
+            </div>
+            <span className="text-[11px] text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              Reset filters &amp; show all
+            </span>
           </div>
-        </div>
-
-        <div className="px-2 border-r border-slate-100 dark:border-white/5 last:border-none">
-          <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
-            Active Rules
-          </span>
-          <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 mt-0.5">
-            {allRulesFlat.length}
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
+            <FiGitBranch />
           </div>
-        </div>
+        </button>
 
-        <div className="px-2 border-r border-slate-100 dark:border-white/5 last:border-none">
-          <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
-            Global Fallback
-          </span>
-          <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 truncate" title={globalFallbackCompany}>
-            {globalFallbackCompany}
+        {/* Metric 2: Active Rules (Click to toggle Grouped vs Table View) */}
+        <button
+          type="button"
+          onClick={() => setViewMode((prev) => (prev === 'grouped' ? 'table' : 'grouped'))}
+          className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-left transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-0.5 hover:border-purple-500/30 flex items-center justify-between group"
+          title="Click to toggle between Grouped Cards and Flat Table view"
+        >
+          <div className="space-y-0.5">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
+              Active Rules
+            </span>
+            <div className="text-2xl font-black text-purple-600 dark:text-purple-400 tracking-tight">
+              {allRulesFlat.length}
+            </div>
+            <span className="text-[11px] text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors flex items-center gap-1">
+              <span>View:</span>
+              <span className="font-semibold underline">
+                {viewMode === 'table' ? 'Table View' : 'Grouped View'}
+              </span>
+            </span>
           </div>
-        </div>
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
+            <FiLayers />
+          </div>
+        </button>
 
-        <div className="px-2">
-          <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
-            Billing Companies
-          </span>
-          <div className="text-xl font-extrabold text-slate-900 dark:text-white mt-0.5">
-            {companies.length}
+        {/* Metric 3: Global Fallback (Click to quick-filter to ALL brand) */}
+        <button
+          type="button"
+          onClick={() => setSearchBrand((prev) => (prev.toUpperCase() === 'ALL' ? '' : 'ALL'))}
+          className={`p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-0.5 flex items-center justify-between group ${
+            searchBrand.toUpperCase() === 'ALL'
+              ? 'bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/40 ring-2 ring-emerald-500/20'
+              : 'bg-white/70 dark:bg-slate-900 border-slate-200/80 dark:border-white/10 hover:border-emerald-500/30'
+          }`}
+          title="Click to isolate the 'ALL' Global Default fallback policy"
+        >
+          <div className="space-y-0.5 min-w-0 pr-2">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
+              Global Fallback
+            </span>
+            <div className="text-base font-black text-emerald-600 dark:text-emerald-400 truncate tracking-tight" title={globalFallbackCompany}>
+              {globalFallbackCompany}
+            </div>
+            <span className="text-[11px] text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate block">
+              {searchBrand.toUpperCase() === 'ALL' ? 'Filtered to ALL (click to clear)' : 'Click to inspect ALL route'}
+            </span>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
+            <FiGlobe />
+          </div>
+        </button>
+
+        {/* Metric 4: Billing Companies */}
+        <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-xs flex items-center justify-between">
+          <div className="space-y-0.5">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
+              Billing Companies
+            </span>
+            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              {companies.length}
+            </div>
+            <span className="text-[11px] text-slate-400">
+              Allocated partner entities
+            </span>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg shrink-0">
+            <FiBriefcase />
           </div>
         </div>
       </div>
@@ -1148,25 +1248,44 @@ const BrandRoutings = () => {
           {filteredMatrix.map((brandGroup) => {
             const isAllBrand = brandGroup.brand === 'ALL';
             const rules = brandGroup.rules || [];
-            const isExpanded = Boolean(expandedStatesByBrand[brandGroup.brand]);
+            const brandColor = getBrandColor(brandGroup.brand);
 
             return (
               <div
                 key={brandGroup.brand}
-                className={`rounded-2xl border transition-all duration-150 overflow-hidden shadow-xs bg-white/60 dark:bg-slate-900 ${
+                className={`rounded-2xl border transition-all duration-200 overflow-hidden shadow-xs ${
                   isAllBrand
-                    ? 'border-blue-500/40 ring-1 ring-blue-500/10'
-                    : 'border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
+                    ? 'bg-white/80 dark:bg-slate-900 border border-blue-500/40 dark:border-blue-500/30 shadow-xs'
+                    : 'bg-white/60 dark:bg-slate-900 border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
                 }`}
               >
+                {/* Visual Distinction Banner for ALL Global Fallback Card */}
+                {isAllBrand && (
+                  <div className="px-5 py-2.5 bg-blue-50/80 dark:bg-blue-950/40 border-b border-blue-100 dark:border-blue-900/40 flex items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-2.5 w-2.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse shrink-0" />
+                      <span className="font-extrabold uppercase tracking-wider text-[11px] text-blue-700 dark:text-blue-300">
+                        Global Default Fallback Policy
+                      </span>
+                      <span className="hidden md:inline text-slate-600 dark:text-slate-400 text-[11px]">
+                        &bull; Unconfigured brands will automatically resolve via this catch-all fallback policy.
+                      </span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-600 text-white shadow-xs">
+                      Default Route
+                    </span>
+                  </div>
+                )}
+
                 {/* Brand Bar */}
                 <div className="px-5 py-3.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-800/40">
                   <div className="flex items-center gap-3">
+                    {/* Color-Coded Brand Avatar */}
                     <div
                       className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-xs ${
                         isAllBrand
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-slate-200'
+                          ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/25 ring-2 ring-blue-500/20'
+                          : brandColor.bg
                       }`}
                     >
                       {isAllBrand ? '★' : brandGroup.brand.slice(0, 2).toUpperCase()}
@@ -1177,8 +1296,8 @@ const BrandRoutings = () => {
                           {brandGroup.brand}
                         </span>
                         {isAllBrand && (
-                          <span className="px-2 py-0.2 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-600 dark:text-blue-400">
-                            Global Default
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                            ★ Global Fallback
                           </span>
                         )}
                         <span className="text-[11px] text-slate-400 font-medium">
@@ -1223,33 +1342,78 @@ const BrandRoutings = () => {
                     const isWildcard = states.includes('*');
                     const isAllStates = states.length === INDIAN_STATES.length;
 
+                    // Unique key for state expansion
+                    const ruleKey = rule._id || `${brandGroup.brand}-${idx}`;
+                    const isRuleExpanded = Boolean(expandedStatesByBrand[ruleKey]);
+
                     return (
                       <div
                         key={rule._id || idx}
-                        className="px-5 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors"
+                        className={`px-5 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors ${
+                          rule.isActive === false ? 'opacity-70' : ''
+                        }`}
                       >
                         {/* Territory Column */}
                         <div className="md:w-1/2 flex items-center gap-2 flex-wrap">
                           {isWildcard ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
                               <FiGlobe className="text-xs" />
                               <span>Pan-India / Wildcard (*)</span>
                             </span>
                           ) : isAllStates ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                               <FiCheck className="text-xs" />
                               <span>All 36 States</span>
                             </span>
                           ) : (
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
                                 <FiMapPin className="text-xs" />
                                 <span>{states.length} {states.length === 1 ? 'State' : 'States'}</span>
                               </span>
-                              <span className="text-xs text-slate-500 dark:text-slate-400">
-                                {states.slice(0, 3).join(', ')}
-                                {states.length > 3 && ` +${states.length - 3} more`}
-                              </span>
+
+                              {/* Interactive State Chips Expansion */}
+                              {isRuleExpanded ? (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {states.map((st) => (
+                                    <span
+                                      key={st}
+                                      className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5"
+                                    >
+                                      {st}
+                                    </span>
+                                  ))}
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleRuleStatesExpansion(ruleKey)}
+                                    className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                                  >
+                                    <span>Show less</span>
+                                    <FiChevronUp size={12} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {states.slice(0, 3).map((st) => (
+                                    <span
+                                      key={st}
+                                      className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5"
+                                    >
+                                      {st}
+                                    </span>
+                                  ))}
+                                  {states.length > 3 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleRuleStatesExpansion(ruleKey)}
+                                      className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition-colors cursor-pointer"
+                                    >
+                                      <span>+{states.length - 3} more</span>
+                                      <FiChevronDown size={12} />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -1268,6 +1432,12 @@ const BrandRoutings = () => {
                           {rule.description && (
                             <span className="text-[11px] text-slate-400 italic block sm:inline">
                               &mdash; {rule.description}
+                            </span>
+                          )}
+
+                          {rule.isActive === false && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200/80 dark:bg-white/10 text-slate-500 border border-slate-300/60 dark:border-white/5">
+                              Paused
                             </span>
                           )}
                         </div>
@@ -1327,16 +1497,17 @@ const BrandRoutings = () => {
       ) : (
         /* ================= FLAT TABLE VIEW ================= */
         <div className="rounded-2xl bg-white/60 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[calc(100vh-280px)] overflow-y-auto">
             <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-white/80 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <thead className="sticky top-0 z-10 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md shadow-xs border-b border-slate-200 dark:border-white/10">
+                <tr className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 px-3 w-12 text-center">#</th>
                   <th className="py-3 px-4">Brand</th>
                   <th className="py-3 px-4">Territory Coverage</th>
                   <th className="py-3 px-4">Destination Billing Company</th>
-                  <th className="py-3 px-4 text-center">Priority</th>
+                  <th className="py-3 px-3 text-center">Priority</th>
                   <th className="py-3 px-4">Notes</th>
-                  <th className="py-3 px-4 text-center">Status</th>
+                  <th className="py-3 px-3 text-center">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -1349,20 +1520,38 @@ const BrandRoutings = () => {
                   const compCode = rule.companyCode || company?.code || '';
                   const states = Array.isArray(rule.states) ? rule.states : [];
                   const isWildcard = states.includes('*');
+                  const brandColor = getBrandColor(rule.brand);
 
                   return (
                     <tr
                       key={rule._id || idx}
                       className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors"
                     >
+                      {/* S.No Column */}
+                      <td className="py-3 px-3 text-center font-mono text-[11px] text-slate-400 font-semibold">
+                        {idx + 1}
+                      </td>
+
+                      {/* Brand Column with Color-Coded Avatar */}
                       <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
-                        <div className="flex items-center gap-2">
-                          <span>{rule.brand}</span>
-                          {rule.brand === 'ALL' && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                              Default
-                            </span>
-                          )}
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-[10px] shrink-0 shadow-xs ${
+                              rule.brand === 'ALL'
+                                ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/20'
+                                : brandColor.bg
+                            }`}
+                          >
+                            {rule.brand === 'ALL' ? '★' : rule.brand.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span>{rule.brand}</span>
+                            {rule.brand === 'ALL' && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                Default
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
@@ -1407,7 +1596,7 @@ const BrandRoutings = () => {
                         </div>
                       </td>
 
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3 px-3 text-center">
                         <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/10">
                           {rule.priority !== undefined ? rule.priority : 10}
                         </span>
@@ -1417,7 +1606,7 @@ const BrandRoutings = () => {
                         {rule.description || '—'}
                       </td>
 
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3 px-3 text-center">
                         {rule.isActive ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
                             Active

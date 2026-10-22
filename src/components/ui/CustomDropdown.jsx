@@ -195,7 +195,7 @@ const CustomDropdown = ({
             minWidth: `${coords.minWidth}px`,
             maxHeight: `${coords.maxHeight}px`
           }}
-          className={`w-max max-w-[340px] bg-white/40 dark:bg-slate-950/50 backdrop-blur-md border border-slate-200 dark:border-white/20 rounded-xl shadow-xl dark:shadow-2xl shadow-slate-900/10 dark:shadow-black/80 flex flex-col overflow-hidden z-[99999] ${
+          className={`w-max max-w-[340px] bg-white/20 dark:bg-slate-950/20 backdrop-blur-md border border-slate-200 dark:border-white/20 rounded-xl shadow-xl dark:shadow-2xl shadow-slate-900/10 dark:shadow-black/80 flex flex-col overflow-hidden z-[99999] ${
             coords.openUp ? 'animate-dropdown-up' : 'animate-dropdown'
           } ${menuClassName || ''}`}
         >
