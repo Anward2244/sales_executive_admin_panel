@@ -696,8 +696,7 @@ const Dashboard = () => {
       title: 'Total Revenue',
       value: `₹${totalOrderValue.toLocaleString('en-IN')}`,
       icon: BiRupee,
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bg: 'bg-emerald-500/15',
+      kpiClass: 'kpi-icon-emerald',
       glow: 'from-emerald-500/20 via-emerald-500/5 to-transparent',
       hoverBorder: 'hover:border-emerald-500/40 hover:shadow-emerald-500/10',
       path: '/purchase-orders',
@@ -712,8 +711,7 @@ const Dashboard = () => {
       title: 'Total Orders',
       value: totalOrders,
       icon: FiShoppingBag,
-      color: 'text-blue-600 dark:text-blue-400',
-      bg: 'bg-blue-500/15',
+      kpiClass: 'kpi-icon-blue',
       glow: 'from-blue-500/20 via-blue-500/5 to-transparent',
       hoverBorder: 'hover:border-blue-500/40 hover:shadow-blue-500/10',
       path: '/purchase-orders',
@@ -728,8 +726,7 @@ const Dashboard = () => {
       title: 'Active Users',
       value: totalUsers,
       icon: FiUsers,
-      color: 'text-amber-600 dark:text-amber-400',
-      bg: 'bg-amber-500/15',
+      kpiClass: 'kpi-icon-amber',
       glow: 'from-amber-500/20 via-amber-500/5 to-transparent',
       hoverBorder: 'hover:border-amber-500/40 hover:shadow-amber-500/10',
       path: '/users',
@@ -744,8 +741,7 @@ const Dashboard = () => {
       title: 'Partner Companies',
       value: totalCompanies,
       icon: FiBriefcase,
-      color: 'text-indigo-600 dark:text-indigo-400',
-      bg: 'bg-indigo-500/15',
+      kpiClass: 'kpi-icon-indigo',
       glow: 'from-indigo-500/20 via-indigo-500/5 to-transparent',
       hoverBorder: 'hover:border-indigo-500/40 hover:shadow-indigo-500/10',
       path: '/companies',
@@ -760,8 +756,7 @@ const Dashboard = () => {
       title: 'Associated Firms',
       value: totalFirms,
       icon: FiLayers,
-      color: 'text-cyan-600 dark:text-cyan-400',
-      bg: 'bg-cyan-500/15',
+      kpiClass: 'kpi-icon-cyan',
       glow: 'from-cyan-500/20 via-cyan-500/5 to-transparent',
       hoverBorder: 'hover:border-cyan-500/40 hover:shadow-cyan-500/10',
       path: '/firms',
@@ -776,8 +771,7 @@ const Dashboard = () => {
       title: 'Catalog Products',
       value: totalProducts,
       icon: FiBox,
-      color: 'text-purple-600 dark:text-purple-400',
-      bg: 'bg-purple-500/15',
+      kpiClass: 'kpi-icon-purple',
       glow: 'from-purple-500/20 via-purple-500/5 to-transparent',
       hoverBorder: 'hover:border-purple-500/40 hover:shadow-purple-500/10',
       path: '/products',
@@ -929,7 +923,7 @@ const Dashboard = () => {
 
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${card.bg} ${card.color} shadow-xs transition-transform group-hover:scale-105 duration-300`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${card.kpiClass} transition-transform group-hover:scale-105 duration-300`}>
                   <card.icon />
                 </div>
                 {card.delta && (
@@ -977,7 +971,7 @@ const Dashboard = () => {
             {/* Header with Title, Series Legend Toggles, and Range Selector */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/20 shadow-xs">
+                <div className="w-10 h-10 rounded-xl kpi-icon-emerald flex items-center justify-center text-lg border border-emerald-500/20 shadow-xs">
                   <FiTrendingUp />
                 </div>
                 <div>
@@ -1135,7 +1129,7 @@ const Dashboard = () => {
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg border border-amber-500/20 shadow-xs">
+                <div className="w-10 h-10 rounded-xl kpi-icon-amber flex items-center justify-center text-lg border border-amber-500/20 shadow-xs">
                   <FiPieChart />
                 </div>
                 <div>
@@ -1255,7 +1249,7 @@ const Dashboard = () => {
         <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl flex flex-col justify-between">
           <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/80 dark:border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-500/20">
+              <div className="w-10 h-10 rounded-xl kpi-icon-blue flex items-center justify-center text-lg border border-blue-500/20">
                 <FiBriefcase />
               </div>
               <div>
@@ -1331,7 +1325,7 @@ const Dashboard = () => {
         <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl flex flex-col justify-between">
           <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/80 dark:border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg border border-amber-500/20">
+              <div className="w-10 h-10 rounded-xl kpi-icon-amber flex items-center justify-center text-lg border border-amber-500/20">
                 <FiAward />
               </div>
               <div>
@@ -1412,7 +1406,7 @@ const Dashboard = () => {
       <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
         <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/20">
+            <div className="w-10 h-10 rounded-xl kpi-icon-emerald flex items-center justify-center text-lg border border-emerald-500/20">
               <FiPackage />
             </div>
             <div>
@@ -1617,7 +1611,7 @@ const Dashboard = () => {
           {/* Header with Title and Metric Switcher */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-lg border border-cyan-500/20 shadow-xs">
+              <div className="w-10 h-10 rounded-xl kpi-icon-cyan flex items-center justify-center text-lg border border-cyan-500/20 shadow-xs">
                 <FiShare2 className="rotate-90" />
               </div>
               <div>

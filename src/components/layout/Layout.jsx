@@ -51,8 +51,8 @@ const Layout = () => {
     const handleSettingsChange = () => {
       setPollingConfigVersion(v => v + 1);
     };
-    window.addEventListener('inizio:notification-settings-changed', handleSettingsChange);
-    return () => window.removeEventListener('inizio:notification-settings-changed', handleSettingsChange);
+    window.addEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    return () => window.removeEventListener('Auric:notification-settings-changed', handleSettingsChange);
   }, []);
 
   const isChatRoute = location.pathname.startsWith('/chat');
@@ -185,7 +185,7 @@ const Layout = () => {
         setBrowserAlertsEnabled(isBrowserAlertsEnabled());
       }
     };
-    window.addEventListener('inizio:notification-settings-changed', onSettingsChange);
+    window.addEventListener('Auric:notification-settings-changed', onSettingsChange);
 
     let permStatus = null;
     if (typeof navigator !== 'undefined' && navigator.permissions && navigator.permissions.query) {
@@ -201,7 +201,7 @@ const Layout = () => {
 
     return () => {
       window.removeEventListener('focus', updatePerm);
-      window.removeEventListener('inizio:notification-settings-changed', onSettingsChange);
+      window.removeEventListener('Auric:notification-settings-changed', onSettingsChange);
       if (permStatus) permStatus.onchange = null;
     };
   }, []);
@@ -251,7 +251,7 @@ const Layout = () => {
         title,
         body: message,
         path,
-        tag: tag || `inizio-${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        tag: tag || `Auric-${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
         category,
         navigate: navigation
       });
@@ -779,7 +779,7 @@ const Layout = () => {
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-800'}`}>System Notifications</span>
                     {totalUnreadCount > 0 && (
-                      <span className="text-[9px] bg-blue-500/20 text-blue-600 font-bold px-1.5 py-0.2 rounded-full border border-blue-500/20 shrink-0">
+                      <span className="text-[9px] bg-blue-500/20 text-blue-600 font-bold px-1.5 py-0.2 rounded-full border border-blue-500/20 shrink-0 tabular-nums">
                         {totalUnreadCount}
                       </span>
                     )}
@@ -921,7 +921,7 @@ const Layout = () => {
 
             {/* Dropdown Menu */}
             {isProfileDropdownOpen && (
-              <div className={`absolute right-0 mt-3 w-52 backdrop-blur-[16px] border rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
+              <div className={`absolute flex right-0 mt-3 w-52 backdrop-blur-[16px] border rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
                 isDark 
                   ? 'bg-slate-900/90 border-white/10 shadow-black/50' 
                   : 'bg-white/40 border-slate-200 shadow-slate-900/60'
@@ -1046,13 +1046,13 @@ const Layout = () => {
           {/* Full Logo */}
           <div className={`absolute transition-all duration-300 ease-in-out flex items-center justify-center ${isExpanded ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-75 rotate-[-12deg] pointer-events-none'
             }`}>
-            <Link to="/"><img src={isDark ? auricDarkLogo : auricLightLogo} alt="Auric Logo" className="h-14 w-auto object-contain scale-125" /></Link>
+            <Link to="/" data-nav-menu="true"><img src={isDark ? auricDarkLogo : auricLightLogo} alt="Auric Logo" className="h-14 w-auto object-contain scale-125" /></Link>
           </div>
 
           {/* Collapsed App Icon */}
           <div className={`absolute transition-all duration-300 ease-in-out flex items-center justify-center ${isExpanded ? 'opacity-0 scale-75 rotate-[12deg] pointer-events-none' : 'opacity-100 scale-100 rotate-0'
             }`}>
-            <Link to="/"><img src={isDark ? auricDarkLogo : auricLightLogo} alt="Auric Logo" className="lg:h-12 lg:w-12 h-12 w-auto object-contain" /></Link>
+            <Link to="/" data-nav-menu="true"><img src={isDark ? auricDarkLogo : auricLightLogo} alt="Auric Logo" className="lg:h-12 lg:w-12 h-12 w-auto object-contain" /></Link>
           </div>
 
           {/* Mobile Close Button */}
@@ -1259,7 +1259,7 @@ const Layout = () => {
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                     </span>
-                    <span className="flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-red-500 text-[10px] font-black text-white shrink-0 shadow-sm">
+                    <span className="flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-red-500 text-[10px] font-black text-white shrink-0 shadow-sm tabular-nums">
                       {badgeCount > 9 ? '9+' : badgeCount}
                     </span>
                   </div>
@@ -1317,7 +1317,7 @@ const Layout = () => {
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-800'}`}>System Notifications</span>
                       {totalUnreadCount > 0 && (
-                        <span className="text-[10px] bg-blue-500/20 text-blue-600 font-bold px-2 py-0.5 rounded-full border border-blue-500/20">
+                        <span className="text-[10px] bg-blue-500/20 text-blue-600 font-bold px-2 py-0.5 rounded-full border border-blue-500/20 tabular-nums">
                           {totalUnreadCount} New
                         </span>
                       )}
@@ -1508,10 +1508,10 @@ const Layout = () => {
 
               {/* Dropdown Menu */}
               {isProfileDropdownOpen && (
-                <div className={`absolute right-0 mt-3 w-52 backdrop-blur-lg border rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
+                <div className={`absolute right-0 mt-3 w-52 backdrop-blur-md border rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
                   isDark 
                     ? 'bg-slate-900/50 border-white/10 shadow-black/50' 
-                    : 'bg-white/40 border-slate-200 shadow-slate-900/40'
+                    : 'bg-white/10 border-slate-200 shadow-slate-900/40'
                 }`}>
                   <div className={`px-4 py-2 border-b mb-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
                     <p className={`text-sm font-semibold line-clamp-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>{user.email || 'User'}</p>
@@ -1519,7 +1519,7 @@ const Layout = () => {
                   </div>
 
                   {/* Theme Switch Toggle */}
-                  <div className={`px-4 py-2 flex items-center justify-between border-b my-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
+                  {/* <div className={`px-4 py-2 flex items-center justify-between border-b my-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
                     <div className="flex items-center gap-2">
                       {isDark ? (
                         <FiMoon className="text-blue-400 text-sm" />
@@ -1549,10 +1549,11 @@ const Layout = () => {
                         }`}
                       />
                     </button>
-                  </div>
+                  </div> */}
 
                   <Link
                     to="/profile"
+                    data-nav-menu="true"
                     onClick={() => setIsProfileDropdownOpen(false)}
                     className={`flex items-center px-4 py-2 text-sm transition-colors ${
                       isDark ? 'text-slate-300 hover:bg-white/10 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -1562,6 +1563,7 @@ const Layout = () => {
                   </Link>
                   <Link
                     to="/settings"
+                    data-nav-menu="true"
                     onClick={() => setIsProfileDropdownOpen(false)}
                     className={`flex items-center px-4 py-2 text-sm transition-colors ${
                       isDark ? 'text-slate-300 hover:bg-white/10 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -1652,7 +1654,7 @@ const Layout = () => {
           <div className={`w-full mx-auto flex flex-col md:flex-row justify-between items-center text-xs font-medium ${
             isDark ? 'text-slate-400' : 'text-slate-500'
           }`}>
-            <p>© {new Date().getFullYear()} Inizio Workspace. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Auric Workspace. All rights reserved.</p>
             <div className="flex items-center space-x-4 mt-2 md:mt-0">
               {/* <Link to="/help" className="hover:text-blue-500 transition-colors">Help Center</Link> */}
               <Link to="/settings/privacy-policy" className={`transition-colors ${

@@ -25,6 +25,7 @@ import {
 } from 'react-icons/fi';
 import { api, getProfileApi, updateProfileApi } from '@/api/axios';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
+import BackButton from '@/components/ui/BackButton';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return 'N/A';
@@ -348,13 +349,7 @@ const Profile = () => {
       {/* Header Section */}
       <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-2 z-10">
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center justify-center p-3 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-white rounded-2xl transition-all border border-slate-200/80 dark:border-white/10 shadow-sm hover:border-slate-300 dark:hover:border-white/20 active:scale-95 cursor-pointer backdrop-blur-md"
-            title="Go Back"
-          >
-            <FiArrowLeft className="text-xl" />
-          </button>
+          <BackButton />
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Admin Profile</h1>

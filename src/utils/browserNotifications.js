@@ -4,7 +4,7 @@ import appIconImg from '../assets/auric.png';
  * Utility for handling native browser notifications, permissions, preferences, and audio feedback
  */
 
-const SETTINGS_KEY = 'inizio_notification_settings_v1';
+const SETTINGS_KEY = 'Auric_notification_settings_v1';
 
 export const DEFAULT_NOTIFICATION_SETTINGS = {
   browserAlertsEnabled: true, // in-app master switch for desktop notifications
@@ -63,7 +63,7 @@ export const saveNotificationSettings = (settings) => {
       }
     };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
-    window.dispatchEvent(new CustomEvent('inizio:notification-settings-changed', { detail: updated }));
+    window.dispatchEvent(new CustomEvent('Auric:notification-settings-changed', { detail: updated }));
     return updated;
   } catch (e) {
     console.error('Failed to save notification settings:', e);
@@ -147,7 +147,7 @@ export const requestBrowserNotificationPermission = async () => {
       // Also ensure in-app setting is active
       saveNotificationSettings({ browserAlertsEnabled: true });
       showBrowserNotification({
-        title: 'Inizio Admin Notifications',
+        title: 'Auric Admin Notifications',
         body: 'Browser notifications are now enabled! You will receive alerts for new orders, chats, and registrations.',
         path: '/'
       });
@@ -300,7 +300,7 @@ export const showBrowserNotification = ({
   }
 
   // Deduplication guard: ignore exact identical notifications within 1.5 seconds
-  const deterministicTag = tag || `inizio-${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+  const deterministicTag = tag || `Auric-${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
   const notifKey = `${deterministicTag}::${body || ''}`;
   const now = Date.now();
 
@@ -318,7 +318,7 @@ export const showBrowserNotification = ({
   playNotificationSound();
 
   const options = {
-    body: body || 'New alert from Inizio Admin Panel',
+    body: body || 'New alert from Auric Admin Panel',
     icon: icon || appIconImg,
     badge: appIconImg,
     tag: deterministicTag,

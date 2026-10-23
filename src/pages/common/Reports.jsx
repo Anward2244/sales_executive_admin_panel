@@ -875,7 +875,7 @@ const Reports = () => {
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Total Orders
             </span>
-            <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl">
+            <div className="p-2.5 rounded-xl kpi-icon-blue">
               <FiShoppingBag className="text-lg" />
             </div>
           </div>
@@ -901,7 +901,7 @@ const Reports = () => {
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Gross Revenue
             </span>
-            <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
+            <div className="p-2.5 rounded-xl kpi-icon-emerald">
               <FiDollarSign className="text-lg" />
             </div>
           </div>
@@ -926,7 +926,7 @@ const Reports = () => {
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Avg. Order Value
             </span>
-            <div className="p-2.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl">
+            <div className="p-2.5 rounded-xl kpi-icon-purple">
               <FiBarChart2 className="text-lg" />
             </div>
           </div>
@@ -951,7 +951,7 @@ const Reports = () => {
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Units Dispatched/Sold
             </span>
-            <div className="p-2.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl">
+            <div className="p-2.5 rounded-xl kpi-icon-amber">
               <FiBox className="text-lg" />
             </div>
           </div>

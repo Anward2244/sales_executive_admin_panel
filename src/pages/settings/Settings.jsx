@@ -2257,7 +2257,7 @@ const Settings = () => {
                   Active Operator
                 </p>
                 <p className="text-base font-black text-slate-900 dark:text-white mt-1 truncate">
-                  {user?.email || 'admin@inizio.in'}
+                  {user?.email || 'admin@Auric.in'}
                 </p>
                 <p className="text-[11px] text-blue-500 font-semibold mt-1 uppercase">
                   {user?.role || 'ADMIN'} Privileges

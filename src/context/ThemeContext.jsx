@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext();
 
-const THEME_STORAGE_KEY = 'inizio_panel_theme_mode';
+const THEME_STORAGE_KEY = 'Auric_panel_theme_mode';
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {

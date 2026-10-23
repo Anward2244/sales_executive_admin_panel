@@ -13,5 +13,6 @@ export { default as EmptyState } from './EmptyState';
 export { default as BulkActionBar } from './BulkActionBar';
 export { default as BatchProgressModal } from './BatchProgressModal';
 export { default as TableToolbar } from './TableToolbar';
+export { default as BackButton } from './BackButton';
 export * from './VisxCharts';
 

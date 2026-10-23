@@ -54,7 +54,7 @@ export const TableToolbar = ({
 
   return (
     <div
-      className={`relative z-25 flex flex-wrap items-center justify-between gap-2.5 py-1.5 px-3 bg-white/60 dark:bg-slate-900/60 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs ${className}`}
+      className={`relative z-25 flex flex-wrap items-center justify-between gap-2.5 py-2 px-3.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs ring-1 ring-slate-900/5 dark:ring-white/5 ${className}`}
     >
       {/* Left section: counts & extra custom controls */}
       <div className="flex items-center gap-2.5 flex-wrap">
@@ -62,12 +62,12 @@ export const TableToolbar = ({
           <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2">
             <span>
               Total:{' '}
-              <strong className="font-bold text-slate-900 dark:text-white">
+              <strong className="font-bold text-slate-900 dark:text-white tabular-nums">
                 {totalCount}
               </strong>
             </span>
             {selectedCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 tabular-nums">
                 {selectedCount} selected
               </span>
             )}

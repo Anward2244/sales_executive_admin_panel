@@ -1,4 +1,5 @@
 import React from 'react';
+import BackButton from './BackButton';
 
 const PageHeader = ({
   title,
@@ -10,7 +11,8 @@ const PageHeader = ({
   action,
   actions,
   children,
-  className = ''
+  className = '',
+  showBackButton = true
 }) => {
   const HeaderIcon = Icon || BadgeIcon;
   const headerText = description || subtitle;
@@ -20,6 +22,7 @@ const PageHeader = ({
     <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 relative z-10 ${className}`}>
       <div>
         <div className="flex items-center gap-3 flex-wrap">
+          {showBackButton && <BackButton />}
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
             {HeaderIcon && <HeaderIcon className="text-blue-600 dark:text-blue-400 shrink-0" />}
             <span>{title}</span>

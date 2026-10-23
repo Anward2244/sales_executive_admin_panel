@@ -141,8 +141,8 @@ const EmailNotifications = () => {
     const navUrl = targetId
       ? `/purchase-orders?orderId=${encodeURIComponent(targetId)}`
       : targetPoNum
-      ? `/purchase-orders?poNumber=${encodeURIComponent(targetPoNum)}`
-      : '/purchase-orders';
+        ? `/purchase-orders?poNumber=${encodeURIComponent(targetPoNum)}`
+        : '/purchase-orders';
 
     navigate(navUrl, {
       state: {
@@ -633,44 +633,40 @@ const EmailNotifications = () => {
                 <button
                   type="button"
                   onClick={() => handleStatusFilterChange('ALL')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    statusFilter === 'ALL'
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${statusFilter === 'ALL'
                       ? 'bg-blue-600 text-white'
                       : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-white/10'
-                  }`}
+                    }`}
                 >
                   All ({metrics.total})
                 </button>
                 <button
                   type="button"
                   onClick={() => handleStatusFilterChange('SENT')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    statusFilter === 'SENT'
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${statusFilter === 'SENT'
                       ? 'bg-emerald-600 text-white'
                       : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-white/10'
-                  }`}
+                    }`}
                 >
                   Sent ({metrics.sent})
                 </button>
                 <button
                   type="button"
                   onClick={() => handleStatusFilterChange('FAILED')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    statusFilter === 'FAILED'
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${statusFilter === 'FAILED'
                       ? 'bg-rose-600 text-white'
                       : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-white/10'
-                  }`}
+                    }`}
                 >
                   Failed ({metrics.failed})
                 </button>
                 <button
                   type="button"
                   onClick={() => handleStatusFilterChange('QUEUED')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    statusFilter === 'QUEUED'
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${statusFilter === 'QUEUED'
                       ? 'bg-amber-600 text-white'
                       : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-white/10'
-                  }`}
+                    }`}
                 >
                   Queued ({metrics.queued})
                 </button>
@@ -760,13 +756,12 @@ const EmailNotifications = () => {
                   <div
                     key={itemId}
                     onClick={() => selectLogItem(item)}
-                    className={`relative p-3.5 rounded-2xl border transition-all duration-150 cursor-pointer text-left group backdrop-blur-xl ${
-                      isSelected
+                    className={`relative p-3.5 rounded-2xl border transition-all duration-150 cursor-pointer text-left group backdrop-blur-xl ${isSelected
                         ? 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-500/80 ring-2 ring-blue-500/30 shadow-md'
                         : item.status?.toUpperCase() === 'FAILED'
-                        ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-200/80 dark:border-rose-900/30 hover:border-rose-300'
-                        : 'bg-white/70 dark:bg-slate-900/50 border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50/50 dark:hover:bg-slate-800/30'
-                    }`}
+                          ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-200/80 dark:border-rose-900/30 hover:border-rose-300'
+                          : 'bg-white/70 dark:bg-slate-900/50 border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50/50 dark:hover:bg-slate-800/30'
+                      }`}
                   >
                     {/* Left Accent indicator */}
                     <span
@@ -813,11 +808,10 @@ const EmailNotifications = () => {
 
                     {/* Email Subject */}
                     <h4
-                      className={`text-xs leading-snug truncate transition-colors ${
-                        item.status?.toUpperCase() === 'FAILED'
+                      className={`text-xs leading-snug truncate transition-colors ${item.status?.toUpperCase() === 'FAILED'
                           ? 'font-bold text-rose-700 dark:text-rose-300'
                           : 'font-bold text-slate-900 dark:text-white'
-                      } ${isSelected ? 'text-blue-700 dark:text-blue-300' : ''}`}
+                        } ${isSelected ? 'text-blue-700 dark:text-blue-300' : ''}`}
                     >
                       {item.subject || 'Purchase Order Email Notification'}
                     </h4>
@@ -1308,7 +1302,7 @@ const EmailNotifications = () => {
             <form onSubmit={handleAddRecipient} className="flex gap-2 text-xs">
               <input
                 type="email"
-                placeholder="Enter recipient email (e.g. accounts@inizio.in)..."
+                placeholder="Enter recipient email (e.g. accounts@Auric.in)..."
                 value={newRecipientInput}
                 onChange={(e) => {
                   setNewRecipientInput(e.target.value);
@@ -1447,11 +1441,10 @@ const EmailNotifications = () => {
                 <button
                   type="button"
                   onClick={() => setResendMode('original')}
-                  className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                    resendMode === 'original'
+                  className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${resendMode === 'original'
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-slate-50 dark:bg-black/20 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
-                  }`}
+                    }`}
                 >
                   <div className="font-bold">Original Addresses</div>
                   <div className={`text-[10px] mt-0.5 ${resendMode === 'original' ? 'text-white/80' : 'text-slate-400'}`}>
@@ -1462,11 +1455,10 @@ const EmailNotifications = () => {
                 <button
                   type="button"
                   onClick={() => setResendMode('custom')}
-                  className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                    resendMode === 'custom'
+                  className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${resendMode === 'custom'
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-slate-50 dark:bg-black/20 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
-                  }`}
+                    }`}
                 >
                   <div className="font-bold">Custom Addresses</div>
                   <div className={`text-[10px] mt-0.5 ${resendMode === 'custom' ? 'text-white/80' : 'text-slate-400'}`}>

@@ -130,7 +130,7 @@ const Products = () => {
   const [drawerProduct, setDrawerProduct] = useState(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
-  const [isFiltersVisible, setIsFiltersVisible] = useState(true);
+  const [isFiltersVisible, setIsFiltersVisible] = useState(false);
   const actionsDropdownRef = useRef(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState(INITIAL_PRODUCT_FORM);

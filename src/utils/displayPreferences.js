@@ -5,8 +5,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-export const DISPLAY_PREFS_KEY = 'inizio_display_preferences';
-export const DISPLAY_PREFS_EVENT = 'inizio:display-preferences-changed';
+export const DISPLAY_PREFS_KEY = 'Auric_display_preferences';
+export const DISPLAY_PREFS_EVENT = 'Auric:display-preferences-changed';
 
 export const DEFAULT_DISPLAY_PREFERENCES = {
   density: 'comfortable', // 'comfortable' | 'compact' | 'dense'

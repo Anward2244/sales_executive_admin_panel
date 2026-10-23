@@ -921,7 +921,7 @@ const BrandRoutings = () => {
     const comp = typeof firstRule?.companyId === 'object'
       ? firstRule.companyId
       : companies.find((c) => c._id === firstRule?.companyId || c.code === firstRule?.companyCode);
-    return comp?.name || firstRule?.companyCode || comp?.code || 'Inizio (Global)';
+    return comp?.name || firstRule?.companyCode || comp?.code || 'Auric (Global)';
   }, [matrixData, companies]);
 
   return (
@@ -1029,14 +1029,14 @@ const BrandRoutings = () => {
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
               Brand Keys
             </span>
-            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">
               {matrixData.length}
             </div>
             <span className="text-[11px] text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
               Reset filters &amp; show all
             </span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
+          <div className="w-10 h-10 rounded-xl kpi-icon-blue flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
             <FiGitBranch />
           </div>
         </button>
@@ -1052,7 +1052,7 @@ const BrandRoutings = () => {
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
               Active Rules
             </span>
-            <div className="text-2xl font-black text-purple-600 dark:text-purple-400 tracking-tight">
+            <div className="text-2xl font-black text-purple-600 dark:text-purple-400 tracking-tight tabular-nums">
               {allRulesFlat.length}
             </div>
             <span className="text-[11px] text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors flex items-center gap-1">
@@ -1062,7 +1062,7 @@ const BrandRoutings = () => {
               </span>
             </span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
+          <div className="w-10 h-10 rounded-xl kpi-icon-purple flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
             <FiLayers />
           </div>
         </button>
@@ -1071,11 +1071,10 @@ const BrandRoutings = () => {
         <button
           type="button"
           onClick={() => setSearchBrand((prev) => (prev.toUpperCase() === 'ALL' ? '' : 'ALL'))}
-          className={`p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-0.5 flex items-center justify-between group ${
-            searchBrand.toUpperCase() === 'ALL'
+          className={`p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-0.5 flex items-center justify-between group ${searchBrand.toUpperCase() === 'ALL'
               ? 'bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/40 ring-2 ring-emerald-500/20'
               : 'bg-white/70 dark:bg-slate-900 border-slate-200/80 dark:border-white/10 hover:border-emerald-500/30'
-          }`}
+            }`}
           title="Click to isolate the 'ALL' Global Default fallback policy"
         >
           <div className="space-y-0.5 min-w-0 pr-2">
@@ -1089,7 +1088,7 @@ const BrandRoutings = () => {
               {searchBrand.toUpperCase() === 'ALL' ? 'Filtered to ALL (click to clear)' : 'Click to inspect ALL route'}
             </span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
+          <div className="w-10 h-10 rounded-xl kpi-icon-emerald flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
             <FiGlobe />
           </div>
         </button>
@@ -1100,14 +1099,14 @@ const BrandRoutings = () => {
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
               Billing Companies
             </span>
-            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">
               {companies.length}
             </div>
             <span className="text-[11px] text-slate-400">
               Allocated partner entities
             </span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg shrink-0">
+          <div className="w-10 h-10 rounded-xl kpi-icon-amber flex items-center justify-center text-lg shrink-0">
             <FiBriefcase />
           </div>
         </div>
@@ -1175,11 +1174,10 @@ const BrandRoutings = () => {
             <button
               type="button"
               onClick={() => setViewMode('grouped')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                viewMode === 'grouped'
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${viewMode === 'grouped'
                   ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
             >
               <FiGrid className="text-xs" />
               <span>By Brand</span>
@@ -1187,11 +1185,10 @@ const BrandRoutings = () => {
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                viewMode === 'table'
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${viewMode === 'table'
                   ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
             >
               <FiList className="text-xs" />
               <span>All Rules</span>
@@ -1253,11 +1250,10 @@ const BrandRoutings = () => {
             return (
               <div
                 key={brandGroup.brand}
-                className={`rounded-2xl border transition-all duration-200 overflow-hidden shadow-xs ${
-                  isAllBrand
+                className={`rounded-2xl border transition-all duration-200 overflow-hidden shadow-xs ${isAllBrand
                     ? 'bg-white/80 dark:bg-slate-900 border border-blue-500/40 dark:border-blue-500/30 shadow-xs'
                     : 'bg-white/60 dark:bg-slate-900 border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
-                }`}
+                  }`}
               >
                 {/* Visual Distinction Banner for ALL Global Fallback Card */}
                 {isAllBrand && (
@@ -1282,11 +1278,10 @@ const BrandRoutings = () => {
                   <div className="flex items-center gap-3">
                     {/* Color-Coded Brand Avatar */}
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-xs ${
-                        isAllBrand
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-xs ${isAllBrand
                           ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/25 ring-2 ring-blue-500/20'
                           : brandColor.bg
-                      }`}
+                        }`}
                     >
                       {isAllBrand ? '★' : brandGroup.brand.slice(0, 2).toUpperCase()}
                     </div>
@@ -1349,9 +1344,8 @@ const BrandRoutings = () => {
                     return (
                       <div
                         key={rule._id || idx}
-                        className={`px-5 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors ${
-                          rule.isActive === false ? 'opacity-70' : ''
-                        }`}
+                        className={`px-5 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors ${rule.isActive === false ? 'opacity-70' : ''
+                          }`}
                       >
                         {/* Territory Column */}
                         <div className="md:w-1/2 flex items-center gap-2 flex-wrap">
@@ -1496,7 +1490,7 @@ const BrandRoutings = () => {
         </div>
       ) : (
         /* ================= FLAT TABLE VIEW ================= */
-        <div className="rounded-2xl bg-white/60 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
+        <div className="rounded-2xl bg-white/80 dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 shadow-xs ring-1 ring-slate-900/5 dark:ring-white/5 overflow-hidden backdrop-blur-md">
           <div className="overflow-x-auto max-h-[calc(100vh-280px)] overflow-y-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead className="sticky top-0 z-10 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md shadow-xs border-b border-slate-200 dark:border-white/10">
@@ -1536,11 +1530,10 @@ const BrandRoutings = () => {
                       <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
                         <div className="flex items-center gap-2.5">
                           <div
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-[10px] shrink-0 shadow-xs ${
-                              rule.brand === 'ALL'
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-[10px] shrink-0 shadow-xs ${rule.brand === 'ALL'
                                 ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/20'
                                 : brandColor.bg
-                            }`}
+                              }`}
                           >
                             {rule.brand === 'ALL' ? '★' : rule.brand.slice(0, 2).toUpperCase()}
                           </div>
@@ -1667,347 +1660,346 @@ const BrandRoutings = () => {
               onClick={() => setIsTestModalOpen(false)}
             />
             <div className="relative bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200/90 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
-            {/* Header */}
-            <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 text-lg">
-                  <FiPlay />
+              {/* Header */}
+              <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 text-lg">
+                    <FiPlay />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      Live Route Resolver Sandbox
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      GET /brand-routings/resolve — Real-time rule evaluation engine
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Live Route Resolver Sandbox
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    GET /brand-routings/resolve — Real-time rule evaluation engine
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsTestModalOpen(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  <FiX size={18} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsTestModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
-              >
-                <FiX size={18} />
-              </button>
-            </div>
 
-            {/* Body */}
-            <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
-              {/* Query Inputs Card */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 shadow-xs space-y-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Brand Name *
-                    </label>
-                    {allBrands.length > 0 && (
-                      <div className="flex items-center gap-1 overflow-x-auto max-w-[260px] pb-0.5">
-                        <span className="text-[10px] text-slate-400 shrink-0">Quick pick:</span>
-                        {allBrands.slice(0, 4).map((b) => (
-                          <button
-                            key={b}
-                            type="button"
-                            onClick={() => {
-                              setSimBrand(b);
-                              handleResolveLiveRoute(b, simState, simCity);
-                            }}
-                            className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-500/20 transition-colors cursor-pointer shrink-0"
-                          >
-                            {b}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    value={simBrand}
-                    onChange={(e) => {
-                      setSimBrand(e.target.value);
-                      handleResolveLiveRoute(e.target.value, simState, simCity);
-                    }}
-                    placeholder="e.g. Realme"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Body */}
+              <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+                {/* Query Inputs Card */}
+                <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 shadow-xs space-y-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Destination State
-                    </label>
-                    <CustomDropdown
-                      value={simState}
-                      onChange={(val) => {
-                        setSimState(val);
-                        handleResolveLiveRoute(simBrand, val, simCity);
-                      }}
-                      options={[
-                        { value: '*', label: '* Wildcard / Any Other State' },
-                        ...INDIAN_STATES.map((s) => ({ value: s, label: s }))
-                      ]}
-                      searchable={true}
-                      statusColor="!px-3 !py-2 !bg-slate-50 dark:!bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Destination City (Optional)
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Brand Name *
+                      </label>
+                      {allBrands.length > 0 && (
+                        <div className="flex items-center gap-1 overflow-x-auto max-w-[260px] pb-0.5">
+                          <span className="text-[10px] text-slate-400 shrink-0">Quick pick:</span>
+                          {allBrands.slice(0, 4).map((b) => (
+                            <button
+                              key={b}
+                              type="button"
+                              onClick={() => {
+                                setSimBrand(b);
+                                handleResolveLiveRoute(b, simState, simCity);
+                              }}
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-500/20 transition-colors cursor-pointer shrink-0"
+                            >
+                              {b}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <input
                       type="text"
-                      value={simCity}
+                      value={simBrand}
                       onChange={(e) => {
-                        setSimCity(e.target.value);
-                        handleResolveLiveRoute(simBrand, simState, e.target.value);
+                        setSimBrand(e.target.value);
+                        handleResolveLiveRoute(e.target.value, simState, simCity);
                       }}
-                      placeholder="e.g. Mumbai or Nagpur"
+                      placeholder="e.g. Realme"
                       className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Destination State
+                      </label>
+                      <CustomDropdown
+                        value={simState}
+                        onChange={(val) => {
+                          setSimState(val);
+                          handleResolveLiveRoute(simBrand, val, simCity);
+                        }}
+                        options={[
+                          { value: '*', label: '* Wildcard / Any Other State' },
+                          ...INDIAN_STATES.map((s) => ({ value: s, label: s }))
+                        ]}
+                        searchable={true}
+                        statusColor="!px-3 !py-2 !bg-slate-50 dark:!bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Destination City (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={simCity}
+                        onChange={(e) => {
+                          setSimCity(e.target.value);
+                          handleResolveLiveRoute(simBrand, simState, e.target.value);
+                        }}
+                        placeholder="e.g. Mumbai or Nagpur"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-1 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleResolveLiveRoute(simBrand, simState, simCity)}
+                      disabled={resolvingApi || !simBrand.trim()}
+                      className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <FiRefreshCw className={`text-xs ${resolvingApi ? 'animate-spin' : ''}`} />
+                      <span>{resolvingApi ? 'Resolving...' : 'Evaluate Route'}</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="pt-1 flex items-center justify-end">
-                  <button
-                    type="button"
-                    onClick={() => handleResolveLiveRoute(simBrand, simState, simCity)}
-                    disabled={resolvingApi || !simBrand.trim()}
-                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                  >
-                    <FiRefreshCw className={`text-xs ${resolvingApi ? 'animate-spin' : ''}`} />
-                    <span>{resolvingApi ? 'Resolving...' : 'Evaluate Route'}</span>
-                  </button>
-                </div>
-              </div>
+                {/* Resolution Result Presentation */}
+                {resolvingApi ? (
+                  <div className="p-8 text-center rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2">
+                    <FiRefreshCw className="animate-spin text-xl text-blue-500 mx-auto" />
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                      Querying routing engine for <span className="text-blue-600 dark:text-blue-400 font-bold">{simBrand || 'brand'}</span>...
+                    </p>
+                  </div>
+                ) : liveResolvedResult ? (
+                  (() => {
+                    const resolvedComp =
+                      liveResolvedResult?.resolvedCompany ||
+                      (typeof liveResolvedResult?.company === 'object' ? liveResolvedResult.company : null) ||
+                      (typeof liveResolvedResult?.companyId === 'object' ? liveResolvedResult.companyId : null);
 
-              {/* Resolution Result Presentation */}
-              {resolvingApi ? (
-                <div className="p-8 text-center rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2">
-                  <FiRefreshCw className="animate-spin text-xl text-blue-500 mx-auto" />
-                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                    Querying routing engine for <span className="text-blue-600 dark:text-blue-400 font-bold">{simBrand || 'brand'}</span>...
-                  </p>
-                </div>
-              ) : liveResolvedResult ? (
-                (() => {
-                  const resolvedComp =
-                    liveResolvedResult?.resolvedCompany ||
-                    (typeof liveResolvedResult?.company === 'object' ? liveResolvedResult.company : null) ||
-                    (typeof liveResolvedResult?.companyId === 'object' ? liveResolvedResult.companyId : null);
+                    const compName =
+                      resolvedComp?.name ||
+                      liveResolvedResult?.companyName ||
+                      liveResolvedResult?.companyCode ||
+                      'Partner Entity';
 
-                  const compName =
-                    resolvedComp?.name ||
-                    liveResolvedResult?.companyName ||
-                    liveResolvedResult?.companyCode ||
-                    'Partner Entity';
+                    const compCode =
+                      resolvedComp?.code ||
+                      liveResolvedResult?.companyCode ||
+                      '';
 
-                  const compCode =
-                    resolvedComp?.code ||
-                    liveResolvedResult?.companyCode ||
-                    '';
+                    const compLogo = resolvedComp?.logo || '';
+                    const compDescription = resolvedComp?.description || '';
+                    const isCompActive =
+                      resolvedComp?.isActive !== undefined ? Boolean(resolvedComp.isActive) : true;
 
-                  const compLogo = resolvedComp?.logo || '';
-                  const compDescription = resolvedComp?.description || '';
-                  const isCompActive =
-                    resolvedComp?.isActive !== undefined ? Boolean(resolvedComp.isActive) : true;
+                    const ruleApplied = liveResolvedResult?.ruleApplied;
+                    const evaluatedPriority =
+                      ruleApplied?.priority !== undefined
+                        ? ruleApplied.priority
+                        : (liveResolvedResult?.priority !== undefined ? liveResolvedResult.priority : 10);
 
-                  const ruleApplied = liveResolvedResult?.ruleApplied;
-                  const evaluatedPriority =
-                    ruleApplied?.priority !== undefined
-                      ? ruleApplied.priority
-                      : (liveResolvedResult?.priority !== undefined ? liveResolvedResult.priority : 10);
+                    const ruleDescription =
+                      ruleApplied?.description ||
+                      liveResolvedResult?.description ||
+                      '';
 
-                  const ruleDescription =
-                    ruleApplied?.description ||
-                    liveResolvedResult?.description ||
-                    '';
+                    const ruleSource = liveResolvedResult?.source || '';
+                    const ruleStates = Array.isArray(ruleApplied?.states) ? ruleApplied.states : [];
+                    const ruleCities = Array.isArray(ruleApplied?.cities) ? ruleApplied.cities : [];
+                    const ruleExcludedCities = Array.isArray(ruleApplied?.excludedCities) ? ruleApplied.excludedCities : [];
 
-                  const ruleSource = liveResolvedResult?.source || '';
-                  const ruleStates = Array.isArray(ruleApplied?.states) ? ruleApplied.states : [];
-                  const ruleCities = Array.isArray(ruleApplied?.cities) ? ruleApplied.cities : [];
-                  const ruleExcludedCities = Array.isArray(ruleApplied?.excludedCities) ? ruleApplied.excludedCities : [];
-
-                  return (
-                    <div className="space-y-3 animate-in fade-in duration-200">
-                      {/* Success Bar & Source */}
-                      <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <FiCheckCircle className="text-emerald-600 dark:text-emerald-400 shrink-0 text-base" />
-                          <span className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300">
-                            Route Resolved Successfully
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-700 dark:text-emerald-400">
-                          <span>{liveResolvedResult.brand || simBrand}</span>
-                          <span>•</span>
-                          <span>{liveResolvedResult.state || simState}</span>
-                          {(liveResolvedResult.city || simCity) && (
-                            <>
-                              <span>•</span>
-                              <span>{liveResolvedResult.city || simCity}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {ruleSource && (
-                        <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs flex items-center gap-2">
-                          <FiZap className="shrink-0 text-blue-500 text-sm" />
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold">Match Source:</span>
-                            <span className="font-medium text-slate-800 dark:text-slate-200">{ruleSource}</span>
+                    return (
+                      <div className="space-y-3 animate-in fade-in duration-200">
+                        {/* Success Bar & Source */}
+                        <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <FiCheckCircle className="text-emerald-600 dark:text-emerald-400 shrink-0 text-base" />
+                            <span className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300">
+                              Route Resolved Successfully
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-700 dark:text-emerald-400">
+                            <span>{liveResolvedResult.brand || simBrand}</span>
+                            <span>•</span>
+                            <span>{liveResolvedResult.state || simState}</span>
+                            {(liveResolvedResult.city || simCity) && (
+                              <>
+                                <span>•</span>
+                                <span>{liveResolvedResult.city || simCity}</span>
+                              </>
+                            )}
                           </div>
                         </div>
-                      )}
 
-                      {/* Resolved Destination Company Card */}
-                      <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 shadow-xs space-y-2.5">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                          <FiBriefcase className="text-blue-500" />
-                          Resolved Billing Partner Entity
-                        </span>
+                        {ruleSource && (
+                          <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs flex items-center gap-2">
+                            <FiZap className="shrink-0 text-blue-500 text-sm" />
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold">Match Source:</span>
+                              <span className="font-medium text-slate-800 dark:text-slate-200">{ruleSource}</span>
+                            </div>
+                          </div>
+                        )}
 
-                        <div className="flex items-start gap-3">
-                          {compLogo ? (
-                            <img
-                              src={compLogo}
-                              alt={compName}
-                              className="w-12 h-12 object-contain rounded-xl p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shrink-0"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg font-black shrink-0">
-                              <FiBriefcase />
+                        {/* Resolved Destination Company Card */}
+                        <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 shadow-xs space-y-2.5">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                            <FiBriefcase className="text-blue-500" />
+                            Resolved Billing Partner Entity
+                          </span>
+
+                          <div className="flex items-start gap-3">
+                            {compLogo ? (
+                              <img
+                                src={compLogo}
+                                alt={compName}
+                                className="w-12 h-12 object-contain rounded-xl p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shrink-0"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg font-black shrink-0">
+                                <FiBriefcase />
+                              </div>
+                            )}
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">
+                                  {compName}
+                                </h4>
+                                {compCode && (
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-black bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                    {compCode}
+                                  </span>
+                                )}
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isCompActive
+                                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                    }`}
+                                >
+                                  {isCompActive ? '✓ Active Entity' : 'Inactive'}
+                                </span>
+                              </div>
+
+                              {compDescription && (
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                                  {compDescription}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Rule Applied Card */}
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                              <FiShield className="text-purple-500" />
+                              Rule Applied & Evaluation
+                            </span>
+                            <span className="inline-flex items-center gap-1 font-mono text-xs font-black px-2.5 py-0.5 rounded-lg bg-blue-600 text-white shadow-xs">
+                              Priority P{evaluatedPriority}
+                            </span>
+                          </div>
+
+                          {ruleDescription && (
+                            <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                              {ruleDescription}
                             </div>
                           )}
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">
-                                {compName}
-                              </h4>
-                              {compCode && (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-black bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                  {compCode}
-                                </span>
-                              )}
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                  isCompActive
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                                }`}
-                              >
-                                {isCompActive ? '✓ Active Entity' : 'Inactive'}
-                              </span>
-                            </div>
+                          <div className="space-y-1.5 pt-1 text-[11px]">
+                            {ruleStates.length > 0 && (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-slate-400 font-medium shrink-0">States:</span>
+                                {ruleStates.map((st) => (
+                                  <span
+                                    key={st}
+                                    className="px-2 py-0.5 rounded-md font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300"
+                                  >
+                                    {st === '*' ? '★ Pan-India (*)' : st}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
 
-                            {compDescription && (
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-                                {compDescription}
-                              </p>
+                            {ruleCities.length > 0 && (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-slate-400 font-medium shrink-0">Cities:</span>
+                                {ruleCities.map((ct) => (
+                                  <span
+                                    key={ct}
+                                    className="px-2 py-0.5 rounded-md font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                                  >
+                                    {ct}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {ruleExcludedCities.length > 0 && (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-slate-400 font-medium shrink-0">Excluded:</span>
+                                {ruleExcludedCities.map((ect) => (
+                                  <span
+                                    key={ect}
+                                    className="px-2 py-0.5 rounded-md font-bold bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20"
+                                  >
+                                    {ect}
+                                  </span>
+                                ))}
+                              </div>
                             )}
                           </div>
                         </div>
                       </div>
-
-                      {/* Rule Applied Card */}
-                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                            <FiShield className="text-purple-500" />
-                            Rule Applied & Evaluation
-                          </span>
-                          <span className="inline-flex items-center gap-1 font-mono text-xs font-black px-2.5 py-0.5 rounded-lg bg-blue-600 text-white shadow-xs">
-                            Priority P{evaluatedPriority}
-                          </span>
-                        </div>
-
-                        {ruleDescription && (
-                          <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                            {ruleDescription}
-                          </div>
-                        )}
-
-                        <div className="space-y-1.5 pt-1 text-[11px]">
-                          {ruleStates.length > 0 && (
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-slate-400 font-medium shrink-0">States:</span>
-                              {ruleStates.map((st) => (
-                                <span
-                                  key={st}
-                                  className="px-2 py-0.5 rounded-md font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300"
-                                >
-                                  {st === '*' ? '★ Pan-India (*)' : st}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {ruleCities.length > 0 && (
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-slate-400 font-medium shrink-0">Cities:</span>
-                              {ruleCities.map((ct) => (
-                                <span
-                                  key={ct}
-                                  className="px-2 py-0.5 rounded-md font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
-                                >
-                                  {ct}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {ruleExcludedCities.length > 0 && (
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-slate-400 font-medium shrink-0">Excluded:</span>
-                              {ruleExcludedCities.map((ect) => (
-                                <span
-                                  key={ect}
-                                  className="px-2 py-0.5 rounded-md font-bold bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20"
-                                >
-                                  {ect}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                    );
+                  })()
+                ) : liveResolveError ? (
+                  <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-start gap-2.5">
+                    <FiAlertCircle className="shrink-0 mt-0.5 text-base" />
+                    <div>
+                      <div className="font-bold">No Matching Route Found</div>
+                      <div className="text-[11px] opacity-90 mt-0.5">{liveResolveError}</div>
                     </div>
-                  );
-                })()
-              ) : liveResolveError ? (
-                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-start gap-2.5">
-                  <FiAlertCircle className="shrink-0 mt-0.5 text-base" />
-                  <div>
-                    <div className="font-bold">No Matching Route Found</div>
-                    <div className="text-[11px] opacity-90 mt-0.5">{liveResolveError}</div>
                   </div>
-                </div>
-              ) : (
-                <div className="p-6 text-center rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 text-slate-400 text-xs">
-                  Enter a brand name above to evaluate the real-time routing resolution.
-                </div>
-              )}
-            </div>
+                ) : (
+                  <div className="p-6 text-center rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 text-slate-400 text-xs">
+                    Enter a brand name above to evaluate the real-time routing resolution.
+                  </div>
+                )}
+              </div>
 
-            {/* Footer */}
-            <div className="px-6 py-3.5 border-t border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-800/40 text-right">
-              <button
-                type="button"
-                onClick={() => setIsTestModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-              >
-                Close
-              </button>
+              {/* Footer */}
+              <div className="px-6 py-3.5 border-t border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-800/40 text-right">
+                <button
+                  type="button"
+                  onClick={() => setIsTestModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* ========================================================
           SINGLE BRAND MATRIX CONFIGURATION MODAL
@@ -2020,406 +2012,405 @@ const BrandRoutings = () => {
               onClick={() => !submitting && setIsModalOpen(false)}
             />
             <div className="relative bg-white/40 dark:bg-slate-950/25 backdrop-blur-2xl rounded-3xl border border-slate-200/90 dark:border-white/10 shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
-            {/* Modal Header */}
-            <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 text-lg">
-                  <FiGitBranch />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    {modalBrand ? `Configure Routing: ${modalBrand}` : 'Configure New Brand Routing'}
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Define territorial routing rules and billing companies.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
-              >
-                <FiX size={18} />
-              </button>
-            </div>
-
-            {/* Modal Form */}
-            <form onSubmit={handleSaveMatrix} className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
-              {modalError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
-                  <FiAlertCircle className="shrink-0 text-sm" />
-                  <span>{modalError}</span>
-                </div>
-              )}
-
-              {loadingBrandDetails && (
-                <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-semibold flex items-center gap-2 animate-pulse">
-                  <FiRefreshCw className="shrink-0 text-sm animate-spin" />
-                  <span>Syncing routing rules for {modalBrand || 'brand'} from server...</span>
-                </div>
-              )}
-
-              {/* Brand and Policy */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                <div className="sm:col-span-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Brand Name *
-                    </label>
-                    {modalBrand.trim() && (
-                      <button
-                        type="button"
-                        onClick={() => fetchBrandRules(modalBrand.trim())}
-                        disabled={loadingBrandDetails}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold hover:bg-purple-500/20 transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50"
-                        title="Fetch existing rules from GET /brand-routings/matrix/{brand}"
-                      >
-                        <FiRefreshCw className={loadingBrandDetails ? 'animate-spin' : ''} />
-                        <span>Load Existing Rules</span>
-                      </button>
-                    )}
+              {/* Modal Header */}
+              <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 text-lg">
+                    <FiGitBranch />
                   </div>
-                  <input
-                    type="text"
-                    value={modalBrand}
-                    onChange={(e) => setModalBrand(e.target.value)}
-                    placeholder='e.g. Realme or "ALL" for global fallback'
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                    required
-                  />
-                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                    <span className="text-[10px] text-slate-400">Quick set:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setModalBrand('ALL');
-                        fetchBrandRules('ALL');
-                      }}
-                      className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-500/20 transition-colors cursor-pointer"
-                    >
-                      ALL (Global Fallback)
-                    </button>
-                    {allBrands.filter((b) => b !== 'ALL').slice(0, 4).map((b) => (
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      {modalBrand ? `Configure Routing: ${modalBrand}` : 'Configure New Brand Routing'}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Define territorial routing rules and billing companies.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  <FiX size={18} />
+                </button>
+              </div>
+
+              {/* Modal Form */}
+              <form onSubmit={handleSaveMatrix} className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
+                {modalError && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
+                    <FiAlertCircle className="shrink-0 text-sm" />
+                    <span>{modalError}</span>
+                  </div>
+                )}
+
+                {loadingBrandDetails && (
+                  <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-semibold flex items-center gap-2 animate-pulse">
+                    <FiRefreshCw className="shrink-0 text-sm animate-spin" />
+                    <span>Syncing routing rules for {modalBrand || 'brand'} from server...</span>
+                  </div>
+                )}
+
+                {/* Brand and Policy */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                  <div className="sm:col-span-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Brand Name *
+                      </label>
+                      {modalBrand.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => fetchBrandRules(modalBrand.trim())}
+                          disabled={loadingBrandDetails}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold hover:bg-purple-500/20 transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                          title="Fetch existing rules from GET /brand-routings/matrix/{brand}"
+                        >
+                          <FiRefreshCw className={loadingBrandDetails ? 'animate-spin' : ''} />
+                          <span>Load Existing Rules</span>
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={modalBrand}
+                      onChange={(e) => setModalBrand(e.target.value)}
+                      placeholder='e.g. Realme or "ALL" for global fallback'
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                      required
+                    />
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      <span className="text-[10px] text-slate-400">Quick set:</span>
                       <button
-                        key={b}
                         type="button"
                         onClick={() => {
-                          setModalBrand(b);
-                          fetchBrandRules(b);
+                          setModalBrand('ALL');
+                          fetchBrandRules('ALL');
                         }}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-white/20 transition-colors cursor-pointer"
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-500/20 transition-colors cursor-pointer"
                       >
-                        {b}
+                        ALL (Global Fallback)
                       </button>
-                    ))}
+                      {allBrands.filter((b) => b !== 'ALL').slice(0, 4).map((b) => (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() => {
+                            setModalBrand(b);
+                            fetchBrandRules(b);
+                          }}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-white/20 transition-colors cursor-pointer"
+                        >
+                          {b}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Replace Policy
+                    </label>
+                    <label className="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={replaceExisting}
+                        onChange={(e) => setReplaceExisting(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <span className="text-xs">Replace all old rules</span>
+                    </label>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Replace Policy
-                  </label>
-                  <label className="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={replaceExisting}
-                      onChange={(e) => setReplaceExisting(e.target.checked)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                    />
-                    <span className="text-xs">Replace all old rules</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Rules List */}
-              <div className="space-y-3 pt-1">
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-2">
-                  <span className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
-                    Routing Rules ({mappings.length})
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleAddMapping}
-                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 cursor-pointer flex items-center gap-1"
-                  >
-                    <FiPlus />
-                    <span>Add Rule</span>
-                  </button>
-                </div>
-
-                {mappings.map((mapping, mIdx) => {
-                  const isWildcardOnly = mapping.states.length === 1 && mapping.states[0] === '*';
-                  const ruleSearch = (stateSearchPerRule[mIdx] || '').toLowerCase();
-                  const displayedStates = ruleSearch
-                    ? INDIAN_STATES.filter((s) => s.toLowerCase().includes(ruleSearch))
-                    : INDIAN_STATES;
-
-                  return (
-                    <div
-                      key={mIdx}
-                      className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 space-y-3.5 shadow-xs"
+                {/* Rules List */}
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-2">
+                    <span className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                      Routing Rules ({mappings.length})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleAddMapping}
+                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 cursor-pointer flex items-center gap-1"
                     >
-                      {/* Rule Header */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400">
-                          Rule #{mIdx + 1}
-                        </span>
+                      <FiPlus />
+                      <span>Add Rule</span>
+                    </button>
+                  </div>
 
-                        <div className="flex items-center gap-2.5">
-                          <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={mapping.isActive}
-                              onChange={(e) => handleUpdateMappingField(mIdx, 'isActive', e.target.checked)}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                            />
-                            <span className="text-xs font-semibold">Active</span>
-                          </label>
+                  {mappings.map((mapping, mIdx) => {
+                    const isWildcardOnly = mapping.states.length === 1 && mapping.states[0] === '*';
+                    const ruleSearch = (stateSearchPerRule[mIdx] || '').toLowerCase();
+                    const displayedStates = ruleSearch
+                      ? INDIAN_STATES.filter((s) => s.toLowerCase().includes(ruleSearch))
+                      : INDIAN_STATES;
 
-                          {(mappings.length > 1 || mapping._id) && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveMapping(mIdx)}
-                              disabled={deletingRuleId === mapping._id}
-                              className="p-1 rounded text-slate-400 hover:text-rose-500 transition-colors cursor-pointer disabled:opacity-50"
-                              title={mapping._id ? 'Permanently delete this rule from database' : 'Remove rule'}
-                            >
-                              {deletingRuleId === mapping._id ? (
-                                <FiRefreshCw className="animate-spin text-xs" />
-                              ) : (
-                                <FiTrash2 size={13} />
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Company & Priority */}
-                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                        <div className="sm:col-span-8">
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                            Destination Corporate Entity *
-                          </label>
-                          <CustomDropdown
-                            value={mapping.companyCode || mapping.companyId}
-                            onChange={(val) => {
-                              const comp = companies.find((c) => c.code === val || c._id === val);
-                              handleUpdateMappingField(mIdx, 'companyCode', comp?.code || val);
-                              handleUpdateMappingField(mIdx, 'companyId', comp?._id || val);
-                            }}
-                            defaultLabel="Select Corporate Partner..."
-                            options={[
-                              { value: '', label: 'Select Company...' },
-                              ...companies.map((c) => ({
-                                value: c.code || c._id,
-                                label: getCompanyLabel(c)
-                              }))
-                            ]}
-                            statusColor="!px-3 !py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200"
-                          />
-                          {(() => {
-                            const comp = companies.find(
-                              (c) => (mapping.companyCode && c.code === mapping.companyCode) || (mapping.companyId && c._id === mapping.companyId)
-                            );
-                            if (!comp) return null;
-                            return (
-                              <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
-                                {comp.logo && (
-                                  <img
-                                    src={comp.logo}
-                                    alt={comp.name}
-                                    className="w-4 h-4 rounded object-contain bg-white border border-slate-200 dark:border-white/10 p-0.5 shrink-0"
-                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                  />
-                                )}
-                                <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">
-                                  {comp.name}
-                                </span>
-                                {comp.code && (
-                                  <span className="font-mono text-blue-600 dark:text-blue-400 font-bold">
-                                    ({comp.code})
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </div>
-
-                        <div className="sm:col-span-4">
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                            Priority (Optional)
-                          </label>
-                          <input
-                            type="number"
-                            value={mapping.priority !== undefined ? mapping.priority : ''}
-                            onChange={(e) => handleUpdateMappingField(mIdx, 'priority', e.target.value)}
-                            placeholder="e.g. 15, 10, 1"
-                            className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                          />
-                        </div>
-                      </div>
-
-                      {/* City Restrictions: Specific Cities & Excluded Cities */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                            Specific Cities (Optional, comma-separated)
-                          </label>
-                          <input
-                            type="text"
-                            value={mapping.citiesStr !== undefined ? mapping.citiesStr : (Array.isArray(mapping.cities) ? mapping.cities.join(', ') : '')}
-                            onChange={(e) => handleUpdateMappingField(mIdx, 'citiesStr', e.target.value)}
-                            placeholder="e.g. Mumbai, Nagpur"
-                            className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                          />
-                          <span className="text-[10px] text-slate-400 block mt-0.5">
-                            Rule applies ONLY to these cities in selected states
+                    return (
+                      <div
+                        key={mIdx}
+                        className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 space-y-3.5 shadow-xs"
+                      >
+                        {/* Rule Header */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400">
+                            Rule #{mIdx + 1}
                           </span>
-                        </div>
 
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                            Excluded Cities (Optional, comma-separated)
-                          </label>
-                          <input
-                            type="text"
-                            value={mapping.excludedCitiesStr !== undefined ? mapping.excludedCitiesStr : (Array.isArray(mapping.excludedCities) ? mapping.excludedCities.join(', ') : '')}
-                            onChange={(e) => handleUpdateMappingField(mIdx, 'excludedCitiesStr', e.target.value)}
-                            placeholder="e.g. Mumbai, Nagpur"
-                            className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                          />
-                          <span className="text-[10px] text-slate-400 block mt-0.5">
-                            Rule applies to all cities EXCEPT these in selected states
-                          </span>
-                        </div>
-                      </div>
+                          <div className="flex items-center gap-2.5">
+                            <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={mapping.isActive}
+                                onChange={(e) => handleUpdateMappingField(mIdx, 'isActive', e.target.checked)}
+                                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                              />
+                              <span className="text-xs font-semibold">Active</span>
+                            </label>
 
-                      {/* Territory Presets & Selection */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between flex-wrap gap-1.5">
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                            Covered Territories *
-                          </label>
-
-                          <div className="flex items-center gap-1 flex-wrap">
-                            {REGION_PRESETS.map((p) => (
+                            {(mappings.length > 1 || mapping._id) && (
                               <button
-                                key={p.name}
                                 type="button"
-                                onClick={() => handleApplyPresetToRule(mIdx, p.states)}
-                                className="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-slate-100 hover:bg-blue-500/10 hover:text-blue-600 dark:bg-white/5 dark:hover:bg-blue-500/20 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                                onClick={() => handleRemoveMapping(mIdx)}
+                                disabled={deletingRuleId === mapping._id}
+                                className="p-1 rounded text-slate-400 hover:text-rose-500 transition-colors cursor-pointer disabled:opacity-50"
+                                title={mapping._id ? 'Permanently delete this rule from database' : 'Remove rule'}
                               >
-                                {p.name}
+                                {deletingRuleId === mapping._id ? (
+                                  <FiRefreshCw className="animate-spin text-xs" />
+                                ) : (
+                                  <FiTrash2 size={13} />
+                                )}
                               </button>
-                            ))}
+                            )}
                           </div>
                         </div>
 
-                        {/* Selected chips */}
-                        <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 min-h-[38px] flex flex-wrap gap-1.5 items-center">
-                          {isWildcardOnly ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300">
-                              ★ Pan-India / Wildcard (*)
-                            </span>
-                          ) : mapping.states.length === INDIAN_STATES.length ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                              ✓ All 36 States
-                            </span>
-                          ) : mapping.states.length > 0 ? (
-                            mapping.states.map((st) => (
-                              <span
-                                key={st}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-300"
-                              >
-                                <span>{st}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleStateInMapping(mIdx, st)}
-                                  className="hover:text-rose-500 cursor-pointer ml-0.5"
-                                >
-                                  <FiX size={10} />
-                                </button>
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-[11px] text-slate-400 italic">
-                              Click a preset above or pick states below.
-                            </span>
-                          )}
-                        </div>
-
-                        {/* State Filter Input & Button Grid */}
-                        <div className="space-y-1.5">
-                          <input
-                            type="text"
-                            value={stateSearchPerRule[mIdx] || ''}
-                            onChange={(e) =>
-                              setStateSearchPerRule((prev) => ({ ...prev, [mIdx]: e.target.value }))
-                            }
-                            placeholder="Type to filter states..."
-                            className="w-full px-3 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-lg text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                          />
-
-                          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
-                            {displayedStates.map((state) => {
-                              const isSelected = mapping.states.includes(state);
-                              return (
-                                <button
-                                  key={state}
-                                  type="button"
-                                  onClick={() => handleToggleStateInMapping(mIdx, state)}
-                                  className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
-                                    isSelected
-                                      ? 'bg-blue-600 text-white border-blue-600 font-bold'
-                                      : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
-                                  }`}
-                                >
-                                  {isSelected ? '✓ ' : '+ '}{state}
-                                </button>
+                        {/* Company & Priority */}
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                          <div className="sm:col-span-8">
+                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Destination Corporate Entity *
+                            </label>
+                            <CustomDropdown
+                              value={mapping.companyCode || mapping.companyId}
+                              onChange={(val) => {
+                                const comp = companies.find((c) => c.code === val || c._id === val);
+                                handleUpdateMappingField(mIdx, 'companyCode', comp?.code || val);
+                                handleUpdateMappingField(mIdx, 'companyId', comp?._id || val);
+                              }}
+                              defaultLabel="Select Corporate Partner..."
+                              options={[
+                                { value: '', label: 'Select Company...' },
+                                ...companies.map((c) => ({
+                                  value: c.code || c._id,
+                                  label: getCompanyLabel(c)
+                                }))
+                              ]}
+                              statusColor="!px-3 !py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200"
+                            />
+                            {(() => {
+                              const comp = companies.find(
+                                (c) => (mapping.companyCode && c.code === mapping.companyCode) || (mapping.companyId && c._id === mapping.companyId)
                               );
-                            })}
+                              if (!comp) return null;
+                              return (
+                                <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                                  {comp.logo && (
+                                    <img
+                                      src={comp.logo}
+                                      alt={comp.name}
+                                      className="w-4 h-4 rounded object-contain bg-white border border-slate-200 dark:border-white/10 p-0.5 shrink-0"
+                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                  )}
+                                  <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                    {comp.name}
+                                  </span>
+                                  {comp.code && (
+                                    <span className="font-mono text-blue-600 dark:text-blue-400 font-bold">
+                                      ({comp.code})
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+
+                          <div className="sm:col-span-4">
+                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Priority (Optional)
+                            </label>
+                            <input
+                              type="number"
+                              value={mapping.priority !== undefined ? mapping.priority : ''}
+                              onChange={(e) => handleUpdateMappingField(mIdx, 'priority', e.target.value)}
+                              placeholder="e.g. 15, 10, 1"
+                              className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                            />
                           </div>
                         </div>
+
+                        {/* City Restrictions: Specific Cities & Excluded Cities */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Specific Cities (Optional, comma-separated)
+                            </label>
+                            <input
+                              type="text"
+                              value={mapping.citiesStr !== undefined ? mapping.citiesStr : (Array.isArray(mapping.cities) ? mapping.cities.join(', ') : '')}
+                              onChange={(e) => handleUpdateMappingField(mIdx, 'citiesStr', e.target.value)}
+                              placeholder="e.g. Mumbai, Nagpur"
+                              className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                            />
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              Rule applies ONLY to these cities in selected states
+                            </span>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Excluded Cities (Optional, comma-separated)
+                            </label>
+                            <input
+                              type="text"
+                              value={mapping.excludedCitiesStr !== undefined ? mapping.excludedCitiesStr : (Array.isArray(mapping.excludedCities) ? mapping.excludedCities.join(', ') : '')}
+                              onChange={(e) => handleUpdateMappingField(mIdx, 'excludedCitiesStr', e.target.value)}
+                              placeholder="e.g. Mumbai, Nagpur"
+                              className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                            />
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              Rule applies to all cities EXCEPT these in selected states
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Territory Presets & Selection */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between flex-wrap gap-1.5">
+                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                              Covered Territories *
+                            </label>
+
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {REGION_PRESETS.map((p) => (
+                                <button
+                                  key={p.name}
+                                  type="button"
+                                  onClick={() => handleApplyPresetToRule(mIdx, p.states)}
+                                  className="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-slate-100 hover:bg-blue-500/10 hover:text-blue-600 dark:bg-white/5 dark:hover:bg-blue-500/20 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                                >
+                                  {p.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Selected chips */}
+                          <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 min-h-[38px] flex flex-wrap gap-1.5 items-center">
+                            {isWildcardOnly ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300">
+                                ★ Pan-India / Wildcard (*)
+                              </span>
+                            ) : mapping.states.length === INDIAN_STATES.length ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                                ✓ All 36 States
+                              </span>
+                            ) : mapping.states.length > 0 ? (
+                              mapping.states.map((st) => (
+                                <span
+                                  key={st}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                                >
+                                  <span>{st}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleStateInMapping(mIdx, st)}
+                                    className="hover:text-rose-500 cursor-pointer ml-0.5"
+                                  >
+                                    <FiX size={10} />
+                                  </button>
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic">
+                                Click a preset above or pick states below.
+                              </span>
+                            )}
+                          </div>
+
+                          {/* State Filter Input & Button Grid */}
+                          <div className="space-y-1.5">
+                            <input
+                              type="text"
+                              value={stateSearchPerRule[mIdx] || ''}
+                              onChange={(e) =>
+                                setStateSearchPerRule((prev) => ({ ...prev, [mIdx]: e.target.value }))
+                              }
+                              placeholder="Type to filter states..."
+                              className="w-full px-3 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-lg text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                            />
+
+                            <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
+                              {displayedStates.map((state) => {
+                                const isSelected = mapping.states.includes(state);
+                                return (
+                                  <button
+                                    key={state}
+                                    type="button"
+                                    onClick={() => handleToggleStateInMapping(mIdx, state)}
+                                    className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${isSelected
+                                        ? 'bg-blue-600 text-white border-blue-600 font-bold'
+                                        : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
+                                      }`}
+                                  >
+                                    {isSelected ? '✓ ' : '+ '}{state}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Note */}
+                        <input
+                          type="text"
+                          value={mapping.description}
+                          onChange={(e) => handleUpdateMappingField(mIdx, 'description', e.target.value)}
+                          placeholder="Internal description (optional)"
+                          className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                        />
                       </div>
+                    );
+                  })}
+                </div>
+              </form>
 
-                      {/* Note */}
-                      <input
-                        type="text"
-                        value={mapping.description}
-                        onChange={(e) => handleUpdateMappingField(mIdx, 'description', e.target.value)}
-                        placeholder="Internal description (optional)"
-                        className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                  );
-                })}
+              {/* Modal Footer */}
+              <div className="p-4 sm:px-6 border-t border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveMatrix}
+                  disabled={submitting}
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {submitting && <FiRefreshCw className="animate-spin text-xs" />}
+                  <span>{submitting ? 'Saving...' : 'Save Matrix Rules'}</span>
+                </button>
               </div>
-            </form>
-
-            {/* Modal Footer */}
-            <div className="p-4 sm:px-6 border-t border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/5 transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveMatrix}
-                disabled={submitting}
-                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {submitting && <FiRefreshCw className="animate-spin text-xs" />}
-                <span>{submitting ? 'Saving...' : 'Save Matrix Rules'}</span>
-              </button>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* ========================================================
           BULK MATRIX MODAL
@@ -2432,41 +2423,41 @@ const BrandRoutings = () => {
               onClick={() => !bulkSubmitting && setIsBulkModalOpen(false)}
             />
             <div className="relative bg-white/40 dark:bg-slate-950/25 backdrop-blur-2xl rounded-3xl border border-slate-200/90 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
-            {/* Header */}
-            <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 text-lg">
-                  <FiUploadCloud />
+              {/* Header */}
+              <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 text-lg">
+                    <FiUploadCloud />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      Bulk Brand Routing Matrix
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Deploy routing rules for multiple brands in one batch.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Bulk Brand Routing Matrix
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Deploy routing rules for multiple brands in one batch.
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkModalOpen(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                >
+                  <FiX size={18} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsBulkModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
-              >
-                <FiX size={18} />
-              </button>
-            </div>
 
-            {/* Body */}
-            <div className="p-6 overflow-y-auto space-y-3 flex-1">
-              {bulkModalError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
-                  <FiAlertCircle className="shrink-0 text-sm" />
-                  <span>{bulkModalError}</span>
-                </div>
-              )}
+              {/* Body */}
+              <div className="p-6 overflow-y-auto space-y-3 flex-1">
+                {bulkModalError && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
+                    <FiAlertCircle className="shrink-0 text-sm" />
+                    <span>{bulkModalError}</span>
+                  </div>
+                )}
 
-              <div className="space-y-3">
-                {bulkBrands.map((bItem, bIdx) => (
+                <div className="space-y-3">
+                  {bulkBrands.map((bItem, bIdx) => (
                     <div
                       key={bIdx}
                       className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2.5"
@@ -2566,29 +2557,29 @@ const BrandRoutings = () => {
                 </div>
               </div>
 
-            {/* Footer */}
-            <div className="p-4 sm:px-6 border-t border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsBulkModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/5 transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveBulkMatrix}
-                disabled={bulkSubmitting}
-                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-md shadow-purple-500/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {bulkSubmitting && <FiRefreshCw className="animate-spin text-xs" />}
-                <span>{bulkSubmitting ? 'Deploying...' : 'Deploy Bulk Matrix'}</span>
-              </button>
+              {/* Footer */}
+              <div className="p-4 sm:px-6 border-t border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveBulkMatrix}
+                  disabled={bulkSubmitting}
+                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-md shadow-purple-500/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {bulkSubmitting && <FiRefreshCw className="animate-spin text-xs" />}
+                  <span>{bulkSubmitting ? 'Deploying...' : 'Deploy Bulk Matrix'}</span>
+                </button>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getAccessibleMenus } from '@/config/menus';
 import { getProductsApi, getCategoryApi, getUsersApi, getCompaniesApi, getFirmsApi, getPurchaseOrdersApi } from '@/api/axios';
 import { CardGridSkeleton } from '@/components/ui/Skeleton';
+import BackButton from '@/components/ui/BackButton';
 
 const SearchResults = () => {
   const { user } = useAuth();
@@ -182,7 +183,10 @@ const SearchResults = () => {
     <div className="relative space-y-6 min-h-full z-0">
       {/* Header Section */}
       <div className="flex flex-col gap-2 mb-8">
-        <h1 className="text-3xl font-bold text-white tracking-tight">Search Results</h1>
+        <div className="flex items-center gap-3 flex-wrap">
+          <BackButton />
+          <h1 className="text-3xl font-bold text-white tracking-tight">Search Results</h1>
+        </div>
         <p className="text-slate-400 font-medium">
           Showing results for: <span className="text-blue-500 font-bold">"{query}"</span>
         </p>

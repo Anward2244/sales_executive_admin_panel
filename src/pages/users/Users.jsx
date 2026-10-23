@@ -15,7 +15,7 @@ import { useConfirm } from '@/context/ConfirmationContext';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import GmailLink from '@/components/ui/GmailLink';
-import { BulkActionBar, BatchProgressModal } from '@/components/ui';
+import { BulkActionBar, BatchProgressModal, BackButton } from '@/components/ui';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { createPortal } from 'react-dom';
 import { formatPhone, formatEntityCode } from '@/utils/formatters';
@@ -956,10 +956,13 @@ const UsersList = () => {
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-              <FiUser className="text-blue-600 dark:text-blue-400" />
-              Users List
-            </h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <BackButton />
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+                <FiUser className="text-blue-600 dark:text-blue-400" />
+                Users List
+              </h1>
+            </div>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
               Manage system administrators, sales executives, and user accounts.
             </p>

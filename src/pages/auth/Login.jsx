@@ -21,8 +21,8 @@ import {
   FiEye,
   FiEyeOff
 } from 'react-icons/fi';
-import auricLoginDark from '@/assets/Auric_login_dark.png';
-import auricLoginLight from '@/assets/Auric_login_light.png';
+import auricLoginFullDark from '@/assets/auric_login_full_dark.png';
+import auricLoginFullLight from '@/assets/auric_login_full_light.png';
 import auricLightLogo from '@/assets/auric_light.png';
 import auricDarkLogo from '@/assets/auric_dark.png';
 
@@ -121,11 +121,20 @@ const Login = () => {
       isDark ? 'panel-bg-dark text-slate-300' : 'panel-bg-light text-slate-700'
     }`}>
 
-      {/* Unified Global Background Lighting */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-1/2 left-[25%] -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full filter blur-[140px] opacity-20 dark:opacity-45 bg-blue-400/40 dark:bg-blue-600/50"></div>
-        <div className="absolute top-1/4 left-[35%] -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] rounded-full filter blur-[120px] opacity-15 dark:opacity-30 bg-indigo-400/35 dark:bg-indigo-600/40"></div>
-        <div className="absolute bottom-1/4 right-[25%] translate-x-1/2 translate-y-1/2 w-[500px] h-[500px] rounded-full filter blur-[140px] opacity-10 dark:opacity-25 bg-blue-300/30 dark:bg-blue-700/30"></div>
+      {/* Full Background Wallpaper (No floor, elements on left, clean empty right side for form card) */}
+      <div className="absolute inset-0 w-full h-full z-0 overflow-hidden select-none pointer-events-none">
+        <img
+          src={isDark ? auricLoginFullDark : auricLoginFullLight}
+          alt="Auric Distribution & Commerce Platform"
+          className="w-full h-full object-cover object-left lg:object-center transition-all duration-700"
+          style={{
+            maskImage: 'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 40%, rgba(0,0,0,0.8) 55%, rgba(0,0,0,0) 85%)',
+            WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 40%, rgba(0,0,0,0.8) 55%, rgba(0,0,0,0) 85%)'
+          }}
+          fetchPriority="high"
+          loading="eager"
+          decoding="async"
+        />
       </div>
 
       {/* Floating Theme Switcher */}
@@ -151,26 +160,19 @@ const Login = () => {
         </button>
       </div>
 
-      {/* Left Image Section */}
-      <div className="hidden lg:flex lg:w-1/2 h-full items-center justify-center relative shrink-0 z-10">
-        <img
-          src={isDark ? auricLoginDark : auricLoginLight}
-          alt="Auric Distribution Hub & Brand Ecosystem"
-          className="max-h-full max-w-full object-contain select-none pointer-events-none drop-shadow-[0_20px_45px_rgba(30,58,138,0.18)] dark:drop-shadow-[0_0_45px_rgba(37,99,235,0.4)] transition-all duration-500"
-          fetchPriority="high"
-          loading="eager"
-          decoding="async"
-        />
-      </div>
+      {/* Main Viewport Content: Left spacer for 3D art, Right side for Form Card */}
+      <div className="relative z-10 w-full h-full flex flex-col lg:flex-row items-stretch">
+        {/* Left Side: Empty spacing area letting the floating 3D elements in the background shine through */}
+        <div className="hidden lg:flex lg:w-1/2 h-full items-center justify-center pointer-events-none" />
 
-      {/* Right Form Section */}
-      <div className={`w-full lg:w-1/2 h-full flex flex-col items-center relative px-4 ${isRegisterMode || isResetMode ? 'overflow-y-auto' : 'overflow-y-auto justify-center'} z-10`}>
+        {/* Right Form Section: Placed cleanly over the empty right side of the wallpaper */}
+        <div className={`w-full lg:w-1/2 h-full flex flex-col items-center justify-center relative px-4 sm:px-8 py-6 ${isRegisterMode || isResetMode ? 'overflow-y-auto' : 'overflow-y-auto justify-center'}`}>
 
-        {/* Auth Card */}
-        <div className={`relative w-full ${isRegisterMode || isResetMode
-            ? 'max-w-lg my-4 sm:my-6 pb-6 p-4 sm:p-6'
-            : 'max-w-[380px] my-auto p-4 sm:p-5'
-          } bg-transparent backdrop-blur-xl border border-slate-200/90 dark:border-white/10 transform-gpu shadow-2xl shadow-slate-500/20 dark:shadow-black/50 rounded-3xl z-10 transition-all duration-300 shrink-0`}>
+          {/* Auth Card */}
+          <div className={`relative w-full ${isRegisterMode || isResetMode
+              ? 'max-w-lg my-auto pb-6 p-4 sm:p-6'
+              : 'max-w-[390px] my-auto p-5 sm:p-6'
+            } bg-white/40 dark:bg-slate-900/50 backdrop-blur-2xl border border-slate-200/90 dark:border-white/10 transform-gpu shadow-2xl shadow-slate-900/15 dark:shadow-black/70 rounded-3xl z-10 transition-all duration-300 shrink-0`}>
 
           {/* Branding */}
           <div className={`flex flex-col items-center justify-center ${isRegisterMode || isResetMode ? 'mb-3 sm:mb-4' : 'mb-2 sm:mb-2.5'}`}>
@@ -564,6 +566,7 @@ const Login = () => {
         </div>
       </div>
     </div>
+  </div>
   );
 };
 
