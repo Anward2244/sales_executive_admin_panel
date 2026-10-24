@@ -66,7 +66,7 @@ import {
   saveDisplayPreferences,
   DEFAULT_DISPLAY_PREFERENCES
 } from '@/utils/displayPreferences';
-import appIconImg from '@/assets/auric.png';
+import appIconImg from '@/assets/whatnot_icon.png';
 
 const getInitialStorage = () => {
   try {
@@ -273,7 +273,7 @@ const Settings = () => {
       if (granted === 'granted' || currentPerm === 'granted') {
         triggerFeedback('Desktop notification permission granted!');
         showBrowserNotification({
-          title: 'Auric Desktop Alerts Active',
+          title: 'Whatnot Sales Desktop Alerts Active',
           body: 'Browser notifications are now authorized and ready to alert you on new orders and events.',
           tag: 'test-permission-granted'
         });
@@ -315,7 +315,7 @@ const Settings = () => {
       title: 'New Purchase Order Received',
       body: 'Purchase Order PO-2026-000001 for B New Mobiles (₹1,122,543) submitted.',
       path: '/purchase-orders',
-      tag: 'test-auric-alert'
+      tag: 'test-whatnot-alert'
     });
     playNotificationSound(notificationConfig.soundType, notificationConfig.soundVolume);
 
@@ -2257,7 +2257,7 @@ const Settings = () => {
                   Active Operator
                 </p>
                 <p className="text-base font-black text-slate-900 dark:text-white mt-1 truncate">
-                  {user?.email || 'admin@Auric.in'}
+                  {user?.email || 'admin@whatnotsales.in'}
                 </p>
                 <p className="text-[11px] text-blue-500 font-semibold mt-1 uppercase">
                   {user?.role || 'ADMIN'} Privileges

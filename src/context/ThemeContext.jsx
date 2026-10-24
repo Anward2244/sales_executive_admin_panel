@@ -2,12 +2,13 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext();
 
-const THEME_STORAGE_KEY = 'Auric_panel_theme_mode';
+const THEME_STORAGE_KEY = 'whatnot_sales_panel_theme_mode';
+const LEGACY_THEME_STORAGE_KEY = 'Auric_panel_theme_mode';
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
     try {
-      const saved = localStorage.getItem(THEME_STORAGE_KEY);
+      const saved = localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
       if (saved === 'light' || saved === 'dark') return saved;
       return 'light'; // Default theme
     } catch {

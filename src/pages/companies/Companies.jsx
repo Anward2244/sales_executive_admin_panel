@@ -930,7 +930,7 @@ const Companies = () => {
                   name="name"
                   required
                   disabled={submitting}
-                  placeholder="e.g. Auric Lifestyle Private Limited"
+                  placeholder="e.g. Whatnot Sales Private Limited"
                   value={formData.name}
                   onChange={handleInputChange}
                   className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400"
@@ -949,7 +949,7 @@ const Companies = () => {
                     name="code"
                     required
                     disabled={submitting}
-                    placeholder="e.g. AURIC"
+                    placeholder="e.g. WHATNOT"
                     value={formData.code}
                     onChange={handleInputChange}
                     className="w-full pl-10 pr-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400"
@@ -982,7 +982,7 @@ const Companies = () => {
                     type="url"
                     name="logo"
                     disabled={submitting}
-                    placeholder="https://example.com/auric-logo.png"
+                    placeholder="https://example.com/whatnot-logo.png"
                     value={formData.logo}
                     onChange={handleInputChange}
                     className="flex-1 px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 font-mono text-xs"

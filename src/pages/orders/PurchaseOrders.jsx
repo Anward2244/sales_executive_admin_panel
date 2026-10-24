@@ -806,7 +806,7 @@ const PurchaseOrders = () => {
   const [bulkRejectReason, setBulkRejectReason] = useState('');
   const [bulkDispatchData, setBulkDispatchData] = useState({
     carrier: 'Blue Dart Express',
-    trackingPrefix: 'AURIC-DISP',
+    trackingPrefix: 'WHATNOT-DISP',
     notes: ''
   });
   const [batchProgress, setBatchProgress] = useState({
@@ -1032,7 +1032,7 @@ const PurchaseOrders = () => {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Purchase Orders');
-    XLSX.writeFile(wb, `Auric_Orders_Export_${Date.now()}.xlsx`);
+    XLSX.writeFile(wb, `Whatnot_Sales_Orders_Export_${Date.now()}.xlsx`);
   };
 
   // Estimated create PO total

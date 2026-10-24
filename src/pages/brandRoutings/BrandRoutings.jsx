@@ -921,7 +921,7 @@ const BrandRoutings = () => {
     const comp = typeof firstRule?.companyId === 'object'
       ? firstRule.companyId
       : companies.find((c) => c._id === firstRule?.companyId || c.code === firstRule?.companyCode);
-    return comp?.name || firstRule?.companyCode || comp?.code || 'Auric (Global)';
+    return comp?.name || firstRule?.companyCode || comp?.code || 'Whatnot Sales (Global)';
   }, [matrixData, companies]);
 
   return (

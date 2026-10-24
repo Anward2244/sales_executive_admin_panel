@@ -5,8 +5,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-export const DISPLAY_PREFS_KEY = 'Auric_display_preferences';
-export const DISPLAY_PREFS_EVENT = 'Auric:display-preferences-changed';
+export const DISPLAY_PREFS_KEY = 'whatnot_sales_display_preferences';
+export const LEGACY_DISPLAY_PREFS_KEY = 'Auric_display_preferences';
+export const DISPLAY_PREFS_EVENT = 'WhatnotSales:display-preferences-changed';
 
 export const DEFAULT_DISPLAY_PREFERENCES = {
   density: 'comfortable', // 'comfortable' | 'compact' | 'dense'
@@ -61,7 +62,7 @@ export const getDensityStyles = (density = 'comfortable') => {
 export const getDisplayPreferences = () => {
   try {
     if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem(DISPLAY_PREFS_KEY);
+      const saved = localStorage.getItem(DISPLAY_PREFS_KEY) || localStorage.getItem(LEGACY_DISPLAY_PREFS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         return {
@@ -111,6 +112,7 @@ export const saveDisplayPreferences = (newPrefs) => {
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(DISPLAY_PREFS_EVENT, { detail: updated }));
+      window.dispatchEvent(new CustomEvent('Auric:display-preferences-changed', { detail: updated }));
     }
     return updated;
   } catch (err) {
@@ -151,10 +153,12 @@ export const useDisplayPreferences = () => {
     };
 
     window.addEventListener(DISPLAY_PREFS_EVENT, handlePrefsChange);
+    window.addEventListener('Auric:display-preferences-changed', handlePrefsChange);
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
       window.removeEventListener(DISPLAY_PREFS_EVENT, handlePrefsChange);
+      window.removeEventListener('Auric:display-preferences-changed', handlePrefsChange);
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);

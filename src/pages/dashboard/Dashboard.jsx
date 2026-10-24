@@ -639,7 +639,7 @@ const Dashboard = () => {
     });
 
     return {
-      name: 'Auric B2B Network',
+      name: 'Whatnot Sales B2B Network',
       nodeType: 'root',
       children: companyChildren
     };

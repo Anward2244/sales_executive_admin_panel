@@ -1,9 +1,9 @@
 {
-  "name": "auric",
+  "name": "whatnot-sales",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": {
+  "scripts": {  
     "dev": "vite",
     "build": "vite build",
     "host": "react-scripts start --host 0.0.0.0",

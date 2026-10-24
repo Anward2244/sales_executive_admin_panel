@@ -6,7 +6,7 @@
  * Formats an entity/company/firm/product code:
  * Converts to uppercase, strips invalid special characters (keeps alphanumeric, hyphens, and underscores),
  * and replaces spaces with hyphens.
- * Example: "auric co 01" -> "AURIC-CO-01"
+ * Example: "whatnot co 01" -> "WHATNOT-CO-01"
  */
 export const formatEntityCode = (val) => {
   if (!val) return '';

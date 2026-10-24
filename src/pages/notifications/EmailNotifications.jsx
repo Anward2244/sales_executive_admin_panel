@@ -1302,7 +1302,7 @@ const EmailNotifications = () => {
             <form onSubmit={handleAddRecipient} className="flex gap-2 text-xs">
               <input
                 type="email"
-                placeholder="Enter recipient email (e.g. accounts@Auric.in)..."
+                placeholder="Enter recipient email (e.g. accounts@whatnotsales.in)..."
                 value={newRecipientInput}
                 onChange={(e) => {
                   setNewRecipientInput(e.target.value);

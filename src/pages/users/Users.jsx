@@ -947,7 +947,7 @@ const UsersList = () => {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Users');
-    XLSX.writeFile(wb, `Auric_Users_Export_${Date.now()}.xlsx`);
+    XLSX.writeFile(wb, `Whatnot_Sales_Users_Export_${Date.now()}.xlsx`);
   };
 
   return (

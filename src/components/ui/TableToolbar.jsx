@@ -54,7 +54,7 @@ export const TableToolbar = ({
 
   return (
     <div
-      className={`relative z-25 flex flex-wrap items-center justify-between gap-2.5 py-2 px-3.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs ring-1 ring-slate-900/5 dark:ring-white/5 ${className}`}
+      className={`relative z-25 flex flex-wrap items-center justify-between gap-2.5 py-2 px-3.5 bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs ring-1 ring-slate-900/5 dark:ring-white/5 ${className}`}
     >
       {/* Left section: counts & extra custom controls */}
       <div className="flex items-center gap-2.5 flex-wrap">

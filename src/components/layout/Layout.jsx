@@ -13,8 +13,10 @@ import {
 import { getAccessibleMenus } from '@/config/menus';
 import HeaderSearch from './HeaderSearch';
 import InternetStrengthIndicator from './InternetStrengthIndicator';
-import auricLightLogo from '@/assets/auric_light.png';
-import auricDarkLogo from '@/assets/auric_dark.png';
+import whatnotLogoLight from '@/assets/whatnot_logo_light.png';
+import whatnotLogoDark from '@/assets/whatnot_logo_dark.png';
+import whatnotIconLight from '@/assets/whatnot_icon_light.png';
+import whatnotIconDark from '@/assets/whatnot_icon_dark.png';
 import {
   api,
   BASE_URL,
@@ -42,7 +44,8 @@ const Layout = () => {
   const { user, logout, userPermissions } = useAuth();
   const { theme, isDark, toggleTheme } = useTheme();
   const { preferences: displayPrefs } = useDisplayPreferences();
-  const auricLogo = isDark ? auricDarkLogo : auricLightLogo;
+  const whatnotLogo = isDark ? whatnotLogoDark : whatnotLogoLight;
+  const auricLogo = whatnotLogo;
   const location = useLocation();
   const mainRef = useRef(null);
   const [pollingConfigVersion, setPollingConfigVersion] = useState(0);
@@ -51,8 +54,12 @@ const Layout = () => {
     const handleSettingsChange = () => {
       setPollingConfigVersion(v => v + 1);
     };
+    window.addEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
     window.addEventListener('Auric:notification-settings-changed', handleSettingsChange);
-    return () => window.removeEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    return () => {
+      window.removeEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+      window.removeEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    };
   }, []);
 
   const isChatRoute = location.pathname.startsWith('/chat');
@@ -185,6 +192,7 @@ const Layout = () => {
         setBrowserAlertsEnabled(isBrowserAlertsEnabled());
       }
     };
+    window.addEventListener('WhatnotSales:notification-settings-changed', onSettingsChange);
     window.addEventListener('Auric:notification-settings-changed', onSettingsChange);
 
     let permStatus = null;
@@ -201,6 +209,7 @@ const Layout = () => {
 
     return () => {
       window.removeEventListener('focus', updatePerm);
+      window.removeEventListener('WhatnotSales:notification-settings-changed', onSettingsChange);
       window.removeEventListener('Auric:notification-settings-changed', onSettingsChange);
       if (permStatus) permStatus.onchange = null;
     };
@@ -251,7 +260,7 @@ const Layout = () => {
         title,
         body: message,
         path,
-        tag: tag || `Auric-${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        tag: tag || `WhatnotSales-${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
         category,
         navigate: navigation
       });
@@ -292,7 +301,7 @@ const Layout = () => {
 
   const handleTestBrowserNotification = () => {
     showBrowserNotification({
-      title: 'Auric Admin Test Alert',
+      title: 'Whatnot Sales Admin Test Alert',
       body: 'Browser notifications are working perfectly! You will receive live alerts for system notifications and updates.',
       path: '/notifications',
       tag: `test-alert-${Date.now()}`,
@@ -451,9 +460,9 @@ const Layout = () => {
           // Show test notification via service worker
           if (navigator.serviceWorker && navigator.serviceWorker.ready) {
             navigator.serviceWorker.ready.then(registration => {
-              registration.showNotification('Auric Notifications', {
+              registration.showNotification('Whatnot Sales Notifications', {
                 body: 'Mobile alerts are now active!',
-                icon: auricLogo,
+                icon: whatnotLogo,
                 vibrate: [100, 50, 100]
               });
             });
@@ -591,9 +600,9 @@ const Layout = () => {
   useEffect(() => {
     const totalNotifications = chatUnreadCount + usersUnreadCount + notificationsUnreadCount + pendingOnboardingCount;
     if (totalNotifications > 0) {
-      document.title = `(${totalNotifications}) Auric`;
+      document.title = `(${totalNotifications}) Whatnot Sales`;
     } else {
-      document.title = 'Auric';
+      document.title = 'Whatnot Sales';
     }
   }, [chatUnreadCount, usersUnreadCount, notificationsUnreadCount, pendingOnboardingCount]);
 
@@ -749,7 +758,7 @@ const Layout = () => {
           ? 'bg-slate-950/80 border-white/10 shadow-xl shadow-black/50' 
           : 'bg-white/85 border-slate-200/80 shadow-md shadow-slate-900/5'
       }`}>
-        <img src={auricLogo} alt="Auric Logo" className="h-12 w-auto object-contain" />
+        <img src={isDark ? whatnotLogoDark : whatnotLogoLight} alt="Whatnot Sales Logo" className="h-8 w-auto object-contain" />
         <div className="flex items-center gap-3">
           {/* Mobile Internet Strength Indicator */}
           <InternetStrengthIndicator compact={true} />
@@ -1043,16 +1052,16 @@ const Layout = () => {
         <div className={`h-16 flex items-center justify-center border-b bg-transparent shrink-0 relative overflow-hidden ${
           isDark ? 'border-white/10' : 'border-slate-200/80'
         }`}>
-          {/* Full Logo */}
+          {/* Full Logo (Expanded) */}
           <div className={`absolute transition-all duration-300 ease-in-out flex items-center justify-center ${isExpanded ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-75 rotate-[-12deg] pointer-events-none'
             }`}>
-            <Link to="/" data-nav-menu="true"><img src={isDark ? auricDarkLogo : auricLightLogo} alt="Auric Logo" className="h-14 w-auto object-contain scale-125" /></Link>
+            <Link to="/" data-nav-menu="true"><img src={isDark ? whatnotLogoDark : whatnotLogoLight} alt="Whatnot Sales Logo" className="h-13 w-auto object-contain" /></Link>
           </div>
 
           {/* Collapsed App Icon */}
           <div className={`absolute transition-all duration-300 ease-in-out flex items-center justify-center ${isExpanded ? 'opacity-0 scale-75 rotate-[12deg] pointer-events-none' : 'opacity-100 scale-100 rotate-0'
             }`}>
-            <Link to="/" data-nav-menu="true"><img src={isDark ? auricDarkLogo : auricLightLogo} alt="Auric Logo" className="lg:h-12 lg:w-12 h-12 w-auto object-contain" /></Link>
+            <Link to="/" data-nav-menu="true"><img src={isDark ? whatnotIconDark : whatnotIconLight} alt="Whatnot Sales Icon" className="h-11 w-11 object-contain" /></Link>
           </div>
 
           {/* Mobile Close Button */}
@@ -1654,7 +1663,7 @@ const Layout = () => {
           <div className={`w-full mx-auto flex flex-col md:flex-row justify-between items-center text-xs font-medium ${
             isDark ? 'text-slate-400' : 'text-slate-500'
           }`}>
-            <p>© {new Date().getFullYear()} Auric Workspace. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Whatnot Sales Workspace. All rights reserved.</p>
             <div className="flex items-center space-x-4 mt-2 md:mt-0">
               {/* <Link to="/help" className="hover:text-blue-500 transition-colors">Help Center</Link> */}
               <Link to="/settings/privacy-policy" className={`transition-colors ${
