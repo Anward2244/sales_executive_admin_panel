@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
 import { useNavigationHistory } from '@/context/NavigationHistoryContext';
 
@@ -7,9 +8,11 @@ const BackButton = ({
   label = 'Back',
   title = 'Go back to previous page',
   forceVisible = false,
+  fallback = '/dashboard',
   onClick
 }) => {
   const { canGoBack, goBack } = useNavigationHistory();
+  const navigate = useNavigate();
 
   if (!canGoBack && !forceVisible) {
     return null;
@@ -18,8 +21,14 @@ const BackButton = ({
   const handleClick = (e) => {
     if (onClick) {
       onClick(e);
-    } else {
+    } else if (canGoBack) {
       goBack();
+    } else {
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        navigate(fallback);
+      }
     }
   };
 

@@ -540,45 +540,71 @@ const Companies = () => {
       />
 
       {/* Filter and Action Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-none p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-md">
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-none p-2 rounded-full border border-slate-200/80 dark:border-white/10 shadow-md">
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             type="button"
             onClick={handleOpenModal}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-full transition-all shadow-lg shadow-blue-600/25 cursor-pointer active:scale-95"
           >
             <FiPlus className="text-base" />
             <span>Add Company</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-white/5 rounded-xl shadow-md border border-slate-200/80 dark:border-white/10 w-full sm:w-auto justify-center">
+        <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start sm:self-auto">
           {[
-            { id: 'all', label: 'All', count: totalCount },
-            { id: 'active', label: 'Active', count: activeCount },
-            { id: 'inactive', label: 'Inactive', count: inactiveCount }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                setStatusFilter(tab.id);
-                setCurrentPage(1);
-              }}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === tab.id
-                ? 'bg-white dark:bg-white/15 text-blue-600 dark:text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+            {
+              id: 'all',
+              label: 'All',
+              count: totalCount,
+              badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
+              bg: 'bg-blue-600',
+              activeBadgeClass: 'bg-blue-800'
+            },
+            {
+              id: 'active',
+              label: 'Active',
+              count: activeCount,
+              badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+              bg: 'bg-emerald-600',
+              activeBadgeClass: 'bg-emerald-800'
+            },
+            {
+              id: 'inactive',
+              label: 'Inactive',
+              count: inactiveCount,
+              badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+              bg: 'bg-rose-600',
+              activeBadgeClass: 'bg-rose-800'
+            }
+          ].map((tab) => {
+            const isActive = statusFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setStatusFilter(tab.id);
+                  setCurrentPage(1);
+                }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  isActive
+                    ? `${tab.bg} text-white shadow-xs font-bold`
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
-            >
-              <span>{tab.label}</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${statusFilter === tab.id
-                ? 'bg-blue-50 dark:bg-white/20 text-blue-600 dark:text-white'
-                : 'bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-400'
-                }`}>
-                {tab.count}
-              </span>
-            </button>
-          ))}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    isActive ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

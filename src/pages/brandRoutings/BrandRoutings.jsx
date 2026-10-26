@@ -1113,7 +1113,7 @@ const BrandRoutings = () => {
       </div>
 
       {/* ================= FILTER & SEARCH BAR ================= */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-white/40 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 p-3 rounded-2xl shadow-xs">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-white/40 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 p-2 rounded-full shadow-lg">
         {/* Search */}
         <div className="relative w-full md:w-80">
           <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />

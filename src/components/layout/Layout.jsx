@@ -1053,13 +1053,13 @@ const Layout = () => {
           isDark ? 'border-white/10' : 'border-slate-200/80'
         }`}>
           {/* Full Logo (Expanded) */}
-          <div className={`absolute transition-all duration-300 ease-in-out flex items-center justify-center ${isExpanded ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-75 rotate-[-12deg] pointer-events-none'
+          <div className={`absolute transition-all duration-300 ease-in-out flex items-center justify-center ${isExpanded ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
             }`}>
             <Link to="/" data-nav-menu="true"><img src={isDark ? whatnotLogoDark : whatnotLogoLight} alt="Whatnot Sales Logo" className="h-13 w-auto object-contain" /></Link>
           </div>
 
           {/* Collapsed App Icon */}
-          <div className={`absolute transition-all duration-300 ease-in-out flex items-center justify-center ${isExpanded ? 'opacity-0 scale-75 rotate-[12deg] pointer-events-none' : 'opacity-100 scale-100 rotate-0'
+          <div className={`absolute transition-all duration-300 ease-in-out flex items-center justify-center ${isExpanded ? 'opacity-0 scale-75 pointer-events-none' : 'opacity-100 scale-100'
             }`}>
             <Link to="/" data-nav-menu="true"><img src={isDark ? whatnotIconDark : whatnotIconLight} alt="Whatnot Sales Icon" className="h-11 w-11 object-contain" /></Link>
           </div>

@@ -1161,32 +1161,75 @@ const PurchaseOrders = () => {
       </div>
 
       {/* Filter, Search & Status Bar */}
-      <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-4 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl space-y-3">
+      <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl space-y-3">
         <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
           {/* Status Tabs */}
-          <div className="flex items-center bg-white/60 shadow-md gap-1.5 rounded-full overflow-x-auto custom-scrollbar w-full md:w-auto pb-1 md:pb-0">
-            {STATUS_TABS.map((tab) => {
-              const active = statusFilter === tab.key;
+          <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start md:self-auto shrink-0 custom-scrollbar">
+            {[
+              {
+                id: 'all',
+                label: 'All Orders',
+                count: stats.total,
+                badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
+                bg: 'bg-blue-600',
+                activeBadgeClass: 'bg-blue-800'
+              },
+              {
+                id: 'PENDING',
+                label: 'Pending',
+                count: stats.pending,
+                badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                bg: 'bg-amber-600',
+                activeBadgeClass: 'bg-amber-800'
+              },
+              {
+                id: 'APPROVED',
+                label: 'Approved',
+                count: stats.approved,
+                badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+                bg: 'bg-emerald-600',
+                activeBadgeClass: 'bg-emerald-800'
+              },
+              {
+                id: 'DISPATCHED',
+                label: 'Dispatched',
+                count: stats.dispatched,
+                badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
+                bg: 'bg-blue-600',
+                activeBadgeClass: 'bg-blue-800'
+              },
+              {
+                id: 'REJECTED',
+                label: 'Rejected',
+                count: stats.rejected,
+                badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+                bg: 'bg-rose-600',
+                activeBadgeClass: 'bg-rose-800'
+              }
+            ].map((tab) => {
+              const active = statusFilter.toUpperCase() === tab.id.toUpperCase();
               return (
                 <button
-                  key={tab.key}
+                  key={tab.id}
                   type="button"
                   onClick={() => {
-                    setStatusFilter(tab.key);
+                    setStatusFilter(tab.id);
                     setCurrentPage(1);
                   }}
-                  className={`px-3.5 py-2 text-xs font-bold rounded-full transition-all cursor-pointer shrink-0 ${
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     active
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                      : 'bg-slate-100/80 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10'
+                      ? `${tab.bg} text-white shadow-xs font-bold`
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  {tab.label}
-                  {tab.key === 'PENDING' && stats.pending > 0 && (
-                    <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px]">
-                      {stats.pending}
-                    </span>
-                  )}
+                  <span>{tab.label}</span>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      active ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
                 </button>
               );
             })}

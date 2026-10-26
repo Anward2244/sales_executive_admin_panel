@@ -1002,7 +1002,7 @@ const UsersList = () => {
         </div>
 
         {/* Users Count, Filters & Action Bar */}
-        <div className="relative z-20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 bg-white/40 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-2xl backdrop-blur-xl shadow-md shadow-slate-500/30 dark:shadow-none text-xs font-semibold text-slate-600 dark:text-slate-400">
+        <div className="relative z-20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 bg-white/40 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-full backdrop-blur-xl shadow-md shadow-slate-500/30 dark:shadow-none text-xs font-semibold text-slate-600 dark:text-slate-400">
           <div className="flex flex-wrap items-center gap-2">
             <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-full shadow-xs dark:shadow-none text-slate-600 dark:text-slate-400">
               Total Users: <strong className="text-slate-900 dark:text-white">{users.length}</strong>
@@ -1017,11 +1017,32 @@ const UsersList = () => {
           {/* Status Segmented Filter, Role Filter & Actions */}
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             {/* Segmented Status Pill Filter */}
-            <div className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-white/5 rounded-2xl shadow-md border border-slate-200/80 dark:border-white/10">
+            <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start sm:self-auto">
               {[
-                { id: 'all', label: 'All', count: users.length },
-                { id: 'active', label: 'Active', count: activeCount },
-                { id: 'inactive', label: 'Inactive', count: inactiveCount }
+                {
+                  id: 'all',
+                  label: 'All',
+                  count: users.length,
+                  badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
+                  bg: 'bg-blue-600',
+                  activeBadgeClass: 'bg-blue-800'
+                },
+                {
+                  id: 'active',
+                  label: 'Active',
+                  count: activeCount,
+                  badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+                  bg: 'bg-emerald-600',
+                  activeBadgeClass: 'bg-emerald-800'
+                },
+                {
+                  id: 'inactive',
+                  label: 'Inactive',
+                  count: inactiveCount,
+                  badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+                  bg: 'bg-rose-600',
+                  activeBadgeClass: 'bg-rose-800'
+                }
               ].map((tab) => {
                 const isSelected = (!selectedStatus && tab.id === 'all') || selectedStatus === tab.id;
                 return (
@@ -1029,21 +1050,17 @@ const UsersList = () => {
                     key={tab.id}
                     type="button"
                     onClick={() => handleFilterChange('status', tab.id === 'all' ? '' : tab.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${isSelected
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                      }`}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                      isSelected
+                        ? `${tab.bg} text-white shadow-xs font-bold`
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
                   >
                     <span>{tab.label}</span>
                     <span
-                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isSelected
-                        ? 'bg-white/20 text-white'
-                        : tab.id === 'active'
-                          ? 'bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                          : tab.id === 'inactive'
-                            ? 'bg-rose-500/15 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'
-                            : 'bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-400'
-                        }`}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        isSelected ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
+                      }`}
                     >
                       {tab.count}
                     </span>

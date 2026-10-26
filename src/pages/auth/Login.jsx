@@ -172,7 +172,7 @@ const Login = () => {
           <div className={`relative w-full ${isRegisterMode || isResetMode
               ? 'max-w-[450px] my-auto p-4 sm:p-5.5'
               : 'max-w-[380px] my-auto p-4 sm:p-6'
-            } bg-white/85 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 transform-gpu shadow-xl shadow-slate-900/5 dark:shadow-black/50 rounded-2xl sm:rounded-3xl z-10 transition-all duration-300 shrink-0`}>
+            } bg-white/40 dark:bg-slate-900/50 backdrop-blur-lg border border-slate-200/80 dark:border-white/10 transform-gpu shadow-2xl dark:shadow-black/50 rounded-2xl sm:rounded-3xl z-10 transition-all duration-300 shrink-0`}>
 
           {/* Branding */}
           <div className="flex flex-col items-center justify-center mb-2.5 sm:mb-3">

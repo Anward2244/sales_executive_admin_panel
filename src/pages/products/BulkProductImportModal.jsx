@@ -1692,42 +1692,59 @@ const BulkProductImportModal = ({
             {/* Top Stats & Filters Bar */}
             <div className="p-4 border-b border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 flex flex-col md:flex-row items-center justify-between gap-3 shrink-0">
               <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
-                <div className="flex items-center bg-slate-200/70 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter('all')}
-                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                      statusFilter === 'all'
-                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
-                    }`}
-                  >
-                    All Rows ({validatedRows.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter('valid')}
-                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                      statusFilter === 'valid'
-                        ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600'
-                    }`}
-                  >
-                    <FiCheckCircle className="text-emerald-500" />
-                    <span>Valid ({validCount})</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter('issues')}
-                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                      statusFilter === 'issues'
-                        ? 'bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:text-rose-600'
-                    }`}
-                  >
-                    <FiAlertTriangle className="text-amber-500" />
-                    <span>Needs Attention ({issueCount})</span>
-                  </button>
+                <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto shrink-0">
+                  {[
+                    {
+                      id: 'all',
+                      label: 'All Rows',
+                      count: validatedRows.length,
+                      badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
+                      bg: 'bg-blue-600',
+                      activeBadgeClass: 'bg-blue-800'
+                    },
+                    {
+                      id: 'valid',
+                      label: 'Valid',
+                      count: validCount,
+                      icon: <FiCheckCircle className="text-emerald-500" />,
+                      badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+                      bg: 'bg-emerald-600',
+                      activeBadgeClass: 'bg-emerald-800'
+                    },
+                    {
+                      id: 'issues',
+                      label: 'Needs Attention',
+                      count: issueCount,
+                      icon: <FiAlertTriangle className="text-amber-500" />,
+                      badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+                      bg: 'bg-rose-600',
+                      activeBadgeClass: 'bg-rose-800'
+                    }
+                  ].map((tab) => {
+                    const isActive = statusFilter === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setStatusFilter(tab.id)}
+                        className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                          isActive
+                            ? `${tab.bg} text-white shadow-xs font-bold`
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        {tab.icon && <span className={isActive ? 'text-white' : ''}>{tab.icon}</span>}
+                        <span>{tab.label}</span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            isActive ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
+                          }`}
+                        >
+                          {tab.count}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <span className="text-xs text-slate-400 hidden sm:inline">

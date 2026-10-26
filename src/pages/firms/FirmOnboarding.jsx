@@ -881,31 +881,39 @@ const FirmOnboarding = () => {
       {/* Clean, Non-Clumsy Filter Bar */}
       <div className="p-2.5 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
         {/* Status Segmented Tabs */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-xl shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start lg:self-auto">
+        <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start lg:self-auto">
           {[
             {
               id: 'ALL',
               label: 'All Requests',
               count: stats.total,
-              badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400'
+              badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
+              bg: 'bg-blue-600',
+              activeBadgeClass: 'bg-blue-800',
             },
             {
               id: 'PENDING',
               label: 'Pending',
               count: stats.pending,
-              badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+              badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+              bg: 'bg-amber-600',
+              activeBadgeClass: 'bg-amber-800',
             },
             {
               id: 'APPROVED',
               label: 'Approved',
               count: stats.approved,
-              badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+              badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+              bg: 'bg-emerald-600',
+              activeBadgeClass: 'bg-emerald-800',
             },
             {
               id: 'REJECTED',
               label: 'Rejected',
               count: stats.rejected,
-              badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+              badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+              bg: 'bg-rose-600',
+              activeBadgeClass: 'bg-rose-800',
             }
           ].map((tab) => {
             const isActive = (selectedStatus || 'ALL').toUpperCase() === tab.id;
@@ -914,16 +922,16 @@ const FirmOnboarding = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => handleStatusFilter(tab.id)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-bold'
+                    ? `${tab.bg} text-white shadow-xs font-bold`
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <span>{tab.label}</span>
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    isActive ? 'bg-blue-600 text-white' : tab.badgeClass
+                    isActive ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
                   }`}
                 >
                   {tab.count}

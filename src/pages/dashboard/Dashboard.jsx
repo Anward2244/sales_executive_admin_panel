@@ -48,7 +48,9 @@ import {
   getReportsApi,
   getPurchaseOrdersApi,
   getCompaniesApi,
-  getFirmsApi
+  getFirmsApi,
+  getUsersApi,
+  getProductsApi
 } from '@/api/axios';
 import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
@@ -93,6 +95,8 @@ const Dashboard = () => {
   const [allPurchaseOrders, setAllPurchaseOrders] = useState([]);
   const [allCompanies, setAllCompanies] = useState([]);
   const [allFirms, setAllFirms] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -156,12 +160,14 @@ const Dashboard = () => {
     setError(null);
 
     try {
-      const [dashRes, repRes, poRes, compRes, firmRes] = await Promise.allSettled([
+      const [dashRes, repRes, poRes, compRes, firmRes, usersRes, prodRes] = await Promise.allSettled([
         getDashboardMetricsApi(),
         getReportsApi({ limit: 30 }),
         getPurchaseOrdersApi({ limit: 100 }),
         getCompaniesApi(),
-        getFirmsApi()
+        getFirmsApi(),
+        getUsersApi(),
+        getProductsApi()
       ]);
 
       if (dashRes.status === 'fulfilled') {
@@ -189,6 +195,16 @@ const Dashboard = () => {
       if (firmRes.status === 'fulfilled') {
         const firmData = firmRes.value?.data?.data || firmRes.value?.data || [];
         setAllFirms(Array.isArray(firmData) ? firmData : []);
+      }
+
+      if (usersRes.status === 'fulfilled') {
+        const userData = usersRes.value?.data?.data || usersRes.value?.data || [];
+        setAllUsers(Array.isArray(userData) ? userData : []);
+      }
+
+      if (prodRes.status === 'fulfilled') {
+        const prodData = prodRes.value?.data?.data || prodRes.value?.data || [];
+        setAllProducts(Array.isArray(prodData) ? prodData : []);
       }
     } catch (err) {
       console.error('Failed to load dashboard metrics:', err);
@@ -220,10 +236,10 @@ const Dashboard = () => {
     ? Number(summary.totalOrderValue)
     : allPurchaseOrders.reduce((sum, o) => sum + Number(o.totalAmount || o.totalValue || 0), 0);
 
-  const totalUsers = activeEntities.users ?? 0;
-  const totalCompanies = activeEntities.companies ?? 0;
-  const totalFirms = activeEntities.firms ?? 0;
-  const totalProducts = activeEntities.products ?? 0;
+  const totalUsers = allUsers.length > 0 ? allUsers.length : (activeEntities.users ?? 0);
+  const totalCompanies = allCompanies.length > 0 ? allCompanies.length : (activeEntities.companies ?? 0);
+  const totalFirms = allFirms.length > 0 ? allFirms.length : (activeEntities.firms ?? 0);
+  const totalProducts = allProducts.length > 0 ? allProducts.length : (activeEntities.products ?? 0);
 
   // Status Breakdown
   const statusBreakdown = summary.statusBreakdown || {
@@ -675,6 +691,36 @@ const Dashboard = () => {
   }, [treemapData, treemapMetric]);
 
 
+  // Helper to generate sparklines with real historical accumulation
+  const generateEntitySparkline = useCallback((items, total) => {
+    if (total <= 0) return [0, 0, 0, 0, 0, 0, 0];
+    if (Array.isArray(items) && items.length >= 2) {
+      const now = Date.now();
+      const MS_PER_DAY = 86400000;
+      const counts = [];
+      for (let i = 6; i >= 0; i--) {
+        const threshold = now - i * MS_PER_DAY;
+        const countUpToThreshold = items.filter((item) => {
+          const t = new Date(item.createdAt || item.dateAdded || item.date || 0).getTime();
+          return !isNaN(t) && t <= threshold;
+        }).length;
+        counts.push(countUpToThreshold);
+      }
+      if (counts.some((c) => c > 0) && counts[6] > 0) {
+        return counts;
+      }
+    }
+    return [
+      Math.max(1, Math.round(total * 0.75)),
+      Math.max(1, Math.round(total * 0.8)),
+      Math.max(1, Math.round(total * 0.85)),
+      Math.max(1, Math.round(total * 0.9)),
+      Math.max(1, Math.round(total * 0.95)),
+      total,
+      total
+    ];
+  }, []);
+
   // Sparkline data generators
   const revenueSparkline = useMemo(() => {
     if (processedTrendData.length >= 2) {
@@ -690,6 +736,228 @@ const Dashboard = () => {
     return [Math.max(1, totalOrders - 6), Math.max(1, totalOrders - 4), Math.max(1, totalOrders - 5), Math.max(1, totalOrders - 3), Math.max(1, totalOrders - 2), Math.max(1, totalOrders - 1), totalOrders];
   }, [processedTrendData, totalOrders]);
 
+  const usersSparkline = useMemo(() => generateEntitySparkline(allUsers, totalUsers), [generateEntitySparkline, allUsers, totalUsers]);
+  const companiesSparkline = useMemo(() => generateEntitySparkline(allCompanies, totalCompanies), [generateEntitySparkline, allCompanies, totalCompanies]);
+  const firmsSparkline = useMemo(() => generateEntitySparkline(allFirms, totalFirms), [generateEntitySparkline, allFirms, totalFirms]);
+  const productsSparkline = useMemo(() => generateEntitySparkline(allProducts, totalProducts), [generateEntitySparkline, allProducts, totalProducts]);
+
+  // Real-time Revenue & Orders Growth Delta (Comparing Recent Period to Prior Period)
+  const { revenueDelta, ordersDelta } = useMemo(() => {
+    const rawOrders = Array.isArray(allPurchaseOrders) && allPurchaseOrders.length > 0
+      ? allPurchaseOrders
+      : (Array.isArray(recentOrders) ? recentOrders : []);
+
+    const seenOrderIds = new Set();
+    const uniqueOrders = rawOrders.filter((o) => {
+      if (!o || !o._id) return true;
+      if (seenOrderIds.has(o._id)) return false;
+      seenOrderIds.add(o._id);
+      return true;
+    });
+
+    const now = Date.now();
+    const MS_PER_DAY = 86400000;
+    const currentWindowStart = now - 30 * MS_PER_DAY;
+    const priorWindowStart = now - 60 * MS_PER_DAY;
+
+    let curRev = 0;
+    let priorRev = 0;
+    let curOrders = 0;
+    let priorOrders = 0;
+
+    uniqueOrders.forEach((o) => {
+      const dateVal = o.createdAt || o.orderDate || o.date;
+      if (!dateVal) return;
+      const time = new Date(dateVal).getTime();
+      if (isNaN(time)) return;
+
+      const amt = Number(o.totalAmount || o.totalValue || 0);
+      if (time >= currentWindowStart && time <= now) {
+        curRev += amt;
+        curOrders += 1;
+      } else if (time >= priorWindowStart && time < currentWindowStart) {
+        priorRev += amt;
+        priorOrders += 1;
+      }
+    });
+
+    // Fallback: If no orders recorded in prior 30-60d window, check 7d vs prior 7d
+    if (priorOrders === 0 && curOrders > 0) {
+      const current7dStart = now - 7 * MS_PER_DAY;
+      const prior7dStart = now - 14 * MS_PER_DAY;
+      let cRev7 = 0;
+      let pRev7 = 0;
+      let cOrd7 = 0;
+      let pOrd7 = 0;
+
+      uniqueOrders.forEach((o) => {
+        const dateVal = o.createdAt || o.orderDate || o.date;
+        if (!dateVal) return;
+        const time = new Date(dateVal).getTime();
+        if (isNaN(time)) return;
+
+        const amt = Number(o.totalAmount || o.totalValue || 0);
+        if (time >= current7dStart && time <= now) {
+          cRev7 += amt;
+          cOrd7 += 1;
+        } else if (time >= prior7dStart && time < current7dStart) {
+          pRev7 += amt;
+          pOrd7 += 1;
+        }
+      });
+
+      if (pOrd7 > 0) {
+        curRev = cRev7;
+        priorRev = pRev7;
+        curOrders = cOrd7;
+        priorOrders = pOrd7;
+      }
+    }
+
+    // Fallback: If dates are clustered or synthetic, compare chronological halves
+    if (priorOrders === 0 && uniqueOrders.length >= 2) {
+      const sorted = [...uniqueOrders].sort((a, b) => {
+        const dA = new Date(a.createdAt || a.orderDate || a.date || 0).getTime();
+        const dB = new Date(b.createdAt || b.orderDate || b.date || 0).getTime();
+        return dA - dB;
+      });
+      const mid = Math.floor(sorted.length / 2);
+      const half1 = sorted.slice(0, mid);
+      const half2 = sorted.slice(mid);
+
+      priorRev = half1.reduce((s, o) => s + Number(o.totalAmount || o.totalValue || 0), 0);
+      curRev = half2.reduce((s, o) => s + Number(o.totalAmount || o.totalValue || 0), 0);
+      priorOrders = half1.length;
+      curOrders = half2.length;
+    }
+
+    // Revenue growth calculation
+    let revDeltaStr = '0.0%';
+    let revType = 'neutral';
+    let revTooltip = 'No prior period revenue recorded';
+
+    if (priorRev > 0) {
+      const pct = ((curRev - priorRev) / priorRev) * 100;
+      const sign = pct >= 0 ? '+' : '';
+      revDeltaStr = `${sign}${pct.toFixed(1)}%`;
+      revType = pct > 0 ? 'up' : pct < 0 ? 'down' : 'neutral';
+      revTooltip = `${sign}${pct.toFixed(1)}% revenue growth vs prior period`;
+    } else if (curRev > 0) {
+      revDeltaStr = '+100%';
+      revType = 'up';
+      revTooltip = 'New revenue registered in current period';
+    }
+
+    // Orders growth calculation
+    let ordDeltaStr = '0.0%';
+    let ordType = 'neutral';
+    let ordTooltip = 'No prior period order data';
+
+    if (priorOrders > 0) {
+      const pct = ((curOrders - priorOrders) / priorOrders) * 100;
+      const sign = pct >= 0 ? '+' : '';
+      ordDeltaStr = `${sign}${pct.toFixed(1)}%`;
+      ordType = pct > 0 ? 'up' : pct < 0 ? 'down' : 'neutral';
+      ordTooltip = `${sign}${pct.toFixed(1)}% order volume growth vs prior period`;
+    } else if (curOrders > 0) {
+      ordDeltaStr = '+100%';
+      ordType = 'up';
+      ordTooltip = 'New orders registered in current period';
+    }
+
+    return {
+      revenueDelta: { delta: revDeltaStr, deltaType: revType, tooltip: revTooltip },
+      ordersDelta: { delta: ordDeltaStr, deltaType: ordType, tooltip: ordTooltip }
+    };
+  }, [allPurchaseOrders, recentOrders]);
+
+  // Real-time Active Users Pill
+  const usersDelta = useMemo(() => {
+    const list = Array.isArray(allUsers) && allUsers.length > 0 ? allUsers : [];
+    const totalCount = list.length || totalUsers;
+    if (totalCount === 0) {
+      return { delta: '0 ACTIVE', deltaType: 'neutral', tooltip: 'No users registered' };
+    }
+    const activeCount = list.length > 0
+      ? list.filter((u) => u.isActive !== false).length
+      : totalUsers;
+    const pct = Math.round((activeCount / totalCount) * 100);
+
+    return {
+      delta: `${pct}% ACTIVE`,
+      deltaType: pct === 100 ? 'up' : pct >= 75 ? 'neutral' : 'down',
+      tooltip: `${activeCount} of ${totalCount} users active (${pct}%)`
+    };
+  }, [allUsers, totalUsers]);
+
+  // Real-time Partner Companies Pill
+  const companiesDelta = useMemo(() => {
+    const list = Array.isArray(allCompanies) && allCompanies.length > 0 ? allCompanies : [];
+    const totalCount = list.length || totalCompanies;
+    if (totalCount === 0) {
+      return { delta: '0 ACTIVE', deltaType: 'neutral', tooltip: 'No partner companies registered' };
+    }
+    const activeCount = list.length > 0
+      ? list.filter((c) => c.isActive !== false).length
+      : totalCompanies;
+    const pct = Math.round((activeCount / totalCount) * 100);
+
+    return {
+      delta: `${pct}% ACTIVE`,
+      deltaType: pct === 100 ? 'up' : pct >= 75 ? 'neutral' : 'down',
+      tooltip: `${activeCount} of ${totalCount} partner companies active (${pct}%)`
+    };
+  }, [allCompanies, totalCompanies]);
+
+  // Real-time Associated Firms Pill
+  const firmsDelta = useMemo(() => {
+    const list = Array.isArray(allFirms) && allFirms.length > 0 ? allFirms : [];
+    const totalCount = list.length || totalFirms;
+    if (totalCount === 0) {
+      return { delta: '0 ACTIVE', deltaType: 'neutral', tooltip: 'No associated firms registered' };
+    }
+
+    const pending = list.filter((f) => (f.approvalStatus || '').toUpperCase() === 'PENDING').length;
+    if (pending > 0) {
+      return {
+        delta: `${pending} PENDING`,
+        deltaType: 'warning',
+        tooltip: `${pending} firm onboarding request(s) awaiting review`
+      };
+    }
+
+    const activeCount = list.length > 0
+      ? list.filter((f) => f.isActive !== false).length
+      : totalFirms;
+    const pct = Math.round((activeCount / totalCount) * 100);
+
+    return {
+      delta: `${pct}% ACTIVE`,
+      deltaType: pct === 100 ? 'up' : pct >= 75 ? 'neutral' : 'down',
+      tooltip: `${activeCount} of ${totalCount} firms active and operational (${pct}%)`
+    };
+  }, [allFirms, totalFirms]);
+
+  // Real-time Catalog Products Pill
+  const productsDelta = useMemo(() => {
+    const list = Array.isArray(allProducts) && allProducts.length > 0 ? allProducts : [];
+    const totalCount = list.length || totalProducts;
+    if (totalCount === 0) {
+      return { delta: '0 ACTIVE', deltaType: 'neutral', tooltip: 'No products in catalog' };
+    }
+
+    const activeCount = list.length > 0
+      ? list.filter((p) => p.isActive !== false).length
+      : totalProducts;
+    const pct = Math.round((activeCount / totalCount) * 100);
+
+    return {
+      delta: `${pct}% ACTIVE`,
+      deltaType: pct === 100 ? 'up' : pct >= 75 ? 'neutral' : 'down',
+      tooltip: `${activeCount} of ${totalCount} catalog products active (${pct}%)`
+    };
+  }, [allProducts, totalProducts]);
+
   // Top Metric Cards Config
   const metricCards = [
     {
@@ -704,8 +972,9 @@ const Dashboard = () => {
       sparkline: revenueSparkline,
       sparkColor: isDark ? '#34d399' : '#059669',
       id: 'rev',
-      delta: '+14.6%',
-      deltaType: 'up'
+      delta: revenueDelta.delta,
+      deltaType: revenueDelta.deltaType,
+      deltaTooltip: revenueDelta.tooltip
     },
     {
       title: 'Total Orders',
@@ -719,8 +988,9 @@ const Dashboard = () => {
       sparkline: ordersSparkline,
       sparkColor: isDark ? '#60a5fa' : '#2563eb',
       id: 'ord',
-      delta: '+8.3%',
-      deltaType: 'up'
+      delta: ordersDelta.delta,
+      deltaType: ordersDelta.deltaType,
+      deltaTooltip: ordersDelta.tooltip
     },
     {
       title: 'Active Users',
@@ -731,11 +1001,12 @@ const Dashboard = () => {
       hoverBorder: 'hover:border-amber-500/40 hover:shadow-amber-500/10',
       path: '/users',
       subtitle: 'Staff & sales executives',
-      sparkline: [Math.max(1, totalUsers - 4), Math.max(1, totalUsers - 3), Math.max(1, totalUsers - 3), Math.max(1, totalUsers - 2), Math.max(1, totalUsers - 1), totalUsers, totalUsers],
+      sparkline: usersSparkline,
       sparkColor: isDark ? '#fbbf24' : '#d97706',
       id: 'usr',
-      delta: 'Active',
-      deltaType: 'neutral'
+      delta: usersDelta.delta,
+      deltaType: usersDelta.deltaType,
+      deltaTooltip: usersDelta.tooltip
     },
     {
       title: 'Partner Companies',
@@ -746,11 +1017,12 @@ const Dashboard = () => {
       hoverBorder: 'hover:border-indigo-500/40 hover:shadow-indigo-500/10',
       path: '/companies',
       subtitle: 'Parent trading entities',
-      sparkline: [Math.max(1, totalCompanies - 3), Math.max(1, totalCompanies - 2), Math.max(1, totalCompanies - 2), Math.max(1, totalCompanies - 1), Math.max(1, totalCompanies - 1), totalCompanies, totalCompanies],
+      sparkline: companiesSparkline,
       sparkColor: isDark ? '#818cf8' : '#4f46e5',
       id: 'comp',
-      delta: '100% active',
-      deltaType: 'neutral'
+      delta: companiesDelta.delta,
+      deltaType: companiesDelta.deltaType,
+      deltaTooltip: companiesDelta.tooltip
     },
     {
       title: 'Associated Firms',
@@ -761,11 +1033,12 @@ const Dashboard = () => {
       hoverBorder: 'hover:border-cyan-500/40 hover:shadow-cyan-500/10',
       path: '/firms',
       subtitle: 'Retailers & wholesale buyers',
-      sparkline: [Math.max(1, totalFirms - 5), Math.max(1, totalFirms - 4), Math.max(1, totalFirms - 3), Math.max(1, totalFirms - 2), Math.max(1, totalFirms - 1), totalFirms, totalFirms],
+      sparkline: firmsSparkline,
       sparkColor: isDark ? '#22d3ee' : '#0891b2',
       id: 'firms',
-      delta: '+12.5%',
-      deltaType: 'up'
+      delta: firmsDelta.delta,
+      deltaType: firmsDelta.deltaType,
+      deltaTooltip: firmsDelta.tooltip
     },
     {
       title: 'Catalog Products',
@@ -776,11 +1049,12 @@ const Dashboard = () => {
       hoverBorder: 'hover:border-purple-500/40 hover:shadow-purple-500/10',
       path: '/products',
       subtitle: 'Live catalog items',
-      sparkline: [Math.max(1, totalProducts - 4), Math.max(1, totalProducts - 3), Math.max(1, totalProducts - 2), Math.max(1, totalProducts - 2), Math.max(1, totalProducts - 1), totalProducts, totalProducts],
+      sparkline: productsSparkline,
       sparkColor: isDark ? '#c084fc' : '#7c3aed',
       id: 'prod',
-      delta: 'Verified',
-      deltaType: 'neutral'
+      delta: productsDelta.delta,
+      deltaType: productsDelta.deltaType,
+      deltaTooltip: productsDelta.tooltip
     }
   ];
 
@@ -852,6 +1126,7 @@ const Dashboard = () => {
         title="Dashboard Overview"
         subtitle="Real-time performance analytics, order lifecycle pipeline, partner performance, and recent procurement stream."
         badgeIcon={FiTrendingUp}
+        showBackButton={false}
         actions={
           <div className="flex items-center gap-2.5">
             <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/10 shadow-xs">
@@ -928,8 +1203,13 @@ const Dashboard = () => {
                 </div>
                 {card.delta && (
                   <span
-                    className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${card.deltaType === 'up'
+                    title={card.deltaTooltip || card.delta}
+                    className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider transition-colors ${card.deltaType === 'up'
                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        : card.deltaType === 'down'
+                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                        : card.deltaType === 'warning'
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
                         : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-white/10'
                       }`}
                   >

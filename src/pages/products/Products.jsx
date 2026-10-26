@@ -1985,7 +1985,7 @@ const Products = () => {
       )}
 
       {/* Actions & Filters Bar - Ultra Compact */}
-      <div className="relative z-30 bg-white/50 dark:bg-slate-900/60 p-2 sm:px-3 sm:py-2 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-1.5">
+      <div className="relative z-30 bg-white/50 dark:bg-slate-900/60 p-2 sm:px-3 sm:py-2 rounded-full border border-slate-200/80 dark:border-white/10 shadow-xs space-y-1.5">
         {/* Top Row: Primary Actions, Filter Toggle & Sort / Reset */}
         <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 ${isFiltersVisible ? 'pb-1.5 border-b border-slate-200/60 dark:border-white/5' : ''}`}>
           {/* Action Controls */}
@@ -1995,7 +1995,7 @@ const Products = () => {
               <button
                 type="button"
                 onClick={() => setIsActionsOpen((prev) => !prev)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg transition-all shadow-xs hover:shadow-sm cursor-pointer active:scale-95 shrink-0"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-full transition-all shadow-xs hover:shadow-sm cursor-pointer active:scale-95 shrink-0"
               >
                 <span>Actions</span>
                 <FiChevronDown className={`text-xs transition-transform duration-200 ${isActionsOpen ? 'rotate-180' : ''}`} />
@@ -2080,7 +2080,7 @@ const Products = () => {
             <button
               type="button"
               onClick={handleOpenAdd}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-full transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
             >
               <FiPlus className="text-xs" />
               <span>Add Product</span>

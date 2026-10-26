@@ -629,47 +629,65 @@ const EmailNotifications = () => {
 
             {/* Filter pills */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => handleStatusFilterChange('ALL')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${statusFilter === 'ALL'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-white/10'
-                    }`}
-                >
-                  All ({metrics.total})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusFilterChange('SENT')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${statusFilter === 'SENT'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-white/10'
-                    }`}
-                >
-                  Sent ({metrics.sent})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusFilterChange('FAILED')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${statusFilter === 'FAILED'
-                      ? 'bg-rose-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-white/10'
-                    }`}
-                >
-                  Failed ({metrics.failed})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusFilterChange('QUEUED')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${statusFilter === 'QUEUED'
-                      ? 'bg-amber-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-white/10'
-                    }`}
-                >
-                  Queued ({metrics.queued})
-                </button>
+              {/* Status Segmented Tabs */}
+              <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start sm:self-auto shrink-0">
+                {[
+                  {
+                    id: 'ALL',
+                    label: 'All',
+                    count: metrics.total,
+                    badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
+                    bg: 'bg-blue-600',
+                    activeBadgeClass: 'bg-blue-800'
+                  },
+                  {
+                    id: 'SENT',
+                    label: 'Sent',
+                    count: metrics.sent,
+                    badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+                    bg: 'bg-emerald-600',
+                    activeBadgeClass: 'bg-emerald-800'
+                  },
+                  {
+                    id: 'FAILED',
+                    label: 'Failed',
+                    count: metrics.failed,
+                    badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+                    bg: 'bg-rose-600',
+                    activeBadgeClass: 'bg-rose-800'
+                  },
+                  {
+                    id: 'QUEUED',
+                    label: 'Queued',
+                    count: metrics.queued,
+                    badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                    bg: 'bg-amber-600',
+                    activeBadgeClass: 'bg-amber-800'
+                  }
+                ].map((tab) => {
+                  const isActive = (statusFilter || 'ALL').toUpperCase() === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => handleStatusFilterChange(tab.id)}
+                      className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                        isActive
+                          ? `${tab.bg} text-white shadow-xs font-bold`
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isActive ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="min-w-[125px]">

@@ -377,6 +377,7 @@ const Notifications = () => {
 
   // Stats
   const unreadCount = useMemo(() => notifications.filter((n) => !n.isRead).length, [notifications]);
+  const readCount = useMemo(() => notifications.length - unreadCount, [notifications.length, unreadCount]);
 
   // Extract unique notification types for dropdown filter
   const availableTypes = useMemo(() => {
@@ -633,40 +634,57 @@ const Notifications = () => {
 
             {/* Filter pills & Type selector */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => handleStatusFilterChange('all')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    statusFilter === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-sm hover:bg-slate-200 dark:hover:bg-white/10'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusFilterChange('unread')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    statusFilter === 'unread'
-                      ? 'bg-rose-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-sm hover:bg-slate-200 dark:hover:bg-white/10'
-                  }`}
-                >
-                  Unread ({unreadCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusFilterChange('read')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    statusFilter === 'read'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 shadow-sm hover:bg-slate-200 dark:hover:bg-white/10'
-                  }`}
-                >
-                  Read
-                </button>
+              {/* Status Segmented Tabs */}
+              <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start sm:self-auto shrink-0">
+                {[
+                  {
+                    id: 'all',
+                    label: 'All',
+                    count: notifications.length,
+                    badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
+                    bg: 'bg-blue-600',
+                    activeBadgeClass: 'bg-blue-800'
+                  },
+                  {
+                    id: 'unread',
+                    label: 'Unread',
+                    count: unreadCount,
+                    badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+                    bg: 'bg-rose-600',
+                    activeBadgeClass: 'bg-rose-800'
+                  },
+                  {
+                    id: 'read',
+                    label: 'Read',
+                    count: readCount,
+                    badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+                    bg: 'bg-emerald-600',
+                    activeBadgeClass: 'bg-emerald-800'
+                  }
+                ].map((tab) => {
+                  const isActive = statusFilter === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => handleStatusFilterChange(tab.id)}
+                      className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                        isActive
+                          ? `${tab.bg} text-white shadow-xs font-bold`
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isActive ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {availableTypes.length > 0 && (
