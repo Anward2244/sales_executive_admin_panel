@@ -52,7 +52,6 @@ const Companies = () => {
   const location = useLocation();
   const { id: routeCompanyId } = useParams();
   const { confirm: confirmDialog, showAlert } = useConfirm() || {};
-
   const [companies, setCompanies] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1090,19 +1089,19 @@ const Companies = () => {
             <div className="w-screen max-w-full sm:max-w-xl bg-white/30 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out animate-in slide-in-from-right duration-300">
               
               {/* Drawer Top Header */}
-              <div className="p-4 sm:p-6 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-slate-950/40 backdrop-blur-md">
+              <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-slate-950/40 backdrop-blur-md">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
-                      <FiBriefcase className="text-lg sm:text-xl" />
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
+                      <FiBriefcase className="text-base sm:text-lg" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight truncate">
+                      <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight truncate">
                         {selectedCompany ? selectedCompany.name : 'Company Details'}
                       </h2>
                       <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
                         {selectedCompany?.code && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/10 text-slate-800 dark:text-slate-200 font-mono text-[10px] sm:text-[11px] font-bold">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/10 text-slate-800 dark:text-slate-200 font-mono text-[10px] sm:text-[11px] font-bold">
                             <FiTag className="text-[10px] text-slate-400" />
                             {selectedCompany.code}
                           </span>
@@ -1112,7 +1111,7 @@ const Companies = () => {
                             <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 font-mono">
                               {selectedCompany._id}
                             </span>
-                            <CopyButton text={selectedCompany._id} />
+                            <CopyButton text={selectedCompany._id} size={10} />
                           </div>
                         )}
                       </div>
@@ -1159,7 +1158,7 @@ const Companies = () => {
                 </div>
 
                 {/* Tab Switcher: View Details vs. Edit Company */}
-                <div className="flex items-center gap-1.5 p-1 mt-3 sm:mt-4 bg-slate-200/60 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
+                <div className="flex items-center gap-1.5 p-1 mt-3 bg-slate-200/60 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
                   <button
                     type="button"
                     onClick={() => {
@@ -1203,56 +1202,56 @@ const Companies = () => {
               </div>
 
               {/* Drawer Body Area */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-5 sm:space-y-6">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-5 space-y-3.5 sm:space-y-4">
                 {drawerLoading ? (
-                  <div className="space-y-6 animate-pulse p-2">
-                    <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 flex items-center gap-5">
-                      <SkeletonPulse className="w-16 h-16 rounded-2xl shrink-0" />
+                  <div className="space-y-4 animate-pulse p-1">
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 flex items-center gap-4">
+                      <SkeletonPulse className="w-14 h-14 rounded-xl shrink-0" />
                       <div className="space-y-2 flex-1">
-                        <SkeletonPulse className="h-6 w-1/2" />
-                        <SkeletonPulse className="h-4 w-1/3" />
+                        <SkeletonPulse className="h-5 w-1/2" />
+                        <SkeletonPulse className="h-3.5 w-1/3" />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <SkeletonPulse className="h-24 w-full rounded-2xl" />
-                      <SkeletonPulse className="h-24 w-full rounded-2xl" />
+                    <div className="grid grid-cols-2 gap-3">
+                      <SkeletonPulse className="h-20 w-full rounded-xl" />
+                      <SkeletonPulse className="h-20 w-full rounded-xl" />
                     </div>
-                    <SkeletonPulse className="h-36 w-full rounded-2xl" />
+                    <SkeletonPulse className="h-28 w-full rounded-xl" />
                   </div>
                 ) : !selectedCompany ? (
-                  <div className="py-20 text-center text-slate-500 dark:text-slate-400">
-                    <FiAlertCircle className="text-3xl mx-auto mb-2 text-slate-400" />
-                    <p className="text-sm font-semibold">No company found.</p>
+                  <div className="py-16 text-center text-slate-500 dark:text-slate-400">
+                    <FiAlertCircle className="text-2xl mx-auto mb-2 text-slate-400" />
+                    <p className="text-xs font-semibold">No company found.</p>
                   </div>
                 ) : drawerMode === 'details' ? (
                   /* ================= DETAILS VIEW ================= */
-                  <div className="space-y-6 animate-in fade-in duration-200">
+                  <div className="space-y-3.5 animate-in fade-in duration-200">
                     {/* Hero Card */}
-                    <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
-                      <div className="w-20 h-20 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-md">
+                    <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
                         {selectedCompany.logo ? (
                           <img
                             src={selectedCompany.logo}
                             alt={selectedCompany.name}
-                            className="w-full h-full object-contain p-2"
+                            className="w-full h-full object-contain p-1.5"
                             onError={(e) => {
                               e.target.style.display = 'none';
                             }}
                           />
                         ) : (
-                          <div className="w-full h-full rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 !text-white flex items-center justify-center text-2xl font-black">
+                          <div className="w-full h-full rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 !text-white flex items-center justify-center text-xl font-bold">
                             {selectedCompany.name?.charAt(0)?.toUpperCase() || 'C'}
                           </div>
                         )}
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-                          <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                          <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
                             {selectedCompany.name}
                           </h3>
                           <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
                               selectedCompany.isActive
                                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                                 : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
@@ -1263,11 +1262,11 @@ const Companies = () => {
                                 selectedCompany.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
                               }`}
                             />
-                            <span>{selectedCompany.isActive ? 'Active Entity' : 'Inactive Entity'}</span>
+                            <span>{selectedCompany.isActive ? 'Active' : 'Inactive'}</span>
                           </span>
                         </div>
 
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                           Billing Code:{' '}
                           <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
                             {selectedCompany.code || 'N/A'}
@@ -1277,52 +1276,52 @@ const Companies = () => {
                     </div>
 
                     {/* Metadata Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                          <FiTag className="text-blue-500 text-sm" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          <FiTag className="text-blue-500 text-xs" />
                           <span>Code Identifier</span>
                         </div>
-                        <p className="mt-2 text-sm font-mono font-black text-slate-900 dark:text-white">
+                        <p className="mt-1 text-xs font-mono font-bold text-slate-900 dark:text-white">
                           {selectedCompany.code || 'N/A'}
                         </p>
                       </div>
 
-                      <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                          <FiCheckCircle className="text-emerald-500 text-sm" />
+                      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          <FiCheckCircle className="text-emerald-500 text-xs" />
                           <span>Operational Status</span>
                         </div>
-                        <p className="mt-2 text-sm font-bold text-slate-900 dark:text-white">
+                        <p className="mt-1 text-xs font-semibold text-slate-900 dark:text-white">
                           {selectedCompany.isActive ? 'Available for Routing' : 'Deactivated'}
                         </p>
                       </div>
 
-                      <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                          <FiCalendar className="text-blue-500 text-sm" />
+                      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          <FiCalendar className="text-blue-500 text-xs" />
                           <span>Created Date</span>
                         </div>
-                        <p className="mt-2 text-sm font-mono font-medium text-slate-900 dark:text-white">
+                        <p className="mt-1 text-xs font-mono font-medium text-slate-900 dark:text-white">
                           {selectedCompany.createdAt ? formatDateDDMMYYYY(selectedCompany.createdAt) : '-'}
                         </p>
                         {selectedCompany.createdAt && (
-                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">
                             {formatDateTimeDDMMYYYY(selectedCompany.createdAt).split(', ')[1] || ''}
                           </p>
                         )}
                       </div>
 
-                      <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                          <FiClock className="text-indigo-500 text-sm" />
+                      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          <FiClock className="text-indigo-500 text-xs" />
                           <span>Last Updated</span>
                         </div>
-                        <p className="mt-2 text-sm font-mono font-medium text-slate-900 dark:text-white">
+                        <p className="mt-1 text-xs font-mono font-medium text-slate-900 dark:text-white">
                           {selectedCompany.updatedAt ? formatDateDDMMYYYY(selectedCompany.updatedAt) : '-'}
                         </p>
                         {selectedCompany.updatedAt && (
-                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">
                             {formatDateTimeDDMMYYYY(selectedCompany.updatedAt).split(', ')[1] || ''}
                           </p>
                         )}
@@ -1330,33 +1329,33 @@ const Companies = () => {
                     </div>
 
                     {/* Description Box */}
-                    <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                      <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                    <div className="p-3.5 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                         Description & Notes
                       </h4>
-                      <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                         {selectedCompany.description || 'No description provided for this company.'}
                       </p>
                     </div>
 
                     {/* Logo Source Preview if URL provided */}
                     {selectedCompany.logo && (
-                      <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      <div className="p-3.5 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             Logo Asset Source
                           </h4>
                           <a
                             href={selectedCompany.logo}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 hover:underline"
+                            className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1 hover:underline"
                           >
                             <span>Open URL</span>
                             <FiExternalLink size={12} />
                           </a>
                         </div>
-                        <p className="text-xs font-mono text-slate-500 dark:text-slate-400 truncate bg-white dark:bg-slate-950/40 p-2.5 rounded-xl border border-slate-200/60 dark:border-white/5">
+                        <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate bg-white dark:bg-slate-950/40 p-2 rounded-lg border border-slate-200/60 dark:border-white/5">
                           {selectedCompany.logo}
                         </p>
                       </div>
@@ -1364,17 +1363,17 @@ const Companies = () => {
                   </div>
                 ) : (
                   /* ================= EDIT VIEW ================= */
-                  <form id="drawerEditCompanyForm" onSubmit={handleUpdateCompany} className="space-y-4 animate-in fade-in duration-200">
+                  <form id="drawerEditCompanyForm" onSubmit={handleUpdateCompany} className="space-y-3.5 animate-in fade-in duration-200">
                     {editError && (
-                      <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2.5 animate-in fade-in duration-150">
-                        <FiAlertCircle className="shrink-0 text-base" />
+                      <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-150">
+                        <FiAlertCircle className="shrink-0 text-sm" />
                         <span>{editError}</span>
                       </div>
                     )}
 
                     {/* Company Name */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
                         Company Name <span className="text-rose-500">*</span>
                       </label>
                       <input
@@ -1385,17 +1384,17 @@ const Companies = () => {
                         placeholder="e.g. Whatnot India Private Limited"
                         value={editFormData.name}
                         onChange={handleEditInputChange}
-                        className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 font-medium"
+                        className="w-full px-3 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 font-medium"
                       />
                     </div>
 
                     {/* Company Code */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
                         Company Code <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
-                        <FiTag className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+                        <FiTag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
                         <input
                           type="text"
                           name="code"
@@ -1404,19 +1403,19 @@ const Companies = () => {
                           placeholder="e.g. WHATNOT"
                           value={editFormData.code}
                           onChange={handleEditInputChange}
-                          className="w-full pl-10 pr-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400"
+                          className="w-full pl-8 pr-3 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400"
                         />
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">Unique uppercase code identifier for billing and orders.</p>
+                      <p className="text-[10px] text-slate-400 mt-1">Unique uppercase code identifier for billing and orders.</p>
                     </div>
 
                     {/* Logo URL + Live Preview */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
                         Logo URL
                       </label>
                       <div className="flex gap-2.5 items-center">
-                        <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
                           {editFormData.logo ? (
                             <img
                               src={editFormData.logo}
@@ -1427,7 +1426,7 @@ const Companies = () => {
                               }}
                             />
                           ) : (
-                            <FiImage className="text-slate-400 text-lg" />
+                            <FiImage className="text-slate-400 text-sm" />
                           )}
                         </div>
                         <input
@@ -1437,24 +1436,24 @@ const Companies = () => {
                           placeholder="https://example.com/logo.png"
                           value={editFormData.logo}
                           onChange={handleEditInputChange}
-                          className="flex-1 px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 font-mono text-xs"
+                          className="flex-1 px-3 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 font-mono"
                         />
                       </div>
                     </div>
 
                     {/* Description */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
                         Description
                       </label>
                       <textarea
                         name="description"
-                        rows={4}
+                        rows={3}
                         disabled={editSubmitting}
                         placeholder="Company summary, corporate crossover, or distribution details..."
                         value={editFormData.description}
                         onChange={handleEditInputChange}
-                        className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 resize-none leading-relaxed"
+                        className="w-full px-3 py-2 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 resize-none leading-relaxed"
                       />
                     </div>
 

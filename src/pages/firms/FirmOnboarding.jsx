@@ -1476,44 +1476,44 @@ const FirmOnboarding = () => {
                   )}
                 </div>
 
-                {/* Grid 1: Business Profile & Contact */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Grid 1: Business Profile & Contact Rep */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Business Entity Profile */}
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
-                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiBriefcase className="text-blue-500" />
-                      Business & Establishment
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiBriefcase className="text-blue-500 text-xs shrink-0" />
+                      <span>Business & Establishment</span>
                     </p>
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400">Business Type</span>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Business Type</span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200 bg-slate-200/60 dark:bg-white/10 px-2 py-0.5 rounded text-[11px]">
                           {selectedRequest.businessType || 'Proprietorship'}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400">Established Date</span>
-                        <span className="font-semibold text-slate-700 dark:text-slate-200 font-mono">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Established Date</span>
+                        <span className="font-semibold text-xs text-slate-700 dark:text-slate-200 font-mono">
                           {selectedRequest.dateOfEstablishment ? formatDateDDMMYYYY(selectedRequest.dateOfEstablishment) : '-'}
                         </span>
                       </div>
                       {selectedRequest.website && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-[10px] text-slate-400">Website</span>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Website</span>
                           <a
                             href={selectedRequest.website.startsWith('http') ? selectedRequest.website : `https://${selectedRequest.website}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 truncate max-w-[170px]"
+                            className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 truncate max-w-[170px]"
                           >
                             <FiGlobe size={11} />
                             <span className="truncate">{selectedRequest.website}</span>
                           </a>
                         </div>
                       )}
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400">Cash Discount</span>
-                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Cash Discount</span>
+                        <span className="font-semibold text-xs text-emerald-600 dark:text-emerald-400 font-mono">
                           {selectedRequest.cashDiscount !== undefined && selectedRequest.cashDiscount !== null ? `${selectedRequest.cashDiscount}%` : '0%'}
                         </span>
                       </div>
@@ -1521,44 +1521,44 @@ const FirmOnboarding = () => {
                   </div>
 
                   {/* Contact Representative */}
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
-                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiUser className="text-indigo-500" />
-                      Contact Representative
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiUser className="text-indigo-500 text-xs shrink-0" />
+                      <span>Contact Representative</span>
                     </p>
                     <div className="space-y-2">
                       <div>
-                        <span className="text-[10px] text-slate-400">Name & Designation</span>
-                        <p className="font-semibold text-slate-800 dark:text-slate-200">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Name & Designation</span>
+                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                           {selectedRequest.contactPerson || '-'}
                           {selectedRequest.designation && (
-                            <span className="text-slate-400 text-[11px] font-normal block">
+                            <span className="text-slate-400 text-[10px] font-normal block">
                               {selectedRequest.designation}
                             </span>
                           )}
                         </p>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-400">Primary Phone</span>
-                        <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200 font-semibold font-mono">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Primary Phone</span>
+                        <div className="flex items-center gap-1 text-xs text-slate-700 dark:text-slate-200 font-semibold font-mono">
                           <span>{selectedRequest.phone || '-'}</span>
-                          {selectedRequest.phone && <CopyButton text={selectedRequest.phone} />}
+                          {selectedRequest.phone && <CopyButton text={selectedRequest.phone} size={11} />}
                         </div>
                       </div>
                       {selectedRequest.alternatePhone && (
                         <div>
-                          <span className="text-[10px] text-slate-400">Alternate Phone</span>
-                          <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300 font-mono">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Alternate Phone</span>
+                          <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300 font-mono font-medium">
                             <span>{selectedRequest.alternatePhone}</span>
-                            <CopyButton text={selectedRequest.alternatePhone} />
+                            <CopyButton text={selectedRequest.alternatePhone} size={11} />
                           </div>
                         </div>
                       )}
                       {selectedRequest.email && (
                         <div>
-                          <span className="text-[10px] text-slate-400">Email Address</span>
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Email Address</span>
                           <div className="mt-0.5">
-                            <GmailLink email={selectedRequest.email} label={selectedRequest.email} />
+                            <GmailLink email={selectedRequest.email} label={selectedRequest.email} className="text-xs font-medium" />
                           </div>
                         </div>
                       )}
@@ -1567,31 +1567,31 @@ const FirmOnboarding = () => {
                 </div>
 
                 {/* Grid 2: Premises & Financial Terms */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Premises & Operating Address */}
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
-                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiMapPin className="text-rose-500" />
-                      Premises & Address
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiMapPin className="text-rose-500 text-xs shrink-0" />
+                      <span>Premises & Address</span>
                     </p>
                     <div className="space-y-2">
                       <div>
-                        <span className="text-[10px] text-slate-400">Registered Address</span>
-                        <p className="font-semibold text-slate-700 dark:text-slate-200 leading-snug">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Registered Address</span>
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-200 leading-relaxed">
                           {selectedRequest.address || '-'}
                         </p>
                       </div>
                       {selectedRequest.branchAddress && (
                         <div>
-                          <span className="text-[10px] text-slate-400">Branch Address</span>
-                          <p className="font-medium text-slate-600 dark:text-slate-300 leading-snug">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Branch Address</span>
+                          <p className="text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
                             {selectedRequest.branchAddress}
                           </p>
                         </div>
                       )}
-                      <div className="pt-1 border-t border-slate-200/60 dark:border-white/5 flex justify-between">
-                        <span className="text-[10px] text-slate-400">City, State, PIN</span>
-                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                      <div className="pt-1.5 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">City, State, PIN</span>
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300 text-right">
                           {[selectedRequest.city, selectedRequest.state, selectedRequest.pincode].filter(Boolean).join(', ') || '-'}
                         </span>
                       </div>
@@ -1599,27 +1599,27 @@ const FirmOnboarding = () => {
                   </div>
 
                   {/* Financial & Credit Terms */}
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
-                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiDollarSign className="text-emerald-500" />
-                      Credit & Terms
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiDollarSign className="text-emerald-500 text-xs shrink-0" />
+                      <span>Credit & Terms</span>
                     </p>
                     <div className="space-y-2">
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-[10px] text-slate-400">Approved Credit Limit</span>
-                        <span className="font-bold text-base text-slate-900 dark:text-white font-mono">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Approved Credit Limit</span>
+                        <span className="font-bold text-xs text-slate-900 dark:text-white font-mono">
                           ₹{(selectedRequest.creditLimit ?? 0).toLocaleString('en-IN')}
                         </span>
                       </div>
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-[10px] text-slate-400">Credit Days Window</span>
-                        <span className="font-bold text-slate-700 dark:text-slate-200 font-mono">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Credit Days Window</span>
+                        <span className="font-bold text-xs text-slate-700 dark:text-slate-200 font-mono">
                           {selectedRequest.creditDays ?? 30} Days
                         </span>
                       </div>
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-[10px] text-slate-400">Cash Discount</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Cash Discount</span>
+                        <span className="font-bold text-xs text-emerald-600 dark:text-emerald-400 font-mono">
                           {selectedRequest.cashDiscount ?? 0}%
                         </span>
                       </div>
@@ -1628,11 +1628,11 @@ const FirmOnboarding = () => {
                 </div>
 
                 {/* Section 3: Statutory Tax & Document Proofs (PAN, TAN, GSTIN, MSME) */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiFileText className="text-amber-500" />
-                      Statutory KYC & Tax Proofs
+                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiFileText className="text-amber-500 text-xs shrink-0" />
+                      <span>Statutory KYC & Tax Proofs</span>
                     </p>
                     <span className="text-[10px] text-slate-400 font-mono">Click documents to preview</span>
                   </div>
@@ -1802,35 +1802,35 @@ const FirmOnboarding = () => {
                 </div>
 
                 {/* Section 4: Banking & Signatory Stamp */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Banking Details */}
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
-                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiCreditCard className="text-purple-500" />
-                      Banking Credentials
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiCreditCard className="text-purple-500 text-xs shrink-0" />
+                      <span>Banking Credentials</span>
                     </p>
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400">Bank Name</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Bank Name</span>
+                        <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">
                           {selectedRequest.bankName || 'Not Provided'}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400">Account Number</span>
-                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Account Number</span>
+                        <span className="font-mono font-semibold text-xs text-slate-700 dark:text-slate-300">
                           {selectedRequest.accountNumber || '-'}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400">IFSC Code</span>
-                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">IFSC Code</span>
+                        <span className="font-mono font-semibold text-xs text-slate-700 dark:text-slate-300">
                           {selectedRequest.ifscCode || '-'}
                         </span>
                       </div>
                       {selectedRequest.cancelledChequeUrl && (
                         <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between">
-                          <span className="text-[10px] text-slate-400">Cancelled Cheque</span>
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Cancelled Cheque</span>
                           <button
                             type="button"
                             onClick={() =>
@@ -1851,26 +1851,26 @@ const FirmOnboarding = () => {
                   </div>
 
                   {/* Declaration & Signatory Stamp */}
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-3">
-                    <p className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiShield className="text-emerald-500" />
-                      Signatory & Authorization
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <FiShield className="text-emerald-500 text-xs shrink-0" />
+                      <span>Signatory & Authorization</span>
                     </p>
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400">Signatory</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Signatory</span>
+                        <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">
                           {selectedRequest.authorizedSignatoryName || selectedRequest.contactPerson || '-'}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400">Designation</span>
-                        <span className="text-slate-600 dark:text-slate-300">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Designation</span>
+                        <span className="text-xs text-slate-600 dark:text-slate-300">
                           {selectedRequest.signatoryDesignation || selectedRequest.designation || '-'}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400">Declaration</span>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Declaration</span>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${selectedRequest.declarationAgreed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 text-slate-600'}`}>
                           <FiCheck size={10} />
                           {selectedRequest.declarationAgreed ? 'Agreed & Signed' : 'Pending'}
@@ -1878,7 +1878,7 @@ const FirmOnboarding = () => {
                       </div>
                       {selectedRequest.companySealOrSignatureUrl && (
                         <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between">
-                          <span className="text-[10px] text-slate-400">Stamp / Signature Proof</span>
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Stamp / Signature Proof</span>
                           <button
                             type="button"
                             onClick={() =>
@@ -1900,10 +1900,10 @@ const FirmOnboarding = () => {
                 </div>
 
                 {/* Audit & Submitter Metadata */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400">Submitted By</span>
-                    <p className="font-semibold text-slate-700 dark:text-slate-200 mt-0.5">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-0.5">
                       {selectedRequest.submittedBy?.email || selectedRequest.submittedBy?.phone || 'Sales Executive'}
                     </p>
                     {selectedRequest.submittedBy?.role && (

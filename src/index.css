@@ -706,3 +706,177 @@ html[data-ambient-glow="false"] .animate-glow-alt {
 .slide-in-from-bottom-6 {
   --tw-enter-translate-y: 1.5rem;
 }
+
+/* ========================================================
+   UNIFIED DESIGN SYSTEM UTILITIES
+   Standardized heights, radii, focus rings, and action states
+   ======================================================== */
+
+/* Standard Focus Ring */
+.focus-ring {
+  outline: none;
+  transition: all 150ms ease;
+}
+.focus-ring:focus-visible {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Standard Inputs & Controls (40px base height, rounded-xl) */
+.input-base {
+  width: 100%;
+  height: 2.5rem; /* 40px */
+  padding-left: 0.875rem;
+  padding-right: 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-radius: 0.75rem; /* rounded-xl (12px) */
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background-color: #ffffff;
+  color: #0f172a;
+  outline: none;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 150ms ease;
+}
+
+.input-base::placeholder {
+  color: #94a3b8;
+}
+
+.input-base:hover {
+  border-color: #cbd5e1;
+}
+
+.input-base:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.dark .input-base,
+[data-theme="dark"] .input-base {
+  border-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(15, 23, 42, 0.8);
+  color: #f8fafc;
+}
+
+.dark .input-base::placeholder,
+[data-theme="dark"] .input-base::placeholder {
+  color: #64748b;
+}
+
+.dark .input-base:hover,
+[data-theme="dark"] .input-base:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dark .input-base:focus,
+[data-theme="dark"] .input-base:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+/* Standard Buttons (40px height, rounded-xl) */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem; /* 40px */
+  padding-left: 1rem;
+  padding-right: 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  background-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  user-select: none;
+  transition: all 150ms ease;
+}
+
+.btn-primary:hover {
+  background-color: #1d4ed8;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  background-color: #f1f5f9;
+  color: #334155;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  cursor: pointer;
+  user-select: none;
+  transition: all 150ms ease;
+}
+
+.btn-secondary:hover {
+  background-color: #e2e8f0;
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+.dark .btn-secondary,
+[data-theme="dark"] .btn-secondary {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .btn-secondary:hover,
+[data-theme="dark"] .btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  background-color: rgba(244, 63, 94, 0.1);
+  color: #e11d48;
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  cursor: pointer;
+  user-select: none;
+  transition: all 150ms ease;
+}
+
+.btn-danger:hover {
+  background-color: #e11d48;
+  color: #ffffff;
+}
+
+.btn-danger:active {
+  transform: scale(0.98);
+}
+
+/* Standard Floating Popovers (rounded-2xl) */
+.popover-base {
+  border-radius: 1rem; /* rounded-2xl (16px) */
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.dark .popover-base,
+[data-theme="dark"] .popover-base {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+}

@@ -175,9 +175,11 @@ const CustomDropdown = ({
       {/* Trigger Button */}
       <div
         onClick={toggleDropdown}
-        className={`w-full bg-white dark:bg-blue-700 outline-none px-3 py-2.5 shadow-md rounded-full border cursor-pointer transition-all flex justify-between items-center select-none gap-2 ${
-          disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
-        } ${statusColor || ''} ${className || ''}`}
+        className={`w-full outline-hidden px-3.5 py-2 min-h-[38px] text-xs sm:text-sm rounded-xl border cursor-pointer transition-all flex justify-between items-center select-none gap-2 ${
+          statusColor || 'bg-white dark:bg-slate-900/80 border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-slate-200 shadow-xs hover:border-slate-300 dark:hover:border-white/20'
+        } ${
+          disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'active:scale-[0.99]'
+        } ${className || ''}`}
       >
         <span className="truncate">{displayLabel}</span>
         <FiChevronDown className={`shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''} text-current opacity-70`} />
@@ -195,7 +197,7 @@ const CustomDropdown = ({
             minWidth: `${coords.minWidth}px`,
             maxHeight: `${coords.maxHeight}px`
           }}
-          className={`w-max max-w-[340px] bg-white/20 dark:bg-slate-950/20 backdrop-blur-md border border-slate-200 dark:border-white/20 rounded-xl shadow-xl dark:shadow-2xl shadow-slate-900/10 dark:shadow-black/80 flex flex-col overflow-hidden z-[99999] ${
+          className={`w-max max-w-[340px] bg-white/20 dark:bg-slate-950/20 backdrop-blur-md border border-slate-200 dark:border-white/20 rounded-2xl shadow-xl dark:shadow-2xl shadow-slate-900/10 dark:shadow-black/80 flex flex-col overflow-hidden z-[99999] ${
             coords.openUp ? 'animate-dropdown-up' : 'animate-dropdown'
           } ${menuClassName || ''}`}
         >

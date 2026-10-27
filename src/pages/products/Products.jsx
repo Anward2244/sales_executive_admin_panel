@@ -1985,7 +1985,7 @@ const Products = () => {
       )}
 
       {/* Actions & Filters Bar - Ultra Compact */}
-      <div className="relative z-30 bg-white/50 dark:bg-slate-900/60 p-2 sm:px-3 sm:py-2 rounded-full border border-slate-200/80 dark:border-white/10 shadow-xs space-y-1.5">
+      <div className={`relative z-30 bg-white/50 dark:bg-slate-900/60 p-2 sm:px-3 sm:py-2 rounded-full border border-slate-200/80 dark:border-white/10 shadow-xs space-y-1.5 transition-all duration-200 ${isFiltersVisible ? 'rounded-xl' : 'rounded-full'}`}>
         {/* Top Row: Primary Actions, Filter Toggle & Sort / Reset */}
         <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 ${isFiltersVisible ? 'pb-1.5 border-b border-slate-200/60 dark:border-white/5' : ''}`}>
           {/* Action Controls */}
@@ -2675,12 +2675,12 @@ const Products = () => {
                   {/* Top Bar: Icon + Title + Close Button */}
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                      <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
-                        <FiPackage className="text-xl sm:text-2xl" />
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
+                        <FiPackage className="text-base sm:text-lg" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
+                          <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
                             {drawerProduct ? drawerProduct.name : 'Add New Product'}
                           </h2>
                           {drawerProduct && (
@@ -2701,7 +2701,7 @@ const Products = () => {
                               <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
                                 {drawerProduct.sku}
                               </span>
-                              <CopyButton text={drawerProduct.sku} size={11} />
+                              <CopyButton text={drawerProduct.sku} size={10} />
                             </>
                           ) : (
                             <p className="text-xs text-slate-400 truncate">Configure new catalog product with pricing and routing</p>
@@ -2787,31 +2787,31 @@ const Products = () => {
                 </div>
 
                 {/* Scrollable Body Content */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-7 custom-scrollbar space-y-5 sm:space-y-6">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-5 custom-scrollbar space-y-3.5 sm:space-y-4">
                   {drawerTab === 'overview' && drawerProduct ? (
                     <>
                       {/* Product Specifications Grid */}
-                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
-                        <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                          <FiTag className="text-blue-500" />
+                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                        <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <FiTag className="text-blue-500 text-xs" />
                           <span>General Information</span>
                         </h3>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5">
                           <div>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Brand</p>
-                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Brand</p>
+                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">
                               {drawerProduct.brand || 'N/A'}
                             </p>
                           </div>
 
                           <div>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Category</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Category</p>
                             {(() => {
                               const cat = getDrawerCategoryDetails(drawerProduct);
                               return cat ? (
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">
                                     {cat.name}
                                   </span>
                                   {cat.code && (
@@ -2821,31 +2821,22 @@ const Products = () => {
                                   )}
                                 </div>
                               ) : (
-                                <p className="text-sm text-slate-400 italic">Unassigned</p>
+                                <p className="text-xs text-slate-400 italic">Unassigned</p>
                               );
                             })()}
                           </div>
 
-                          {/* <div>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Price (INR)</p>
-                            <p className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                              {drawerProduct.price !== undefined && drawerProduct.price !== null && drawerProduct.price !== ''
-                                ? `₹${Number(drawerProduct.price).toLocaleString('en-IN')}`
-                                : '₹0'}
-                            </p>
-                          </div> */}
-
                           <div>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Measurement Unit</p>
-                            <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Measurement Unit</p>
+                            <p className="text-xs font-mono font-semibold text-slate-800 dark:text-slate-100">
                               {drawerProduct.unit || 'PCS'}
                             </p>
                           </div>
 
                           <div>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Catalog Status</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Catalog Status</p>
                             <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                                 drawerProduct.isActive !== false
                                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                                   : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
@@ -2856,32 +2847,32 @@ const Products = () => {
                           </div>
 
                           <div>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Created Date</p>
-                            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Created Date</p>
+                            <p className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
                               {formatDateTimeDDMMYYYY(drawerProduct.createdAt)}
                             </p>
                           </div>
 
                           <div>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Last Updated</p>
-                            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Last Updated</p>
+                            <p className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
                               {formatDateTimeDDMMYYYY(drawerProduct.updatedAt)}
                             </p>
                           </div>
                         </div>
 
-                        <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-bold text-slate-400">Product System ID:</span>
-                            <span className="font-mono text-xs text-slate-600 dark:text-slate-400">{drawerProduct._id}</span>
+                        <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap items-center justify-between gap-2.5 text-[11px]">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold text-slate-400">Product System ID:</span>
+                            <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{drawerProduct._id}</span>
                             <CopyButton text={drawerProduct._id} size={10} />
                           </div>
                           {(() => {
                             const cat = getDrawerCategoryDetails(drawerProduct);
                             return cat?.id ? (
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-bold text-slate-400">Category ID:</span>
-                                <span className="font-mono text-xs text-slate-600 dark:text-slate-400">{cat.id}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-bold text-slate-400">Category ID:</span>
+                                <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{cat.id}</span>
                                 <CopyButton text={cat.id} size={10} />
                               </div>
                             ) : null;
@@ -2891,10 +2882,10 @@ const Products = () => {
 
                       {/* Company Territory Routing (companyMappings) */}
                       {Array.isArray(drawerProduct.companyMappings) && drawerProduct.companyMappings.length > 0 ? (
-                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-2.5">
                           <div className="flex items-center justify-between">
-                            <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                              <FiBriefcase className="text-blue-500" />
+                            <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                              <FiBriefcase className="text-blue-500 text-xs" />
                               <span>Company Territory Routing ({drawerProduct.companyMappings.length})</span>
                             </h3>
                             <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
@@ -2902,7 +2893,7 @@ const Products = () => {
                             </span>
                           </div>
 
-                          <div className="space-y-2.5">
+                          <div className="space-y-2">
                             {drawerProduct.companyMappings.map((mapping, idx) => {
                               const compObj =
                                 typeof mapping.companyId === 'object' && mapping.companyId !== null
@@ -2916,7 +2907,7 @@ const Products = () => {
                               return (
                                 <div
                                   key={idx}
-                                  className="p-3.5 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 space-y-2"
+                                  className="p-2.5 sm:p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 space-y-1.5"
                                 >
                                   <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2">
@@ -2932,7 +2923,7 @@ const Products = () => {
                                         </span>
                                       )}
                                     </div>
-                                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
                                       {isWildcard
                                         ? 'Pan-India Wildcard'
                                         : `${states.length} ${states.length === 1 ? 'state' : 'states'}`}
@@ -2945,7 +2936,7 @@ const Products = () => {
                                         st === '*' ? (
                                           <span
                                             key={sIdx}
-                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20"
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20"
                                           >
                                             ★ Pan-India / All Territories (*)
                                           </span>
@@ -2961,7 +2952,7 @@ const Products = () => {
                                       )}
                                     </div>
                                   ) : (
-                                    <span className="text-[11px] text-slate-400 italic">No specific states assigned (All territories fallback)</span>
+                                    <span className="text-[10px] text-slate-400 italic">No specific states assigned (All territories fallback)</span>
                                   )}
                                 </div>
                               );
@@ -2970,36 +2961,36 @@ const Products = () => {
                         </div>
                       ) : (
                         /* Single Trading / Partner Company Fallback */
-                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
-                          <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                            <FiBriefcase className="text-emerald-500" />
+                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                          <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <FiBriefcase className="text-emerald-500 text-xs" />
                             <span>Partner / Trading Company</span>
                           </h3>
 
                           {(() => {
                             const comp = getDrawerCompanyDetails(drawerProduct);
                             return (
-                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5">
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 p-2.5 sm:p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5">
                                 <div className="space-y-0.5">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                    <span className="text-xs font-bold text-slate-900 dark:text-white">
                                       {comp.name}
                                     </span>
                                     {comp.code && (
-                                      <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md border border-blue-500/20">
+                                      <span className="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md border border-blue-500/20">
                                         {comp.code}
                                       </span>
                                     )}
                                   </div>
                                   {comp.id && (
-                                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
                                       <span>ID: {comp.id}</span>
                                       <CopyButton text={comp.id} size={10} />
                                     </div>
                                   )}
                                 </div>
 
-                                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
                                   <FiCheckCircle className="text-xs" />
                                   <span>Mapped Company</span>
                                 </span>
@@ -3010,39 +3001,39 @@ const Products = () => {
                       )}
 
                       {/* Covered Distribution Locations */}
-                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                            <FiMapPin className="text-rose-500" />
+                          <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <FiMapPin className="text-rose-500 text-xs" />
                             <span>Covered Locations / Territories</span>
                           </h3>
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
                             {(drawerProduct.locations || []).length} Locations
                           </span>
                         </div>
 
                         {Array.isArray(drawerProduct.locations) && drawerProduct.locations.length > 0 ? (
-                          <div className="flex flex-wrap gap-2 pt-1">
+                          <div className="flex flex-wrap gap-1.5 pt-1">
                             {drawerProduct.locations.map((loc, idx) => (
                               <span
                                 key={idx}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 shadow-2xs"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-[11px] font-medium text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 shadow-2xs"
                               >
-                                <FiGlobe className="text-blue-500 text-xs shrink-0" />
+                                <FiGlobe className="text-blue-500 text-[10px] shrink-0" />
                                 <span>{loc}</span>
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <div className="p-4 text-center text-slate-400 text-xs italic bg-white/40 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-white/10">
+                          <div className="p-3 text-center text-slate-400 text-xs italic bg-white/40 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-white/10">
                             No specific locations assigned. This product can be distributed across all territories.
                           </div>
                         )}
                       </div>
 
                       {/* Description */}
-                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
-                        <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-1.5">
+                        <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                           Product Description
                         </h3>
                         <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">

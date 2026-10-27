@@ -392,7 +392,11 @@ const Layout = () => {
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
   }, []);
 
   const getNotificationsList = () => {
@@ -766,7 +770,10 @@ const Layout = () => {
           {/* Mobile Notifications Dropdown */}
           <div className="relative" ref={mobileNotificationsDropdownRef}>
             <button
-              onClick={() => setIsNotificationsDropdownOpen(!isNotificationsDropdownOpen)}
+              onClick={() => {
+                setIsNotificationsDropdownOpen(!isNotificationsDropdownOpen);
+                setIsProfileDropdownOpen(false);
+              }}
               className={`${isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'} relative transition-colors mt-1 focus:outline-none`}
             >
               <FiBell className="text-xl cursor-pointer" />
@@ -922,26 +929,39 @@ const Layout = () => {
           {/* Mobile Profile Dropdown */}
           <div className="relative" ref={mobileProfileDropdownRef}>
             <div
-              className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center !text-white font-bold text-xs shadow-inner cursor-pointer"
-              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center !text-white font-bold text-xs shadow-inner cursor-pointer select-none active:scale-95 transition-transform"
+              onClick={() => {
+                setIsProfileDropdownOpen(!isProfileDropdownOpen);
+                setIsNotificationsDropdownOpen(false);
+              }}
+              title="Profile menu"
             >
-              {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+              {user?.email ? user.email.charAt(0).toUpperCase() : (user?.name ? user.name.charAt(0).toUpperCase() : 'U')}
             </div>
 
             {/* Dropdown Menu */}
             {isProfileDropdownOpen && (
-              <div className={`absolute flex right-0 mt-3 w-52 backdrop-blur-[16px] border rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
+              <div className={`absolute right-0 mt-3 w-56 flex flex-col backdrop-blur-xl border rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
                 isDark 
-                  ? 'bg-slate-900/90 border-white/10 shadow-black/50' 
-                  : 'bg-white/40 border-slate-200 shadow-slate-900/60'
+                  ? 'bg-slate-900/50 border-white/10 shadow-black/50' 
+                  : 'bg-white/40 border-slate-200/90 shadow-slate-900/15'
               }`}>
-                <div className={`px-4 py-2 border-b mb-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
-                  <p className={`text-sm font-semibold line-clamp-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>{user.email || 'User'}</p>
-                  <p className={`text-xs capitalize ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Administrator</p>
+                <div className={`px-4 py-2.5 border-b mb-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
+                  <p className={`text-sm font-semibold line-clamp-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                    {user?.name || user?.email || 'User'}
+                  </p>
+                  <p className={`text-xs capitalize ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {user?.role || 'Administrator'}
+                  </p>
                 </div>
 
                 {/* Theme Switch Toggle */}
-                <div className={`px-4 py-2 flex items-center justify-between border-b my-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
+                {/* <div 
+                  onClick={() => toggleTheme()}
+                  className={`px-4 py-2 flex items-center justify-between border-b my-1 cursor-pointer transition-colors ${
+                    isDark ? 'border-white/10 hover:bg-white/5' : 'border-slate-100 hover:bg-slate-50'
+                  }`}
+                >
                   <div className="flex items-center gap-2">
                     {isDark ? (
                       <FiMoon className="text-blue-400 text-sm" />
@@ -971,10 +991,11 @@ const Layout = () => {
                       }`}
                     />
                   </button>
-                </div>
+                </div> */}
 
                 <Link
                   to="/profile"
+                  data-nav-menu="true"
                   onClick={() => setIsProfileDropdownOpen(false)}
                   className={`flex items-center px-4 py-2 text-sm transition-colors ${
                     isDark ? 'text-slate-300 hover:bg-white/10 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -984,6 +1005,7 @@ const Layout = () => {
                 </Link>
                 <Link
                   to="/settings"
+                  data-nav-menu="true"
                   onClick={() => setIsProfileDropdownOpen(false)}
                   className={`flex items-center px-4 py-2 text-sm transition-colors ${
                     isDark ? 'text-slate-300 hover:bg-white/10 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -992,7 +1014,10 @@ const Layout = () => {
                   <FiSettings className="mr-2" /> Panel Settings
                 </Link>
                 <button
-                  onClick={logout}
+                  onClick={() => {
+                    setIsProfileDropdownOpen(false);
+                    logout();
+                  }}
                   className="w-full flex items-center px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
                 >
                   <FiLogOut className="mr-2" /> Logout
@@ -1002,7 +1027,11 @@ const Layout = () => {
           </div>
 
           <button
-            onClick={() => setIsMobileMenuOpen(true)}
+            onClick={() => {
+              setIsMobileMenuOpen(true);
+              setIsProfileDropdownOpen(false);
+              setIsNotificationsDropdownOpen(false);
+            }}
             className={`p-1 focus:outline-none transition-colors ${
               isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'
             }`}
@@ -1303,7 +1332,10 @@ const Layout = () => {
             {/* Desktop Notifications Dropdown */}
             <div className="relative" ref={notificationsDropdownRef}>
               <button
-                onClick={() => setIsNotificationsDropdownOpen(!isNotificationsDropdownOpen)}
+                onClick={() => {
+                  setIsNotificationsDropdownOpen(!isNotificationsDropdownOpen);
+                  setIsProfileDropdownOpen(false);
+                }}
                 className={`${isDark ? 'text-slate-400 hover:text-blue-500' : 'text-slate-600 hover:text-blue-600'} relative transition-colors mt-1 focus:outline-none`}
                 title="Notifications"
               >
@@ -1503,10 +1535,13 @@ const Layout = () => {
             <div className="relative" ref={profileDropdownRef}>
               <div
                 className="flex items-center cursor-pointer group"
-                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                onClick={() => {
+                  setIsProfileDropdownOpen(!isProfileDropdownOpen);
+                  setIsNotificationsDropdownOpen(false);
+                }}
               >
                 <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center !text-white font-bold text-xs shadow-inner">
-                  {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                  {user?.email ? user.email.charAt(0).toUpperCase() : (user?.name ? user.name.charAt(0).toUpperCase() : 'U')}
                 </div>
                 <div className="ml-3 hidden md:block">
                   <p className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>Admin Account</p>
@@ -1517,74 +1552,49 @@ const Layout = () => {
 
               {/* Dropdown Menu */}
               {isProfileDropdownOpen && (
-                <div className={`absolute right-0 mt-3 w-52 backdrop-blur-md border rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
+                <div className={`absolute right-0 mt-3 w-56 backdrop-blur-md border rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 ${
                   isDark 
                     ? 'bg-slate-900/50 border-white/10 shadow-black/50' 
                     : 'bg-white/10 border-slate-200 shadow-slate-900/40'
                 }`}>
-                  <div className={`px-4 py-2 border-b mb-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
-                    <p className={`text-sm font-semibold line-clamp-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>{user.email || 'User'}</p>
-                    <p className={`text-xs capitalize ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Administrator</p>
+                  <div className={`px-4 py-2.5 border-b mb-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
+                    <p className={`text-sm font-semibold line-clamp-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                      {user?.name || user?.email || 'User'}
+                    </p>
+                    <p className={`text-xs capitalize ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {user?.role || 'Administrator'}
+                    </p>
                   </div>
-
-                  {/* Theme Switch Toggle */}
-                  {/* <div className={`px-4 py-2 flex items-center justify-between border-b my-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
-                    <div className="flex items-center gap-2">
-                      {isDark ? (
-                        <FiMoon className="text-blue-400 text-sm" />
-                      ) : (
-                        <FiSun className="text-amber-500 text-sm" />
-                      )}
-                      <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                        {isDark ? 'Dark Mode' : 'Light Mode'}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleTheme();
-                      }}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        isDark ? 'bg-blue-600' : 'bg-slate-300'
-                      }`}
-                      role="switch"
-                      aria-checked={isDark}
-                      title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                          isDark ? 'translate-x-4' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div> */}
 
                   <Link
                     to="/profile"
                     data-nav-menu="true"
                     onClick={() => setIsProfileDropdownOpen(false)}
-                    className={`flex items-center px-4 py-2 text-sm transition-colors ${
+                    className={`flex items-center px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors ${
                       isDark ? 'text-slate-300 hover:bg-white/10 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
-                    <FiUser className="mr-2" /> Profile
+                    <FiUser className="mr-2.5 text-sm" /> Profile
                   </Link>
                   <Link
                     to="/settings"
                     data-nav-menu="true"
                     onClick={() => setIsProfileDropdownOpen(false)}
-                    className={`flex items-center px-4 py-2 text-sm transition-colors ${
+                    className={`flex items-center px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors ${
                       isDark ? 'text-slate-300 hover:bg-white/10 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
-                    <FiSettings className="mr-2" /> Panel Settings
+                    <FiSettings className="mr-2.5 text-sm" /> Panel Settings
                   </Link>
+                  <div className={`my-1 border-t ${isDark ? 'border-white/10' : 'border-slate-100'}`} />
                   <button
-                    onClick={logout}
-                    className="w-full flex items-center px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      logout();
+                    }}
+                    className="w-full flex items-center px-4 py-2.5 text-xs sm:text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
                   >
-                    <FiLogOut className="mr-2" /> Logout
+                    <FiLogOut className="mr-2.5 text-sm" /> Logout
                   </button>
                 </div>
               )}
