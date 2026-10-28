@@ -175,8 +175,8 @@ const CustomDropdown = ({
       {/* Trigger Button */}
       <div
         onClick={toggleDropdown}
-        className={`w-full outline-hidden px-3.5 py-2 min-h-[38px] text-xs sm:text-sm rounded-xl border cursor-pointer transition-all flex justify-between items-center select-none gap-2 ${
-          statusColor || 'bg-white dark:bg-slate-900/80 border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-slate-200 shadow-xs hover:border-slate-300 dark:hover:border-white/20'
+        className={`w-full outline-hidden px-3.5 py-2 min-h-[38px] text-xs sm:text-sm shadow-md rounded-xl border cursor-pointer transition-all flex justify-between items-center select-none gap-2 ${
+          statusColor || 'bg-white dark:bg-slate-900/80 border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-white/20'
         } ${
           disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'active:scale-[0.99]'
         } ${className || ''}`}

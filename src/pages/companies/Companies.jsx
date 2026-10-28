@@ -38,6 +38,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { formatEntityCode } from '@/utils/formatters';
 import { validateEntityCode } from '@/utils/validators';
 import { TableSkeleton, SkeletonPulse } from '@/components/ui/Skeleton';
+import { StatusBadge, EmptyState, OptimizedImage, SegmentedTabs } from '@/components/ui';
 
 const INITIAL_FORM = {
   name: '',
@@ -551,60 +552,19 @@ const Companies = () => {
           </button>
         </div>
 
-        <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start sm:self-auto">
-          {[
-            {
-              id: 'all',
-              label: 'All',
-              count: totalCount,
-              badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
-              bg: 'bg-blue-600',
-              activeBadgeClass: 'bg-blue-800'
-            },
-            {
-              id: 'active',
-              label: 'Active',
-              count: activeCount,
-              badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-              bg: 'bg-emerald-600',
-              activeBadgeClass: 'bg-emerald-800'
-            },
-            {
-              id: 'inactive',
-              label: 'Inactive',
-              count: inactiveCount,
-              badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
-              bg: 'bg-rose-600',
-              activeBadgeClass: 'bg-rose-800'
-            }
-          ].map((tab) => {
-            const isActive = statusFilter === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  setStatusFilter(tab.id);
-                  setCurrentPage(1);
-                }}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                  isActive
-                    ? `${tab.bg} text-white shadow-xs font-bold`
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    isActive ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Status Segmented Tabs (unified SegmentedTabs) */}
+        <SegmentedTabs
+          tabs={[
+            { id: 'all', label: 'All', count: totalCount },
+            { id: 'active', label: 'Active', count: activeCount },
+            { id: 'inactive', label: 'Inactive', count: inactiveCount }
+          ]}
+          activeTab={statusFilter}
+          onChange={(tabId) => {
+            setStatusFilter(tabId);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
       {/* Error Banner */}
@@ -718,12 +678,12 @@ const Companies = () => {
                                 className="w-9 h-9 rounded-xl overflow-hidden bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm cursor-pointer hover:ring-2 hover:ring-blue-500/30 transition-all"
                                 title="View company details"
                               >
-                                {hasCustomLogo ? (
-                                  <img
+                                {company.logo ? (
+                                  <OptimizedImage
                                     src={company.logo}
                                     alt={company.name}
-                                    onError={() => handleImageError(company._id)}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    width={64}
                                   />
                                 ) : (
                                   <div className="w-full h-full rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 !text-white flex items-center justify-center text-xs font-extrabold shadow-sm">
@@ -771,18 +731,7 @@ const Companies = () => {
 
                           {/* Status */}
                           <td className="p-4 text-sm text-center">
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${company.isActive
-                                ? 'bg-emerald-500/50 dark:bg-emerald-500/10 text-white dark:text-emerald-600 border-emerald-500/25'
-                                : 'bg-rose-500/50 dark:bg-rose-500/10 text-white dark:text-rose-600 border-rose-500/20'
-                                }`}
-                            >
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${company.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
-                                  }`}
-                              />
-                              <span>{company.isActive ? 'Active' : 'Inactive'}</span>
-                            </span>
+                            <StatusBadge status={company.isActive ? 'ACTIVE' : 'INACTIVE'} size="xs" dot />
                           </td>
 
                           {/* Created Date */}
@@ -841,10 +790,15 @@ const Companies = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={7} className="p-12 text-center text-slate-500 dark:text-slate-400 italic">
-                        {searchTerm || statusFilter !== 'all'
-                          ? 'No matching companies found for current filters.'
-                          : 'No companies found.'}
+                      <td colSpan={7} className="p-4 text-center">
+                        <EmptyState
+                          icon={FiBriefcase}
+                          title={searchTerm || statusFilter !== 'all' ? 'No matching companies found' : 'No companies found'}
+                          description="Try adjusting your search query or switching active status filters."
+                          actionText="Reset Filters"
+                          onAction={() => { setSearchTerm(''); setStatusFilter('all'); }}
+                          contained={false}
+                        />
                       </td>
                     </tr>
                   )}
@@ -1250,20 +1204,7 @@ const Companies = () => {
                           <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
                             {selectedCompany.name}
                           </h3>
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                              selectedCompany.isActive
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                            }`}
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                selectedCompany.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
-                              }`}
-                            />
-                            <span>{selectedCompany.isActive ? 'Active' : 'Inactive'}</span>
-                          </span>
+                          <StatusBadge status={selectedCompany.isActive ? 'ACTIVE' : 'INACTIVE'} size="xs" dot />
                         </div>
 
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">

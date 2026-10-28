@@ -26,6 +26,7 @@ import {
 } from '@/api/axios';
 import { formatEntityCode, formatPhone, formatGSTIN, formatPincode } from '@/utils/formatters';
 import { validateEntityCode, validatePhone, validateEmail, validateGSTIN, validatePincode } from '@/utils/validators';
+import { SegmentedTabs, StatusBadge } from '@/components/ui';
 
 const INITIAL_ONBOARD_FORM = {
   companyId: '',
@@ -695,31 +696,9 @@ const FirmOnboarding = () => {
     );
   };
 
-  const getStatusBadge = (status) => {
-    const s = (status || 'PENDING').toUpperCase();
-    if (s === 'APPROVED') {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-xs">
-          <FiCheckCircle size={13} className="shrink-0" />
-          APPROVED
-        </span>
-      );
-    }
-    if (s === 'REJECTED') {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 shadow-xs">
-          <FiUserX size={13} className="shrink-0" />
-          REJECTED
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-xs">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-        PENDING
-      </span>
-    );
-  };
+  const getStatusBadge = (status) => (
+    <StatusBadge status={status || 'PENDING'} size="xs" dot />
+  );
 
   return (
     <div className="space-y-5 pb-12 w-full">
@@ -780,7 +759,7 @@ const FirmOnboarding = () => {
             <button
               onClick={() => fetchRequests(false)}
               disabled={loading}
-              className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+              className="px-3.5 py-2 text-xs bg-white/40 font-semibold rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 shadow-md hover:bg-slate-100 dark:hover:bg-white/5 transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
               title="Refresh onboarding requests"
             >
               <FiRefreshCcw className={`text-sm ${loading ? 'animate-spin' : ''}`} />
@@ -790,7 +769,7 @@ const FirmOnboarding = () => {
             <button
               onClick={handleExportExcel}
               disabled={sortedRequests.length === 0}
-              className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+              className="px-3.5 py-2 text-xs bg-white/40 font-semibold rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 shadow-md hover:bg-slate-100 dark:hover:bg-white/5 transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
               title="Export filtered list to Excel"
             >
               <FiDownload className="text-sm text-emerald-500" />
@@ -880,66 +859,17 @@ const FirmOnboarding = () => {
 
       {/* Clean, Non-Clumsy Filter Bar */}
       <div className="p-2.5 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-        {/* Status Segmented Tabs */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start lg:self-auto">
-          {[
-            {
-              id: 'ALL',
-              label: 'All Requests',
-              count: stats.total,
-              badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
-              bg: 'bg-blue-600',
-              activeBadgeClass: 'bg-blue-800',
-            },
-            {
-              id: 'PENDING',
-              label: 'Pending',
-              count: stats.pending,
-              badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-              bg: 'bg-amber-600',
-              activeBadgeClass: 'bg-amber-800',
-            },
-            {
-              id: 'APPROVED',
-              label: 'Approved',
-              count: stats.approved,
-              badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-              bg: 'bg-emerald-600',
-              activeBadgeClass: 'bg-emerald-800',
-            },
-            {
-              id: 'REJECTED',
-              label: 'Rejected',
-              count: stats.rejected,
-              badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
-              bg: 'bg-rose-600',
-              activeBadgeClass: 'bg-rose-800',
-            }
-          ].map((tab) => {
-            const isActive = (selectedStatus || 'ALL').toUpperCase() === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleStatusFilter(tab.id)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                  isActive
-                    ? `${tab.bg} text-white shadow-xs font-bold`
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    isActive ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Status Segmented Tabs (unified SegmentedTabs) */}
+        <SegmentedTabs
+          tabs={[
+            { id: 'ALL', label: 'All Requests', count: stats.total },
+            { id: 'PENDING', label: 'Pending', count: stats.pending },
+            { id: 'APPROVED', label: 'Approved', count: stats.approved },
+            { id: 'REJECTED', label: 'Rejected', count: stats.rejected }
+          ]}
+          activeTab={selectedStatus || 'ALL'}
+          onChange={handleStatusFilter}
+        />
 
         {/* Company Dropdown, Search Input, and Reset */}
         <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap justify-end">

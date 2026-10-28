@@ -20,6 +20,7 @@ import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { createPortal } from 'react-dom';
 import { formatPhone, formatEntityCode } from '@/utils/formatters';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { StatusBadge, EmptyState, SegmentedTabs } from '@/components/ui';
 import { useToast } from '@/context/ToastContext';
 
 const getUserFullName = (user) => {
@@ -1016,58 +1017,16 @@ const UsersList = () => {
 
           {/* Status Segmented Filter, Role Filter & Actions */}
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            {/* Segmented Status Pill Filter */}
-            <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start sm:self-auto">
-              {[
-                {
-                  id: 'all',
-                  label: 'All',
-                  count: users.length,
-                  badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
-                  bg: 'bg-blue-600',
-                  activeBadgeClass: 'bg-blue-800'
-                },
-                {
-                  id: 'active',
-                  label: 'Active',
-                  count: activeCount,
-                  badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-                  bg: 'bg-emerald-600',
-                  activeBadgeClass: 'bg-emerald-800'
-                },
-                {
-                  id: 'inactive',
-                  label: 'Inactive',
-                  count: inactiveCount,
-                  badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
-                  bg: 'bg-rose-600',
-                  activeBadgeClass: 'bg-rose-800'
-                }
-              ].map((tab) => {
-                const isSelected = (!selectedStatus && tab.id === 'all') || selectedStatus === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => handleFilterChange('status', tab.id === 'all' ? '' : tab.id)}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                      isSelected
-                        ? `${tab.bg} text-white shadow-xs font-bold`
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <span>{tab.label}</span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        isSelected ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
-                      }`}
-                    >
-                      {tab.count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {/* Segmented Status Tabs (unified SegmentedTabs) */}
+            <SegmentedTabs
+              tabs={[
+                { id: 'all', label: 'All', count: users.length },
+                { id: 'active', label: 'Active', count: activeCount },
+                { id: 'inactive', label: 'Inactive', count: inactiveCount }
+              ]}
+              activeTab={selectedStatus || 'all'}
+              onChange={(tabId) => handleFilterChange('status', tabId === 'all' ? '' : tabId)}
+            />
 
             <div className="min-w-[130px]">
               <CustomDropdown
@@ -1092,7 +1051,7 @@ const UsersList = () => {
                 setIsBulkMode((prev) => !prev);
                 if (isBulkMode) setSelectedUserIds(new Set());
               }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer shrink-0 ${isBulkMode
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs shadow-md font-bold transition-all border cursor-pointer shrink-0 ${isBulkMode
                 ? 'bg-amber-500 border-amber-500/40 text-white dark:text-amber-400'
                 : 'bg-white dark:bg-white/5 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-blue-500/40'
                 }`}
@@ -1361,19 +1320,14 @@ const UsersList = () => {
 
                           {/* Status Toggle (PATCH /users/{id}/status) */}
                           <td className="p-4 text-sm text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleUserStatus(user)}
-                              disabled={actionLoadingId === user._id}
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer hover:scale-105 active:scale-95 disabled:opacity-50 ${user.isActive
-                                ? 'bg-emerald-500/60 dark:bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-white dark:text-emerald-600'
-                                : 'bg-rose-500/60 dark:bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-white dark:text-rose-600'
-                                }`}
-                              title={`Click to ${user.isActive ? 'deactivate' : 'activate'} user`}
-                            >
-                              <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                              <span>{user.isActive ? 'Active' : 'Inactive'}</span>
-                            </button>
+                            <StatusBadge
+                                status={user.isActive ? 'ACTIVE' : 'INACTIVE'}
+                                size="xs"
+                                dot
+                                onClick={() => handleToggleUserStatus(user)}
+                                className="cursor-pointer hover:opacity-80"
+                                title={`Click to ${user.isActive ? 'deactivate' : 'activate'} user`}
+                              />
                           </td>
 
                           {/* Last Login */}
@@ -1429,12 +1383,17 @@ const UsersList = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={isBulkMode ? 12 : 11} className="p-12 text-center text-slate-500 dark:text-slate-400 italic">
-                        {searchTerm || selectedRole || selectedStatus || userTab !== 'all'
-                          ? 'No matching users found for current filters.'
-                          : 'No users found.'}
-                      </td>
-                    </tr>
+                        <td colSpan={isBulkMode ? 12 : 11} className="p-4 text-center">
+                          <EmptyState
+                            icon={FiUsers}
+                            title={searchTerm || selectedRole || selectedStatus || userTab !== 'all' ? 'No matching users found' : 'No users found'}
+                            description="Try clearing your search query or switching active filter tabs."
+                            actionText="Reset Filters"
+                            onAction={handleClearFilters}
+                            contained={false}
+                          />
+                        </td>
+                      </tr>
                   )}
                 </tbody>
               </table>

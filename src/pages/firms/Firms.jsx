@@ -8,7 +8,8 @@ import {
   FiUsers, FiUserCheck, FiUserX, FiMapPin, FiFileText,
   FiPlus, FiUser, FiCheckCircle, FiEdit2, FiTrash2,
   FiLayers, FiDownload, FiCreditCard, FiChevronLeft, FiChevronRight,
-  FiShield, FiAward, FiGlobe, FiMaximize2
+  FiShield, FiAward, FiGlobe, FiMaximize2,
+  FiFilter, FiChevronDown
 } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
@@ -18,7 +19,7 @@ import GmailLink from '@/components/ui/GmailLink';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { TableRowSkeleton, TableSkeleton } from '@/components/ui/Skeleton';
 import PageHeader from '@/components/ui/PageHeader';
-import { BulkActionBar, BatchProgressModal } from '@/components/ui';
+import { BulkActionBar, BatchProgressModal, StatusBadge, EmptyState, OptimizedImage, SegmentedTabs } from '@/components/ui';
 import {
   getFirmsApi,
   createFirmApi,
@@ -109,10 +110,22 @@ const Firms = () => {
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
 
   const selectedCompany = searchParams.get('company') || '';
+  const selectedBusinessType = searchParams.get('businessType') || '';
   const selectedStatus = searchParams.get('status') || '';
   const sortKey = searchParams.get('sortKey') || 'createdAt';
   const sortOrder = searchParams.get('sortOrder') || 'desc';
   const firmTab = searchParams.get('tab') || 'all';
+
+  // Toggle Filters Visibility (matching Products.jsx)
+  const [isFiltersVisible, setIsFiltersVisible] = useState(() => Boolean(selectedCompany || selectedBusinessType));
+
+  // Count active non-default dropdown filters
+  const activeFiltersCount = useMemo(() => {
+    return [
+      Boolean(selectedCompany),
+      Boolean(selectedBusinessType)
+    ].filter(Boolean).length;
+  }, [selectedCompany, selectedBusinessType]);
 
   // Pagination limit
   const { preferences: displayPrefs } = useDisplayPreferences();
@@ -213,6 +226,7 @@ const Firms = () => {
       prev.delete('search');
       prev.delete('firmId');
       prev.delete('company');
+      prev.delete('businessType');
       prev.delete('status');
       prev.delete('sortKey');
       prev.delete('sortOrder');
@@ -363,16 +377,24 @@ const Firms = () => {
     return Array.from(map.values());
   }, [availableCompanies, firms]);
 
-  // Counts for tabs (dynamic based on selected company)
+  // Counts for tabs (dynamic based on selected company and business type)
   const tabCounts = useMemo(() => {
     let activeCount = 0;
     let inactiveCount = 0;
     let approvedCount = 0;
     let pendingCount = 0;
 
-    const baseList = selectedCompany
-      ? firms.filter((f) => f.companyId?._id === selectedCompany)
-      : firms;
+    let baseList = firms;
+
+    if (selectedCompany) {
+      baseList = baseList.filter((f) => f.companyId?._id === selectedCompany);
+    }
+
+    if (selectedBusinessType) {
+      baseList = baseList.filter(
+        (f) => (f.businessType || '').toLowerCase().trim() === selectedBusinessType.toLowerCase().trim()
+      );
+    }
 
     baseList.forEach((f) => {
       if (f.isActive) activeCount++;
@@ -390,7 +412,7 @@ const Firms = () => {
       approved: approvedCount,
       pending: pendingCount
     };
-  }, [firms, selectedCompany]);
+  }, [firms, selectedCompany, selectedBusinessType]);
 
   // Tab Filtering
   const tabFilteredFirms = useMemo(() => {
@@ -418,6 +440,13 @@ const Firms = () => {
     return tabFilteredFirms.filter((firm) => {
       if (selectedCompany && firm.companyId?._id !== selectedCompany) {
         return false;
+      }
+
+      if (selectedBusinessType) {
+        const firmType = (firm.businessType || '').toLowerCase().trim();
+        if (firmType !== selectedBusinessType.toLowerCase().trim()) {
+          return false;
+        }
       }
 
       if (selectedStatus) {
@@ -487,7 +516,7 @@ const Firms = () => {
 
       return true;
     });
-  }, [tabFilteredFirms, selectedCompany, selectedStatus, searchTerm]);
+  }, [tabFilteredFirms, selectedCompany, selectedBusinessType, selectedStatus, searchTerm]);
 
   // Sorting
   const sortedFirms = useMemo(() => {
@@ -507,6 +536,9 @@ const Firms = () => {
       } else if (sortKey === 'company') {
         aVal = (a.companyId?.name || '').toLowerCase();
         bVal = (b.companyId?.name || '').toLowerCase();
+      } else if (sortKey === 'businessType') {
+        aVal = (a.businessType || '').toLowerCase();
+        bVal = (b.businessType || '').toLowerCase();
       } else if (sortKey === 'city') {
         aVal = (a.city || '').toLowerCase();
         bVal = (b.city || '').toLowerCase();
@@ -597,6 +629,35 @@ const Firms = () => {
       }))
     ];
   }, [allCompanyOptions]);
+
+  // Business Type Filter Options (only types present in data)
+  const businessTypeFilterOptions = useMemo(() => {
+    const typeMap = new Map();
+
+    firms.forEach((f) => {
+      if (f.businessType && typeof f.businessType === 'string' && f.businessType.trim()) {
+        const trimmed = f.businessType.trim();
+        const lower = trimmed.toLowerCase();
+        if (!typeMap.has(lower)) {
+          typeMap.set(lower, trimmed);
+        }
+      }
+    });
+
+    if (selectedBusinessType && !typeMap.has(selectedBusinessType.toLowerCase().trim())) {
+      typeMap.set(selectedBusinessType.toLowerCase().trim(), selectedBusinessType);
+    }
+
+    const sortedTypes = Array.from(typeMap.values()).sort((a, b) => a.localeCompare(b));
+
+    return [
+      { value: '', label: 'All Business Types' },
+      ...sortedTypes.map((type) => ({
+        value: type,
+        label: type
+      }))
+    ];
+  }, [firms, selectedBusinessType]);
 
   // Pagination logic
   const totalPages = Math.ceil(sortedFirms.length / firmsPerPage) || 1;
@@ -1026,6 +1087,7 @@ const Firms = () => {
         'Firm Name': f.firmName || '',
         'Firm Code': f.firmCode || '',
         'Parent Company': compName,
+        'Business Type': f.businessType || '',
         'Approval Status': f.approvalStatus || 'APPROVED',
         'Credit Limit (₹)': f.creditLimit ?? 0,
         'Credit Days': f.creditDays ?? 30,
@@ -1100,151 +1162,189 @@ const Firms = () => {
         }
       />
 
-      {/* Unified Action & Filter Bar */}
-      <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2 rounded-full border border-slate-200/80 dark:border-white/10 shadow-md flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
-        {/* Left: Action Controls */}
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              setCreateFormError('');
-              setCreateFormData(INITIAL_FORM_STATE);
-              setIsCreateModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-full text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer shrink-0 active:scale-95"
-          >
-            <FiPlus className="w-3.5 h-3.5" />
-            <span>Add Firm</span>
-          </button>
-
-          {/* Bulk Operations Toggle Button */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsBulkMode((prev) => !prev);
-              if (isBulkMode) setSelectedFirmIds([]);
-            }}
-            className={`flex items-center gap-2 px-3.5 py-2.5 border text-xs font-bold rounded-full transition-all shadow-md cursor-pointer active:scale-95 shrink-0 ${
-              isBulkMode
-                ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20 shadow-md'
-                : 'bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200'
-            }`}
-          >
-            <FiLayers className={`text-sm ${isBulkMode ? 'text-white' : 'text-blue-500'}`} />
-            <span>Bulk Operations</span>
-            {selectedFirmIds.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 bg-blue-700 text-white text-[10px] rounded-full font-bold">
-                {selectedFirmIds.length}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Right: Segmented Status Tabs + Company Selector + Reset */}
-        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap justify-between lg:justify-end">
-          {/* Status Segmented Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start lg:self-auto shrink-0">
-            {[
-              {
-                id: 'all',
-                label: 'All',
-                count: tabCounts.all,
-                badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
-                bg: 'bg-blue-600',
-                activeBadgeClass: 'bg-blue-800'
-              },
-              {
-                id: 'approved',
-                label: 'Approved',
-                count: tabCounts.approved,
-                badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-                bg: 'bg-emerald-600',
-                activeBadgeClass: 'bg-emerald-800'
-              },
-              {
-                id: 'pending',
-                label: 'Pending',
-                count: tabCounts.pending,
-                badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-                bg: 'bg-amber-600',
-                activeBadgeClass: 'bg-amber-800'
-              },
-              {
-                id: 'active',
-                label: 'Active',
-                count: tabCounts.active,
-                badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-                bg: 'bg-emerald-600',
-                activeBadgeClass: 'bg-emerald-800'
-              },
-              {
-                id: 'inactive',
-                label: 'Inactive',
-                count: tabCounts.inactive,
-                badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
-                bg: 'bg-rose-600',
-                activeBadgeClass: 'bg-rose-800'
-              }
-            ].map((tab) => {
-              const isActive = firmTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                    isActive
-                      ? `${tab.bg} text-white shadow-xs font-bold`
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      isActive ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Parent Company Dropdown */}
-          <div className="w-full sm:w-auto min-w-[170px] sm:min-w-[190px]">
-            <CustomDropdown
-              value={selectedCompany}
-              onChange={(val) => handleFilterChange('company', val)}
-              options={companyFilterOptions}
-              defaultLabel="All Companies"
-              statusColor={`!px-3 !py-1.5 text-xs rounded-full border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-black/20 font-bold ${
-                selectedCompany ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'
-              }`}
-            />
-          </div>
-
-          {/* Reset Filters */}
-          {(searchTerm || selectedCompany || selectedStatus || firmTab !== 'all') && (
+      {/* Unified Action & Filter Bar (matching Products.jsx) */}
+      <div className={`bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2 sm:px-3 sm:py-2 border border-slate-200/80 dark:border-white/10 shadow-md space-y-2 transition-all duration-200 ${
+        isFiltersVisible ? 'rounded-2xl' : 'rounded-full'
+      }`}>
+        {/* Top Row: Primary Actions, Status Tabs, Filter Toggle & Reset */}
+        <div className={`flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center justify-between ${
+          isFiltersVisible ? 'pb-2 border-b border-slate-200/60 dark:border-white/5' : ''
+        }`}>
+          {/* Left: Action Controls */}
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
-              onClick={handleClearFilters}
-              className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 hover:text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:hover:text-white text-xs font-bold rounded-full border border-slate-300 dark:border-white/10 transition-all cursor-pointer shrink-0"
-              title="Reset Filters"
+              onClick={() => {
+                setCreateFormError('');
+                setCreateFormData(INITIAL_FORM_STATE);
+                setIsCreateModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-full text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer shrink-0 active:scale-95"
             >
-              Reset
+              <FiPlus className="w-3.5 h-3.5" />
+              <span>Add Firm</span>
             </button>
-          )}
+
+            {/* Bulk Operations Toggle Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsBulkMode((prev) => !prev);
+                if (isBulkMode) setSelectedFirmIds([]);
+              }}
+              className={`flex items-center gap-2 px-3.5 py-2 border text-xs font-bold rounded-full transition-all shadow-md cursor-pointer active:scale-95 shrink-0 ${
+                isBulkMode
+                  ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20 shadow-md'
+                  : 'bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200'
+              }`}
+            >
+              <FiLayers className={`text-sm ${isBulkMode ? 'text-white' : 'text-blue-500'}`} />
+              <span>Bulk Operations</span>
+              {selectedFirmIds.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 bg-blue-700 text-white text-[10px] rounded-full font-bold">
+                  {selectedFirmIds.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Right: Status Segmented Tabs + Filter Toggle + Reset */}
+          <div className="flex items-center gap-2 flex-wrap justify-between lg:justify-end">
+            {/* Status Segmented Tabs (unified SegmentedTabs) */}
+            <SegmentedTabs
+              tabs={[
+                { id: 'all', label: 'All', count: tabCounts.all },
+                { id: 'approved', label: 'Approved', count: tabCounts.approved },
+                { id: 'pending', label: 'Pending', count: tabCounts.pending },
+                { id: 'active', label: 'Active', count: tabCounts.active },
+                { id: 'inactive', label: 'Inactive', count: tabCounts.inactive }
+              ]}
+              activeTab={firmTab}
+              onChange={handleTabChange}
+            />
+
+            {/* Toggle Filters Visibility Button (matching Products.jsx) */}
+            <button
+              type="button"
+              onClick={() => setIsFiltersVisible((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border transition-all cursor-pointer shrink-0 ${
+                isFiltersVisible || activeFiltersCount > 0
+                  ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                  : 'bg-white dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-white/10 hover:border-slate-300'
+              }`}
+              title={isFiltersVisible ? 'Collapse filter dropdowns' : 'Show filter dropdowns'}
+            >
+              <FiFilter className="text-xs" />
+              <span>Filters</span>
+              {activeFiltersCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
+                  {activeFiltersCount}
+                </span>
+              )}
+              <FiChevronDown className={`text-xs transition-transform duration-200 ${isFiltersVisible ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Reset Filters */}
+            {(searchTerm || selectedCompany || selectedBusinessType || selectedStatus || firmTab !== 'all') && (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 hover:text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:hover:text-white text-xs font-bold rounded-full border border-slate-300 dark:border-white/10 transition-all cursor-pointer shrink-0"
+                title="Reset Filters"
+              >
+                Reset
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Collapsible Filter Dropdowns Strip (matching Products.jsx) */}
+        {isFiltersVisible && (
+          <div className="flex items-center gap-2.5 flex-wrap pt-0.5 animate-in fade-in duration-150">
+            <div className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400 mr-0.5 shrink-0">
+              <FiFilter className="text-blue-500 text-xs" />
+              <span>Filters:</span>
+            </div>
+
+            {/* Parent Company Dropdown */}
+            <div className="min-w-[170px] sm:min-w-[190px] flex-1 sm:flex-initial">
+              <CustomDropdown
+                value={selectedCompany}
+                onChange={(val) => handleFilterChange('company', val)}
+                options={companyFilterOptions}
+                defaultLabel="All Companies"
+                statusColor={`!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 ${
+                  selectedCompany ? 'text-blue-600 dark:text-blue-400 font-bold border-blue-500/30' : 'text-slate-700 dark:text-slate-200'
+                }`}
+              />
+            </div>
+
+            {/* Business Type Dropdown */}
+            <div className="min-w-[170px] sm:min-w-[185px] flex-1 sm:flex-initial">
+              <CustomDropdown
+                value={selectedBusinessType}
+                onChange={(val) => handleFilterChange('businessType', val)}
+                options={businessTypeFilterOptions}
+                defaultLabel="All Business Types"
+                statusColor={`!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 ${
+                  selectedBusinessType ? 'text-blue-600 dark:text-blue-400 font-bold border-blue-500/30' : 'text-slate-700 dark:text-slate-200'
+                }`}
+              />
+            </div>
+
+            {/* Clear Dropdown Filters shortcut if any active */}
+            {(selectedCompany || selectedBusinessType) && (
+              <button
+                type="button"
+                onClick={() => {
+                  handleFilterChange('company', '');
+                  handleFilterChange('businessType', '');
+                }}
+                className="px-2 py-1 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg transition-all cursor-pointer border border-rose-200/60 dark:border-rose-900/40 shrink-0"
+                title="Clear dropdown filters"
+              >
+                Clear dropdowns
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Active Filter Info Strip */}
-      {(searchTerm || selectedCompany || selectedStatus || firmTab !== 'all') && (
+      {(searchTerm || selectedCompany || selectedBusinessType || selectedStatus || firmTab !== 'all') && (
         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 -mt-2">
-          <span>
-            Showing <strong className="text-slate-900 dark:text-white">{sortedFirms.length}</strong> of{' '}
-            <strong className="text-slate-900 dark:text-white">{firms.length}</strong> firms
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span>
+              Showing <strong className="text-slate-900 dark:text-white">{sortedFirms.length}</strong> of{' '}
+              <strong className="text-slate-900 dark:text-white">{firms.length}</strong> firms
+            </span>
+            {selectedCompany && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                Company: {allCompanyOptions.find((c) => c.id === selectedCompany)?.name || 'Selected'}
+                <button
+                  type="button"
+                  onClick={() => handleFilterChange('company', '')}
+                  className="hover:text-blue-900 dark:hover:text-blue-100 cursor-pointer ml-0.5"
+                  title="Remove company filter"
+                >
+                  <FiX className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {selectedBusinessType && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                Type: {selectedBusinessType}
+                <button
+                  type="button"
+                  onClick={() => handleFilterChange('businessType', '')}
+                  className="hover:text-blue-900 dark:hover:text-blue-100 cursor-pointer ml-0.5"
+                  title="Remove business type filter"
+                >
+                  <FiX className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+          </div>
           <button
             type="button"
             onClick={handleClearFilters}
@@ -1537,16 +1637,16 @@ const Firms = () => {
                           {company.name ? (
                             <div className="flex items-center gap-2.5">
                               <div className="w-7 h-7 rounded-lg overflow-hidden bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shrink-0 flex items-center justify-center">
-                                {hasCompanyLogo ? (
-                                  <img
+                                {company.logo ? (
+                                  <OptimizedImage
                                     src={company.logo}
-                                    alt={company.name}
-                                    onError={() => setImageErrors((prev) => ({ ...prev, [company._id]: true }))}
+                                    alt={company.name || 'Company'}
                                     className="w-full h-full object-cover"
+                                    width={56}
                                   />
                                 ) : (
                                   <span className="text-[10px] font-bold text-slate-500">
-                                    {company.name.charAt(0).toUpperCase()}
+                                    {(company.name || 'C').charAt(0).toUpperCase()}
                                   </span>
                                 )}
                               </div>
@@ -1647,46 +1747,22 @@ const Firms = () => {
                           </div>
                         </td>
 
-                        {/* Status & Approval */}
+                        {/* Status & Approval (unified StatusBadge) */}
                         <td className="p-4 text-sm text-center">
                           <div className="flex flex-col items-center gap-1.5">
-                            {(() => {
-                              const appStatus = (firm.approvalStatus || 'APPROVED').toUpperCase();
-                              if (appStatus === 'PENDING') {
-                                return (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                                    PENDING
-                                  </span>
-                                );
-                              }
-                              if (appStatus === 'REJECTED') {
-                                return (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25">
-                                    <FiUserX size={11} />
-                                    REJECTED
-                                  </span>
-                                );
-                              }
-                              return (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
-                                  <FiCheckCircle size={11} />
-                                  APPROVED
-                                </span>
-                              );
-                            })()}
-                            <span
+                            <StatusBadge
+                              status={firm.approvalStatus || 'APPROVED'}
+                              size="xs"
+                              dot
+                            />
+                            <StatusBadge
+                              status={firm.isActive ? 'ACTIVE' : 'INACTIVE'}
+                              size="xs"
+                              dot
                               onClick={() => handleToggleFirmStatus(firm)}
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
-                                firm.isActive
-                                  ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/30'
-                                  : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-300'
-                              }`}
+                              className="cursor-pointer hover:opacity-80"
                               title={`Click to ${firm.isActive ? 'deactivate' : 'activate'}`}
-                            >
-                              <span className={`w-1.5 h-1.5 rounded-full ${firm.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                              <span>{firm.isActive ? 'Active' : 'Inactive'}</span>
-                            </span>
+                            />
                           </div>
                         </td>
 
@@ -1751,14 +1827,15 @@ const Firms = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={isBulkMode ? 14 : 13} className="p-12 text-center text-slate-500 dark:text-slate-400">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3 text-slate-400">
-                        <FiServer className="text-xl" />
-                      </div>
-                      <p className="text-sm font-semibold">No matching firms found</p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Try refining your search keyword or clearing filters.
-                      </p>
+                    <td colSpan={isBulkMode ? 14 : 13} className="p-4 text-center">
+                      <EmptyState
+                        icon={FiServer}
+                        title="No matching firms found"
+                        description="Try refining your search keyword or clearing active filters."
+                        actionText="Clear Filters"
+                        onAction={handleClearFilters}
+                        contained={false}
+                      />
                     </td>
                   </tr>
                 )}

@@ -2111,26 +2111,6 @@ const Products = () => {
 
           {/* Right Controls: Filters Toggle, Sort & Reset */}
           <div className="flex items-center gap-2 justify-end flex-wrap sm:flex-nowrap">
-            {/* Toggle Filters Visibility Button */}
-            <button
-              type="button"
-              onClick={() => setIsFiltersVisible((prev) => !prev)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer shrink-0 ${
-                isFiltersVisible
-                  ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
-                  : 'bg-white dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-white/10 hover:border-slate-300'
-              }`}
-              title={isFiltersVisible ? 'Collapse filter dropdowns' : 'Show filter dropdowns'}
-            >
-              <FiFilter className="text-xs" />
-              <span>Filters</span>
-              {activeFiltersCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
-                  {activeFiltersCount}
-                </span>
-              )}
-              <FiChevronDown className={`text-[10px] transition-transform duration-200 ${isFiltersVisible ? 'rotate-180' : ''}`} />
-            </button>
 
             {/* Sort Dropdown */}
             <div className="flex items-center gap-1.5 shrink-0">
@@ -2148,6 +2128,27 @@ const Products = () => {
                 />
               </div>
             </div>
+
+            {/* Toggle Filters Visibility Button */}
+            <button
+              type="button"
+              onClick={() => setIsFiltersVisible((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs shadow-md font-bold rounded-lg border transition-all cursor-pointer shrink-0 ${
+                isFiltersVisible
+                  ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                  : 'bg-white dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-white/10 hover:border-slate-300'
+              }`}
+              title={isFiltersVisible ? 'Collapse filter dropdowns' : 'Show filter dropdowns'}
+            >
+              <FiFilter className="text-xs" />
+              <span>Filters</span>
+              {activeFiltersCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
+                  {activeFiltersCount}
+                </span>
+              )}
+              <FiChevronDown className={`text-[10px] transition-transform duration-200 ${isFiltersVisible ? 'rotate-180' : ''}`} />
+            </button>
 
             {/* Reset Filters */}
             {(searchQuery || selectedCompanyFilter !== 'ALL' || selectedCategoryFilter !== 'ALL' || selectedLocationFilter !== 'ALL' || selectedBrandFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || sortBy !== 'newest') && (
