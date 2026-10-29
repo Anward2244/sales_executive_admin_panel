@@ -1227,7 +1227,7 @@ const Firms = () => {
             <button
               type="button"
               onClick={() => setIsFiltersVisible((prev) => !prev)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border transition-all cursor-pointer shrink-0 ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border transition-all cursor-pointer shrink-0 shadow-md ${
                 isFiltersVisible || activeFiltersCount > 0
                   ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
                   : 'bg-white dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-white/10 hover:border-slate-300'

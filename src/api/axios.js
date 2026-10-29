@@ -280,16 +280,16 @@ export const deleteFirmApi = async (id) => {
 };
 
 export const getFirmOnboardingRequestsApi = async (params = {}) => {
-  return fetchAllPages('/firms/onboarding-requests', '/v1/firms/onboarding-requests', params);
+  return fetchAllPages('/v1/firms/onboarding-requests', '/firms/onboarding-requests', params);
 };
 export const getOnboardingRequestsApi = getFirmOnboardingRequestsApi;
 
 export const onboardFirmApi = async (firmData) => {
   try {
-    return await api.post('/firms/onboard', firmData);
+    return await api.post('/v1/firms/onboard', firmData);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.post('/v1/firms/onboard', firmData);
+      return await api.post('/firms/onboard', firmData);
     }
     throw err;
   }
@@ -303,10 +303,10 @@ export const reviewFirmApi = async (id, reviewData) => {
     : reviewData;
 
   try {
-    return await api.patch(`/firms/${id}/review`, payload);
+    return await api.patch(`/v1/firms/${id}/review`, payload);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.patch(`/v1/firms/${id}/review`, payload);
+      return await api.patch(`/firms/${id}/review`, payload);
     }
     throw err;
   }

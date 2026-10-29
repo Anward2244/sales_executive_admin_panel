@@ -548,11 +548,21 @@ const Layout = () => {
   // Poll firm onboarding requests for pending count (red dot indicator)
   useEffect(() => {
     let isMounted = true;
+    let timerId = null;
+    let pollDelay = 15000; // Initial interval: 15s
+
+    // RBAC Permission Guard: only poll if user can access firm onboarding
+    const canViewOnboarding = isRouteAllowed('/firms/onboarding', userPermissions, user?.role);
+    if (!user || !canViewOnboarding) {
+      setPendingOnboardingCount(0);
+      return;
+    }
 
     const fetchPendingOnboarding = async () => {
-      if (!user) return;
+      if (!isMounted) return;
       try {
-        const response = await getFirmOnboardingRequestsApi();
+        // Query lightweight page (50 items) so backend does not choke on limit: 1000
+        const response = await getFirmOnboardingRequestsApi({ page: 1, limit: 50 });
         let list = [];
         if (response && response.data) {
           if (Array.isArray(response.data.data)) {
@@ -568,19 +578,29 @@ const Layout = () => {
           (item) => (item.approvalStatus || 'PENDING').toUpperCase() === 'PENDING'
         ).length;
         setPendingOnboardingCount(pending);
+        // Reset delay to standard on success
+        pollDelay = getPollingInterval('onboarding', 15);
       } catch (err) {
-        console.warn('Failed to poll firm onboarding requests in Layout:', err);
+        // Back off exponentially on server/gateway errors (502 Bad Gateway) up to 2 minutes
+        pollDelay = Math.min(pollDelay * 2, 120000);
+        if (import.meta.env.DEV && err?.response?.status !== 502) {
+          console.debug('Firm onboarding poll deferred:', err?.message || err);
+        }
+      } finally {
+        if (isMounted) {
+          timerId = setTimeout(fetchPendingOnboarding, pollDelay);
+        }
       }
     };
 
     fetchPendingOnboarding();
-    const intervalMs = 15000; // 15 seconds polling for fresh requests
-    const intervalId = setInterval(fetchPendingOnboarding, intervalMs);
 
     const handleOnboardingUpdated = (e) => {
       if (e?.detail?.pendingCount !== undefined) {
         setPendingOnboardingCount(e.detail.pendingCount);
       } else {
+        if (timerId) clearTimeout(timerId);
+        pollDelay = 15000;
         fetchPendingOnboarding();
       }
     };
@@ -588,10 +608,10 @@ const Layout = () => {
 
     return () => {
       isMounted = false;
-      clearInterval(intervalId);
+      if (timerId) clearTimeout(timerId);
       window.removeEventListener('firm-onboarding-updated', handleOnboardingUpdated);
     };
-  }, [user]);
+  }, [user, userPermissions]);
 
   // Clear counts when visiting the page
   useEffect(() => {

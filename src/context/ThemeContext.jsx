@@ -10,7 +10,7 @@ export const ThemeProvider = ({ children }) => {
     try {
       const saved = localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
       if (saved === 'light' || saved === 'dark') return saved;
-      return 'light'; // Default theme
+      return 'light';
     } catch {
       return 'light';
     }

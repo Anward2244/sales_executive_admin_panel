@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Group } from '@visx/group';
 import { Bar, Pie } from '@visx/shape';
 import { scaleLinear, scaleBand } from '@visx/scale';
@@ -108,7 +108,7 @@ const ProductTooltipContent = ({ tooltipData }) => {
         {tooltipData.ordersCount !== undefined && (
           <div>
             <span className="text-slate-400 block text-[10px]">PO Orders:</span>
-            <span className="font-mono font-bold">
+            <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
               {tooltipData.ordersCount} POs
             </span>
           </div>
@@ -137,6 +137,7 @@ function LeaderboardBarChart({
   activeMetric,
   totalRevenue,
   totalUnitsSold,
+  totalOrders,
   isDark,
 }) {
   const {
@@ -160,7 +161,15 @@ function LeaderboardBarChart({
   const textSecondary = isDark ? '#94a3b8' : '#64748b';
   const trackBg = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(241, 245, 249, 0.9)';
 
-  const margin = { top: 8, right: 90, bottom: 8, left: 180 };
+  const isMobile = width < 520;
+  const isSmallMobile = width < 380;
+  const margin = {
+    top: 8,
+    right: isMobile ? 80 : 100,
+    bottom: 8,
+    left: isSmallMobile ? 110 : isMobile ? 135 : 175,
+  };
+
   const xMax = Math.max(10, width - margin.left - margin.right);
   const yMax = Math.max(10, height - margin.top - margin.bottom);
 
@@ -173,13 +182,19 @@ function LeaderboardBarChart({
     1
   );
 
+  // Extend scale domain to 1.25x so end-of-bar text labels never overflow past the right margin
   const xScale = scaleLinear({
-    domain: [0, maxVal * 1.05],
+    domain: [0, maxVal * 1.25],
     range: [0, xMax],
   });
 
+  const getProductKey = useCallback(
+    (product, idx) => (product._id ? `${product._id}-${idx}` : `${product.sku || product.productName || 'p'}-${idx}`),
+    []
+  );
+
   const yScale = scaleBand({
-    domain: sortedProducts.map((p) => p._id || p.sku || p.productName),
+    domain: sortedProducts.map((p, idx) => getProductKey(p, idx)),
     range: [0, yMax],
     padding: 0.28,
   });
@@ -207,7 +222,7 @@ function LeaderboardBarChart({
 
         <Group left={margin.left} top={margin.top}>
           {sortedProducts.map((product, idx) => {
-            const key = product._id || product.sku || product.productName;
+            const key = getProductKey(product, idx);
             const barY = yScale(key);
             const barHeight = yScale.bandwidth();
 
@@ -233,7 +248,9 @@ function LeaderboardBarChart({
                 : `${val.toLocaleString('en-IN')}`;
 
             const sharePercent = activeMetric === 'quantity'
-              ? (totalUnitsSold ? ((val / totalUnitsSold) * 100).toFixed(1) : '0')
+              ? (totalUnitsSold ? ((val / Number(totalUnitsSold)) * 100).toFixed(1) : '0')
+              : activeMetric === 'orders'
+              ? (totalOrders ? ((val / Number(totalOrders)) * 100).toFixed(1) : '0')
               : (totalRevenue ? ((val / Number(totalRevenue)) * 100).toFixed(1) : '0');
 
             const handleHover = (e) => {
@@ -248,24 +265,26 @@ function LeaderboardBarChart({
               }
             };
 
+            const prodName = product.productName || product.sku || 'Product';
+            const maxChars = isSmallMobile ? 11 : isMobile ? 15 : 21;
+            const displayName = prodName.length > maxChars ? `${prodName.slice(0, maxChars - 2)}...` : prodName;
+
             return (
               <Group key={key}>
                 {/* Product Title Label on the Left */}
                 <text
-                  x={-14}
+                  x={-12}
                   y={(barY || 0) + barHeight / 2}
                   textAnchor="end"
                   alignmentBaseline="middle"
-                  fontSize={11}
+                  fontSize={isMobile ? 10 : 11}
                   fontWeight={idx < 3 ? '800' : '600'}
                   fill={isHovered ? (isDark ? '#ffffff' : '#0f172a') : textPrimary}
                   className="cursor-pointer select-none"
                 >
                   {/* Rank Medal Indicator */}
                   {idx === 0 ? '🥇 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : `#${idx + 1} `}
-                  {product.productName.length > 22
-                    ? `${product.productName.slice(0, 20)}...`
-                    : product.productName}
+                  {displayName}
                 </text>
 
                 {/* Background Track */}
@@ -301,16 +320,16 @@ function LeaderboardBarChart({
 
                 {/* End-of-Bar Value Label */}
                 <text
-                  x={barWidth + 10}
+                  x={barWidth + 8}
                   y={(barY || 0) + barHeight / 2}
                   alignmentBaseline="middle"
-                  fontSize={11}
+                  fontSize={isMobile ? 10 : 11}
                   fontWeight="800"
                   fill={isDark ? '#e2e8f0' : '#1e293b'}
                   className="font-mono select-none pointer-events-none"
                 >
                   {formattedVal}
-                  <tspan fontSize={9.5} fill={textSecondary} dx={4}>
+                  <tspan fontSize={isMobile ? 8.5 : 9.5} fill={textSecondary} dx={4}>
                     ({sharePercent}%)
                   </tspan>
                 </text>
@@ -344,6 +363,7 @@ function DonutConcentrationChart({
   activeMetric,
   totalRevenue,
   totalUnitsSold,
+  totalOrders,
   isDark,
 }) {
   const {
@@ -373,6 +393,7 @@ function DonutConcentrationChart({
           sku: arc.data.sku,
           totalRevenue: activeMetric === 'revenue' ? arc.data.value : undefined,
           totalQuantity: activeMetric === 'quantity' ? arc.data.value : undefined,
+          ordersCount: activeMetric === 'orders' ? arc.data.value : undefined,
           sharePercent: arc.data.sharePct,
           rank: i + 1,
         },
@@ -414,12 +435,14 @@ function DonutConcentrationChart({
       {/* Center Stat Inside Donut */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-          {activeMetric === 'revenue' ? 'Revenue' : 'Units'}
+          {activeMetric === 'revenue' ? 'Revenue' : activeMetric === 'orders' ? 'Orders' : 'Units'}
         </span>
         <span className="text-sm font-black text-slate-900 dark:text-white font-mono">
           {activeMetric === 'revenue'
             ? formatCompact(totalRevenue, true)
-            : totalUnitsSold.toLocaleString('en-IN')}
+            : activeMetric === 'orders'
+            ? Number(totalOrders || 0).toLocaleString('en-IN')
+            : Number(totalUnitsSold || 0).toLocaleString('en-IN')}
         </span>
       </div>
 
@@ -444,6 +467,7 @@ const ProductPerformanceChart = ({
   productPerformance = [],
   totalRevenue = 0,
   totalUnitsSold = 0,
+  totalOrders = 0,
   isDark = false,
   loading = false,
 }) => {
@@ -452,21 +476,28 @@ const ProductPerformanceChart = ({
   // Top Limit: 5 | 8 | 10
   const [topLimit, setTopLimit] = useState(8);
 
+  // Compute effective total orders fallback
+  const effectiveTotalOrders = useMemo(() => {
+    if (Number(totalOrders) > 0) return Number(totalOrders);
+    return (
+      productPerformance.reduce((acc, p) => acc + (Number(p.ordersCount) || 0), 0) || 1
+    );
+  }, [totalOrders, productPerformance]);
+
+  // Metric value helper
+  const getMetricVal = useCallback((p, metric) => {
+    if (metric === 'quantity') return Number(p.totalQuantity || 0);
+    if (metric === 'orders') return Number(p.ordersCount || 0);
+    return Number(p.totalRevenue || 0);
+  }, []);
+
   // Sorted and limited dataset based on activeMetric
   const sortedProducts = useMemo(() => {
     if (!Array.isArray(productPerformance) || productPerformance.length === 0) return [];
     const list = [...productPerformance];
-    list.sort((a, b) => {
-      if (activeMetric === 'quantity') {
-        return (Number(b.totalQuantity) || 0) - (Number(a.totalQuantity) || 0);
-      }
-      if (activeMetric === 'orders') {
-        return (Number(b.ordersCount) || 0) - (Number(a.ordersCount) || 0);
-      }
-      return (Number(b.totalRevenue) || 0) - (Number(a.totalRevenue) || 0);
-    });
+    list.sort((a, b) => getMetricVal(b, activeMetric) - getMetricVal(a, activeMetric));
     return list.slice(0, topLimit);
-  }, [productPerformance, activeMetric, topLimit]);
+  }, [productPerformance, activeMetric, topLimit, getMetricVal]);
 
   // Insights Metrics
   const insights = useMemo(() => {
@@ -490,23 +521,43 @@ const ProductPerformanceChart = ({
     };
   }, [productPerformance]);
 
-  // Donut Data: Top 5 + Others
+  // Dynamic Top 3 Contribution calculation matching the active metric
+  const top3Contribution = useMemo(() => {
+    if (!productPerformance.length) return '0.0';
+    const sorted = [...productPerformance].sort(
+      (a, b) => getMetricVal(b, activeMetric) - getMetricVal(a, activeMetric)
+    );
+    const top3 = sorted.slice(0, 3);
+    const sum = top3.reduce((acc, p) => acc + getMetricVal(p, activeMetric), 0);
+    const total =
+      activeMetric === 'quantity'
+        ? Number(totalUnitsSold) || 1
+        : activeMetric === 'orders'
+        ? Number(effectiveTotalOrders) || 1
+        : Number(totalRevenue) || 1;
+    return Math.min(100, (sum / total) * 100).toFixed(1);
+  }, [productPerformance, activeMetric, totalRevenue, totalUnitsSold, effectiveTotalOrders, getMetricVal]);
+
+  // Donut Data: Top 5 sorted by activeMetric + Others
   const donutData = useMemo(() => {
     if (!productPerformance.length) return [];
-    const top5 = productPerformance.slice(0, 5);
-    const top5Total = top5.reduce((sum, p) => {
-      const val = activeMetric === 'quantity' ? Number(p.totalQuantity || 0) : Number(p.totalRevenue || 0);
-      return sum + val;
-    }, 0);
+    const sorted = [...productPerformance].sort(
+      (a, b) => getMetricVal(b, activeMetric) - getMetricVal(a, activeMetric)
+    );
+    const top5 = sorted.slice(0, 5);
+    const top5Total = top5.reduce((sum, p) => sum + getMetricVal(p, activeMetric), 0);
 
-    const overallTotal = activeMetric === 'quantity'
-      ? (totalUnitsSold || 1)
-      : (Number(totalRevenue) || 1);
+    const overallTotal =
+      activeMetric === 'quantity'
+        ? (Number(totalUnitsSold) || top5Total || 1)
+        : activeMetric === 'orders'
+        ? (Number(effectiveTotalOrders) || top5Total || 1)
+        : (Number(totalRevenue) || top5Total || 1);
 
     const remaining = Math.max(0, overallTotal - top5Total);
 
     const slices = top5.map((p, idx) => {
-      const val = activeMetric === 'quantity' ? Number(p.totalQuantity || 0) : Number(p.totalRevenue || 0);
+      const val = getMetricVal(p, activeMetric);
       return {
         label: p.productName || p.sku || `Product #${idx + 1}`,
         sku: p.sku,
@@ -517,9 +568,9 @@ const ProductPerformanceChart = ({
       };
     });
 
-    if (remaining > 0 && productPerformance.length > 5) {
+    if (remaining > 0 && sorted.length > 5) {
       slices.push({
-        label: `Other ${productPerformance.length - 5} SKUs`,
+        label: `Other ${sorted.length - 5} products`,
         sku: 'OTHER',
         value: remaining,
         color: DONUT_COLORS[5],
@@ -529,7 +580,7 @@ const ProductPerformanceChart = ({
     }
 
     return slices;
-  }, [productPerformance, activeMetric, totalRevenue, totalUnitsSold]);
+  }, [productPerformance, activeMetric, totalRevenue, totalUnitsSold, effectiveTotalOrders, getMetricVal]);
 
   if (loading) {
     return (
@@ -559,7 +610,65 @@ const ProductPerformanceChart = ({
   }
 
   return (
-    <div className="p-5 sm:p-6 space-y-6">
+    <div className="p-5 sm:pt-2 space-y-6">
+
+      {/* ================= EXECUTIVE INSIGHT HIGHLIGHT STRIP ================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        {/* Top Revenue Leader */}
+        <div className="p-3.5 rounded-2xl bg-purple-500/5 dark:bg-purple-500/10 border border-purple-500/20 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+            <FiAward className="text-lg" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 block">
+              Revenue Leader
+            </span>
+            <div className="font-extrabold text-xs text-slate-900 dark:text-white truncate" title={insights.topRevenueProduct?.productName}>
+              {insights.topRevenueProduct?.productName || 'N/A'}
+            </div>
+            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 font-mono">
+              {formatCurrency(insights.topRevenueProduct?.totalRevenue || 0)}
+            </div>
+          </div>
+        </div>
+
+        {/* Top Volume Leader */}
+        <div className="p-3.5 rounded-2xl bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+            <FiBox className="text-lg" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
+              Highest Volume Sold
+            </span>
+            <div className="font-extrabold text-xs text-slate-900 dark:text-white truncate" title={insights.topVolumeProduct?.productName}>
+              {insights.topVolumeProduct?.productName || 'N/A'}
+            </div>
+            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 font-mono">
+              {(insights.topVolumeProduct?.totalQuantity || 0).toLocaleString('en-IN')} units
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Metric Contribution */}
+        <div className="p-3.5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <FiTrendingUp className="text-lg" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
+              Top 3 Contribution
+            </span>
+            <div className="font-extrabold text-xs text-slate-900 dark:text-white">
+              {top3Contribution}% of {activeMetric === 'revenue' ? 'Revenue' : activeMetric === 'orders' ? 'Orders' : 'Volume'}
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">
+              Generated by Top 3 bestsellers
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ================= CONTROLS & SUB-HEADER ================= */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200/60 dark:border-white/5">
         {/* Metric Selector Pills */}
@@ -627,66 +736,6 @@ const ProductPerformanceChart = ({
         </div>
       </div>
 
-      {/* ================= EXECUTIVE INSIGHT HIGHLIGHT STRIP ================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        {/* Top Revenue Leader */}
-        <div className="p-3.5 rounded-2xl bg-purple-500/5 dark:bg-purple-500/10 border border-purple-500/20 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-            <FiAward className="text-lg" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 block">
-              Revenue Leader
-            </span>
-            <div className="font-extrabold text-xs text-slate-900 dark:text-white truncate" title={insights.topRevenueProduct?.productName}>
-              {insights.topRevenueProduct?.productName || 'N/A'}
-            </div>
-            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 font-mono">
-              {formatCurrency(insights.topRevenueProduct?.totalRevenue || 0)}
-            </div>
-          </div>
-        </div>
-
-        {/* Top Volume Leader */}
-        <div className="p-3.5 rounded-2xl bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-            <FiBox className="text-lg" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
-              Highest Volume Sold
-            </span>
-            <div className="font-extrabold text-xs text-slate-900 dark:text-white truncate" title={insights.topVolumeProduct?.productName}>
-              {insights.topVolumeProduct?.productName || 'N/A'}
-            </div>
-            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 font-mono">
-              {(insights.topVolumeProduct?.totalQuantity || 0).toLocaleString('en-IN')} units
-            </div>
-          </div>
-        </div>
-
-        {/* Catalog Concentration */}
-        <div className="p-3.5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <FiTrendingUp className="text-lg" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
-              Top 3 Contribution
-            </span>
-            <div className="font-extrabold text-xs text-slate-900 dark:text-white">
-              {productPerformance.slice(0, 3).reduce((sum, p) => {
-                const totalRev = Number(totalRevenue) || 1;
-                return sum + ((Number(p.totalRevenue || 0) / totalRev) * 100);
-              }, 0).toFixed(1)}% of Revenue
-            </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400">
-              Generated by Top 3 bestsellers
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* ================= MAIN DUAL CHART PANELS ================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Ranked Leaderboard Bar Visualizer (8 Columns) */}
@@ -719,6 +768,7 @@ const ProductPerformanceChart = ({
                     activeMetric={activeMetric}
                     totalRevenue={totalRevenue}
                     totalUnitsSold={totalUnitsSold}
+                    totalOrders={effectiveTotalOrders}
                     isDark={isDark}
                   />
                 );
@@ -751,6 +801,7 @@ const ProductPerformanceChart = ({
                       activeMetric={activeMetric}
                       totalRevenue={totalRevenue}
                       totalUnitsSold={totalUnitsSold}
+                      totalOrders={effectiveTotalOrders}
                       isDark={isDark}
                     />
                   );

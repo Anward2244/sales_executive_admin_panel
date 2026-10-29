@@ -51,6 +51,9 @@ const STATUS_CONFIG = {
     textColor: 'text-amber-500 dark:text-amber-400',
     borderColor: 'border-amber-500/30',
     bgColor: 'bg-amber-500/10 dark:bg-amber-500/15',
+    cardBg: 'bg-amber-500/5 dark:bg-amber-500/10',
+    cardBorder: 'border-amber-500/25 dark:border-amber-500/20 hover:border-amber-500/50 hover:bg-amber-500/10',
+    selectedCard: 'bg-amber-500/15 dark:bg-amber-500/25 border-amber-500 dark:border-amber-400 ring-2 ring-amber-500/40 dark:ring-amber-400/40 shadow-sm shadow-amber-500/10',
     icon: FiClock,
   },
   APPROVED: {
@@ -62,6 +65,9 @@ const STATUS_CONFIG = {
     textColor: 'text-emerald-500 dark:text-emerald-400',
     borderColor: 'border-emerald-500/30',
     bgColor: 'bg-emerald-500/10 dark:bg-emerald-500/15',
+    cardBg: 'bg-emerald-500/5 dark:bg-emerald-500/10',
+    cardBorder: 'border-emerald-500/25 dark:border-emerald-500/20 hover:border-emerald-500/50 hover:bg-emerald-500/10',
+    selectedCard: 'bg-emerald-500/15 dark:bg-emerald-500/25 border-emerald-500 dark:border-emerald-400 ring-2 ring-emerald-500/40 dark:ring-emerald-400/40 shadow-sm shadow-emerald-500/10',
     icon: FiCheckCircle,
   },
   DISPATCHED: {
@@ -73,6 +79,9 @@ const STATUS_CONFIG = {
     textColor: 'text-blue-500 dark:text-blue-400',
     borderColor: 'border-blue-500/30',
     bgColor: 'bg-blue-500/10 dark:bg-blue-500/15',
+    cardBg: 'bg-blue-500/5 dark:bg-blue-500/10',
+    cardBorder: 'border-blue-500/25 dark:border-blue-500/20 hover:border-blue-500/50 hover:bg-blue-500/10',
+    selectedCard: 'bg-blue-500/15 dark:bg-blue-500/25 border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/40 dark:ring-blue-400/40 shadow-sm shadow-blue-500/10',
     icon: FiTruck,
   },
   REJECTED: {
@@ -84,6 +93,9 @@ const STATUS_CONFIG = {
     textColor: 'text-rose-500 dark:text-rose-400',
     borderColor: 'border-rose-500/30',
     bgColor: 'bg-rose-500/10 dark:bg-rose-500/15',
+    cardBg: 'bg-rose-500/5 dark:bg-rose-500/10',
+    cardBorder: 'border-rose-500/25 dark:border-rose-500/20 hover:border-rose-500/50 hover:bg-rose-500/10',
+    selectedCard: 'bg-rose-500/15 dark:bg-rose-500/25 border-rose-500 dark:border-rose-400 ring-2 ring-rose-500/40 dark:ring-rose-400/40 shadow-sm shadow-rose-500/10',
     icon: FiXCircle,
   },
 };
@@ -97,6 +109,9 @@ const DEFAULT_STATUS_CONFIG = {
   textColor: 'text-purple-500 dark:text-purple-400',
   borderColor: 'border-purple-500/30',
   bgColor: 'bg-purple-500/10 dark:bg-purple-500/15',
+  cardBg: 'bg-purple-500/5 dark:bg-purple-500/10',
+  cardBorder: 'border-purple-500/25 dark:border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-500/10',
+  selectedCard: 'bg-purple-500/15 dark:bg-purple-500/25 border-purple-500 dark:border-purple-400 ring-2 ring-purple-500/40 dark:ring-purple-400/40 shadow-sm shadow-purple-500/10',
   icon: FiLayers,
 };
 
@@ -527,11 +542,6 @@ export default function OrderStatusBreakdownChart({
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <span>Order Status Breakdown</span>
-                {selectedStatus && selectedStatus !== 'ALL' && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                    Filtered: {selectedStatus}
-                  </span>
-                )}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Distribution of order volume and financial commitments
@@ -609,10 +619,11 @@ export default function OrderStatusBreakdownChart({
                     key={`pill-${item.status}`}
                     type="button"
                     onClick={() => onSelectStatus && onSelectStatus(item.status)}
-                    className={`p-2.5 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${isSelected
-                        ? `ring-2 ring-blue-500 dark:ring-blue-400 ${meta.bgColor} ${meta.borderColor}`
-                        : `bg-slate-50/70 dark:bg-slate-800/40 border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15`
-                      }`}
+                    className={`p-2.5 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                      isSelected
+                        ? meta.selectedCard
+                        : `${meta.cardBg} ${meta.cardBorder}`
+                    }`}
                   >
                     <div className="flex items-center justify-between gap-1 mb-1">
                       <span
@@ -621,11 +632,6 @@ export default function OrderStatusBreakdownChart({
                         <Icon className="text-xs" />
                         <span>{meta.label}</span>
                       </span>
-                      {isSelected && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-blue-500 text-white">
-                          Active
-                        </span>
-                      )}
                     </div>
                     <div className="flex items-baseline justify-between gap-1">
                       <span className="text-xs font-extrabold text-slate-800 dark:text-slate-100">

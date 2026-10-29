@@ -146,6 +146,46 @@ function InnerTrendLineChart({
     [maxY, yMax]
   );
 
+  // Adaptive tick filtering based on chart width to guarantee zero collisions
+  const targetTickCount = useMemo(() => {
+    if (xMax <= 0) return 3;
+    if (isMobile || xMax < 360) return 3;
+    if (xMax < 500) return 4;
+    if (xMax < 680) return 5;
+    return 6;
+  }, [xMax, isMobile]);
+
+  const tickValues = useMemo(() => {
+    if (!timeScale) return [];
+    const dates = data.map(getDate).sort((a, b) => a.getTime() - b.getTime());
+    if (dates.length === 0) return [];
+
+    const minGapPx = isMobile ? 55 : 68;
+    const rawTicks = timeScale.ticks ? timeScale.ticks(targetTickCount) : [];
+    const sourceTicks = rawTicks.length > 0 ? rawTicks : dates;
+
+    const result = [];
+    let lastX = -Infinity;
+    const seen = new Set();
+
+    for (const tick of sourceTicks) {
+      const xPos = timeScale(tick);
+      if (xPos < -5 || xPos > xMax + 5) continue;
+      const str = formatDateTick(tick);
+      if (xPos - lastX >= minGapPx && !seen.has(str)) {
+        result.push(tick);
+        lastX = xPos;
+        seen.add(str);
+      }
+    }
+
+    if (result.length === 0 && dates.length > 0) {
+      result.push(dates[0]);
+    }
+
+    return result;
+  }, [timeScale, data, targetTickCount, isMobile, xMax]);
+
   // Hover detection handler
   const handleTooltip = useCallback(
     (event) => {
@@ -321,20 +361,30 @@ function InnerTrendLineChart({
             tickFormat={(val) => (isRevenue ? formatCompact(val, true) : `${val}`)}
           />
 
-          {/* Bottom X Axis */}
+          {/* Bottom X Axis with dynamic collision-free ticks */}
           <AxisBottom
             top={yMax}
             scale={timeScale}
-            numTicks={isMobile ? 4 : data.length > 15 ? 7 : data.length}
+            tickValues={tickValues}
             stroke={axisStroke}
             tickStroke="transparent"
-            tickLabelProps={() => ({
-              fill: axisTextFill,
-              fontSize: isMobile ? 10 : 11,
-              fontWeight: 600,
-              textAnchor: 'middle',
-              dy: 4,
-            })}
+            tickLength={4}
+            tickLabelProps={(val, index) => {
+              const xPos = timeScale ? timeScale(val) : 0;
+              let textAnchor = 'middle';
+              if (index === 0 && xPos < 15) {
+                textAnchor = 'start';
+              } else if (index === tickValues.length - 1 && xMax - xPos < 15) {
+                textAnchor = 'end';
+              }
+              return {
+                fill: axisTextFill,
+                fontSize: isMobile ? 10 : 11,
+                fontWeight: 600,
+                textAnchor,
+                dy: 8,
+              };
+            }}
             tickFormat={(val) => formatDateTick(val)}
           />
 

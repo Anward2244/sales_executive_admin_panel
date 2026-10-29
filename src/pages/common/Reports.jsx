@@ -39,7 +39,7 @@ import ProductPerformanceChart from '@/components/reports/ProductPerformanceChar
 import CustomDatePicker from '@/components/ui/CustomDatePicker';
 import { useTheme } from '@/context/ThemeContext';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
-import { getReportsApi } from '@/api/axios';
+import { getReportsApi, getProductsApi, getCategoryApi, getBrandRoutingMatrixApi } from '@/api/axios';
 
 // Format Indian Rupee currency
 const formatCurrency = (amount) => {
@@ -172,6 +172,134 @@ const Reports = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [productViewMode, setProductViewMode] = useState('chart'); // 'chart' | 'table'
+  const [catalogProducts, setCatalogProducts] = useState([]);
+  const [catalogCategories, setCatalogCategories] = useState([]);
+  const [catalogBrandMatrix, setCatalogBrandMatrix] = useState([]);
+
+  // Fetch catalog metadata (Products, Categories, Brand Matrix) to enrich reports with real Brand & Category mapping
+  const fetchCatalogMetadata = useCallback(async () => {
+    try {
+      const [prodRes, catRes, matrixRes] = await Promise.all([
+        getProductsApi().catch(() => ({ data: [] })),
+        getCategoryApi().catch(() => ({ data: [] })),
+        getBrandRoutingMatrixApi().catch(() => ({ data: [] })),
+      ]);
+
+      const prodData = prodRes?.data?.data || (Array.isArray(prodRes?.data) ? prodRes.data : []);
+      const catData = catRes?.data?.data || (Array.isArray(catRes?.data) ? catRes.data : []);
+      const matrixData = matrixRes?.data?.data || (Array.isArray(matrixRes?.data) ? matrixRes.data : []);
+
+      setCatalogProducts(prodData);
+      setCatalogCategories(catData);
+      setCatalogBrandMatrix(matrixData);
+    } catch (err) {
+      console.warn('Could not fetch catalog metadata for reports:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCatalogMetadata();
+  }, [fetchCatalogMetadata]);
+
+  // Lookup maps for exact matching against catalog Products, Categories, and Brands
+  const catalogMetaMaps = useMemo(() => {
+    const categoryNameById = new Map();
+    catalogCategories.forEach((c) => {
+      if (c && c._id && c.name) categoryNameById.set(String(c._id), c.name.trim());
+      if (c && c.id && c.name) categoryNameById.set(String(c.id), c.name.trim());
+    });
+
+    const matrixBrandsList = [];
+    const matrixBrandsSet = new Set();
+    catalogBrandMatrix.forEach((m) => {
+      if (m?.brand && typeof m.brand === 'string') {
+        const b = m.brand.trim();
+        if (b && !matrixBrandsSet.has(b.toLowerCase())) {
+          matrixBrandsSet.add(b.toLowerCase());
+          matrixBrandsList.push(b);
+        }
+      }
+    });
+
+    const productById = new Map();
+    const productBySku = new Map();
+    const productByName = new Map();
+
+    catalogProducts.forEach((p) => {
+      if (!p) return;
+      const catId = typeof p.categoryId === 'object' ? p.categoryId?._id : p.categoryId;
+      const categoryName =
+        typeof p.categoryId === 'object' && p.categoryId?.name
+          ? p.categoryId.name
+          : categoryNameById.get(String(catId)) || p.category?.name || p.category || '';
+
+      const brand = p.brand && typeof p.brand === 'string' ? p.brand.trim() : '';
+
+      const meta = {
+        _id: p._id,
+        name: p.name,
+        sku: p.sku,
+        brand,
+        category: categoryName,
+      };
+
+      if (p._id) productById.set(String(p._id), meta);
+      if (p.sku) productBySku.set(String(p.sku).trim().toLowerCase(), meta);
+      if (p.name) productByName.set(String(p.name).trim().toLowerCase(), meta);
+    });
+
+    return {
+      categoryNameById,
+      matrixBrandsList,
+      productById,
+      productBySku,
+      productByName,
+    };
+  }, [catalogProducts, catalogCategories, catalogBrandMatrix]);
+
+  // Helper to resolve brand & category from catalog metadata
+  const resolveProductMetadata = useCallback(
+    (productId, sku, name) => {
+      const { productById, productBySku, productByName, matrixBrandsList, categoryNameById } = catalogMetaMaps;
+
+      if (productId) {
+        const found = productById.get(String(productId));
+        if (found && (found.brand || found.category)) return found;
+      }
+
+      if (sku) {
+        const found = productBySku.get(String(sku).trim().toLowerCase());
+        if (found && (found.brand || found.category)) return found;
+      }
+
+      if (name) {
+        const normName = String(name).trim().toLowerCase();
+        const found = productByName.get(normName);
+        if (found && (found.brand || found.category)) return found;
+
+        for (const [catProdName, meta] of productByName.entries()) {
+          if (normName.includes(catProdName) || catProdName.includes(normName)) {
+            if (meta.brand || meta.category) return meta;
+          }
+        }
+
+        for (const b of matrixBrandsList) {
+          if (normName.includes(b.toLowerCase())) {
+            return { brand: b, category: '' };
+          }
+        }
+
+        for (const catName of categoryNameById.values()) {
+          if (normName.includes(catName.toLowerCase())) {
+            return { brand: '', category: catName };
+          }
+        }
+      }
+
+      return { brand: '', category: '' };
+    },
+    [catalogMetaMaps]
+  );
 
   // Fetch report data (supports server-side range param if provided by backend)
   const fetchReportData = useCallback(async (isSilent = false, rangeParam = selectedRange) => {
@@ -411,6 +539,8 @@ const Reports = () => {
                 _id: pId,
                 productName: pName,
                 sku,
+                brand: item.productId?.brand || item.brand || item.brandSnapshot,
+                category: item.productId?.category?.name || item.productId?.categoryId?.name || item.category,
                 totalQuantity: 0,
                 totalRevenue: 0,
                 orderIds: new Set()
@@ -1074,6 +1204,7 @@ const Reports = () => {
             productPerformance={productPerformance}
             totalRevenue={summary.totalRevenue}
             totalUnitsSold={totalUnitsSold}
+            totalOrders={summary.totalOrders}
             isDark={isDark}
             loading={loading}
           />

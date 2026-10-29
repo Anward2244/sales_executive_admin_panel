@@ -2,12 +2,12 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { getUsersApi, getUserByIdApi, createUserApi, updateUserStatusApi, updateUserApi } from '@/api/axios';
 import {
-  FiCheck, FiLoader, FiAlertCircle,
+  FiPlus, FiCheck, FiLoader, FiAlertCircle,
   FiSearch, FiUser, FiRefreshCcw, FiX,
   FiChevronDown, FiCopy, FiCalendar, FiClock, FiPhone,
   FiMail, FiEye, FiEyeOff, FiExternalLink, FiHash, FiBriefcase,
   FiLayers, FiUserCheck, FiUserX, FiShield, FiDownload, FiCheckCircle, FiXCircle,
-  FiEdit2, FiEdit3, FiPower, FiMapPin, FiChevronLeft, FiChevronRight, FiImage, FiTag
+  FiEdit2, FiEdit3, FiPower, FiMapPin, FiChevronLeft, FiChevronRight, FiImage, FiTag, FiUsers
 } from 'react-icons/fi';
 import { useOutletContext, useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
@@ -1003,79 +1003,137 @@ const UsersList = () => {
         </div>
 
         {/* Users Count, Filters & Action Bar */}
-        <div className="relative z-20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 bg-white/40 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-full backdrop-blur-xl shadow-md shadow-slate-500/30 dark:shadow-none text-xs font-semibold text-slate-600 dark:text-slate-400">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-full shadow-xs dark:shadow-none text-slate-600 dark:text-slate-400">
-              Total Users: <strong className="text-slate-900 dark:text-white">{users.length}</strong>
-            </span>
-            {(searchTerm || selectedRole || selectedStatus || userTab !== 'all') && (
-              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full">
-                Showing: <strong>{sortedUsers.length}</strong>
+        <div className="relative z-20 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 p-2.5 sm:px-3 sm:py-2 bg-white/40 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-2xl lg:rounded-full backdrop-blur-xl shadow-md shadow-slate-500/10 dark:shadow-none text-xs font-semibold text-slate-600 dark:text-slate-400">
+
+          {/* Top row on Mobile / Left side on Desktop: User Counts & Mobile Actions */}
+          <div className="flex items-center justify-between gap-2 w-full lg:w-auto">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-full shadow-xs dark:shadow-none text-slate-600 dark:text-slate-400 shrink-0">
+                Total Users: <strong className="text-slate-900 dark:text-white">{users.length}</strong>
               </span>
-            )}
-          </div>
-
-          {/* Status Segmented Filter, Role Filter & Actions */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            {/* Segmented Status Tabs (unified SegmentedTabs) */}
-            <SegmentedTabs
-              tabs={[
-                { id: 'all', label: 'All', count: users.length },
-                { id: 'active', label: 'Active', count: activeCount },
-                { id: 'inactive', label: 'Inactive', count: inactiveCount }
-              ]}
-              activeTab={selectedStatus || 'all'}
-              onChange={(tabId) => handleFilterChange('status', tabId === 'all' ? '' : tabId)}
-            />
-
-            <div className="min-w-[130px]">
-              <CustomDropdown
-                value=""
-                onChange={(val) => handleFilterChange('role', val)}
-                options={roleOptions}
-                statusColor={`!px-3 !py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 font-bold ${selectedRole ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}
-              />
-            </div>
-            {(searchTerm || selectedRole || (selectedStatus && selectedStatus !== 'all') || userTab !== 'all') && (
-              <button
-                onClick={handleClearFilters}
-                className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 hover:text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:hover:text-white text-xs font-bold rounded-xl border border-slate-300 dark:border-white/10 transition-all cursor-pointer"
-                title="Reset Filters"
-              >
-                Reset
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setIsBulkMode((prev) => !prev);
-                if (isBulkMode) setSelectedUserIds(new Set());
-              }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs shadow-md font-bold transition-all border cursor-pointer shrink-0 ${isBulkMode
-                ? 'bg-amber-500 border-amber-500/40 text-white dark:text-amber-400'
-                : 'bg-white dark:bg-white/5 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-blue-500/40'
-                }`}
-            >
-              <FiLayers className="text-sm" />
-              <span>{isBulkMode ? 'Exit Bulk' : 'Bulk Operations'}</span>
-              {isBulkMode && selectedUserIds.size > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500 text-white font-mono">
-                  {selectedUserIds.size}
+              {(searchTerm || selectedRole || selectedStatus || userTab !== 'all') && (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full shrink-0">
+                  Showing: <strong>{sortedUsers.length}</strong>
                 </span>
               )}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setFormError('');
-                setFormData(initialFormstate);
-                setShowPassword(false);
-                setIsCreateModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer shrink-0"
-            >
-              <span>Add User</span>
-            </button>
+            </div>
+
+            {/* Mobile-only Action Buttons */}
+            <div className="flex lg:hidden items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBulkMode((prev) => !prev);
+                  if (isBulkMode) setSelectedUserIds(new Set());
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer shrink-0 shadow-xs ${
+                  isBulkMode
+                    ? 'bg-amber-500 border-amber-500/40 text-white'
+                    : 'bg-white dark:bg-white/5 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                }`}
+                title={isBulkMode ? 'Exit Bulk' : 'Bulk Operations'}
+              >
+                <FiLayers className="text-sm" />
+                <span className="hidden xs:inline">{isBulkMode ? 'Exit' : 'Bulk'}</span>
+                {isBulkMode && selectedUserIds.size > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-600 text-white font-mono">
+                    {selectedUserIds.size}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormError('');
+                  setFormData(initialFormstate);
+                  setShowPassword(false);
+                  setIsCreateModalOpen(true);
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer shrink-0"
+              >
+                <FiPlus className="text-xs" />
+                <span>Add User</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Middle/Bottom on Mobile / Right side on Desktop: Segmented Tabs & Filter Controls */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+            {/* Segmented Status Tabs (with mobile width distribution) */}
+            <div className="w-full sm:w-auto overflow-x-auto no-scrollbar rounded-full shadow-md">
+              <SegmentedTabs
+                tabs={[
+                  { id: 'all', label: 'All', count: users.length },
+                  { id: 'active', label: 'Active', count: activeCount },
+                  { id: 'inactive', label: 'Inactive', count: inactiveCount }
+                ]}
+                activeTab={selectedStatus || 'all'}
+                onChange={(tabId) => handleFilterChange('status', tabId === 'all' ? '' : tabId)}
+                className="w-full sm:w-auto"
+                tabClassName="flex-1 sm:flex-initial justify-center"
+              />
+            </div>
+
+            {/* Role Filter & Desktop Actions */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex-1 sm:flex-initial sm:min-w-[130px]">
+                <CustomDropdown
+                  value=""
+                  onChange={(val) => handleFilterChange('role', val)}
+                  options={roleOptions}
+                  statusColor={`!px-3 !py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 font-bold ${
+                    selectedRole ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'
+                  }`}
+                />
+              </div>
+
+              {(searchTerm || selectedRole || (selectedStatus && selectedStatus !== 'all') || userTab !== 'all') && (
+                <button
+                  onClick={handleClearFilters}
+                  className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 hover:text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:hover:text-white text-xs font-bold rounded-xl border border-slate-300 dark:border-white/10 transition-all cursor-pointer shrink-0"
+                  title="Reset Filters"
+                >
+                  Reset
+                </button>
+              )}
+
+              {/* Desktop-only Bulk Operations button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBulkMode((prev) => !prev);
+                  if (isBulkMode) setSelectedUserIds(new Set());
+                }}
+                className={`hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs shadow-md font-bold transition-all border cursor-pointer shrink-0 ${
+                  isBulkMode
+                    ? 'bg-amber-500 border-amber-500/40 text-white dark:text-amber-400'
+                    : 'bg-white dark:bg-white/5 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-blue-500/40'
+                }`}
+              >
+                <FiLayers className="text-sm" />
+                <span>{isBulkMode ? 'Exit Bulk' : 'Bulk Operations'}</span>
+                {isBulkMode && selectedUserIds.size > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500 text-white font-mono">
+                    {selectedUserIds.size}
+                  </span>
+                )}
+              </button>
+
+              {/* Desktop-only Add User button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setFormError('');
+                  setFormData(initialFormstate);
+                  setShowPassword(false);
+                  setIsCreateModalOpen(true);
+                }}
+                className="hidden lg:flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer shrink-0"
+              >
+                <FiPlus className="text-xs" />
+                <span>Add User</span>
+              </button>
+            </div>
           </div>
         </div>
 
