@@ -83,8 +83,8 @@ const Firms = () => {
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createFormError, setCreateFormError] = useState('');
 
-  // Edit Modal State (PATCH /firms/{id})
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  // Slide-Over Drawer State (Details & Edits)
+  const [drawerMode, setDrawerMode] = useState('details'); // 'details' | 'edit'
   const [firmToEdit, setFirmToEdit] = useState(null);
   const [editFormData, setEditFormData] = useState(INITIAL_FORM_STATE);
   const [editSubmitting, setEditSubmitting] = useState(false);
@@ -333,16 +333,12 @@ const Firms = () => {
         }
         if (isCreateModalOpen && !createSubmitting) {
           setIsCreateModalOpen(false);
-        } else if (isEditModalOpen && !editSubmitting) {
-          setIsEditModalOpen(false);
-        } else if (selectedFirm) {
-          setSelectedFirm(null);
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [docPreviewModal.isOpen, isCreateModalOpen, createSubmitting, isEditModalOpen, editSubmitting, selectedFirm]);
+  }, [docPreviewModal.isOpen, isCreateModalOpen, createSubmitting]);
 
   // Combined Companies list for Select Dropdown
   const allCompanyOptions = useMemo(() => {
@@ -573,17 +569,50 @@ const Firms = () => {
   const canGoPrevFirm = selectedFirmIndex > 0;
   const canGoNextFirm = selectedFirmIndex >= 0 && selectedFirmIndex < sortedFirms.length - 1;
 
+  // Slide-Over Drawer Open & Close Handlers
+  const handleOpenDrawer = useCallback((firm, mode = 'details') => {
+    if (!firm) return;
+    setSelectedFirm(firm);
+    setDrawerMode(mode);
+    setFirmToEdit(firm);
+    setEditFormData({
+      companyId: firm.companyId?._id || firm.companyId || '',
+      firmName: firm.firmName || '',
+      firmCode: firm.firmCode || '',
+      contactPerson: firm.contactPerson || '',
+      phone: firm.phone || '',
+      email: firm.email || '',
+      address: firm.address || '',
+      city: firm.city || '',
+      state: firm.state || '',
+      pincode: firm.pincode || '',
+      gstin: firm.gstin || '',
+      isActive: Boolean(firm.isActive)
+    });
+    setEditFormError('');
+  }, []);
+
+  const handleCloseDrawer = useCallback(() => {
+    if (editSubmitting) return;
+    setSelectedFirm(null);
+    setDrawerMode('details');
+    setFirmToEdit(null);
+    setEditFormError('');
+  }, [editSubmitting]);
+
   const handlePrevFirm = useCallback(() => {
     if (selectedFirmIndex > 0) {
-      setSelectedFirm(sortedFirms[selectedFirmIndex - 1]);
+      const prevFirm = sortedFirms[selectedFirmIndex - 1];
+      handleOpenDrawer(prevFirm, drawerMode);
     }
-  }, [selectedFirmIndex, sortedFirms]);
+  }, [selectedFirmIndex, sortedFirms, drawerMode, handleOpenDrawer]);
 
   const handleNextFirm = useCallback(() => {
     if (selectedFirmIndex >= 0 && selectedFirmIndex < sortedFirms.length - 1) {
-      setSelectedFirm(sortedFirms[selectedFirmIndex + 1]);
+      const nextFirm = sortedFirms[selectedFirmIndex + 1];
+      handleOpenDrawer(nextFirm, drawerMode);
     }
-  }, [selectedFirmIndex, sortedFirms]);
+  }, [selectedFirmIndex, sortedFirms, drawerMode, handleOpenDrawer]);
 
   // Drawer keyboard navigation & body scroll lock
   useEffect(() => {
@@ -597,16 +626,18 @@ const Firms = () => {
           setDocPreviewModal({ isOpen: false, title: '', url: '' });
           return;
         }
-        setSelectedFirm(null);
+        if (!editSubmitting) {
+          handleCloseDrawer();
+        }
       } else if (e.key === 'ArrowLeft') {
-        if (canGoPrevFirm) handlePrevFirm();
+        if (canGoPrevFirm && drawerMode !== 'edit') handlePrevFirm();
       } else if (e.key === 'ArrowRight') {
-        if (canGoNextFirm) handleNextFirm();
+        if (canGoNextFirm && drawerMode !== 'edit') handleNextFirm();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedFirm, canGoPrevFirm, canGoNextFirm, handlePrevFirm, handleNextFirm, docPreviewModal.isOpen]);
+  }, [selectedFirm, canGoPrevFirm, canGoNextFirm, handlePrevFirm, handleNextFirm, docPreviewModal.isOpen, editSubmitting, drawerMode, handleCloseDrawer]);
 
   useEffect(() => {
     if (selectedFirm) {
@@ -756,31 +787,11 @@ const Firms = () => {
     }
   };
 
-  // Open Edit Modal (prefills form data)
-  const handleOpenEditModal = (firm) => {
-    setFirmToEdit(firm);
-    setEditFormData({
-      companyId: firm.companyId?._id || firm.companyId || '',
-      firmName: firm.firmName || '',
-      firmCode: firm.firmCode || '',
-      contactPerson: firm.contactPerson || '',
-      phone: firm.phone || '',
-      email: firm.email || '',
-      address: firm.address || '',
-      city: firm.city || '',
-      state: firm.state || '',
-      pincode: firm.pincode || '',
-      gstin: firm.gstin || '',
-      isActive: Boolean(firm.isActive)
-    });
-    setEditFormError('');
-    setIsEditModalOpen(true);
-  };
-
-  // Submit Handler for PATCH /firms/{id}
+  // Submit Handler for PATCH /firms/{id} (Drawer Edit Process)
   const handleUpdateFirm = async (e) => {
     e.preventDefault();
-    if (!firmToEdit) return;
+    const targetFirm = firmToEdit || selectedFirm;
+    if (!targetFirm) return;
     setEditFormError('');
 
     if (!editFormData.companyId) return setEditFormError('Please select a parent company.');
@@ -828,30 +839,30 @@ const Firms = () => {
 
     setEditSubmitting(true);
     try {
-      const response = await updateFirmApi(firmToEdit._id, payload);
+      const response = await updateFirmApi(targetFirm._id, payload);
       const resData = response.data?.data || response.data || {};
       const matchedComp = allCompanyOptions.find((c) => c.id === payload.companyId);
 
       const updatedFirm = {
-        ...firmToEdit,
+        ...targetFirm,
         ...payload,
         companyId: {
           _id: payload.companyId,
-          name: matchedComp?.name || firmToEdit.companyId?.name || 'Company',
-          code: matchedComp?.code || firmToEdit.companyId?.code || '',
-          logo: matchedComp?.logo || firmToEdit.companyId?.logo || ''
+          name: matchedComp?.name || targetFirm.companyId?.name || 'Company',
+          code: matchedComp?.code || targetFirm.companyId?.code || '',
+          logo: matchedComp?.logo || targetFirm.companyId?.logo || ''
         },
         updatedAt: resData.updatedAt || new Date().toISOString()
       };
 
-      setFirms((prev) => prev.map((f) => (f._id === firmToEdit._id ? updatedFirm : f)));
-      if (selectedFirm?._id === firmToEdit._id) {
+      setFirms((prev) => prev.map((f) => (f._id === targetFirm._id ? updatedFirm : f)));
+      if (selectedFirm?._id === targetFirm._id) {
         setSelectedFirm(updatedFirm);
       }
+      setFirmToEdit(updatedFirm);
       setSuccessToast(`Firm "${payload.firmName}" updated successfully!`);
       setTimeout(() => setSuccessToast(''), 4000);
-      setIsEditModalOpen(false);
-      setFirmToEdit(null);
+      setDrawerMode('details');
     } catch (err) {
       console.error('Update firm error:', err);
       setEditFormError(err.response?.data?.message || err.message || 'Failed to update firm.');
@@ -880,6 +891,8 @@ const Firms = () => {
       setFirms((prev) => prev.filter((f) => f._id !== targetId));
       if (selectedFirm?._id === targetId) {
         setSelectedFirm(null);
+        setDrawerMode('details');
+        setFirmToEdit(null);
       }
       setSuccessToast(`Firm "${firm.firmName}" deleted successfully!`);
       setTimeout(() => setSuccessToast(''), 4000);
@@ -1589,7 +1602,7 @@ const Firms = () => {
                         <td className="p-4 text-sm text-slate-900 dark:text-white font-medium">
                           <div className="flex items-center gap-3">
                             <div
-                              onClick={() => setSelectedFirm(firm)}
+                              onClick={() => handleOpenDrawer(firm, 'details')}
                               className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 !text-white flex items-center justify-center text-xs font-extrabold shrink-0 shadow-sm cursor-pointer hover:scale-105 transition-transform"
                               title="View firm details"
                             >
@@ -1598,7 +1611,7 @@ const Firms = () => {
                             <div>
                               <div className="flex items-center gap-2">
                                 <span
-                                  onClick={() => setSelectedFirm(firm)}
+                                  onClick={() => handleOpenDrawer(firm, 'details')}
                                   className="font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
                                   title="View firm details"
                                 >
@@ -1789,21 +1802,11 @@ const Firms = () => {
                             {/* View Details */}
                             <button
                               type="button"
-                              onClick={() => setSelectedFirm(firm)}
+                              onClick={() => handleOpenDrawer(firm, 'details')}
                               className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                               title="View firm details"
                             >
                               <FiEye className="text-base" />
-                            </button>
-
-                            {/* Edit Firm (PATCH /firms/{id}) */}
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditModal(firm)}
-                              className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border border-amber-200/60 dark:border-amber-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                              title="Edit firm details"
-                            >
-                              <FiEdit2 className="text-base" />
                             </button>
 
                             {/* Delete Firm (DELETE /firms/{id}) */}
@@ -2228,313 +2231,6 @@ const Firms = () => {
           document.body
         )}
 
-      {/* EDIT FIRM MODAL (PATCH /firms/{id}) */}
-      {isEditModalOpen &&
-        firmToEdit &&
-        createPortal(
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 dark:bg-slate-950/50 backdrop-blur-lg transition-opacity"
-              onClick={() => !editSubmitting && setIsEditModalOpen(false)}
-            />
-
-            {/* Modal Dialog */}
-            <div className="relative w-full max-w-2xl bg-white/20 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
-              {/* Header */}
-              <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg font-black shrink-0">
-                    <FiEdit2 />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                      Edit Firm Profile
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Update details for <span className="font-semibold text-slate-700 dark:text-slate-200">{firmToEdit.firmName}</span> ({firmToEdit.firmCode})
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={editSubmitting}
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer disabled:opacity-40"
-                  title="Close modal (Esc)"
-                >
-                  <FiX className="text-xl" />
-                </button>
-              </div>
-
-              {/* Form Body */}
-              <form onSubmit={handleUpdateFirm} className="flex flex-col flex-1 overflow-hidden">
-                <div className="p-6 overflow-y-auto custom-scrollbar space-y-4 flex-1">
-                  {/* Error Notification */}
-                  {editFormError && (
-                    <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-500/30 flex items-center gap-2.5 text-xs text-rose-600 dark:text-rose-400 font-medium">
-                      <FiAlertCircle className="text-base shrink-0" />
-                      <span>{editFormError}</span>
-                    </div>
-                  )}
-
-                  {/* 1. Parent Company Dropdown */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                      Parent Company <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <CustomDropdown
-                        value={editFormData.companyId}
-                        onChange={(val) =>
-                          setEditFormData((prev) => ({ ...prev, companyId: val }))
-                        }
-                        defaultLabel="-- Select Parent Enterprise --"
-                        options={[
-                          { value: '', label: '-- Select Parent Enterprise --' },
-                          ...allCompanyOptions.map((comp) => ({
-                            value: comp.id,
-                            label: `${comp.name} ${comp.code ? `(${comp.code})` : ''}`
-                          }))
-                        ]}
-                        statusColor="!px-3.5 !py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white"
-                      />
-                    </div>
-                  </div>
-
-                  {/* 2. Firm Name & Firm Code */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                        Firm Name <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="firmName"
-                        value={editFormData.firmName}
-                        onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, firmName: e.target.value }))
-                        }
-                        placeholder="e.g. Metro Telecom & Gadgets"
-                        required
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                        Firm Code <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="firmCode"
-                        value={editFormData.firmCode}
-                        onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, firmCode: formatEntityCode(e.target.value) }))
-                        }
-                        placeholder="e.g. METRO-DEL"
-                        required
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 uppercase"
-                      />
-                    </div>
-                  </div>
-
-                  {/* 3. Contact Person & Phone */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                        Contact Person <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="contactPerson"
-                        value={editFormData.contactPerson}
-                        onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, contactPerson: e.target.value }))
-                        }
-                        placeholder="e.g. Suresh Singhania"
-                        required
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                        Phone Number <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={editFormData.phone}
-                        onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, phone: formatPhone(e.target.value) }))
-                        }
-                        placeholder="e.g. +919811001122"
-                        required
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                      />
-                    </div>
-                  </div>
-
-                  {/* 4. Email & GSTIN */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                        Official Email <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={editFormData.email}
-                        onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, email: e.target.value }))
-                        }
-                        placeholder="e.g. orders@metrotelecom.in"
-                        required
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                        GSTIN Number <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="gstin"
-                        value={editFormData.gstin}
-                        onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, gstin: formatGSTIN(e.target.value) }))
-                        }
-                        placeholder="e.g. 07AAAAA1111A1Z1"
-                        required
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 uppercase"
-                      />
-                    </div>
-                  </div>
-
-                  {/* 5. Premises Address */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                      Premises Address <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={editFormData.address}
-                      onChange={(e) =>
-                        setEditFormData((prev) => ({ ...prev, address: e.target.value }))
-                      }
-                      placeholder="e.g. Shop 104, Nehru Place Market"
-                      required
-                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                    />
-                  </div>
-
-                  {/* 6. City, State, Pincode */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                        City <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="city"
-                        value={editFormData.city}
-                        onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, city: e.target.value }))
-                        }
-                        placeholder="e.g. New Delhi"
-                        required
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                        State <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="state"
-                        value={editFormData.state}
-                        onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, state: e.target.value }))
-                        }
-                        placeholder="e.g. Delhi"
-                        required
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                        Pincode <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="pincode"
-                        value={editFormData.pincode}
-                        onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, pincode: formatPincode(e.target.value) }))
-                        }
-                        placeholder="e.g. 110019"
-                        required
-                        className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                      />
-                    </div>
-                  </div>
-
-                  {/* 7. Active Status Toggle */}
-                  <div className="pt-2">
-                    <label className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-white/[0.04] transition-colors">
-                      <input
-                        type="checkbox"
-                        name="isActive"
-                        checked={editFormData.isActive}
-                        onChange={(e) =>
-                          setEditFormData((prev) => ({ ...prev, isActive: e.target.checked }))
-                        }
-                        className="w-4 h-4 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500 cursor-pointer"
-                      />
-                      <div>
-                        <p className="text-xs font-bold text-slate-900 dark:text-white">
-                          Active Operational Branch
-                        </p>
-                        <p className="text-[11px] text-slate-400">
-                          Toggle whether this firm entity is active in procurement and inventory allocations.
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Modal Footer */}
-                <div className="p-4 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-end gap-2.5">
-                  <button
-                    type="button"
-                    disabled={editSubmitting}
-                    onClick={() => setIsEditModalOpen(false)}
-                    className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={editSubmitting}
-                    className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer disabled:opacity-50 active:scale-95"
-                  >
-                    {editSubmitting && <FiLoader className="animate-spin text-sm" />}
-                    <span>{editSubmitting ? 'Saving Changes...' : 'Save Changes'}</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>,
-          document.body
-        )}
-
       {/* QUICK VIEW FIRM DETAILS SLIDE-OVER DRAWER (Portal) */}
       {selectedFirm &&
         createPortal(
@@ -2542,12 +2238,12 @@ const Firms = () => {
             {/* Backdrop Blur Overlay */}
             <div
               className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
-              onClick={() => setSelectedFirm(null)}
+              onClick={handleCloseDrawer}
             />
 
             {/* Slide-Over Drawer Container (Pinned to Right) */}
             <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
-              <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10">
+              <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 backdrop-blur-xl">
                 {/* 1. Sticky Drawer Header */}
                 <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md gap-2 sm:gap-4">
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
@@ -2572,7 +2268,7 @@ const Firms = () => {
 
                   {/* Header Actions: Stepping & Close */}
                   <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                    {selectedFirmIndex >= 0 && (
+                    {selectedFirmIndex >= 0 && sortedFirms.length > 1 && (
                       <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
                         <button
                           type="button"
@@ -2599,8 +2295,9 @@ const Firms = () => {
                     )}
                     <button
                       type="button"
-                      onClick={() => setSelectedFirm(null)}
-                      className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                      disabled={editSubmitting}
+                      onClick={handleCloseDrawer}
+                      className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer disabled:opacity-40"
                       title="Close drawer (Esc)"
                     >
                       <FiX size={18} />
@@ -2608,9 +2305,46 @@ const Firms = () => {
                   </div>
                 </div>
 
+                {/* Tab Switcher: View Details vs. Edit Firm */}
+                <div className="px-4 sm:px-6 py-2.5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md shrink-0">
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDrawerMode('details');
+                        setEditFormError('');
+                      }}
+                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        drawerMode === 'details'
+                          ? 'bg-white dark:bg-white/15 text-blue-600 dark:text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                      }`}
+                    >
+                      <FiEye className="text-sm" />
+                      <span>Overview & Details</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleOpenDrawer(selectedFirm, 'edit');
+                      }}
+                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        drawerMode === 'edit'
+                          ? 'bg-white dark:bg-white/15 text-blue-600 dark:text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                      }`}
+                    >
+                      <FiEdit2 className="text-sm" />
+                      <span>Edit Firm</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* 2. Scrollable Drawer Body */}
                 <div className="flex-1 p-4 sm:p-7 overflow-y-auto custom-scrollbar space-y-5 sm:space-y-6">
-                {/* Status & Parent Company Banner */}
+                  {drawerMode === 'details' ? (
+                    <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200">
+                      {/* Status & Parent Company Banner */}
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl overflow-hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center shrink-0">
@@ -3143,41 +2877,310 @@ const Firms = () => {
                   </div>
                 </div>
               </div>
+            ) : (
+              /* ================= EDIT FIRM FORM ================= */
+              <form id="drawerEditFirmForm" onSubmit={handleUpdateFirm} className="space-y-4 animate-in fade-in duration-200">
+                {/* Error Notification */}
+                {editFormError && (
+                  <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-500/30 flex items-center gap-2.5 text-xs text-rose-600 dark:text-rose-400 font-medium">
+                    <FiAlertCircle className="text-base shrink-0" />
+                    <span>{editFormError}</span>
+                  </div>
+                )}
 
-                {/* 3. Sticky Drawer Footer */}
-                <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteFirm(selectedFirm)}
-                    disabled={actionLoadingId === selectedFirm._id}
-                    className="flex items-center gap-1.5 px-3.5 py-2 text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <FiTrash2 className="text-sm" />
-                    <span>Delete Firm</span>
-                  </button>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const firm = selectedFirm;
-                        setSelectedFirm(null);
-                        handleOpenEditModal(firm);
-                      }}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/20 cursor-pointer active:scale-95"
-                    >
-                      <FiEdit2 className="text-sm" />
-                      <span>Edit Firm</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedFirm(null)}
-                      className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer"
-                    >
-                      Close Drawer
-                    </button>
+                {/* 1. Parent Company Dropdown */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Parent Company <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <CustomDropdown
+                      value={editFormData.companyId}
+                      onChange={(val) =>
+                        setEditFormData((prev) => ({ ...prev, companyId: val }))
+                      }
+                      defaultLabel="-- Select Parent Enterprise --"
+                      options={[
+                        { value: '', label: '-- Select Parent Enterprise --' },
+                        ...allCompanyOptions.map((comp) => ({
+                          value: comp.id,
+                          label: `${comp.name} ${comp.code ? `(${comp.code})` : ''}`
+                        }))
+                      ]}
+                      statusColor="!px-3.5 !py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white"
+                    />
                   </div>
                 </div>
+
+                {/* 2. Firm Name & Firm Code */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Firm Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="firmName"
+                      value={editFormData.firmName}
+                      onChange={(e) =>
+                        setEditFormData((prev) => ({ ...prev, firmName: e.target.value }))
+                      }
+                      placeholder="e.g. Metro Telecom & Gadgets"
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Firm Code <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="firmCode"
+                      value={editFormData.firmCode}
+                      onChange={(e) =>
+                        setEditFormData((prev) => ({ ...prev, firmCode: formatEntityCode(e.target.value) }))
+                      }
+                      placeholder="e.g. METRO-DEL"
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 uppercase"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Contact Person & Phone */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Contact Person <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="contactPerson"
+                      value={editFormData.contactPerson}
+                      onChange={(e) =>
+                        setEditFormData((prev) => ({ ...prev, contactPerson: e.target.value }))
+                      }
+                      placeholder="e.g. Suresh Singhania"
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Phone Number <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={editFormData.phone}
+                      onChange={(e) =>
+                        setEditFormData((prev) => ({ ...prev, phone: formatPhone(e.target.value) }))
+                      }
+                      placeholder="e.g. +919811001122"
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. Email & GSTIN */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Official Email <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={editFormData.email}
+                      onChange={(e) =>
+                        setEditFormData((prev) => ({ ...prev, email: e.target.value }))
+                      }
+                      placeholder="e.g. orders@metrotelecom.in"
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      GSTIN Number <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="gstin"
+                      value={editFormData.gstin}
+                      onChange={(e) =>
+                        setEditFormData((prev) => ({ ...prev, gstin: formatGSTIN(e.target.value) }))
+                      }
+                      placeholder="e.g. 07AAAAA1111A1Z1"
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 uppercase"
+                    />
+                  </div>
+                </div>
+
+                {/* 5. Premises Address */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Premises Address <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={editFormData.address}
+                    onChange={(e) =>
+                      setEditFormData((prev) => ({ ...prev, address: e.target.value }))
+                    }
+                    placeholder="e.g. Shop 104, Nehru Place Market"
+                    required
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                </div>
+
+                {/* 6. City, State, Pincode */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      City <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={editFormData.city}
+                      onChange={(e) =>
+                        setEditFormData((prev) => ({ ...prev, city: e.target.value }))
+                      }
+                      placeholder="e.g. New Delhi"
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      State <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="state"
+                      value={editFormData.state}
+                      onChange={(e) =>
+                        setEditFormData((prev) => ({ ...prev, state: e.target.value }))
+                      }
+                      placeholder="e.g. Delhi"
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Pincode <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="pincode"
+                      value={editFormData.pincode}
+                      onChange={(e) =>
+                        setEditFormData((prev) => ({ ...prev, pincode: formatPincode(e.target.value) }))
+                      }
+                      placeholder="e.g. 110019"
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    />
+                  </div>
+                </div>
+
+                {/* 7. Active Status Toggle */}
+                <div className="pt-2">
+                  <label className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-white/[0.04] transition-colors">
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      checked={editFormData.isActive}
+                      onChange={(e) =>
+                        setEditFormData((prev) => ({ ...prev, isActive: e.target.checked }))
+                      }
+                      className="w-4 h-4 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">
+                        Active Operational Branch
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        Toggle whether this firm entity is active in procurement and inventory allocations.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </form>
+            )}
+          </div>
+
+          {/* 3. Sticky Drawer Footer */}
+          <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
+            {drawerMode === 'details' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteFirm(selectedFirm)}
+                  disabled={actionLoadingId === selectedFirm._id}
+                  className="flex items-center gap-1.5 px-3.5 py-2 text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <FiTrash2 className="text-sm" />
+                  <span>Delete Firm</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDrawer(selectedFirm, 'edit')}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/20 cursor-pointer active:scale-95"
+                  >
+                    <FiEdit2 className="text-sm" />
+                    <span>Edit Firm</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCloseDrawer}
+                    className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer"
+                  >
+                    Close Drawer
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={editSubmitting}
+                  onClick={() => {
+                    setDrawerMode('details');
+                    setEditFormError('');
+                  }}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    form="drawerEditFirmForm"
+                    disabled={editSubmitting}
+                    className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer disabled:opacity-50 active:scale-95"
+                  >
+                    {editSubmitting && <FiLoader className="animate-spin text-sm" />}
+                    <span>{editSubmitting ? 'Saving Changes...' : 'Save Changes'}</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
               </div>
             </div>
           </div>,
