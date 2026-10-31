@@ -171,14 +171,34 @@ const Firms = () => {
     });
   }, [setSearchParams]);
 
-  // Filter change helper
-  const handleFilterChange = (key, value) => {
+  // Filter change helper (supports single key/value or batch update object)
+  const handleFilterChange = (keyOrUpdates, value) => {
     setSearchParams((prev) => {
-      if (value) {
-        prev.set(key, value);
+      if (typeof keyOrUpdates === 'object' && keyOrUpdates !== null) {
+        Object.entries(keyOrUpdates).forEach(([k, v]) => {
+          if (v) {
+            prev.set(k, v);
+          } else {
+            prev.delete(k);
+          }
+        });
       } else {
-        prev.delete(key);
+        if (value) {
+          prev.set(keyOrUpdates, value);
+        } else {
+          prev.delete(keyOrUpdates);
+        }
       }
+      prev.set('page', '1');
+      return prev;
+    });
+  };
+
+  // Reset dropdown filters
+  const handleClearDropdowns = () => {
+    setSearchParams((prev) => {
+      prev.delete('company');
+      prev.delete('businessType');
       prev.set('page', '1');
       return prev;
     });
@@ -1176,8 +1196,8 @@ const Firms = () => {
       />
 
       {/* Unified Action & Filter Bar (matching Products.jsx) */}
-      <div className={`bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2 sm:px-3 sm:py-2 border border-slate-200/80 dark:border-white/10 shadow-md space-y-2 transition-all duration-200 ${
-        isFiltersVisible ? 'rounded-2xl' : 'rounded-full'
+      <div className={`bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2.5 sm:px-3 sm:py-2 border border-slate-200/80 dark:border-white/10 shadow-md space-y-2 transition-all duration-200 ${
+        isFiltersVisible ? 'rounded-2xl' : 'rounded-2xl lg:rounded-full'
       }`}>
         {/* Top Row: Primary Actions, Status Tabs, Filter Toggle & Reset */}
         <div className={`flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center justify-between ${
@@ -1224,17 +1244,19 @@ const Firms = () => {
           {/* Right: Status Segmented Tabs + Filter Toggle + Reset */}
           <div className="flex items-center gap-2 flex-wrap justify-between lg:justify-end">
             {/* Status Segmented Tabs (unified SegmentedTabs) */}
-            <SegmentedTabs
-              tabs={[
-                { id: 'all', label: 'All', count: tabCounts.all },
-                { id: 'approved', label: 'Approved', count: tabCounts.approved },
-                { id: 'pending', label: 'Pending', count: tabCounts.pending },
-                { id: 'active', label: 'Active', count: tabCounts.active },
-                { id: 'inactive', label: 'Inactive', count: tabCounts.inactive }
-              ]}
-              activeTab={firmTab}
-              onChange={handleTabChange}
-            />
+            <div className="max-w-full overflow-x-auto no-scrollbar">
+              <SegmentedTabs
+                tabs={[
+                  { id: 'all', label: 'All', count: tabCounts.all },
+                  { id: 'approved', label: 'Approved', count: tabCounts.approved },
+                  { id: 'pending', label: 'Pending', count: tabCounts.pending },
+                  { id: 'active', label: 'Active', count: tabCounts.active },
+                  { id: 'inactive', label: 'Inactive', count: tabCounts.inactive }
+                ]}
+                activeTab={firmTab}
+                onChange={handleTabChange}
+              />
+            </div>
 
             {/* Toggle Filters Visibility Button (matching Products.jsx) */}
             <button
@@ -1309,10 +1331,7 @@ const Firms = () => {
             {(selectedCompany || selectedBusinessType) && (
               <button
                 type="button"
-                onClick={() => {
-                  handleFilterChange('company', '');
-                  handleFilterChange('businessType', '');
-                }}
+                onClick={handleClearDropdowns}
                 className="px-2 py-1 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg transition-all cursor-pointer border border-rose-200/60 dark:border-rose-900/40 shrink-0"
                 title="Clear dropdown filters"
               >

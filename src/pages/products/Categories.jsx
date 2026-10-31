@@ -514,7 +514,7 @@ const Categories = () => {
         {/* Right Column: Categories List & Filter Table */}
         <div className="lg:col-span-8 space-y-4">
           {/* Action and Filter Toolbar */}
-          <div className="flex items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2 sm:p-2 rounded-full border border-slate-200/80 dark:border-white/10 shadow-xs">
+          <div className="flex items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2.5 sm:p-2 rounded-2xl sm:rounded-full border border-slate-200/80 dark:border-white/10 shadow-xs">
             {/* Status Tabs */}
             <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start sm:self-auto">
               {[

@@ -933,7 +933,7 @@ const Reports = () => {
       )}
 
       {/* Date Range Selector Banner */}
-      <div className="flex flex-col gap-3 bg-white/40 dark:bg-slate-900/60 p-2 rounded-full border border-slate-200/80 dark:border-white/10 shadow-lg">
+      <div className={`flex flex-col gap-3 bg-white/40 dark:bg-slate-900/60 p-2.5 sm:p-2 border border-slate-200/80 dark:border-white/10 shadow-lg ${selectedRange === 'custom' ? 'rounded-2xl' : 'rounded-2xl sm:rounded-full'}`}>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           <div className="flex items-center gap-2 flex-wrap">
             <FiCalendar className="text-blue-500 text-sm" />

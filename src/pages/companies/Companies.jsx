@@ -540,7 +540,7 @@ const Companies = () => {
       />
 
       {/* Filter and Action Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-none p-2 rounded-full border border-slate-200/80 dark:border-white/10 shadow-md">
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-none p-2.5 sm:p-2 rounded-2xl sm:rounded-full border border-slate-200/80 dark:border-white/10 shadow-md">
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             type="button"

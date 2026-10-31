@@ -1985,7 +1985,7 @@ const Products = () => {
       )}
 
       {/* Actions & Filters Bar - Ultra Compact */}
-      <div className={`relative z-30 bg-white/50 dark:bg-slate-900/60 p-2 sm:px-3 sm:py-2 rounded-full border border-slate-200/80 dark:border-white/10 shadow-xs space-y-1.5 transition-all duration-200 ${isFiltersVisible ? 'rounded-xl' : 'rounded-full'}`}>
+      <div className={`relative z-30 bg-white/50 dark:bg-slate-900/60 p-2.5 sm:px-3 sm:py-2 border border-slate-200/80 dark:border-white/10 shadow-xs space-y-1.5 transition-all duration-200 ${isFiltersVisible ? 'rounded-2xl' : 'rounded-2xl sm:rounded-full'}`}>
         {/* Top Row: Primary Actions, Filter Toggle & Sort / Reset */}
         <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 ${isFiltersVisible ? 'pb-1.5 border-b border-slate-200/60 dark:border-white/5' : ''}`}>
           {/* Action Controls */}
