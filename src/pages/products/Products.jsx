@@ -44,6 +44,9 @@ import {
   createProductApi,
   updateProductApi,
   deleteProductApi,
+  createProductVariantApi,
+  updateProductVariantApi,
+  deleteProductVariantApi,
   getCompaniesApi,
   getBrandRoutingMatrixApi,
   getBrandRoutingByBrandApi,
@@ -60,6 +63,8 @@ import { INDIAN_STATES, POPULAR_STATES, isAllKeyword } from '@/utils/indianState
 const PRODUCT_COLUMNS = [
   { id: 'serialNo', label: 'S.No.' },
   { id: 'productDetails', label: 'Product Details', alwaysVisible: true },
+  { id: 'variants', label: 'Variants & Stock' },
+  { id: 'price', label: 'Price (INR)' },
   { id: 'brand', label: 'Brand' },
   { id: 'category', label: 'Category' },
   { id: 'company', label: 'Partner Company' },
@@ -70,11 +75,58 @@ const PRODUCT_COLUMNS = [
   { id: 'actions', label: 'Actions', alwaysVisible: true }
 ];
 
+// Helper functions for variants, price and stock resolution
+export const getProductPriceInfo = (product) => {
+  if (!product) return { formatted: '—', min: 0, max: 0, hasVariants: false };
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  if (variants.length > 0) {
+    const prices = variants
+      .map((v) => Number(v.price))
+      .filter((p) => !isNaN(p) && p > 0);
+    if (prices.length > 0) {
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      if (min === max) {
+        return {
+          formatted: `₹${min.toLocaleString('en-IN')}`,
+          min,
+          max,
+          hasVariants: true
+        };
+      }
+      return {
+        formatted: `₹${min.toLocaleString('en-IN')} – ₹${max.toLocaleString('en-IN')}`,
+        min,
+        max,
+        hasVariants: true
+      };
+    }
+  }
+  const basePrice = Number(product.price);
+  if (!isNaN(basePrice) && basePrice > 0) {
+    return {
+      formatted: `₹${basePrice.toLocaleString('en-IN')}`,
+      min: basePrice,
+      max: basePrice,
+      hasVariants: false
+    };
+  }
+  return { formatted: '—', min: 0, max: 0, hasVariants: false };
+};
+
+export const getProductStockInfo = (product) => {
+  if (!product) return { totalStock: 0, variantCount: 0 };
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const variantCount = variants.length;
+  const totalStock = variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0);
+  return { totalStock, variantCount };
+};
+
 // Initial form state for Add/Edit product according to new schema
 const INITIAL_PRODUCT_FORM = {
   name: '',
   sku: '',
-  brand: 'Realme',
+  brand: 'Whatnot',
   categoryId: '',
   companyId: '',
   price: '',
@@ -82,6 +134,21 @@ const INITIAL_PRODUCT_FORM = {
   companyMappings: [],
   unit: 'PCS',
   description: '',
+  isActive: true,
+  variants: []
+};
+
+// Initial form state for dedicated Product Variant Modal
+const INITIAL_VARIANT_FORM = {
+  name: '',
+  sku: '',
+  price: '',
+  stock: 0,
+  attributes: {
+    color: '',
+    wattage: '',
+    edition: ''
+  },
   isActive: true
 };
 
@@ -146,6 +213,15 @@ const Products = () => {
   // Delete Confirm Modal
   const [deleteConfirmProduct, setDeleteConfirmProduct] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Variant Modal & Direct CRUD States
+  const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
+  const [editingVariant, setEditingVariant] = useState(null);
+  const [variantFormData, setVariantFormData] = useState(INITIAL_VARIANT_FORM);
+  const [variantFormError, setVariantFormError] = useState('');
+  const [variantSubmitting, setVariantSubmitting] = useState(false);
+  const [deleteConfirmVariant, setDeleteConfirmVariant] = useState(null);
+  const [deletingVariant, setDeletingVariant] = useState(false);
 
   // Bulk Operations State
   const [isBulkMode, setIsBulkMode] = useState(false);
@@ -419,6 +495,16 @@ const Products = () => {
                 : []);
           const locsStr = locsList.join(' ').toLowerCase();
 
+          // Also match variant attributes, names, and SKUs
+          const variantMatch = Array.isArray(product.variants) && product.variants.some((v) => {
+            const vName = String(v.name || '').toLowerCase();
+            const vSku = String(v.sku || '').toLowerCase();
+            const vAttrs = v.attributes && typeof v.attributes === 'object'
+              ? Object.values(v.attributes).map((val) => String(val).toLowerCase()).join(' ')
+              : '';
+            return vName.includes(q) || vSku.includes(q) || vAttrs.includes(q);
+          });
+
           return (
             matchId ||
             name.includes(q) ||
@@ -429,7 +515,8 @@ const Products = () => {
             catCode.includes(q) ||
             compName.includes(q) ||
             compCode.includes(q) ||
-            locsStr.includes(q)
+            locsStr.includes(q) ||
+            variantMatch
           );
         }
 
@@ -738,7 +825,7 @@ const Products = () => {
     setFormData({
       name: product.name || '',
       sku: product.sku || '',
-      brand: product.brand || 'Realme',
+      brand: product.brand || 'Sony',
       categoryId: catId || '',
       companyId: compId || (companies.length > 0 ? companies[0]._id : ''),
       price: product.price !== undefined && product.price !== null ? product.price : '',
@@ -746,12 +833,247 @@ const Products = () => {
       companyMappings: initialMappings,
       unit: product.unit || 'PCS',
       description: product.description || '',
-      isActive: product.isActive !== undefined ? Boolean(product.isActive) : true
+      isActive: product.isActive !== undefined ? Boolean(product.isActive) : true,
+      variants: Array.isArray(product.variants)
+        ? product.variants.map((v) => ({
+            name: v.name || '',
+            sku: v.sku || '',
+            price: v.price !== undefined ? v.price : '',
+            stock: v.stock !== undefined ? v.stock : '',
+            attributes: v.attributes && typeof v.attributes === 'object' ? { ...v.attributes } : {},
+            isActive: v.isActive !== false,
+            _id: v._id
+          }))
+        : []
     });
     setCustomLocationInput('');
     setCustomMappingInputs({});
     setFormError('');
     setAutoMappedBanner(null);
+  };
+
+  // Variant management handlers for Add/Edit Drawer
+  const handleAddVariantRow = () => {
+    setFormData((prev) => {
+      const currentVariants = prev.variants || [];
+      const defaultSku = prev.sku ? `${prev.sku}-VAR${currentVariants.length + 1}` : '';
+      return {
+        ...prev,
+        variants: [
+          ...currentVariants,
+          {
+            name: '',
+            sku: defaultSku,
+            price: prev.price || '',
+            stock: 0,
+            attributes: { color: '' },
+            isActive: true
+          }
+        ]
+      };
+    });
+  };
+
+  const handleUpdateVariantField = (index, field, value) => {
+    setFormData((prev) => {
+      const nextVariants = [...(prev.variants || [])];
+      nextVariants[index] = {
+        ...nextVariants[index],
+        [field]: value
+      };
+      return { ...prev, variants: nextVariants };
+    });
+  };
+
+  const handleUpdateVariantAttribute = (index, attrKey, value) => {
+    setFormData((prev) => {
+      const nextVariants = [...(prev.variants || [])];
+      nextVariants[index] = {
+        ...nextVariants[index],
+        attributes: {
+          ...(nextVariants[index]?.attributes || {}),
+          [attrKey]: value
+        }
+      };
+      return { ...prev, variants: nextVariants };
+    });
+  };
+
+  const handleRemoveVariantRow = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      variants: (prev.variants || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  // Direct Variant Management Modal Handlers (POST / PUT / DELETE)
+  const handleOpenAddVariantModal = (targetProduct = (drawerProduct || editingProduct)) => {
+    if (!targetProduct?._id) {
+      showToast('Please save the product first before adding individual variants.', 'error');
+      return;
+    }
+    setEditingVariant(null);
+    const existingCount = Array.isArray(targetProduct.variants) ? targetProduct.variants.length : 0;
+    const defaultSku = targetProduct.sku ? `${targetProduct.sku}-VAR${existingCount + 1}` : '';
+    setVariantFormData({
+      ...INITIAL_VARIANT_FORM,
+      sku: defaultSku
+    });
+    setVariantFormError('');
+    setIsVariantModalOpen(true);
+  };
+
+  const handleOpenEditVariantModal = (variant) => {
+    setEditingVariant(variant);
+    setVariantFormData({
+      name: variant.name || '',
+      sku: variant.sku || '',
+      price: variant.price !== undefined && variant.price !== null ? variant.price : '',
+      stock: variant.stock !== undefined && variant.stock !== null ? variant.stock : 0,
+      attributes: {
+        color: variant.attributes?.color || '',
+        wattage: variant.attributes?.wattage || '',
+        edition: variant.attributes?.edition || '',
+        ...(variant.attributes || {})
+      },
+      isActive: variant.isActive !== false
+    });
+    setVariantFormError('');
+    setIsVariantModalOpen(true);
+  };
+
+  const handleSaveVariantModal = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setVariantFormError('');
+
+    if (!variantFormData.name.trim()) {
+      setVariantFormError('Variant name is required.');
+      return;
+    }
+    const skuVal = validateEntityCode(variantFormData.sku);
+    if (!skuVal.isValid) {
+      setVariantFormError(`Variant SKU: ${skuVal.error}`);
+      return;
+    }
+
+    const targetProductId = drawerProduct?._id || editingProduct?._id;
+    if (!targetProductId) {
+      setVariantFormError('Parent product ID not found.');
+      return;
+    }
+
+    // Clean attributes object
+    const cleanAttributes = {};
+    if (variantFormData.attributes) {
+      Object.entries(variantFormData.attributes).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && String(val).trim()) {
+          cleanAttributes[key] = String(val).trim();
+        }
+      });
+    }
+
+    const payload = {
+      name: variantFormData.name.trim(),
+      sku: variantFormData.sku.trim().toUpperCase(),
+      price: variantFormData.price !== '' && !isNaN(Number(variantFormData.price)) ? Number(variantFormData.price) : 0,
+      stock: variantFormData.stock !== '' && !isNaN(Number(variantFormData.stock)) ? Number(variantFormData.stock) : 0,
+      attributes: cleanAttributes,
+      isActive: Boolean(variantFormData.isActive)
+    };
+
+    setVariantSubmitting(true);
+    try {
+      if (editingVariant?._id) {
+        // PUT /products/{id}/variants/{variantId}
+        const res = await updateProductVariantApi(targetProductId, editingVariant._id, payload);
+        const savedVar = res.data?.data || res.data?.variant || (res.data?._id ? res.data : { ...editingVariant, ...payload });
+
+        const syncUpdated = (prod) => {
+          if (!prod) return prod;
+          const updatedVars = (prod.variants || []).map((v) =>
+            v._id === editingVariant._id ? { ...v, ...savedVar } : v
+          );
+          return { ...prod, variants: updatedVars };
+        };
+
+        setProducts((prev) => prev.map((p) => (p._id === targetProductId ? syncUpdated(p) : p)));
+        setDrawerProduct((prev) => (prev?._id === targetProductId ? syncUpdated(prev) : prev));
+        setEditingProduct((prev) => (prev?._id === targetProductId ? syncUpdated(prev) : prev));
+        setFormData((prev) => ({
+          ...prev,
+          variants: (prev.variants || []).map((v) => (v._id === editingVariant._id ? { ...v, ...savedVar } : v))
+        }));
+
+        setIsVariantModalOpen(false);
+        showToast(`Variant "${payload.name}" updated successfully!`);
+      } else {
+        // POST /products/{id}/variants
+        const res = await createProductVariantApi(targetProductId, payload);
+        const createdVar = res.data?.data || res.data?.variant || (res.data?._id ? res.data : { ...payload, _id: 'var_' + Date.now() });
+
+        const syncCreated = (prod) => {
+          if (!prod) return prod;
+          const updatedVars = [...(prod.variants || []), createdVar];
+          return { ...prod, variants: updatedVars };
+        };
+
+        setProducts((prev) => prev.map((p) => (p._id === targetProductId ? syncCreated(p) : p)));
+        setDrawerProduct((prev) => (prev?._id === targetProductId ? syncCreated(prev) : prev));
+        setEditingProduct((prev) => (prev?._id === targetProductId ? syncCreated(prev) : prev));
+        setFormData((prev) => ({
+          ...prev,
+          variants: [...(prev.variants || []), createdVar]
+        }));
+
+        setIsVariantModalOpen(false);
+        showToast(`Variant "${payload.name}" created successfully!`);
+      }
+    } catch (err) {
+      console.error('Failed to save variant:', err);
+      setVariantFormError(err.response?.data?.message || 'Failed to save variant.');
+    } finally {
+      setVariantSubmitting(false);
+    }
+  };
+
+  const handleDeleteVariantConfirm = async () => {
+    if (!deleteConfirmVariant) return;
+    const targetProductId = drawerProduct?._id || editingProduct?._id;
+    if (!targetProductId) return;
+
+    setDeletingVariant(true);
+    try {
+      if (deleteConfirmVariant._id) {
+        // DELETE /products/{id}/variants/{variantId}
+        await deleteProductVariantApi(targetProductId, deleteConfirmVariant._id);
+      }
+
+      const syncRemoved = (prod) => {
+        if (!prod) return prod;
+        const updatedVars = (prod.variants || []).filter((v) =>
+          v._id ? v._id !== deleteConfirmVariant._id : v.sku !== deleteConfirmVariant.sku
+        );
+        return { ...prod, variants: updatedVars };
+      };
+
+      setProducts((prev) => prev.map((p) => (p._id === targetProductId ? syncRemoved(p) : p)));
+      setDrawerProduct((prev) => (prev?._id === targetProductId ? syncRemoved(prev) : prev));
+      setEditingProduct((prev) => (prev?._id === targetProductId ? syncRemoved(prev) : prev));
+      setFormData((prev) => ({
+        ...prev,
+        variants: (prev.variants || []).filter((v) =>
+          v._id ? v._id !== deleteConfirmVariant._id : v.sku !== deleteConfirmVariant.sku
+        )
+      }));
+
+      showToast(`Variant "${deleteConfirmVariant.name || deleteConfirmVariant.sku}" deleted.`);
+      setDeleteConfirmVariant(null);
+    } catch (err) {
+      console.error('Failed to delete variant:', err);
+      showToast(err.response?.data?.message || 'Failed to delete variant.', 'error');
+    } finally {
+      setDeletingVariant(false);
+    }
   };
 
   // Open Drawer for Add Product
@@ -1182,6 +1504,21 @@ const Products = () => {
       }
     }
 
+    // Format & sanitize variants
+    const cleanVariants = Array.isArray(formData.variants)
+      ? formData.variants
+          .filter((v) => v && (v.name?.trim() || v.sku?.trim()))
+          .map((v) => ({
+            ...(v._id ? { _id: v._id } : {}),
+            name: String(v.name || '').trim(),
+            sku: String(v.sku || '').trim().toUpperCase(),
+            price: v.price !== undefined && v.price !== '' && !isNaN(Number(v.price)) ? Number(v.price) : 0,
+            stock: v.stock !== undefined && v.stock !== '' && !isNaN(Number(v.stock)) ? Number(v.stock) : 0,
+            attributes: v.attributes && typeof v.attributes === 'object' ? v.attributes : {},
+            isActive: v.isActive !== false
+          }))
+      : [];
+
     setSubmitting(true);
     try {
       const payload = {
@@ -1197,7 +1534,8 @@ const Products = () => {
         description: formData.description.trim(),
         locations: effectiveLocations,
         companyMappings: cleanMappings,
-        isActive: Boolean(formData.isActive)
+        isActive: Boolean(formData.isActive),
+        ...(cleanVariants.length > 0 ? { variants: cleanVariants } : {})
       };
 
       const targetProd = editingProduct || drawerProduct;
@@ -1212,6 +1550,7 @@ const Products = () => {
           ...targetProd,
           ...payload,
           ...serverData,
+          variants: serverData.variants || (cleanVariants.length > 0 ? cleanVariants : targetProd.variants) || [],
           companyId: matchedComp || serverData.companyId || payload.companyId,
           categoryId: matchedCat || serverData.categoryId || payload.categoryId,
           locations: payload.locations,
@@ -1227,17 +1566,20 @@ const Products = () => {
         showToast(`Product "${payload.name}" updated successfully!`);
       } else {
         const res = await createProductApi(payload);
-        const serverData = res.data?.data || (res.data?._id ? res.data : null);
-        const matchedComp = companies.find((c) => c._id === payload.companyId);
-        const matchedCat = categories.find((c) => c._id === payload.categoryId);
+        const serverData = res.data?.data || (res.data?.name || res.data?.sku || res.data?._id ? res.data : {});
+        const catId = typeof serverData?.categoryId === 'object' ? serverData?.categoryId?._id : (serverData?.categoryId || payload.categoryId);
+        const matchedComp = companies.find((c) => c._id === (serverData?.companyId || payload.companyId));
+        const matchedCat = categories.find((c) => c._id === catId);
         const completeCreated = {
           ...payload,
-          ...(serverData || {}),
-          _id: serverData?._id || ('prod_' + Date.now()),
+          ...serverData,
+          _id: serverData?._id || serverData?.id || ('prod_' + Date.now()),
+          price: serverData?.price !== undefined ? Number(serverData.price) : payload.price,
+          variants: serverData?.variants || cleanVariants || [],
           companyId: matchedComp || serverData?.companyId || payload.companyId,
           categoryId: matchedCat || serverData?.categoryId || payload.categoryId,
-          locations: payload.locations,
-          companyMappings: payload.companyMappings
+          locations: (Array.isArray(serverData?.locations) && serverData.locations.length > 0) ? serverData.locations : payload.locations,
+          companyMappings: (Array.isArray(serverData?.companyMappings) && serverData.companyMappings.length > 0) ? serverData.companyMappings : payload.companyMappings
         };
 
         setProducts((prev) => [completeCreated, ...prev]);
@@ -1277,16 +1619,39 @@ const Products = () => {
   // Export to CSV
   const handleExportCSV = () => {
     if (!filteredProducts.length) return;
-    const headers = ['Product Name', 'SKU', 'Brand', 'Company Name', 'Company Code', 'Covered Locations', 'Unit', 'Status', 'Date Added'];
+    const headers = [
+      'Product Name',
+      'SKU',
+      'Brand',
+      'Category',
+      'Variants Count',
+      'Price (INR)',
+      'Total Stock',
+      'Company Name',
+      'Company Code',
+      'Covered Locations',
+      'Unit',
+      'Status',
+      'Date Added'
+    ];
     const rows = [headers];
     filteredProducts.forEach((p) => {
       const compName = typeof p.companyId === 'object' ? p.companyId?.name : '';
       const compCode = typeof p.companyId === 'object' ? p.companyId?.code : '';
+      const pCatId = typeof p.categoryId === 'object' ? p.categoryId?._id : p.categoryId;
+      const catObj = categories.find((c) => c._id === pCatId);
+      const catName = typeof p.categoryId === 'object' && p.categoryId?.name ? p.categoryId.name : (catObj?.name || '');
+      const priceInfo = getProductPriceInfo(p);
+      const stockInfo = getProductStockInfo(p);
       const locStr = Array.isArray(p.locations) ? p.locations.join('; ') : '';
       rows.push([
         p.name || '',
         p.sku || '',
         p.brand || '',
+        catName || '',
+        Array.isArray(p.variants) ? p.variants.length : 0,
+        priceInfo.formatted,
+        stockInfo.totalStock,
         compName || '',
         compCode || '',
         locStr || '',
@@ -1902,11 +2267,20 @@ const Products = () => {
       const compName = typeof prod.companyId === 'object' ? prod.companyId?.name : '';
       const compCode = typeof prod.companyId === 'object' ? prod.companyId?.code : '';
       const locStr = Array.isArray(prod.locations) ? prod.locations.join(', ') : '';
+      const pCatId = typeof prod.categoryId === 'object' ? prod.categoryId?._id : prod.categoryId;
+      const catObj = categories.find((c) => c._id === pCatId);
+      const catName = typeof prod.categoryId === 'object' && prod.categoryId?.name ? prod.categoryId.name : (catObj?.name || '');
+      const priceInfo = getProductPriceInfo(prod);
+      const stockInfo = getProductStockInfo(prod);
       return {
         'S.No.': idx + 1,
         'SKU': prod.sku || '',
         'Product Name': prod.name || '',
-        'Brand': prod.brand || 'Realme',
+        'Brand': prod.brand || 'Sony',
+        'Category': catName || '',
+        'Variants Count': Array.isArray(prod.variants) ? prod.variants.length : 0,
+        'Price (INR)': priceInfo.formatted,
+        'Total Stock': stockInfo.totalStock,
         'Company Name': compName || '',
         'Company Code': compCode || '',
         'Covered Locations': locStr || '',
@@ -2352,6 +2726,12 @@ const Products = () => {
                   {isColVisible('category') && (
                     <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Category</th>
                   )}
+                  {isColVisible('variants') && (
+                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Variants & Stock</th>
+                  )}
+                  {isColVisible('price') && (
+                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Price (INR)</th>
+                  )}
                   {isColVisible('company') && (
                     <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Partner Company</th>
                   )}
@@ -2435,6 +2815,12 @@ const Products = () => {
                                   {product.sku}
                                 </span>
                                 <CopyButton text={product.sku} size={10} />
+                                {Array.isArray(product.variants) && product.variants.length > 0 && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                    <FiLayers className="text-[9px]" />
+                                    <span>{product.variants.length}</span>
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -2463,6 +2849,39 @@ const Products = () => {
                           ) : (
                             <span className="text-xs text-slate-400 italic">Unassigned</span>
                           )}
+                        </td>
+                      )}
+
+                      {/* Variants & Stock */}
+                      {isColVisible('variants') && (
+                        <td className={`${densityStyles.td} whitespace-nowrap`}>
+                          {(() => {
+                            const stockInfo = getProductStockInfo(product);
+                            const variantCount = Array.isArray(product.variants) ? product.variants.length : 0;
+                            if (variantCount === 0) {
+                              return <span className="text-xs text-slate-400 italic">No variants</span>;
+                            }
+                            return (
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                    <FiLayers className="text-[10px]" />
+                                    <span>{variantCount} variant{variantCount > 1 ? 's' : ''}</span>
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                                  Stock: <strong className="font-mono text-slate-800 dark:text-slate-200">{stockInfo.totalStock}</strong>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </td>
+                      )}
+
+                      {/* Price */}
+                      {isColVisible('price') && (
+                        <td className={`${densityStyles.td} whitespace-nowrap font-mono text-xs font-bold text-slate-800 dark:text-slate-200`}>
+                          {getProductPriceInfo(product).formatted}
                         </td>
                       )}
 
@@ -2881,6 +3300,133 @@ const Products = () => {
                         </div>
                       </div>
 
+                      {/* Product Variants & Inventory Breakdown */}
+                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <FiLayers className="text-blue-500 text-xs" />
+                            <span>Product Variants & Inventory ({Array.isArray(drawerProduct.variants) ? drawerProduct.variants.length : 0})</span>
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            {Array.isArray(drawerProduct.variants) && drawerProduct.variants.length > 0 && (
+                              <>
+                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                  Total Stock: <strong className="font-mono text-slate-800 dark:text-slate-200">{getProductStockInfo(drawerProduct).totalStock}</strong>
+                                </span>
+                                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                  {getProductPriceInfo(drawerProduct).formatted}
+                                </span>
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenAddVariantModal(drawerProduct)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg transition-all shadow-xs cursor-pointer ml-1"
+                              title="Add new variant (POST /products/{id}/variants)"
+                            >
+                              <FiPlus className="text-[11px]" />
+                              <span>Add Variant</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {Array.isArray(drawerProduct.variants) && drawerProduct.variants.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {drawerProduct.variants.map((variant, vIdx) => {
+                              const vPrice = variant.price !== undefined && variant.price !== null ? Number(variant.price) : 0;
+                              const vStock = variant.stock !== undefined && variant.stock !== null ? Number(variant.stock) : 0;
+                              const attrs = variant.attributes && typeof variant.attributes === 'object' ? variant.attributes : {};
+
+                              return (
+                                <div
+                                  key={variant._id || vIdx}
+                                  className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 space-y-2 shadow-2xs group"
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="space-y-0.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                          {vIdx + 1}
+                                        </span>
+                                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                                          {variant.name || `Variant #${vIdx + 1}`}
+                                        </h4>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-slate-500 dark:text-slate-400 pl-6.5">
+                                        <span>{variant.sku}</span>
+                                        <CopyButton text={variant.sku} size={10} />
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <span
+                                        className={`inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${
+                                          variant.isActive !== false
+                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                            : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
+                                        }`}
+                                      >
+                                        {variant.isActive !== false ? 'Active' : 'Inactive'}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenEditVariantModal(variant)}
+                                        className="p-1 rounded-md text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
+                                        title="Edit Variant (PUT /products/{id}/variants/{variantId})"
+                                      >
+                                        <FiEdit2 size={12} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setDeleteConfirmVariant(variant)}
+                                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors cursor-pointer"
+                                        title="Delete Variant (DELETE /products/{id}/variants/{variantId})"
+                                      >
+                                        <FiTrash2 size={12} />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs flex-wrap gap-2">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      {Object.entries(attrs).map(([key, val]) =>
+                                        val ? (
+                                          <span
+                                            key={key}
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-[11px] font-medium text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5"
+                                          >
+                                            <span className="text-[10px] text-slate-400 capitalize">{key}:</span>
+                                            <span className="font-semibold">{val}</span>
+                                          </span>
+                                        ) : null
+                                      )}
+                                      <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                        Stock: <strong className="font-mono text-slate-800 dark:text-slate-200">{vStock}</strong>
+                                      </span>
+                                    </div>
+
+                                    <div className="text-xs font-mono font-bold text-slate-900 dark:text-white">
+                                      ₹{vPrice.toLocaleString('en-IN')}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="p-4 text-center bg-white dark:bg-slate-800/60 rounded-xl border border-dashed border-slate-300 dark:border-white/10 space-y-2">
+                            <p className="text-xs text-slate-400">No variants registered for this product yet.</p>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenAddVariantModal(drawerProduct)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                            >
+                              <FiPlus className="text-xs" />
+                              <span>Add First Variant</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                       {/* Company Territory Routing (companyMappings) */}
                       {Array.isArray(drawerProduct.companyMappings) && drawerProduct.companyMappings.length > 0 ? (
                         <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-2.5">
@@ -3067,8 +3613,8 @@ const Products = () => {
                         />
                       </div>
 
-                      {/* SKU, Brand, Category & Unit Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      {/* SKU, Brand, Category, Base Price & Unit Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                         <div>
                           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                             SKU Code *
@@ -3134,10 +3680,10 @@ const Products = () => {
                         </div>
 
                         {/* Price (INR) Field */}
-                        {/* <div>
+                        <div>
                           <div className="flex items-center justify-between mb-1">
                             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                              Price (₹)
+                              Base Price (₹)
                             </label>
                             <span className="text-[10px] font-mono text-slate-400">price</span>
                           </div>
@@ -3147,10 +3693,10 @@ const Products = () => {
                             step="any"
                             value={formData.price}
                             onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                            placeholder="e.g. 1499"
-                            className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                            placeholder="e.g. 1299"
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
                           />
-                        </div> */}
+                        </div>
 
                         <div>
                           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -3165,6 +3711,158 @@ const Products = () => {
                             required
                           />
                         </div>
+                      </div>
+
+                      {/* Product Variants Management */}
+                      <div className="space-y-3 pt-2 border-t border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                              <FiLayers className="text-blue-500" />
+                              <span>Product Variants & Inventory</span>
+                              {Array.isArray(formData.variants) && formData.variants.length > 0 && (
+                                <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                  {formData.variants.length} Variant{formData.variants.length > 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </label>
+                            <p className="text-[11px] text-slate-400">
+                              Define different editions, colors, or SKUs with individual prices and stock counts.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleAddVariantRow}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                          >
+                            <FiPlus className="text-xs" />
+                            <span>Add Variant</span>
+                          </button>
+                        </div>
+
+                        {Array.isArray(formData.variants) && formData.variants.length > 0 ? (
+                          <div className="space-y-2.5 max-h-72 overflow-y-auto custom-scrollbar p-1">
+                            {formData.variants.map((v, vIdx) => (
+                              <div
+                                key={vIdx}
+                                className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-2 relative"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                      {vIdx + 1}
+                                    </span>
+                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                      {v.name ? v.name : `Variant #${vIdx + 1}`}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveVariantRow(vIdx)}
+                                    className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                                    title="Remove this variant"
+                                  >
+                                    <FiTrash2 size={13} />
+                                  </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                                  <div className="lg:col-span-2">
+                                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                                      Variant Name
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={v.name || ''}
+                                      onChange={(e) => handleUpdateVariantField(vIdx, 'name', e.target.value)}
+                                      placeholder="e.g. Midnight Matte Black"
+                                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                                      Variant SKU
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={v.sku || ''}
+                                      onChange={(e) => handleUpdateVariantField(vIdx, 'sku', formatEntityCode(e.target.value))}
+                                      placeholder="e.g. SONY-H9-BLK"
+                                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                                      Price (₹)
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="any"
+                                      value={v.price ?? ''}
+                                      onChange={(e) => handleUpdateVariantField(vIdx, 'price', e.target.value)}
+                                      placeholder="15499"
+                                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                                      Stock
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={v.stock ?? ''}
+                                      onChange={(e) => handleUpdateVariantField(vIdx, 'stock', e.target.value)}
+                                      placeholder="65"
+                                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-200/60 dark:border-white/5">
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                                      Color Attribute:
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={v.attributes?.color || ''}
+                                      onChange={(e) => handleUpdateVariantAttribute(vIdx, 'color', e.target.value)}
+                                      placeholder="e.g. Black, White, Titanium"
+                                      className="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                      Active Variant:
+                                    </label>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateVariantField(vIdx, 'isActive', v.isActive === false)}
+                                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                                        v.isActive !== false
+                                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                          : 'bg-slate-200 dark:bg-white/10 text-slate-500'
+                                      }`}
+                                    >
+                                      {v.isActive !== false ? 'Active' : 'Inactive'}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-3 text-center bg-slate-50/60 dark:bg-white/[0.02] rounded-xl border border-dashed border-slate-200 dark:border-white/10">
+                            <p className="text-[11px] text-slate-400">
+                              No variants added. Click "+ Add Variant" if this product comes in different colors or specifications.
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Product Distribution Locations (locations) */}
@@ -3627,6 +4325,271 @@ const Products = () => {
           </div>,
           document.body
         )}
+
+      {/* ================= VARIANT MODAL (ADD / EDIT) ================= */}
+      {isVariantModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
+                  <FiLayers className="text-base" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    {editingVariant ? 'Edit Product Variant' : 'Add New Variant'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    {editingVariant ? `Update SKU ${editingVariant.sku}` : `Add variant for ${(drawerProduct || editingProduct)?.name || 'product'}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVariantModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <FiX size={16} />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveVariantModal} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 custom-scrollbar">
+              {variantFormError && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
+                  <FiAlertCircle className="shrink-0 text-sm" />
+                  <span>{variantFormError}</span>
+                </div>
+              )}
+
+              {/* Variant Name */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Variant Name *
+                </label>
+                <input
+                  type="text"
+                  value={variantFormData.name}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, name: e.target.value })}
+                  placeholder="e.g. Midnight Black (128GB)"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                  required
+                />
+              </div>
+
+              {/* SKU & Price */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Variant SKU *
+                  </label>
+                  <input
+                    type="text"
+                    value={variantFormData.sku}
+                    onChange={(e) => setVariantFormData({ ...variantFormData, sku: formatEntityCode(e.target.value) })}
+                    placeholder="e.g. SONY-INZONE-H9-BLK"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Price (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={variantFormData.price}
+                    onChange={(e) => setVariantFormData({ ...variantFormData, price: e.target.value })}
+                    placeholder="e.g. 12999"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Stock */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Available Stock Quantity
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={variantFormData.stock}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, stock: e.target.value })}
+                  placeholder="e.g. 50"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
+                />
+              </div>
+
+              {/* Attributes (color, edition) */}
+              <div className="p-3 bg-slate-50 dark:bg-white/[0.03] rounded-xl border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  Variant Attributes
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-0.5">
+                      Color
+                    </label>
+                    <input
+                      type="text"
+                      value={variantFormData.attributes?.color || ''}
+                      onChange={(e) => setVariantFormData({
+                        ...variantFormData,
+                        attributes: { ...variantFormData.attributes, color: e.target.value }
+                      })}
+                      placeholder="e.g. Black, White"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-0.5">
+                      Wattage / Specs
+                    </label>
+                    <input
+                      type="text"
+                      value={variantFormData.attributes?.wattage || ''}
+                      onChange={(e) => setVariantFormData({
+                        ...variantFormData,
+                        attributes: { ...variantFormData.attributes, wattage: e.target.value }
+                      })}
+                      placeholder="e.g. 65W, 100W"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-0.5">
+                      Edition / Version
+                    </label>
+                    <input
+                      type="text"
+                      value={variantFormData.attributes?.edition || ''}
+                      onChange={(e) => setVariantFormData({
+                        ...variantFormData,
+                        attributes: { ...variantFormData.attributes, edition: e.target.value }
+                      })}
+                      placeholder="e.g. Wireless, GaN Pro"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Status */}
+              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
+                <div>
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Active Variant</div>
+                  <div className="text-[11px] text-slate-400">Available for order placements</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setVariantFormData({ ...variantFormData, isActive: !variantFormData.isActive })}
+                  className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
+                    variantFormData.isActive ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                      variantFormData.isActive ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Modal Buttons */}
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsVariantModalOpen(false)}
+                  disabled={variantSubmitting}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={variantSubmitting}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer disabled:opacity-50"
+                >
+                  {variantSubmitting ? (
+                    <>
+                      <FiLoader className="animate-spin text-xs" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiSave className="text-xs" />
+                      <span>{editingVariant ? 'Update Variant' : 'Create Variant'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= DELETE VARIANT CONFIRM MODAL ================= */}
+      {deleteConfirmVariant && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full border border-slate-200 dark:border-white/10 shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0 border border-rose-500/20">
+                <FiTrash2 className="text-lg" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Delete Variant?</h3>
+                <p className="text-xs text-slate-400 mt-0.5">This will permanently remove this variant.</p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10 text-xs space-y-1">
+              <div className="font-bold text-slate-800 dark:text-slate-200">
+                {deleteConfirmVariant.name || 'Unnamed Variant'}
+              </div>
+              <div className="font-mono text-slate-500">
+                SKU: {deleteConfirmVariant.sku}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmVariant(null)}
+                disabled={deletingVariant}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteVariantConfirm}
+                disabled={deletingVariant}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-rose-600/25 cursor-pointer disabled:opacity-50"
+              >
+                {deletingVariant ? (
+                  <>
+                    <FiLoader className="animate-spin text-xs" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <FiTrash2 className="text-xs" />
+                    <span>Delete Variant</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================= DELETE CONFIRM MODAL ================= */}
       {deleteConfirmProduct && (

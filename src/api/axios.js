@@ -424,10 +424,10 @@ export const getProductsApi = async (params = {}) => {
 
 export const createProductApi = async (productData) => {
   try {
-    return await api.post('/v1/products/brands', productData);
+    return await api.post('/products/brands', productData);
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.post('/products/brands', productData);
+      return await api.post('/v1/products/brands', productData);
     }
     throw err;
   }
@@ -479,6 +479,47 @@ export const deleteProductApi = async (id) => {
   } catch (err) {
     if (err.response?.status === 404) {
       return await api.delete(`/products/${id}`);
+    }
+    throw err;
+  }
+};
+
+// Product Variants APIs
+export const createProductVariantApi = async (productId, variantData) => {
+  try {
+    return await api.post(`/products/${productId}/variants`, variantData);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.post(`/v1/products/${productId}/variants`, variantData);
+    }
+    throw err;
+  }
+};
+
+export const updateProductVariantApi = async (productId, variantId, variantData) => {
+  try {
+    return await api.put(`/products/${productId}/variants/${variantId}`, variantData);
+  } catch (err) {
+    if (err.response?.status === 404 || err.response?.status === 405) {
+      try {
+        return await api.patch(`/products/${productId}/variants/${variantId}`, variantData);
+      } catch (err2) {
+        if (err2.response?.status === 404 || err2.response?.status === 405) {
+          return await api.put(`/v1/products/${productId}/variants/${variantId}`, variantData);
+        }
+        throw err2;
+      }
+    }
+    throw err;
+  }
+};
+
+export const deleteProductVariantApi = async (productId, variantId) => {
+  try {
+    return await api.delete(`/products/${productId}/variants/${variantId}`);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.delete(`/v1/products/${productId}/variants/${variantId}`);
     }
     throw err;
   }

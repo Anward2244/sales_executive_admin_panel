@@ -1524,10 +1524,10 @@ const Dashboard = () => {
       </div>
 
       {/* 3. Two-Column Analytics: Company Breakdown & Top Sales Executives */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         {/* Company Breakdown Card */}
-        <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/80 dark:border-white/10">
+        <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl flex flex-col h-[370px]">
+          <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/80 dark:border-white/10 shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl kpi-icon-blue flex items-center justify-center text-lg border border-blue-500/20">
                 <FiBriefcase />
@@ -1545,7 +1545,7 @@ const Dashboard = () => {
           </div>
 
           {companyBreakdown.length > 0 ? (
-            <div className="space-y-3 max-h-[320px] overflow-y-auto custom-scrollbar pr-1">
+            <div className="space-y-3 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
               {companyBreakdown.map((comp, idx) => {
                 const orderNum = comp.orderCount !== undefined ? comp.orderCount : (comp.ordersCount || 0);
                 const val = comp.totalValue || 0;
@@ -1591,7 +1591,7 @@ const Dashboard = () => {
               })}
             </div>
           ) : (
-            <div className="text-center py-10">
+            <div className="text-center py-10 flex-1 flex flex-col items-center justify-center">
               <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3 text-slate-400">
                 <FiBriefcase className="text-xl" />
               </div>
@@ -1602,8 +1602,8 @@ const Dashboard = () => {
         </div>
 
         {/* Top Sales Executives Card */}
-        <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/80 dark:border-white/10">
+        <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl flex flex-col h-[370px]">
+          <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/80 dark:border-white/10 shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl kpi-icon-amber flex items-center justify-center text-lg border border-amber-500/20">
                 <FiAward />
@@ -1621,7 +1621,7 @@ const Dashboard = () => {
           </div>
 
           {topSalesExecutives.length > 0 ? (
-            <div className="space-y-3 max-h-[320px] overflow-y-auto custom-scrollbar pr-1">
+            <div className="space-y-3 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
               {topSalesExecutives.map((exec, idx) => {
                 const orderNum = exec.orderCount !== undefined ? exec.orderCount : (exec.ordersCount || 0);
                 const val = exec.totalValue !== undefined ? exec.totalValue : (exec.totalSales || 0);
@@ -1671,7 +1671,7 @@ const Dashboard = () => {
               })}
             </div>
           ) : (
-            <div className="text-center py-10">
+            <div className="text-center py-10 flex-1 flex flex-col items-center justify-center">
               <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3 text-slate-400">
                 <FiAward className="text-xl" />
               </div>

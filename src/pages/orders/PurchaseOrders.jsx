@@ -53,7 +53,7 @@ import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import PageHeader from '@/components/ui/PageHeader';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
-import { BulkActionBar, BatchProgressModal, TableToolbar } from '@/components/ui';
+import { BulkActionBar, BatchProgressModal, TableToolbar, SegmentedTabs } from '@/components/ui';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { useDisplayPreferences, getDensityStyles } from '@/utils/displayPreferences';
 import { useToast } from '@/context/ToastContext';
@@ -67,6 +67,7 @@ const STATUS_TABS = [
 ];
 
 const PO_COLUMNS = [
+  { id: 'sno', label: 'S.No.' },
   { id: 'poNumber', label: 'PO Number', alwaysVisible: true },
   { id: 'entityId', label: 'Entity ID', optional: true },
   { id: 'company', label: 'Company' },
@@ -1162,81 +1163,27 @@ const PurchaseOrders = () => {
 
       {/* Filter, Search & Status Bar */}
       <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl space-y-3">
-        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
           {/* Status Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start md:self-auto shrink-0 custom-scrollbar">
-            {[
-              {
-                id: 'all',
-                label: 'All Orders',
-                count: stats.total,
-                badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
-                bg: 'bg-blue-600',
-                activeBadgeClass: 'bg-blue-800'
-              },
-              {
-                id: 'PENDING',
-                label: 'Pending',
-                count: stats.pending,
-                badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-                bg: 'bg-amber-600',
-                activeBadgeClass: 'bg-amber-800'
-              },
-              {
-                id: 'APPROVED',
-                label: 'Approved',
-                count: stats.approved,
-                badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-                bg: 'bg-emerald-600',
-                activeBadgeClass: 'bg-emerald-800'
-              },
-              {
-                id: 'DISPATCHED',
-                label: 'Dispatched',
-                count: stats.dispatched,
-                badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
-                bg: 'bg-blue-600',
-                activeBadgeClass: 'bg-blue-800'
-              },
-              {
-                id: 'REJECTED',
-                label: 'Rejected',
-                count: stats.rejected,
-                badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
-                bg: 'bg-rose-600',
-                activeBadgeClass: 'bg-rose-800'
-              }
-            ].map((tab) => {
-              const active = statusFilter.toUpperCase() === tab.id.toUpperCase();
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => {
-                    setStatusFilter(tab.id);
-                    setCurrentPage(1);
-                  }}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                    active
-                      ? `${tab.bg} text-white shadow-xs font-bold`
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      active ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="w-full md:w-auto min-w-0 max-w-full">
+            <SegmentedTabs
+              tabs={[
+                { id: 'all', label: 'All Orders', count: stats.total },
+                { id: 'PENDING', label: 'Pending', count: stats.pending },
+                { id: 'APPROVED', label: 'Approved', count: stats.approved },
+                { id: 'DISPATCHED', label: 'Dispatched', count: stats.dispatched },
+                { id: 'REJECTED', label: 'Rejected', count: stats.rejected }
+              ]}
+              activeTab={statusFilter}
+              onChange={(tabId) => {
+                setStatusFilter(tabId);
+                setCurrentPage(1);
+              }}
+            />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2.5 w-full md:w-auto justify-end flex-wrap">
+          <div className="flex items-center gap-2.5 w-full md:w-auto justify-end flex-wrap shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -1284,7 +1231,7 @@ const PurchaseOrders = () => {
 
         {/* Loading State */}
         {loading && (
-          <TableSkeleton columns={9} rows={8} className="border-0 shadow-none rounded-none" />
+          <TableSkeleton columns={10} rows={8} className="border-0 shadow-none rounded-none" />
         )}
 
         {/* Error State */}
@@ -1322,6 +1269,9 @@ const PurchaseOrders = () => {
                         />
                       </th>
                     )}
+                    {isColVisible('sno') && (
+                      <th className={`${densityStyles.th} text-center w-14 whitespace-nowrap`}>S.No.</th>
+                    )}
                     {isColVisible('poNumber') && <th className={densityStyles.th}>PO Number</th>}
                     {isColVisible('entityId') && <th className={densityStyles.th}>Entity ID</th>}
                     {isColVisible('company') && <th className={densityStyles.th}>Company</th>}
@@ -1339,6 +1289,7 @@ const PurchaseOrders = () => {
                 <tbody className="divide-y divide-slate-200/80 dark:divide-white/5 text-xs">
                   {currentOrders.length > 0 ? (
                     currentOrders.map((order, idx) => {
+                      const serialNo = (currentPage - 1) * itemsPerPage + idx + 1;
                       const poNum =
                         order.poNumber || order.orderNumber || order.orderId || `#ORD-${order._id?.slice(-6) || idx + 1}`;
                       const companyName = order.companyId?.name || 'Company';
@@ -1380,6 +1331,13 @@ const PurchaseOrders = () => {
                                 onChange={() => toggleSelectOrder(order._id)}
                                 className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                               />
+                            </td>
+                          )}
+
+                          {/* S.No */}
+                          {isColVisible('sno') && (
+                            <td className={`${densityStyles.td} text-center font-mono text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap`}>
+                              {serialNo}
                             </td>
                           )}
 
@@ -1635,7 +1593,7 @@ const PurchaseOrders = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={isBulkMode ? 11 : 10} className="p-16 text-center text-slate-500 dark:text-slate-400">
+                      <td colSpan={isBulkMode ? 12 : 11} className="p-16 text-center text-slate-500 dark:text-slate-400">
                         <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-4">
                           <FiShoppingCart className="text-2xl" />
                         </div>

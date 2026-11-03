@@ -952,6 +952,7 @@ const FirmOnboarding = () => {
           <table className="w-full min-w-[1350px] text-left border-collapse whitespace-nowrap">
             <thead className="bg-slate-50/80 dark:bg-white/[0.03] border-b border-slate-200/80 dark:border-white/10 select-none">
               <tr className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-4 py-4 whitespace-nowrap text-center w-14">S.No.</th>
                 <th className="px-5 py-4 whitespace-nowrap">Firm & Code</th>
                 <th className="px-5 py-4 whitespace-nowrap">Company</th>
                 <th className="px-5 py-4 whitespace-nowrap">Contact Person</th>
@@ -965,11 +966,11 @@ const FirmOnboarding = () => {
             <tbody className="divide-y divide-slate-200/60 dark:divide-white/5 text-xs">
               {loading ? (
                 Array.from({ length: 5 }).map((_, idx) => (
-                  <TableRowSkeleton key={idx} cols={8} />
+                  <TableRowSkeleton key={idx} cols={9} />
                 ))
               ) : currentRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-16 text-center text-slate-400">
+                  <td colSpan={9} className="py-16 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center">
                       <div className="p-3 bg-slate-100 dark:bg-white/5 rounded-2xl text-slate-400 mb-3">
                         <FiUserCheck size={28} />
@@ -997,7 +998,7 @@ const FirmOnboarding = () => {
                   </td>
                 </tr>
               ) : (
-                currentRequests.map((item) => {
+                currentRequests.map((item, index) => {
                   const status = (item.approvalStatus || 'PENDING').toUpperCase();
                   const isPending = status === 'PENDING';
                   const isProcessing = actionLoadingId === item._id;
@@ -1007,6 +1008,11 @@ const FirmOnboarding = () => {
                       key={item._id}
                       className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group"
                     >
+                      {/* S.No */}
+                      <td className="px-4 py-4 text-center font-mono text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        {indexOfFirstItem + index + 1}
+                      </td>
+
                       {/* Firm & Code */}
                       <td className="px-5 py-4 align-middle">
                         <div className="flex items-center gap-3">

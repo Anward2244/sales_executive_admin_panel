@@ -1060,7 +1060,7 @@ const UsersList = () => {
           {/* Middle/Bottom on Mobile / Right side on Desktop: Segmented Tabs & Filter Controls */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
             {/* Segmented Status Tabs (with mobile width distribution) */}
-            <div className="w-full sm:w-auto overflow-x-auto no-scrollbar rounded-full shadow-md">
+            <div className="w-full sm:w-auto min-w-0">
               <SegmentedTabs
                 tabs={[
                   { id: 'all', label: 'All', count: users.length },

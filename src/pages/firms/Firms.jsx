@@ -1244,7 +1244,7 @@ const Firms = () => {
           {/* Right: Status Segmented Tabs + Filter Toggle + Reset */}
           <div className="flex items-center gap-2 flex-wrap justify-between lg:justify-end">
             {/* Status Segmented Tabs (unified SegmentedTabs) */}
-            <div className="max-w-full overflow-x-auto no-scrollbar">
+            <div className="max-w-full min-w-0">
               <SegmentedTabs
                 tabs={[
                   { id: 'all', label: 'All', count: tabCounts.all },
