@@ -236,10 +236,10 @@ const Dashboard = () => {
     ? Number(summary.totalOrderValue)
     : allPurchaseOrders.reduce((sum, o) => sum + Number(o.totalAmount || o.totalValue || 0), 0);
 
-  const totalUsers = allUsers.length > 0 ? allUsers.length : (activeEntities.users ?? 0);
-  const totalCompanies = allCompanies.length > 0 ? allCompanies.length : (activeEntities.companies ?? 0);
-  const totalFirms = allFirms.length > 0 ? allFirms.length : (activeEntities.firms ?? 0);
-  const totalProducts = allProducts.length > 0 ? allProducts.length : (activeEntities.products ?? 0);
+  const totalUsers = activeEntities.users !== undefined ? Number(activeEntities.users) : (allUsers.length > 0 ? allUsers.length : 0);
+  const totalCompanies = activeEntities.companies !== undefined ? Number(activeEntities.companies) : (allCompanies.length > 0 ? allCompanies.length : 0);
+  const totalFirms = activeEntities.firms !== undefined ? Number(activeEntities.firms) : (allFirms.length > 0 ? allFirms.length : 0);
+  const totalProducts = activeEntities.products !== undefined ? Number(activeEntities.products) : (allProducts.length > 0 ? allProducts.length : 0);
 
   // Status Breakdown
   const statusBreakdown = summary.statusBreakdown || {
@@ -1716,6 +1716,8 @@ const Dashboard = () => {
                 <th className="px-5 py-3.5">PO Number</th>
                 <th className="px-5 py-3.5">Company</th>
                 <th className="px-5 py-3.5">Purchasing Firm</th>
+                <th className="px-4 py-3.5">Brand</th>
+                <th className="px-4 py-3.5">State</th>
                 <th className="px-4 py-3.5">Sales Executive</th>
                 <th className="px-4 py-3.5 text-center">Items</th>
                 <th className="px-4 py-3.5 text-right">Total Amount</th>
@@ -1728,7 +1730,7 @@ const Dashboard = () => {
             <tbody className="divide-y divide-slate-200/80 dark:divide-white/5 text-xs">
               {loading ? (
                 Array.from({ length: 5 }).map((_, idx) => (
-                  <TableRowSkeleton key={idx} cols={11} />
+                  <TableRowSkeleton key={idx} cols={13} />
                 ))
               ) : recentOrders.length > 0 ? (
                 recentOrders.map((order, idx) => {
@@ -1798,6 +1800,30 @@ const Dashboard = () => {
                         </div>
                       </td>
 
+                      {/* Brand */}
+                      <td className="px-4 py-3.5">
+                        {order.brand ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                            <FiTag className="text-[10px]" />
+                            {order.brand}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
+                      </td>
+
+                      {/* State */}
+                      <td className="px-4 py-3.5">
+                        {order.state ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                            <FiMapPin className="text-[10px]" />
+                            {order.state}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
+                      </td>
+
                       {/* Sales Executive */}
                       <td className="px-4 py-3.5">
                         <div className="flex flex-col">
@@ -1808,7 +1834,21 @@ const Dashboard = () => {
 
                       {/* Items */}
                       <td className="px-4 py-3.5 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300 cursor-help"
+                          title={
+                            Array.isArray(order.items)
+                              ? order.items
+                                  .map(
+                                    (it) =>
+                                      `${it.productNameSnapshot || 'Product'}${
+                                        it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
+                                      } [${it.skuSnapshot || '-'}] × ${it.quantity}`
+                                  )
+                                  .join('\n')
+                              : ''
+                          }
+                        >
                           <FiBox className="text-blue-500 text-[10px]" />
                           <span>{itemCount} ({totalUnits})</span>
                         </span>
@@ -1869,7 +1909,7 @@ const Dashboard = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="11" className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan="13" className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                     <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3 text-slate-400">
                       <FiPackage className="text-xl" />
                     </div>
@@ -2135,6 +2175,26 @@ const Dashboard = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* Brand & Order Region / State */}
+                  {(selectedOrder.brand || selectedOrder.state) && (
+                    <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Brand</span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 font-bold text-xs border border-amber-500/20">
+                          <FiTag className="text-[11px]" />
+                          {selectedOrder.brand || '-'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Order Region / State</span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold text-xs border border-emerald-500/20">
+                          <FiMapPin className="text-[11px]" />
+                          {selectedOrder.state || '-'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Email Dispatch Details Card */}
@@ -2204,6 +2264,16 @@ const Dashboard = () => {
                   </div>
                 )}
 
+                {/* Rejection Reason */}
+                {selectedOrder.rejectionReason && (
+                  <div className="mb-5 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs">
+                    <span className="font-bold text-rose-700 dark:text-rose-300 block mb-0.5 flex items-center gap-1.5">
+                      <FiXCircle /> Rejection Reason:
+                    </span>
+                    <p className="text-slate-700 dark:text-slate-200 italic">"{selectedOrder.rejectionReason}"</p>
+                  </div>
+                )}
+
                 {/* Line Items Snapshot Table */}
                 <div className="space-y-2 mb-5">
                   <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -2223,16 +2293,35 @@ const Dashboard = () => {
                       <tbody className="divide-y divide-slate-200 dark:divide-white/5">
                         {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
                           selectedOrder.items.map((item, i) => (
-                            <tr key={item.productId || i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
+                            <tr key={item.productId || item.variantId || i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
                               <td className="p-2.5 text-center font-mono text-slate-500 dark:text-slate-400 font-medium">{i + 1}</td>
                               <td className="p-2.5">
-                                <p className="font-bold text-slate-900 dark:text-white">{item.productNameSnapshot || 'Product'}</p>
-                                <p className="font-mono text-[10px] text-blue-600 dark:text-blue-400">{item.skuSnapshot}</p>
+                                <div className="flex flex-col gap-0.5">
+                                  <div className="flex items-center flex-wrap gap-1.5">
+                                    <span className="font-bold text-slate-900 dark:text-white">
+                                      {item.productNameSnapshot || 'Product Item'}
+                                    </span>
+                                    {item.variantNameSnapshot && (
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-semibold font-sans">
+                                        <FiLayers className="text-[9px]" />
+                                        {item.variantNameSnapshot}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 font-mono text-[10px] text-blue-600 dark:text-blue-400">
+                                    <span>{item.skuSnapshot || '-'}</span>
+                                    {item.variantId && (
+                                      <span className="text-slate-400 text-[9px]">
+                                        • Var: {typeof item.variantId === 'string' ? item.variantId.slice(-6) : item.variantId?._id?.slice(-6) || '-'}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                               </td>
                               <td className="p-2.5 text-center font-mono font-bold">{item.quantity}</td>
                               <td className="p-2.5 text-right font-mono">₹{(item.unitPrice || 0).toLocaleString('en-IN')}</td>
                               <td className="p-2.5 text-right font-mono font-bold text-slate-900 dark:text-white">
-                                ₹{(item.totalPrice || 0).toLocaleString('en-IN')}
+                                ₹{(item.totalPrice != null ? item.totalPrice : ((item.quantity || 0) * (item.unitPrice || 0))).toLocaleString('en-IN')}
                               </td>
                             </tr>
                           ))

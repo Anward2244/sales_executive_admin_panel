@@ -12,6 +12,7 @@ import {
   FiLayers,
   FiUser,
   FiMapPin,
+  FiTag,
   FiFileText,
   FiCheckCircle,
   FiClock,
@@ -535,12 +536,13 @@ const Reports = () => {
             const rev = Number(item.totalPrice || (qty * uPrice) || 0);
 
             if (!prodMap[pId]) {
+              const meta = resolveProductMetadata(pId, sku, pName);
               prodMap[pId] = {
                 _id: pId,
                 productName: pName,
                 sku,
-                brand: item.productId?.brand || item.brand || item.brandSnapshot,
-                category: item.productId?.category?.name || item.productId?.categoryId?.name || item.category,
+                brand: item.productId?.brand || item.brand || item.brandSnapshot || o.brand || meta.brand || '',
+                category: item.productId?.category?.name || item.productId?.categoryId?.name || item.category || meta.category || '',
                 totalQuantity: 0,
                 totalRevenue: 0,
                 orderIds: new Set()
@@ -562,10 +564,15 @@ const Reports = () => {
     }
 
     if (Array.isArray(reportData?.productPerformance)) {
-      return reportData.productPerformance.map((p) => ({
-        ...p,
-        ordersCount: p.ordersCount || p.orderCount || Math.max(1, Math.round((p.totalQuantity || 1) / 3))
-      }));
+      return reportData.productPerformance.map((p) => {
+        const meta = resolveProductMetadata(p._id, p.sku, p.productName);
+        return {
+          ...p,
+          brand: p.brand || meta.brand || '',
+          category: p.category || meta.category || '',
+          ordersCount: p.ordersCount || p.orderCount || Math.max(1, Math.round((p.totalQuantity || 1) / 3))
+        };
+      });
     }
 
     return [];
@@ -630,12 +637,22 @@ const Reports = () => {
       const execName = `${order.salesExecutiveId?.firstName || ''} ${order.salesExecutiveId?.lastName || ''}`.toLowerCase();
       const execCode = String(order.salesExecutiveId?.employeeCode || '').toLowerCase();
       const execEmail = String(order.salesExecutiveId?.email || '').toLowerCase();
+      const brand = String(order.brand || '').toLowerCase();
+      const state = String(order.state || '').toLowerCase();
 
       const itemsMatch = Array.isArray(order.items) && order.items.some((it) => {
         const itId = String(it._id || it.id || it.productId?._id || it.productId || '').toLowerCase();
+        const itVarId = String(it.variantId?._id || it.variantId || '').toLowerCase();
         const itSku = String(it.sku || it.skuSnapshot || '').toLowerCase();
         const itName = String(it.productName || it.productNameSnapshot || '').toLowerCase();
-        return itId.includes(q) || itSku.includes(q) || itName.includes(q);
+        const itVarName = String(it.variantName || it.variantNameSnapshot || '').toLowerCase();
+        return (
+          itId.includes(q) ||
+          itVarId.includes(q) ||
+          itSku.includes(q) ||
+          itName.includes(q) ||
+          itVarName.includes(q)
+        );
       });
 
       return (
@@ -650,6 +667,8 @@ const Reports = () => {
         firmName.includes(q) ||
         firmCode.includes(q) ||
         firmCity.includes(q) ||
+        brand.includes(q) ||
+        state.includes(q) ||
         execName.includes(q) ||
         execCode.includes(q) ||
         execEmail.includes(q) ||
@@ -757,12 +776,15 @@ const Reports = () => {
       'Email Recipients',
       'Company Name',
       'Company Code',
+      'Brand',
+      'State',
       'Firm Name',
       'Firm Code',
       'City',
       'Sales Executive',
       'Employee Code',
       'Items Count',
+      'Items Details',
       'Subtotal (INR)',
       'Total Amount (INR)',
       'Notes',
@@ -772,6 +794,16 @@ const Reports = () => {
     const rows = [headers];
     targetOrders.forEach((o, idx) => {
       const itemsCount = (o.items || []).reduce((acc, i) => acc + (i.quantity || 0), 0);
+      const itemsDetails = Array.isArray(o.items)
+        ? o.items
+            .map(
+              (it) =>
+                `${it.productNameSnapshot || 'Product'}${
+                  it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
+                } [${it.skuSnapshot || '-'}] x ${it.quantity} @ Rs.${it.unitPrice || 0}`
+            )
+            .join('; ')
+        : '';
       const salesRep = `${o.salesExecutiveId?.firstName || ''} ${o.salesExecutiveId?.lastName || ''}`.trim();
       const emailStatus = o.emailStatus?.status || (o.emailStatus?.isSent ? 'SENT' : 'PENDING');
       const recipients = Array.isArray(o.emailStatus?.recipients) ? o.emailStatus.recipients.join('; ') : '';
@@ -783,13 +815,16 @@ const Reports = () => {
         recipients,
         o.companyId?.name || '',
         o.companyId?.code || '',
+        o.brand || '',
+        o.state || '',
         o.firmId?.firmName || '',
         o.firmId?.firmCode || '',
         o.firmId?.city || '',
         salesRep,
         o.salesExecutiveId?.employeeCode || '',
         itemsCount,
-        o.subtotal || 0,
+        itemsDetails,
+        o.subtotal || o.totalAmount || 0,
         o.totalAmount || 0,
         o.notes || '',
         o.createdAt ? new Date(o.createdAt).toLocaleString('en-IN') : '',
@@ -1527,6 +1562,8 @@ const Reports = () => {
                   <th className="py-3.5 px-4">PO Number</th>
                   <th className="py-3.5 px-4">Trading Company</th>
                   <th className="py-3.5 px-4">Purchasing Firm</th>
+                  <th className="py-3.5 px-4">Brand</th>
+                  <th className="py-3.5 px-4">State</th>
                   <th className="py-3.5 px-4">Sales Executive</th>
                   <th className="py-3.5 px-4 text-center">Items</th>
                   <th className="py-3.5 px-4 text-center">Status</th>
@@ -1602,6 +1639,30 @@ const Reports = () => {
                         )}
                       </td>
 
+                      {/* Brand */}
+                      <td className="py-4 px-4">
+                        {order.brand ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                            <FiTag className="text-[10px]" />
+                            {order.brand}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
+                      </td>
+
+                      {/* State */}
+                      <td className="py-4 px-4">
+                        {order.state ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                            <FiMapPin className="text-[10px]" />
+                            {order.state}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
+                      </td>
+
                       {/* Sales Executive */}
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-1.5">
@@ -1623,7 +1684,21 @@ const Reports = () => {
 
                       {/* Items */}
                       <td className="py-4 px-4 text-center">
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 shrink-0">
+                        <span
+                          className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 shrink-0 cursor-help"
+                          title={
+                            Array.isArray(order.items)
+                              ? order.items
+                                  .map(
+                                    (it) =>
+                                      `${it.productNameSnapshot || 'Product'}${
+                                        it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
+                                      } [${it.skuSnapshot || '-'}] × ${it.quantity}`
+                                  )
+                                  .join('\n')
+                              : ''
+                          }
+                        >
                           <FiBox className="text-blue-500 text-xs" />
                           <span>
                             {(order.items || []).length} SKU{((order.items || []).length !== 1 ? 's' : '')} ({totalUnits} pcs)
@@ -1870,6 +1945,22 @@ const Reports = () => {
                         <span>• {selectedOrder.firmId.city}</span>
                       )}
                     </div>
+                    {(selectedOrder.brand || selectedOrder.state) && (
+                      <div className="mt-2.5 flex items-center gap-2 flex-wrap text-xs">
+                        {selectedOrder.brand && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 dark:text-purple-300 font-bold text-[10px] border border-purple-500/20">
+                            <FiTag className="text-[10px]" />
+                            <span>{selectedOrder.brand}</span>
+                          </span>
+                        )}
+                        {selectedOrder.state && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-white/10 text-slate-700 dark:text-slate-300 text-[10px] font-medium border border-slate-300/60 dark:border-white/10">
+                            <FiMapPin className="text-[10px] text-slate-400" />
+                            <span>{selectedOrder.state}</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -1971,6 +2062,21 @@ const Reports = () => {
                   )}
                 </div>
 
+                {/* Rejection Reason (if rejected) */}
+                {selectedOrder.rejectionReason && (
+                  <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-xs text-rose-700 dark:text-rose-400 flex items-start gap-3">
+                    <FiXCircle className="text-base shrink-0 mt-0.5 text-rose-500" />
+                    <div className="space-y-0.5">
+                      <span className="font-bold uppercase text-[10px] tracking-wider block text-rose-600 dark:text-rose-400">
+                        Order Rejection Reason
+                      </span>
+                      <p className="text-xs text-rose-800 dark:text-rose-300 leading-relaxed">
+                        {selectedOrder.rejectionReason}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Order Items Table */}
                 <div>
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
@@ -1997,18 +2103,31 @@ const Reports = () => {
                               <div className="font-bold text-slate-900 dark:text-white">
                                 {item.productNameSnapshot || 'Product Item'}
                               </div>
-                              <div className="text-[11px] font-mono text-slate-400">
-                                {item.skuSnapshot}
+                              <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                <span className="text-[11px] font-mono text-slate-400">
+                                  {item.skuSnapshot || '-'}
+                                </span>
+                                {item.variantNameSnapshot && (
+                                  <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
+                                    <FiLayers className="text-[9px]" />
+                                    <span>{item.variantNameSnapshot}</span>
+                                  </span>
+                                )}
                               </div>
+                              {item.variantId && (
+                                <div className="text-[9px] font-mono text-slate-400 mt-0.5">
+                                  Var ID: {typeof item.variantId === 'object' ? item.variantId._id : item.variantId}
+                                </div>
+                              )}
                             </td>
                             <td className="py-3 px-3 text-center font-bold text-slate-800 dark:text-slate-200">
                               {item.quantity}
                             </td>
-                            <td className="py-3 px-3 text-right text-slate-600 dark:text-slate-300">
+                            <td className="py-3 px-3 text-right text-slate-600 dark:text-slate-300 font-mono">
                               {formatCurrency(item.unitPrice)}
                             </td>
-                            <td className="py-3 px-3 text-right font-extrabold text-slate-900 dark:text-white">
-                              {formatCurrency(item.totalPrice)}
+                            <td className="py-3 px-3 text-right font-extrabold text-slate-900 dark:text-white font-mono">
+                              {formatCurrency(item.totalPrice != null ? item.totalPrice : ((item.quantity || 0) * (item.unitPrice || 0)))}
                             </td>
                           </tr>
                         ))}

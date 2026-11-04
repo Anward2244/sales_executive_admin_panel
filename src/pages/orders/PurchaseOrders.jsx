@@ -72,6 +72,8 @@ const PO_COLUMNS = [
   { id: 'entityId', label: 'Entity ID', optional: true },
   { id: 'company', label: 'Company' },
   { id: 'firm', label: 'Purchasing Firm' },
+  { id: 'brand', label: 'Brand', optional: true },
+  { id: 'state', label: 'State', optional: true },
   { id: 'salesRep', label: 'Sales Executive' },
   { id: 'items', label: 'Items' },
   { id: 'totalAmount', label: 'Total Amount' },
@@ -220,10 +222,10 @@ const PurchaseOrders = () => {
   } = useDisplayPreferences();
   const density = displayPrefs.density || 'comfortable';
   const densityStyles = getDensityStyles(density);
-  const poColumnVisibility = displayPrefs.columnVisibility?.purchaseOrders || { entityId: false };
+  const poColumnVisibility = displayPrefs.columnVisibility?.purchaseOrders || { entityId: false, brand: false, state: false };
   const isColVisible = (colId) => {
     if (poColumnVisibility[colId] !== undefined) return poColumnVisibility[colId];
-    if (colId === 'entityId') return false;
+    if (colId === 'entityId' || colId === 'brand' || colId === 'state') return false;
     return true;
   };
 
@@ -452,7 +454,18 @@ const PurchaseOrders = () => {
   const handleAddItemRow = () => {
     setCreateForm((prev) => ({
       ...prev,
-      items: [...prev.items, { productId: '', quantity: 1, unitPrice: 0, productNameSnapshot: '', skuSnapshot: '' }]
+      items: [
+        ...prev.items,
+        {
+          productId: '',
+          variantId: '',
+          variantNameSnapshot: '',
+          quantity: 1,
+          unitPrice: 0,
+          productNameSnapshot: '',
+          skuSnapshot: ''
+        }
+      ]
     }));
   };
 
@@ -475,6 +488,31 @@ const PurchaseOrders = () => {
         target.productNameSnapshot = selectedProd?.name || '';
         target.skuSnapshot = selectedProd?.sku || '';
         target.unitPrice = Number(selectedProd?.defaultPrice || selectedProd?.price || 0);
+
+        // If product has variants, pre-select first variant
+        if (selectedProd?.variants?.length > 0) {
+          const firstVar = selectedProd.variants[0];
+          target.variantId = firstVar._id;
+          target.variantNameSnapshot = firstVar.name || '';
+          target.skuSnapshot = firstVar.sku || selectedProd.sku || '';
+          target.unitPrice = Number(firstVar.price != null ? firstVar.price : (selectedProd?.defaultPrice || selectedProd?.price || 0));
+        } else {
+          target.variantId = '';
+          target.variantNameSnapshot = '';
+        }
+      } else if (field === 'variantId') {
+        target.variantId = value;
+        const selectedProd = productsList.find((p) => p._id === target.productId);
+        const selectedVar = selectedProd?.variants?.find((v) => v._id === value);
+        if (selectedVar) {
+          target.variantNameSnapshot = selectedVar.name || '';
+          target.skuSnapshot = selectedVar.sku || selectedProd?.sku || '';
+          target.unitPrice = Number(selectedVar.price != null ? selectedVar.price : (selectedProd?.defaultPrice || selectedProd?.price || 0));
+        } else {
+          target.variantNameSnapshot = '';
+          target.skuSnapshot = selectedProd?.sku || '';
+          target.unitPrice = Number(selectedProd?.defaultPrice || selectedProd?.price || 0);
+        }
       } else if (field === 'quantity') {
         target.quantity = Math.max(1, parseInt(value, 10) || 1);
       } else if (field === 'unitPrice') {
@@ -511,6 +549,7 @@ const PurchaseOrders = () => {
       ...(createForm.notes?.trim() ? { notes: createForm.notes.trim() } : {}),
       items: validItems.map((it) => ({
         productId: String(it.productId).trim(),
+        ...(it.variantId ? { variantId: String(it.variantId).trim() } : {}),
         quantity: Number(it.quantity) || 1,
         unitPrice: Number(it.unitPrice) || 0
       }))
@@ -678,13 +717,23 @@ const PurchaseOrders = () => {
       const repEmpCode = (o.salesExecutiveId?.employeeCode || '').toLowerCase();
       const repEmail = (o.salesExecutiveId?.email || '').toLowerCase();
       const emailStatus = (o.emailStatus?.status || '').toLowerCase();
+      const brandStr = String(o.brand || '').toLowerCase();
+      const stateStr = String(o.state || '').toLowerCase();
 
       const term = searchTerm.toLowerCase().trim();
       const itemsMatch = Array.isArray(o.items) && o.items.some((it) => {
         const itId = String(it._id || it.id || it.productId?._id || it.productId || '').toLowerCase();
+        const itVarId = String(it.variantId?._id || it.variantId || '').toLowerCase();
         const itSku = String(it.sku || it.skuSnapshot || '').toLowerCase();
         const itName = String(it.productName || it.productNameSnapshot || '').toLowerCase();
-        return itId.includes(term) || itSku.includes(term) || itName.includes(term);
+        const itVarName = String(it.variantName || it.variantNameSnapshot || '').toLowerCase();
+        return (
+          itId.includes(term) ||
+          itVarId.includes(term) ||
+          itSku.includes(term) ||
+          itName.includes(term) ||
+          itVarName.includes(term)
+        );
       });
 
       const searchMatch =
@@ -705,6 +754,8 @@ const PurchaseOrders = () => {
         repEmpCode.includes(term) ||
         repEmail.includes(term) ||
         emailStatus.includes(term) ||
+        brandStr.includes(term) ||
+        stateStr.includes(term) ||
         itemsMatch;
 
       return statusMatch && companyMatch && searchMatch;
@@ -1012,6 +1063,8 @@ const PurchaseOrders = () => {
       'Order Date': formatDateDDMMYYYY(o.createdAt || o.orderDate),
       'Company Name': o.companyId?.name || o.companyName || '-',
       'Company Code': o.companyId?.code || '-',
+      'Brand': o.brand || '-',
+      'State': o.state || '-',
       'Buyer Firm': o.firmId?.firmName || o.firmName || '-',
       'Firm Code': o.firmId?.firmCode || '-',
       'Firm Contact': o.firmId?.contactPerson || '-',
@@ -1022,6 +1075,17 @@ const PurchaseOrders = () => {
       'Sales Rep Code': o.salesExecutiveId?.employeeCode || '-',
       'Sales Rep Email': o.salesExecutiveId?.email || '-',
       'Items Count': Array.isArray(o.items) ? o.items.length : 0,
+      'Items Details': Array.isArray(o.items)
+        ? o.items
+            .map(
+              (it) =>
+                `${it.productNameSnapshot || it.productId?.name || 'Product'}${
+                  it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
+                } [${it.skuSnapshot || it.sku || '-'}] x ${it.quantity} @ Rs.${it.unitPrice || 0}`
+            )
+            .join('; ')
+        : '-',
+      'Subtotal (INR)': Number(o.subtotal || o.totalAmount || o.orderTotal || 0),
       'Total Amount (INR)': Number(o.totalAmount || o.orderTotal || 0),
       Status: (o.status || 'PENDING').toUpperCase(),
       'Approved By': o.approvedBy ? `${o.approvedBy.firstName || ''} ${o.approvedBy.lastName || ''}`.trim() : '-',
@@ -1276,6 +1340,8 @@ const PurchaseOrders = () => {
                     {isColVisible('entityId') && <th className={densityStyles.th}>Entity ID</th>}
                     {isColVisible('company') && <th className={densityStyles.th}>Company</th>}
                     {isColVisible('firm') && <th className={densityStyles.th}>Purchasing Firm</th>}
+                    {isColVisible('brand') && <th className={densityStyles.th}>Brand</th>}
+                    {isColVisible('state') && <th className={densityStyles.th}>State</th>}
                     {isColVisible('salesRep') && <th className={densityStyles.th}>Sales Executive</th>}
                     {isColVisible('items') && <th className={`${densityStyles.th} text-center`}>Items</th>}
                     {isColVisible('totalAmount') && <th className={`${densityStyles.th} text-right`}>Total Amount</th>}
@@ -1424,6 +1490,34 @@ const PurchaseOrders = () => {
                             </td>
                           )}
 
+                          {/* Brand (Optional) */}
+                          {isColVisible('brand') && (
+                            <td className={densityStyles.td}>
+                              {order.brand ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                                  <FiTag className="text-[10px]" />
+                                  {order.brand}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 text-xs">-</span>
+                              )}
+                            </td>
+                          )}
+
+                          {/* State (Optional) */}
+                          {isColVisible('state') && (
+                            <td className={densityStyles.td}>
+                              {order.state ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                                  <FiMapPin className="text-[10px]" />
+                                  {order.state}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 text-xs">-</span>
+                              )}
+                            </td>
+                          )}
+
                           {/* Sales Executive */}
                           {isColVisible('salesRep') && (
                             <td className={densityStyles.td}>
@@ -1438,11 +1532,13 @@ const PurchaseOrders = () => {
                                     </span>
                                   )}
                                 </div>
-                                {repEmail && (
-                                  <span className="text-[10px] text-slate-400 truncate max-w-[140px]" title={repEmail}>
-                                    {repEmail}
-                                  </span>
-                                )}
+                                <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                                  {repEmail && (
+                                    <span className="truncate max-w-[140px]" title={repEmail}>
+                                      {repEmail}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </td>
                           )}
@@ -1450,7 +1546,21 @@ const PurchaseOrders = () => {
                           {/* Items Count & Units */}
                           {isColVisible('items') && (
                             <td className={`${densityStyles.td} text-center`}>
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                              <span
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300 cursor-help"
+                                title={
+                                  Array.isArray(order.items)
+                                    ? order.items
+                                        .map(
+                                          (it) =>
+                                            `${it.productNameSnapshot || it.productId?.name || 'Product'}${
+                                              it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
+                                            } [${it.skuSnapshot || it.sku || '-'}] × ${it.quantity}`
+                                        )
+                                        .join('\n')
+                                    : ''
+                                }
+                              >
                                 <FiBox className="text-blue-500 text-[10px]" />
                                 <span>
                                   {itemCount} {itemCount === 1 ? 'item' : 'items'} ({totalUnits})
@@ -1593,7 +1703,7 @@ const PurchaseOrders = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={isBulkMode ? 12 : 11} className="p-16 text-center text-slate-500 dark:text-slate-400">
+                      <td colSpan={PO_COLUMNS.filter((c) => isColVisible(c.id)).length + (isBulkMode ? 1 : 0)} className="p-16 text-center text-slate-500 dark:text-slate-400">
                         <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-4">
                           <FiShoppingCart className="text-2xl" />
                         </div>
@@ -1892,6 +2002,26 @@ const PurchaseOrders = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Brand & State / Region */}
+                {(selectedOrder.brand || selectedOrder.state) && (
+                  <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Brand</span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 font-bold text-xs border border-amber-500/20">
+                        <FiTag className="text-[11px]" />
+                        {selectedOrder.brand || '-'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Order Region / State</span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold text-xs border border-emerald-500/20">
+                        <FiMapPin className="text-[11px]" />
+                        {selectedOrder.state || '-'}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Notification Email Status Card */}
@@ -1983,21 +2113,36 @@ const PurchaseOrders = () => {
                     <tbody className="divide-y divide-slate-200 dark:divide-white/5">
                       {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
                         selectedOrder.items.map((item, i) => (
-                          <tr key={item.productId || i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
+                          <tr key={item.productId || item.variantId || i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
                             <td className="p-2.5">
-                              <p className="font-bold text-slate-900 dark:text-white">
-                                {item.productNameSnapshot || item.productId?.name || 'Product Item'}
-                              </p>
-                              <p className="font-mono text-[10px] text-blue-600 dark:text-blue-400">
-                                {item.skuSnapshot || item.productId?.sku}
-                              </p>
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center flex-wrap gap-1.5">
+                                  <span className="font-bold text-slate-900 dark:text-white">
+                                    {item.productNameSnapshot || item.productId?.name || 'Product Item'}
+                                  </span>
+                                  {item.variantNameSnapshot && (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-semibold font-sans">
+                                      <FiLayers className="text-[9px]" />
+                                      {item.variantNameSnapshot}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 font-mono text-[10px] text-blue-600 dark:text-blue-400">
+                                  <span>{item.skuSnapshot || item.productId?.sku || '-'}</span>
+                                  {item.variantId && (
+                                    <span className="text-slate-400 text-[9px]">
+                                      • Var: {typeof item.variantId === 'string' ? item.variantId.slice(-6) : item.variantId?._id?.slice(-6) || '-'}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </td>
                             <td className="p-2.5 text-center font-mono font-bold">{item.quantity}</td>
                             <td className="p-2.5 text-right font-mono">
                               ₹{(item.unitPrice || 0).toLocaleString('en-IN')}
                             </td>
                             <td className="p-2.5 text-right font-mono font-bold text-slate-900 dark:text-white">
-                              ₹{((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString('en-IN')}
+                              ₹{(item.totalPrice != null ? item.totalPrice : ((item.quantity || 0) * (item.unitPrice || 0))).toLocaleString('en-IN')}
                             </td>
                           </tr>
                         ))
@@ -2014,13 +2159,21 @@ const PurchaseOrders = () => {
               </div>
 
               {/* Total Order Amount */}
-              <div className="flex justify-between items-center p-4 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 mb-5">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
-                  Total Order Amount
-                </span>
-                <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
-                  ₹{(selectedOrder.totalAmount || selectedOrder.totalValue || selectedOrder.subtotal || 0).toLocaleString('en-IN')}
-                </span>
+              <div className="p-4 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 mb-5 space-y-1.5">
+                {selectedOrder.subtotal != null && selectedOrder.subtotal !== (selectedOrder.totalAmount || selectedOrder.totalValue) && (
+                  <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
+                    <span className="font-semibold uppercase text-[10px]">Subtotal</span>
+                    <span className="font-mono font-bold">₹{Number(selectedOrder.subtotal).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-1 border-t border-slate-200/60 dark:border-white/5">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">
+                    Total Order Amount
+                  </span>
+                  <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+                    ₹{(selectedOrder.totalAmount || selectedOrder.totalValue || selectedOrder.subtotal || 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
               </div>
 
               {/* Status History & Complete Audit Log */}
@@ -2335,6 +2488,33 @@ const PurchaseOrders = () => {
                                 ]}
                                 statusColor="!px-3 !py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
                               />
+
+                              {/* Variant Dropdown if chosen product has variants */}
+                              {(() => {
+                                const prod = productsList.find((p) => p._id === item.productId);
+                                if (prod?.variants?.length > 0) {
+                                  return (
+                                    <div className="pt-0.5">
+                                      <CustomDropdown
+                                        value={item.variantId || ''}
+                                        onChange={(val) => handleItemChange(idx, 'variantId', val)}
+                                        disabled={createSubmitting}
+                                        defaultLabel="Select Variant"
+                                        options={[
+                                          { value: '', label: 'No Specific Variant (Base Product)' },
+                                          ...prod.variants.map((v) => ({
+                                            value: v._id,
+                                            label: `${v.name} ${v.sku ? `[${v.sku}]` : ''} - ₹${v.price ?? prod.price ?? 0}`
+                                          }))
+                                        ]}
+                                        statusColor="!px-2.5 !py-1.5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-500/20 rounded-lg text-xs text-indigo-900 dark:text-indigo-200"
+                                      />
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+
                               <input
                                 type="text"
                                 placeholder="Or enter productId..."

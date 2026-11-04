@@ -31,7 +31,7 @@ import {
   FiLoader
 } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
-import BulkProductImportModal, { downloadProductExcelTemplate } from './BulkProductImportModal';
+import BulkProductImportModal, { downloadProductExcelTemplate, downloadVariantsExcelTemplate } from './BulkProductImportModal';
 import PageHeader from '@/components/ui/PageHeader';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import CopyButton from '@/components/ui/CopyButton';
@@ -138,20 +138,6 @@ const INITIAL_PRODUCT_FORM = {
   variants: []
 };
 
-// Initial form state for dedicated Product Variant Modal
-const INITIAL_VARIANT_FORM = {
-  name: '',
-  sku: '',
-  price: '',
-  stock: 0,
-  attributes: {
-    color: '',
-    wattage: '',
-    edition: ''
-  },
-  isActive: true
-};
-
 const Products = () => {
   // Data States
   const [products, setProducts] = useState([]);
@@ -196,6 +182,7 @@ const Products = () => {
   const [drawerTab, setDrawerTab] = useState('overview'); // 'overview' | 'edit'
   const [drawerProduct, setDrawerProduct] = useState(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importModalMode, setImportModalMode] = useState('products');
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isFiltersVisible, setIsFiltersVisible] = useState(false);
   const actionsDropdownRef = useRef(null);
@@ -205,6 +192,8 @@ const Products = () => {
   const [customMappingInputs, setCustomMappingInputs] = useState({});
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [expandedOverviewMappings, setExpandedOverviewMappings] = useState({});
+  const [expandedOverviewLocations, setExpandedOverviewLocations] = useState(false);
 
   // Auto-Mapping from Brand Routing Matrix States
   const [isAutoMappingBrand, setIsAutoMappingBrand] = useState(false);
@@ -213,15 +202,6 @@ const Products = () => {
   // Delete Confirm Modal
   const [deleteConfirmProduct, setDeleteConfirmProduct] = useState(null);
   const [deleting, setDeleting] = useState(false);
-
-  // Variant Modal & Direct CRUD States
-  const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
-  const [editingVariant, setEditingVariant] = useState(null);
-  const [variantFormData, setVariantFormData] = useState(INITIAL_VARIANT_FORM);
-  const [variantFormError, setVariantFormError] = useState('');
-  const [variantSubmitting, setVariantSubmitting] = useState(false);
-  const [deleteConfirmVariant, setDeleteConfirmVariant] = useState(null);
-  const [deletingVariant, setDeletingVariant] = useState(false);
 
   // Bulk Operations State
   const [isBulkMode, setIsBulkMode] = useState(false);
@@ -866,7 +846,7 @@ const Products = () => {
             sku: defaultSku,
             price: prev.price || '',
             stock: 0,
-            attributes: { color: '' },
+            attributes: { color: '', wattage: '', edition: '' },
             isActive: true
           }
         ]
@@ -899,180 +879,84 @@ const Products = () => {
     });
   };
 
-  const handleRemoveVariantRow = (index) => {
+  const handleRemoveVariantRow = async (index) => {
+    const variantToRemove = formData.variants?.[index];
+    const targetProductId = editingProduct?._id || drawerProduct?._id;
+    if (variantToRemove?._id && targetProductId) {
+      const confirmName = variantToRemove.name || variantToRemove.sku || 'this variant';
+      if (!window.confirm(`Are you sure you want to delete variant "${confirmName}"?`)) {
+        return;
+      }
+      try {
+        await deleteProductVariantApi(targetProductId, variantToRemove._id);
+        showToast(`Variant "${confirmName}" deleted.`);
+      } catch (err) {
+        console.error('Failed to delete variant via API:', err);
+      }
+    }
     setFormData((prev) => ({
       ...prev,
       variants: (prev.variants || []).filter((_, i) => i !== index)
     }));
   };
 
-  // Direct Variant Management Modal Handlers (POST / PUT / DELETE)
-  const handleOpenAddVariantModal = (targetProduct = (drawerProduct || editingProduct)) => {
-    if (!targetProduct?._id) {
-      showToast('Please save the product first before adding individual variants.', 'error');
-      return;
+  // Drawer-based variant actions (switching to drawer's inline variant management)
+  const handleAddVariantInDrawer = () => {
+    if (drawerProduct) {
+      populateProductForm(drawerProduct);
     }
-    setEditingVariant(null);
-    const existingCount = Array.isArray(targetProduct.variants) ? targetProduct.variants.length : 0;
-    const defaultSku = targetProduct.sku ? `${targetProduct.sku}-VAR${existingCount + 1}` : '';
-    setVariantFormData({
-      ...INITIAL_VARIANT_FORM,
-      sku: defaultSku
-    });
-    setVariantFormError('');
-    setIsVariantModalOpen(true);
+    setDrawerTab('edit');
+    handleAddVariantRow();
+    setTimeout(() => {
+      const el = document.getElementById('drawer-variants-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
   };
 
-  const handleOpenEditVariantModal = (variant) => {
-    setEditingVariant(variant);
-    setVariantFormData({
-      name: variant.name || '',
-      sku: variant.sku || '',
-      price: variant.price !== undefined && variant.price !== null ? variant.price : '',
-      stock: variant.stock !== undefined && variant.stock !== null ? variant.stock : 0,
-      attributes: {
-        color: variant.attributes?.color || '',
-        wattage: variant.attributes?.wattage || '',
-        edition: variant.attributes?.edition || '',
-        ...(variant.attributes || {})
-      },
-      isActive: variant.isActive !== false
-    });
-    setVariantFormError('');
-    setIsVariantModalOpen(true);
-  };
-
-  const handleSaveVariantModal = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    setVariantFormError('');
-
-    if (!variantFormData.name.trim()) {
-      setVariantFormError('Variant name is required.');
-      return;
+  const handleEditVariantInDrawer = (variantIndex) => {
+    if (drawerProduct) {
+      populateProductForm(drawerProduct);
     }
-    const skuVal = validateEntityCode(variantFormData.sku);
-    if (!skuVal.isValid) {
-      setVariantFormError(`Variant SKU: ${skuVal.error}`);
-      return;
-    }
-
-    const targetProductId = drawerProduct?._id || editingProduct?._id;
-    if (!targetProductId) {
-      setVariantFormError('Parent product ID not found.');
-      return;
-    }
-
-    // Clean attributes object
-    const cleanAttributes = {};
-    if (variantFormData.attributes) {
-      Object.entries(variantFormData.attributes).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && String(val).trim()) {
-          cleanAttributes[key] = String(val).trim();
-        }
-      });
-    }
-
-    const payload = {
-      name: variantFormData.name.trim(),
-      sku: variantFormData.sku.trim().toUpperCase(),
-      price: variantFormData.price !== '' && !isNaN(Number(variantFormData.price)) ? Number(variantFormData.price) : 0,
-      stock: variantFormData.stock !== '' && !isNaN(Number(variantFormData.stock)) ? Number(variantFormData.stock) : 0,
-      attributes: cleanAttributes,
-      isActive: Boolean(variantFormData.isActive)
-    };
-
-    setVariantSubmitting(true);
-    try {
-      if (editingVariant?._id) {
-        // PUT /products/{id}/variants/{variantId}
-        const res = await updateProductVariantApi(targetProductId, editingVariant._id, payload);
-        const savedVar = res.data?.data || res.data?.variant || (res.data?._id ? res.data : { ...editingVariant, ...payload });
-
-        const syncUpdated = (prod) => {
-          if (!prod) return prod;
-          const updatedVars = (prod.variants || []).map((v) =>
-            v._id === editingVariant._id ? { ...v, ...savedVar } : v
-          );
-          return { ...prod, variants: updatedVars };
-        };
-
-        setProducts((prev) => prev.map((p) => (p._id === targetProductId ? syncUpdated(p) : p)));
-        setDrawerProduct((prev) => (prev?._id === targetProductId ? syncUpdated(prev) : prev));
-        setEditingProduct((prev) => (prev?._id === targetProductId ? syncUpdated(prev) : prev));
-        setFormData((prev) => ({
-          ...prev,
-          variants: (prev.variants || []).map((v) => (v._id === editingVariant._id ? { ...v, ...savedVar } : v))
-        }));
-
-        setIsVariantModalOpen(false);
-        showToast(`Variant "${payload.name}" updated successfully!`);
+    setDrawerTab('edit');
+    setTimeout(() => {
+      const el = document.getElementById(`drawer-variant-row-${variantIndex}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-2', 'ring-blue-500');
+        setTimeout(() => el.classList.remove('ring-2', 'ring-blue-500'), 1500);
       } else {
-        // POST /products/{id}/variants
-        const res = await createProductVariantApi(targetProductId, payload);
-        const createdVar = res.data?.data || res.data?.variant || (res.data?._id ? res.data : { ...payload, _id: 'var_' + Date.now() });
-
-        const syncCreated = (prod) => {
-          if (!prod) return prod;
-          const updatedVars = [...(prod.variants || []), createdVar];
-          return { ...prod, variants: updatedVars };
-        };
-
-        setProducts((prev) => prev.map((p) => (p._id === targetProductId ? syncCreated(p) : p)));
-        setDrawerProduct((prev) => (prev?._id === targetProductId ? syncCreated(prev) : prev));
-        setEditingProduct((prev) => (prev?._id === targetProductId ? syncCreated(prev) : prev));
-        setFormData((prev) => ({
-          ...prev,
-          variants: [...(prev.variants || []), createdVar]
-        }));
-
-        setIsVariantModalOpen(false);
-        showToast(`Variant "${payload.name}" created successfully!`);
+        const sec = document.getElementById('drawer-variants-section');
+        if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    } catch (err) {
-      console.error('Failed to save variant:', err);
-      setVariantFormError(err.response?.data?.message || 'Failed to save variant.');
-    } finally {
-      setVariantSubmitting(false);
-    }
+    }, 120);
   };
 
-  const handleDeleteVariantConfirm = async () => {
-    if (!deleteConfirmVariant) return;
-    const targetProductId = drawerProduct?._id || editingProduct?._id;
-    if (!targetProductId) return;
-
-    setDeletingVariant(true);
+  const handleDeleteVariantInOverview = async (variant) => {
+    if (!drawerProduct?._id) return;
+    const confirmName = variant.name || variant.sku || 'this variant';
+    if (!window.confirm(`Are you sure you want to delete variant "${confirmName}"?`)) {
+      return;
+    }
     try {
-      if (deleteConfirmVariant._id) {
-        // DELETE /products/{id}/variants/{variantId}
-        await deleteProductVariantApi(targetProductId, deleteConfirmVariant._id);
+      if (variant._id) {
+        await deleteProductVariantApi(drawerProduct._id, variant._id);
       }
-
-      const syncRemoved = (prod) => {
-        if (!prod) return prod;
-        const updatedVars = (prod.variants || []).filter((v) =>
-          v._id ? v._id !== deleteConfirmVariant._id : v.sku !== deleteConfirmVariant.sku
-        );
-        return { ...prod, variants: updatedVars };
-      };
-
-      setProducts((prev) => prev.map((p) => (p._id === targetProductId ? syncRemoved(p) : p)));
-      setDrawerProduct((prev) => (prev?._id === targetProductId ? syncRemoved(prev) : prev));
-      setEditingProduct((prev) => (prev?._id === targetProductId ? syncRemoved(prev) : prev));
+      const updatedVariants = (drawerProduct.variants || []).filter((v) =>
+        v._id ? v._id !== variant._id : v.sku !== variant.sku
+      );
+      const updatedProd = { ...drawerProduct, variants: updatedVariants };
+      setDrawerProduct(updatedProd);
+      setProducts((prev) => prev.map((p) => (p._id === drawerProduct._id ? updatedProd : p)));
       setFormData((prev) => ({
         ...prev,
         variants: (prev.variants || []).filter((v) =>
-          v._id ? v._id !== deleteConfirmVariant._id : v.sku !== deleteConfirmVariant.sku
+          v._id ? v._id !== variant._id : v.sku !== variant.sku
         )
       }));
-
-      showToast(`Variant "${deleteConfirmVariant.name || deleteConfirmVariant.sku}" deleted.`);
-      setDeleteConfirmVariant(null);
+      showToast(`Variant "${confirmName}" removed.`);
     } catch (err) {
       console.error('Failed to delete variant:', err);
       showToast(err.response?.data?.message || 'Failed to delete variant.', 'error');
-    } finally {
-      setDeletingVariant(false);
     }
   };
 
@@ -1081,7 +965,7 @@ const Products = () => {
     setDrawerProduct(null);
     setEditingProduct(null);
     setDrawerTab('edit');
-    const initialBrand = matrixBrands.length > 0 ? matrixBrands[0].brand : (uniqueBrands[0] || 'Realme');
+    const initialBrand = matrixBrands.length > 0 ? matrixBrands[0].brand : (uniqueBrands[0] || 'Whatnot');
     const initialCompId = companies.length > 0 ? companies[0]._id : '';
 
     setFormData({
@@ -2382,6 +2266,7 @@ const Products = () => {
                     type="button"
                     onClick={() => {
                       setIsActionsOpen(false);
+                      setImportModalMode('products');
                       setIsImportModalOpen(true);
                     }}
                     className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 text-left transition-colors cursor-pointer group"
@@ -2394,18 +2279,43 @@ const Products = () => {
                         Import Products
                       </div>
                       <div className="text-[10px] text-slate-400 leading-tight">
-                        Bulk import via Excel or CSV
+                        Bulk import products via Excel / CSV
                       </div>
                     </div>
                   </button>
 
-                  {/* Option 2: Download Sample File */}
+                  {/* Option 2: Bulk Add Variants via Excel */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsActionsOpen(false);
+                      setImportModalMode('variants');
+                      setIsImportModalOpen(true);
+                    }}
+                    className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-indigo-50/80 dark:hover:bg-indigo-950/30 text-left transition-colors cursor-pointer group"
+                  >
+                    <span className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors shrink-0">
+                      <FiLayers className="text-sm" />
+                    </span>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                        Bulk Add Variants
+                      </div>
+                      <div className="text-[10px] text-slate-400 leading-tight">
+                        Add variants to existing products
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="my-1 border-t border-slate-100 dark:border-white/5" />
+
+                  {/* Option 3: Download Products Template */}
                   <button
                     type="button"
                     onClick={() => {
                       setIsActionsOpen(false);
                       downloadProductExcelTemplate(companies);
-                      showToast('Sample Excel template downloaded.');
+                      showToast('Products Excel template downloaded.');
                     }}
                     className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-blue-50/80 dark:hover:bg-blue-950/30 text-left transition-colors cursor-pointer group"
                   >
@@ -2414,10 +2324,33 @@ const Products = () => {
                     </span>
                     <div>
                       <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                        Download Sample File
+                        Products Template
                       </div>
                       <div className="text-[10px] text-slate-400 leading-tight">
                         Pre-formatted .xlsx with companies
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Option 4: Download Variants Template */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsActionsOpen(false);
+                      downloadVariantsExcelTemplate(products);
+                      showToast('Variants Excel template downloaded.');
+                    }}
+                    className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-indigo-50/80 dark:hover:bg-indigo-950/30 text-left transition-colors cursor-pointer group"
+                  >
+                    <span className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors shrink-0">
+                      <FiDownload className="text-sm" />
+                    </span>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                        Variants Template
+                      </div>
+                      <div className="text-[10px] text-slate-400 leading-tight">
+                        Pre-filled with catalog product names & SKUs
                       </div>
                     </div>
                   </button>
@@ -3083,48 +3016,53 @@ const Products = () => {
           <div className="fixed inset-0 z-[9999] overflow-hidden">
             {/* Backdrop */}
             <div
-              className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+              className="fixed inset-0 dark:bg-slate-950/50 backdrop-blur-lg transition-opacity animate-in fade-in duration-300"
               onClick={handleCloseDrawer}
             />
 
             {/* Slide-over Container (Pinned to Right) */}
             <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
-              <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/20 dark:bg-slate-900/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 text-left">
+              <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl bg-white/40 dark:bg-slate-900/25 border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 text-left overflow-hidden">
                 {/* Sticky Drawer Header */}
-                <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 shrink-0 space-y-3">
-                  {/* Top Bar: Icon + Title + Close Button */}
+                <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 space-y-3.5">
+                  {/* Top Bar: Icon + Title + Status + Close Button */}
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
-                        <FiPackage className="text-base sm:text-lg" />
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
+                        <FiPackage className="text-xl" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate tracking-tight">
                             {drawerProduct ? drawerProduct.name : 'Add New Product'}
                           </h2>
                           {drawerProduct && (
                             <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold ${
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                                 drawerProduct.isActive !== false
                                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                                   : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
                               }`}
                             >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  drawerProduct.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                                }`}
+                              />
                               {drawerProduct.isActive !== false ? 'Active' : 'Inactive'}
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
+                        <div className="flex items-center gap-2 mt-0.5">
                           {drawerProduct ? (
-                            <>
-                              <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs font-semibold text-slate-500 dark:text-slate-400">
                                 {drawerProduct.sku}
                               </span>
-                              <CopyButton text={drawerProduct.sku} size={10} />
-                            </>
+                              <CopyButton text={drawerProduct.sku} size={11} />
+                            </div>
                           ) : (
-                            <p className="text-xs text-slate-400 truncate">Configure new catalog product with pricing and routing</p>
+                            <p className="text-xs text-slate-400 truncate">Configure new catalog product with pricing, variants, and routing</p>
                           )}
                         </div>
                       </div>
@@ -3136,21 +3074,22 @@ const Products = () => {
                       className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer shrink-0"
                       title="Close drawer (Esc)"
                     >
-                      <FiX size={18} />
+                      <FiX size={20} />
                     </button>
                   </div>
 
-                  {/* Bottom Sub-Bar: Mode Selector Tabs & Stepper Navigation */}
+                  {/* Sub-Bar: Overview / Edit Switcher & Stepper Navigation */}
                   {drawerProduct && (
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/40 dark:border-white/5 flex-wrap sm:flex-nowrap">
-                      <div className="flex items-center p-0.5 sm:p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
+                    <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-white/5 flex-wrap sm:flex-nowrap">
+                      {/* Segmented Tab Pill */}
+                      <div className="flex items-center p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
                         <button
                           type="button"
                           onClick={() => {
                             setDrawerTab('overview');
                             setFormError('');
                           }}
-                          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             drawerTab === 'overview'
                               ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                               : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -3165,30 +3104,30 @@ const Products = () => {
                             setDrawerTab('edit');
                             setFormError('');
                           }}
-                          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             drawerTab === 'edit'
                               ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                               : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                           }`}
                         >
                           <FiEdit2 className="text-xs" />
-                          <span>Edit</span>
+                          <span>Edit Details</span>
                         </button>
                       </div>
 
-                      {/* Product Stepper Navigation */}
+                      {/* Stepper Navigation */}
                       {selectedProductIndex >= 0 && filteredProducts.length > 1 && (
-                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
+                        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl px-2 py-1 text-xs">
                           <button
                             type="button"
                             onClick={handlePrevProduct}
                             disabled={!canGoPrevProduct}
                             title="Previous Product (Left Arrow)"
-                            className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            className="p-1 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                           >
-                            <FiChevronLeft size={15} />
+                            <FiChevronLeft size={16} />
                           </button>
-                          <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                          <span className="font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 select-none">
                             {selectedProductIndex + 1} of {filteredProducts.length}
                           </span>
                           <button
@@ -3196,9 +3135,9 @@ const Products = () => {
                             onClick={handleNextProduct}
                             disabled={!canGoNextProduct}
                             title="Next Product (Right Arrow)"
-                            className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            className="p-1 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                           >
-                            <FiChevronRight size={15} />
+                            <FiChevronRight size={16} />
                           </button>
                         </div>
                       )}
@@ -3207,131 +3146,116 @@ const Products = () => {
                 </div>
 
                 {/* Scrollable Body Content */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-5 custom-scrollbar space-y-3.5 sm:space-y-4">
+                <div className="flex-1 overflow-y-auto p-5 sm:p-6 custom-scrollbar space-y-5">
                   {drawerTab === 'overview' && drawerProduct ? (
                     <>
-                      {/* Product Specifications Grid */}
-                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-3">
-                        <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <FiTag className="text-blue-500 text-xs" />
-                          <span>General Information</span>
-                        </h3>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5">
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Brand</p>
-                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">
-                              {drawerProduct.brand || 'N/A'}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Category</p>
-                            {(() => {
-                              const cat = getDrawerCategoryDetails(drawerProduct);
-                              return cat ? (
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">
-                                    {cat.name}
-                                  </span>
-                                  {cat.code && (
-                                    <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
-                                      {cat.code}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
-                                <p className="text-xs text-slate-400 italic">Unassigned</p>
-                              );
-                            })()}
-                          </div>
-
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Measurement Unit</p>
-                            <p className="text-xs font-mono font-semibold text-slate-800 dark:text-slate-100">
-                              {drawerProduct.unit || 'PCS'}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Catalog Status</p>
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                                drawerProduct.isActive !== false
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                  : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
-                              }`}
-                            >
-                              {drawerProduct.isActive !== false ? 'Active' : 'Inactive'}
-                            </span>
-                          </div>
-
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Created Date</p>
-                            <p className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
-                              {formatDateTimeDDMMYYYY(drawerProduct.createdAt)}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Last Updated</p>
-                            <p className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
-                              {formatDateTimeDDMMYYYY(drawerProduct.updatedAt)}
-                            </p>
-                          </div>
+                      {/* 1. Highlight Metrics Cards */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {/* Price Card */}
+                        <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/80 dark:border-white/10">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                            Pricing
+                          </p>
+                          <p className="text-sm sm:text-base font-mono font-bold text-emerald-600 dark:text-emerald-400 truncate">
+                            {getProductPriceInfo(drawerProduct).formatted}
+                          </p>
+                          <p className="text-[10px] text-slate-400 mt-1 truncate">
+                            {Array.isArray(drawerProduct.variants) && drawerProduct.variants.length > 0
+                              ? `${drawerProduct.variants.length} variant${drawerProduct.variants.length > 1 ? 's' : ''}`
+                              : 'Base catalog price'}
+                          </p>
                         </div>
 
-                        <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap items-center justify-between gap-2.5 text-[11px]">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-bold text-slate-400">Product System ID:</span>
-                            <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{drawerProduct._id}</span>
-                            <CopyButton text={drawerProduct._id} size={10} />
-                          </div>
+                        {/* Stock Card */}
+                        <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/80 dark:border-white/10">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                            Total Inventory
+                          </p>
+                          <p className="text-sm sm:text-base font-mono font-bold text-slate-900 dark:text-white truncate">
+                            {getProductStockInfo(drawerProduct).totalStock} <span className="text-xs font-normal text-slate-500">units</span>
+                          </p>
+                          <p className="text-[10px] mt-1">
+                            <span
+                              className={`inline-flex items-center px-1.5 py-0.2 rounded font-semibold ${
+                                getProductStockInfo(drawerProduct).inStock
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                              }`}
+                            >
+                              {getProductStockInfo(drawerProduct).inStock ? 'In Stock' : 'Out of Stock'}
+                            </span>
+                          </p>
+                        </div>
+
+                        {/* Brand Card */}
+                        <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/80 dark:border-white/10">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                            Brand
+                          </p>
+                          <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                            {drawerProduct.brand || 'N/A'}
+                          </p>
+                          <p className="text-[10px] text-slate-400 mt-1 truncate">
+                            Unit: <strong className="text-slate-700 dark:text-slate-300 font-mono">{drawerProduct.unit || 'PCS'}</strong>
+                          </p>
+                        </div>
+
+                        {/* Category Card */}
+                        <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/80 dark:border-white/10">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                            Category
+                          </p>
                           {(() => {
                             const cat = getDrawerCategoryDetails(drawerProduct);
-                            return cat?.id ? (
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] font-bold text-slate-400">Category ID:</span>
-                                <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{cat.id}</span>
-                                <CopyButton text={cat.id} size={10} />
-                              </div>
-                            ) : null;
+                            return cat ? (
+                              <>
+                                <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate" title={cat.name}>
+                                  {cat.name}
+                                </p>
+                                <p className="text-[10px] text-slate-400 mt-1 truncate">
+                                  {cat.code ? (
+                                    <span className="px-1.5 py-0.2 rounded font-mono font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                                      {cat.code}
+                                    </span>
+                                  ) : (
+                                    'Standard Category'
+                                  )}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-xs text-slate-400 italic">Unassigned</p>
+                            );
                           })()}
                         </div>
                       </div>
 
-                      {/* Product Variants & Inventory Breakdown */}
-                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                      {/* 2. Product Variants & Inventory */}
+                      <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3.5">
                         <div className="flex items-center justify-between flex-wrap gap-2">
-                          <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <FiLayers className="text-blue-500 text-xs" />
-                            <span>Product Variants & Inventory ({Array.isArray(drawerProduct.variants) ? drawerProduct.variants.length : 0})</span>
-                          </h3>
                           <div className="flex items-center gap-2">
-                            {Array.isArray(drawerProduct.variants) && drawerProduct.variants.length > 0 && (
-                              <>
-                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                                  Total Stock: <strong className="font-mono text-slate-800 dark:text-slate-200">{getProductStockInfo(drawerProduct).totalStock}</strong>
-                                </span>
-                                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                  {getProductPriceInfo(drawerProduct).formatted}
-                                </span>
-                              </>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleOpenAddVariantModal(drawerProduct)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg transition-all shadow-xs cursor-pointer ml-1"
-                              title="Add new variant (POST /products/{id}/variants)"
-                            >
-                              <FiPlus className="text-[11px]" />
-                              <span>Add Variant</span>
-                            </button>
+                            <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                              <FiLayers className="text-sm" />
+                            </div>
+                            <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                              Product Variants & Inventory
+                            </h3>
+                            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              {Array.isArray(drawerProduct.variants) ? drawerProduct.variants.length : 0}
+                            </span>
                           </div>
+
+                          <button
+                            type="button"
+                            onClick={handleAddVariantInDrawer}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                          >
+                            <FiPlus className="text-xs" />
+                            <span>Add Variant</span>
+                          </button>
                         </div>
 
                         {Array.isArray(drawerProduct.variants) && drawerProduct.variants.length > 0 ? (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div className="space-y-2.5">
                             {drawerProduct.variants.map((variant, vIdx) => {
                               const vPrice = variant.price !== undefined && variant.price !== null ? Number(variant.price) : 0;
                               const vStock = variant.stock !== undefined && variant.stock !== null ? Number(variant.stock) : 0;
@@ -3340,26 +3264,26 @@ const Products = () => {
                               return (
                                 <div
                                   key={variant._id || vIdx}
-                                  className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 space-y-2 shadow-2xs group"
+                                  className="p-3.5 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/70 dark:border-white/10 shadow-xs space-y-2.5 transition-all hover:border-slate-300 dark:hover:border-white/20"
                                 >
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="space-y-0.5">
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
-                                          {vIdx + 1}
-                                        </span>
-                                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                                          {variant.name || `Variant #${vIdx + 1}`}
-                                        </h4>
-                                      </div>
-                                      <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-slate-500 dark:text-slate-400 pl-6.5">
+                                  {/* Row 1: Header info + Actions */}
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                      <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                        {vIdx + 1}
+                                      </span>
+                                      <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                                        {variant.name || `Variant #${vIdx + 1}`}
+                                      </span>
+                                      <div className="flex items-center gap-1 font-mono text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-white/5">
                                         <span>{variant.sku}</span>
                                         <CopyButton text={variant.sku} size={10} />
                                       </div>
                                     </div>
+
                                     <div className="flex items-center gap-1.5 shrink-0">
                                       <span
-                                        className={`inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${
+                                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                           variant.isActive !== false
                                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                                             : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
@@ -3369,23 +3293,24 @@ const Products = () => {
                                       </span>
                                       <button
                                         type="button"
-                                        onClick={() => handleOpenEditVariantModal(variant)}
-                                        className="p-1 rounded-md text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
-                                        title="Edit Variant (PUT /products/{id}/variants/{variantId})"
+                                        onClick={() => handleEditVariantInDrawer(vIdx)}
+                                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
+                                        title="Edit this variant in form"
                                       >
-                                        <FiEdit2 size={12} />
+                                        <FiEdit2 size={13} />
                                       </button>
                                       <button
                                         type="button"
-                                        onClick={() => setDeleteConfirmVariant(variant)}
-                                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors cursor-pointer"
-                                        title="Delete Variant (DELETE /products/{id}/variants/{variantId})"
+                                        onClick={() => handleDeleteVariantInOverview(variant)}
+                                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors cursor-pointer"
+                                        title="Delete this variant"
                                       >
-                                        <FiTrash2 size={12} />
+                                        <FiTrash2 size={13} />
                                       </button>
                                     </div>
                                   </div>
 
+                                  {/* Row 2: Attributes, Stock & Price */}
                                   <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs flex-wrap gap-2">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       {Object.entries(attrs).map(([key, val]) =>
@@ -3399,12 +3324,12 @@ const Products = () => {
                                           </span>
                                         ) : null
                                       )}
-                                      <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
-                                        Stock: <strong className="font-mono text-slate-800 dark:text-slate-200">{vStock}</strong>
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                                        Stock: <strong className="font-mono text-slate-900 dark:text-white">{vStock}</strong>
                                       </span>
                                     </div>
 
-                                    <div className="text-xs font-mono font-bold text-slate-900 dark:text-white">
+                                    <div className="text-sm font-mono font-bold text-slate-900 dark:text-white">
                                       ₹{vPrice.toLocaleString('en-IN')}
                                     </div>
                                   </div>
@@ -3413,11 +3338,14 @@ const Products = () => {
                             })}
                           </div>
                         ) : (
-                          <div className="p-4 text-center bg-white dark:bg-slate-800/60 rounded-xl border border-dashed border-slate-300 dark:border-white/10 space-y-2">
-                            <p className="text-xs text-slate-400">No variants registered for this product yet.</p>
+                          <div className="p-6 text-center bg-white dark:bg-slate-800/60 rounded-xl border border-dashed border-slate-200 dark:border-white/10 space-y-2">
+                            <FiPackage className="text-2xl text-slate-400 mx-auto" />
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              No variants registered. Base catalog item will be sold as a single SKU.
+                            </p>
                             <button
                               type="button"
-                              onClick={() => handleOpenAddVariantModal(drawerProduct)}
+                              onClick={handleAddVariantInDrawer}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
                             >
                               <FiPlus className="text-xs" />
@@ -3427,20 +3355,25 @@ const Products = () => {
                         )}
                       </div>
 
-                      {/* Company Territory Routing (companyMappings) */}
+                      {/* 3. Company Territory Routing (companyMappings) */}
                       {Array.isArray(drawerProduct.companyMappings) && drawerProduct.companyMappings.length > 0 ? (
-                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                        <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3.5">
                           <div className="flex items-center justify-between">
-                            <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                              <FiBriefcase className="text-blue-500 text-xs" />
-                              <span>Company Territory Routing ({drawerProduct.companyMappings.length})</span>
-                            </h3>
-                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                              companyMappings
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                <FiBriefcase className="text-sm" />
+                              </div>
+                              <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                                Territory Routing
+                              </h3>
+                              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                {drawerProduct.companyMappings.length} Partner{drawerProduct.companyMappings.length > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-400">companyMappings</span>
                           </div>
 
-                          <div className="space-y-2">
+                          <div className="space-y-2.5">
                             {drawerProduct.companyMappings.map((mapping, idx) => {
                               const compObj =
                                 typeof mapping.companyId === 'object' && mapping.companyId !== null
@@ -3449,19 +3382,20 @@ const Products = () => {
                               const compName = compObj?.name || (typeof mapping.companyId === 'string' ? mapping.companyId : 'Unassigned');
                               const compCode = compObj?.code || null;
                               const states = Array.isArray(mapping.states) ? mapping.states : [];
-                              const isWildcard = states.includes('*');
+                              const isWildcard = states.includes('*') || states.length >= 36;
+                              const isExpanded = !!expandedOverviewMappings[idx];
 
                               return (
                                 <div
                                   key={idx}
-                                  className="p-2.5 sm:p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 space-y-1.5"
+                                  className="p-3.5 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/70 dark:border-white/10 space-y-2 shadow-xs"
                                 >
-                                  <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center justify-between gap-2 flex-wrap">
                                     <div className="flex items-center gap-2">
                                       <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
                                         {idx + 1}
                                       </span>
-                                      <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                      <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                                         {compName}
                                       </span>
                                       {compCode && (
@@ -3470,24 +3404,21 @@ const Products = () => {
                                         </span>
                                       )}
                                     </div>
-                                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                                      {isWildcard
-                                        ? 'Pan-India Wildcard'
-                                        : `${states.length} ${states.length === 1 ? 'state' : 'states'}`}
+                                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                      {isWildcard ? (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20">
+                                          ★ Pan-India (All Territories)
+                                        </span>
+                                      ) : (
+                                        `${states.length} state${states.length === 1 ? '' : 's'} assigned`
+                                      )}
                                     </span>
                                   </div>
 
-                                  {states.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1 pt-1">
-                                      {states.map((st, sIdx) =>
-                                        st === '*' ? (
-                                          <span
-                                            key={sIdx}
-                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20"
-                                          >
-                                            ★ Pan-India / All Territories (*)
-                                          </span>
-                                        ) : (
+                                  {!isWildcard && states.length > 0 && (
+                                    <div className="pt-1">
+                                      <div className="flex flex-wrap gap-1">
+                                        {(isExpanded ? states : states.slice(0, 6)).map((st, sIdx) => (
                                           <span
                                             key={sIdx}
                                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 text-[10px] font-medium border border-slate-200/60 dark:border-white/5"
@@ -3495,11 +3426,23 @@ const Products = () => {
                                             <FiMapPin className="text-[9px] text-blue-500 shrink-0" />
                                             <span>{st}</span>
                                           </span>
-                                        )
-                                      )}
+                                        ))}
+                                        {states.length > 6 && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setExpandedOverviewMappings((prev) => ({
+                                                ...prev,
+                                                [idx]: !prev[idx]
+                                              }))
+                                            }
+                                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline px-1.5 py-0.5 cursor-pointer"
+                                          >
+                                            {isExpanded ? 'Show less' : `+${states.length - 6} more`}
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
-                                  ) : (
-                                    <span className="text-[10px] text-slate-400 italic">No specific states assigned (All territories fallback)</span>
                                   )}
                                 </div>
                               );
@@ -3508,19 +3451,23 @@ const Products = () => {
                         </div>
                       ) : (
                         /* Single Trading / Partner Company Fallback */
-                        <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-2.5">
-                          <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <FiBriefcase className="text-emerald-500 text-xs" />
-                            <span>Partner / Trading Company</span>
-                          </h3>
+                        <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                              <FiBriefcase className="text-sm" />
+                            </div>
+                            <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                              Trading Partner Company
+                            </h3>
+                          </div>
 
                           {(() => {
                             const comp = getDrawerCompanyDetails(drawerProduct);
                             return (
-                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 p-2.5 sm:p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5">
+                              <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/70 dark:border-white/10">
                                 <div className="space-y-0.5">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                    <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                                       {comp.name}
                                     </span>
                                     {comp.code && (
@@ -3539,7 +3486,7 @@ const Products = () => {
 
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
                                   <FiCheckCircle className="text-xs" />
-                                  <span>Mapped Company</span>
+                                  <span>Mapped</span>
                                 </span>
                               </div>
                             );
@@ -3547,101 +3494,148 @@ const Products = () => {
                         </div>
                       )}
 
-                      {/* Covered Distribution Locations */}
-                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                      {/* 4. Covered Locations */}
+                      <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <FiMapPin className="text-rose-500 text-xs" />
-                            <span>Covered Locations / Territories</span>
-                          </h3>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                            {(drawerProduct.locations || []).length} Locations
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                              <FiMapPin className="text-sm" />
+                            </div>
+                            <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                              Covered Locations
+                            </h3>
+                          </div>
+                          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            {(drawerProduct.locations || []).length} Assigned
                           </span>
                         </div>
 
-                        {Array.isArray(drawerProduct.locations) && drawerProduct.locations.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            {drawerProduct.locations.map((loc, idx) => (
-                              <span
-                                key={idx}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-[11px] font-medium text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 shadow-2xs"
-                              >
-                                <FiGlobe className="text-blue-500 text-[10px] shrink-0" />
-                                <span>{loc}</span>
+                        {Array.isArray(drawerProduct.locations) && drawerProduct.locations.length >= 36 ? (
+                          <div className="p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/70 dark:border-white/10 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <FiGlobe className="text-blue-500 text-sm shrink-0" />
+                              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                Pan-India Distribution (All 36 States & Union Territories covered)
                               </span>
-                            ))}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedOverviewLocations((prev) => !prev)}
+                              className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer shrink-0"
+                            >
+                              {expandedOverviewLocations ? 'Collapse' : 'View all'}
+                            </button>
                           </div>
+                        ) : null}
+
+                        {Array.isArray(drawerProduct.locations) && drawerProduct.locations.length > 0 ? (
+                          (drawerProduct.locations.length < 36 || expandedOverviewLocations) && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {drawerProduct.locations.map((loc, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-[11px] font-medium text-slate-800 dark:text-slate-200 border border-slate-200/70 dark:border-white/10 shadow-2xs"
+                                >
+                                  <FiGlobe className="text-blue-500 text-[10px] shrink-0" />
+                                  <span>{loc}</span>
+                                </span>
+                              ))}
+                            </div>
+                          )
                         ) : (
-                          <div className="p-3 text-center text-slate-400 text-xs italic bg-white/40 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-white/10">
-                            No specific locations assigned. This product can be distributed across all territories.
+                          <div className="p-3 text-center text-slate-400 text-xs italic bg-white dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-white/10">
+                            All territories fallback.
                           </div>
                         )}
                       </div>
 
-                      {/* Description */}
-                      <div className="bg-slate-50/80 dark:bg-white/[0.03] p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-1.5">
+                      {/* 5. Product Description */}
+                      <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
                         <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                           Product Description
                         </h3>
                         <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                          {drawerProduct.description || 'No detailed description provided for this product.'}
+                          {drawerProduct.description || 'No detailed description provided.'}
                         </p>
+                      </div>
+
+                      {/* 6. Metadata Strip */}
+                      <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-400">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">Product ID:</span>
+                          <span className="font-mono text-slate-600 dark:text-slate-300 font-semibold">{drawerProduct._id}</span>
+                          <CopyButton text={drawerProduct._id} size={10} />
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span>Created: <strong className="font-mono text-slate-600 dark:text-slate-300">{formatDateTimeDDMMYYYY(drawerProduct.createdAt)}</strong></span>
+                          <span>Updated: <strong className="font-mono text-slate-600 dark:text-slate-300">{formatDateTimeDDMMYYYY(drawerProduct.updatedAt)}</strong></span>
+                        </div>
                       </div>
                     </>
                   ) : (
                     /* Edit or Create Form */
-                    <form onSubmit={handleSaveProduct} className="space-y-4">
+                    <form onSubmit={handleSaveProduct} className="space-y-5">
                       {formError && (
-                        <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
-                          <FiAlertCircle className="shrink-0 text-sm" />
+                        <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
+                          <FiAlertCircle className="shrink-0 text-base" />
                           <span>{formError}</span>
                         </div>
                       )}
 
-                      {/* Product Name */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                          Product Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.name}
-                          onChange={(e) => handleNameChange(e.target.value)}
-                          placeholder="e.g. Whatnot NitroCharge 65W GaN Fast Charger Pro"
-                          className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
-                          required
-                        />
-                      </div>
+                      {/* Card 1: Core Product Information */}
+                      <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
+                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-white/5">
+                          <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                            <FiTag className="text-xs" />
+                          </div>
+                          <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                            1. Basic Details
+                          </h3>
+                        </div>
 
-                      {/* SKU, Brand, Category, Base Price & Unit Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                        {/* Product Name */}
                         <div>
                           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                            SKU Code *
+                            Product Name *
                           </label>
                           <input
                             type="text"
-                            value={formData.sku}
-                            onChange={(e) => setFormData({ ...formData, sku: formatEntityCode(e.target.value), skuManual: true })}
-                            placeholder="e.g. WNOT-CHG-065"
-                            className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 uppercase"
+                            value={formData.name}
+                            onChange={(e) => handleNameChange(e.target.value)}
+                            placeholder="e.g. Sony Inzone H9 Wireless Headset"
+                            className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30"
                             required
                           />
                         </div>
 
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                              Brand Name *
+                        {/* SKU, Brand, Category Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              SKU Code *
                             </label>
-                            {activeBrandGroup && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-md border border-emerald-500/20">
-                                <FiZap className="text-[10px]" />
-                                <span>Matrix</span>
-                              </span>
-                            )}
+                            <input
+                              type="text"
+                              value={formData.sku}
+                              onChange={(e) => setFormData({ ...formData, sku: formatEntityCode(e.target.value), skuManual: true })}
+                              placeholder="e.g. SONY-INZONE-H9"
+                              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 font-semibold"
+                              required
+                            />
                           </div>
-                          <div className="relative">
+
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                                Brand Name *
+                              </label>
+                              {activeBrandGroup && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-md border border-emerald-500/20">
+                                  <FiZap className="text-[9px]" />
+                                  <span>Matrix</span>
+                                </span>
+                              )}
+                            </div>
                             <CustomDropdown
                               value={formData.brand || ''}
                               onChange={(val) => handleBrandSelect(val)}
@@ -3650,90 +3644,85 @@ const Products = () => {
                               searchable={true}
                               allowCustom={true}
                               options={brandOptions}
-                              statusColor="!px-3 !py-2 !bg-slate-50 dark:!bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
+                              statusColor="!px-3 !py-2 !bg-white dark:!bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Category
+                            </label>
+                            <CustomDropdown
+                              value={formData.categoryId || ''}
+                              onChange={(val) => setFormData({ ...formData, categoryId: val })}
+                              placeholder="Select Category (None)"
+                              defaultLabel="Select Category (None)"
+                              searchable={true}
+                              options={[
+                                { value: '', label: 'Select Category (None)' },
+                                ...categories.map((c) => ({
+                                  value: c._id,
+                                  label: `${c.name}${c.code ? ` (${c.code})` : ''}`
+                                }))
+                              ]}
+                              statusColor="!px-3 !py-2 !bg-white dark:!bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
                             />
                           </div>
                         </div>
 
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                              Category
-                            </label>
-                            <span className="text-[10px] font-mono text-slate-400">categoryId</span>
-                          </div>
-                          <CustomDropdown
-                            value={formData.categoryId || ''}
-                            onChange={(val) => setFormData({ ...formData, categoryId: val })}
-                            placeholder="Select Category (None)"
-                            defaultLabel="Select Category (None)"
-                            searchable={true}
-                            options={[
-                              { value: '', label: 'Select Category (None)' },
-                              ...categories.map((c) => ({
-                                value: c._id,
-                                label: `${c.name}${c.code ? ` (${c.code})` : ''}`
-                              }))
-                            ]}
-                            statusColor="!px-3 !py-2 !bg-slate-50 dark:!bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
-                          />
-                        </div>
-
-                        {/* Price (INR) Field */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                        {/* Base Price & Unit */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                               Base Price (₹)
                             </label>
-                            <span className="text-[10px] font-mono text-slate-400">price</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={formData.price}
+                              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                              placeholder="0 (or define per variant)"
+                              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30"
+                            />
                           </div>
-                          <input
-                            type="number"
-                            min="0"
-                            step="any"
-                            value={formData.price}
-                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                            placeholder="e.g. 1299"
-                            className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
-                          />
-                        </div>
 
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                            Unit *
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.unit}
-                            onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                            placeholder="e.g. PCS, BOX"
-                            className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden uppercase"
-                            required
-                          />
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                              Measurement Unit *
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.unit}
+                              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                              placeholder="e.g. PCS, BOX, SET"
+                              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden"
+                              required
+                            />
+                          </div>
                         </div>
                       </div>
 
-                      {/* Product Variants Management */}
-                      <div className="space-y-3 pt-2 border-t border-slate-200/80 dark:border-white/10">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                              <FiLayers className="text-blue-500" />
-                              <span>Product Variants & Inventory</span>
-                              {Array.isArray(formData.variants) && formData.variants.length > 0 && (
-                                <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                  {formData.variants.length} Variant{formData.variants.length > 1 ? 's' : ''}
-                                </span>
-                              )}
-                            </label>
-                            <p className="text-[11px] text-slate-400">
-                              Define different editions, colors, or SKUs with individual prices and stock counts.
-                            </p>
+                      {/* Card 2: Product Variants & Inventory */}
+                      <div id="drawer-variants-section" className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                              <FiLayers className="text-xs" />
+                            </div>
+                            <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                              2. Variants & Inventory
+                            </h3>
+                            {Array.isArray(formData.variants) && formData.variants.length > 0 && (
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                {formData.variants.length}
+                              </span>
+                            )}
                           </div>
                           <button
                             type="button"
                             onClick={handleAddVariantRow}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer"
                           >
                             <FiPlus className="text-xs" />
                             <span>Add Variant</span>
@@ -3741,55 +3730,69 @@ const Products = () => {
                         </div>
 
                         {Array.isArray(formData.variants) && formData.variants.length > 0 ? (
-                          <div className="space-y-2.5 max-h-72 overflow-y-auto custom-scrollbar p-1">
+                          <div className="space-y-3">
                             {formData.variants.map((v, vIdx) => (
                               <div
-                                key={vIdx}
-                                className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-2 relative"
+                                key={v._id || vIdx}
+                                id={`drawer-variant-row-${vIdx}`}
+                                className="p-3.5 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-3 shadow-xs"
                               >
                                 <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-2">
                                     <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
                                       {vIdx + 1}
                                     </span>
-                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                      {v.name ? v.name : `Variant #${vIdx + 1}`}
+                                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                      {v.name || `Variant #${vIdx + 1}`}
                                     </span>
                                   </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveVariantRow(vIdx)}
-                                    className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                                    title="Remove this variant"
-                                  >
-                                    <FiTrash2 size={13} />
-                                  </button>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateVariantField(vIdx, 'isActive', v.isActive === false)}
+                                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                                        v.isActive !== false
+                                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                          : 'bg-slate-200 dark:bg-white/10 text-slate-500'
+                                      }`}
+                                    >
+                                      {v.isActive !== false ? 'Active' : 'Inactive'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveVariantRow(vIdx)}
+                                      className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                                      title="Remove this variant"
+                                    >
+                                      <FiTrash2 size={13} />
+                                    </button>
+                                  </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-                                  <div className="lg:col-span-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                                  <div>
                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
-                                      Variant Name
+                                      Variant Name *
                                     </label>
                                     <input
                                       type="text"
                                       value={v.name || ''}
                                       onChange={(e) => handleUpdateVariantField(vIdx, 'name', e.target.value)}
-                                      placeholder="e.g. Midnight Matte Black"
-                                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                      placeholder="e.g. Midnight Black (128GB)"
+                                      className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
 
                                   <div>
                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
-                                      Variant SKU
+                                      Variant SKU *
                                     </label>
                                     <input
                                       type="text"
                                       value={v.sku || ''}
                                       onChange={(e) => handleUpdateVariantField(vIdx, 'sku', formatEntityCode(e.target.value))}
                                       placeholder="e.g. SONY-H9-BLK"
-                                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                      className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-semibold"
                                     />
                                   </div>
 
@@ -3804,13 +3807,13 @@ const Products = () => {
                                       value={v.price ?? ''}
                                       onChange={(e) => handleUpdateVariantField(vIdx, 'price', e.target.value)}
                                       placeholder="15499"
-                                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                      className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
 
                                   <div>
                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
-                                      Stock
+                                      Stock Count
                                     </label>
                                     <input
                                       type="number"
@@ -3818,173 +3821,73 @@ const Products = () => {
                                       value={v.stock ?? ''}
                                       onChange={(e) => handleUpdateVariantField(vIdx, 'stock', e.target.value)}
                                       placeholder="65"
-                                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                      className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-200/60 dark:border-white/5">
-                                  <div className="flex items-center gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-slate-100 dark:border-white/5">
+                                  <div className="flex items-center gap-1.5">
                                     <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
-                                      Color Attribute:
+                                      Color:
                                     </label>
                                     <input
                                       type="text"
                                       value={v.attributes?.color || ''}
                                       onChange={(e) => handleUpdateVariantAttribute(vIdx, 'color', e.target.value)}
-                                      placeholder="e.g. Black, White, Titanium"
-                                      className="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                      placeholder="e.g. Black"
+                                      className="flex-1 px-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
-                                  <div className="flex items-center justify-end gap-2">
-                                    <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                                      Active Variant:
+
+                                  <div className="flex items-center gap-1.5">
+                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                                      Wattage:
                                     </label>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleUpdateVariantField(vIdx, 'isActive', v.isActive === false)}
-                                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                                        v.isActive !== false
-                                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                          : 'bg-slate-200 dark:bg-white/10 text-slate-500'
-                                      }`}
-                                    >
-                                      {v.isActive !== false ? 'Active' : 'Inactive'}
-                                    </button>
+                                    <input
+                                      type="text"
+                                      value={v.attributes?.wattage || ''}
+                                      onChange={(e) => handleUpdateVariantAttribute(vIdx, 'wattage', e.target.value)}
+                                      placeholder="e.g. 65W"
+                                      className="flex-1 px-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5">
+                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                                      Edition:
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={v.attributes?.edition || ''}
+                                      onChange={(e) => handleUpdateVariantAttribute(vIdx, 'edition', e.target.value)}
+                                      placeholder="e.g. Wireless"
+                                      className="flex-1 px-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                    />
                                   </div>
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="p-3 text-center bg-slate-50/60 dark:bg-white/[0.02] rounded-xl border border-dashed border-slate-200 dark:border-white/10">
-                            <p className="text-[11px] text-slate-400">
-                              No variants added. Click "+ Add Variant" if this product comes in different colors or specifications.
+                          <div className="p-4 text-center bg-white dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-white/10">
+                            <p className="text-xs text-slate-400">
+                              No variants added. The item will use the base price. Click "+ Add Variant" to configure options.
                             </p>
                           </div>
                         )}
                       </div>
 
-                      {/* Product Distribution Locations (locations) */}
-                      <div className="space-y-3 pt-2 border-t border-slate-200/80 dark:border-white/10">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                              <FiMapPin className="text-blue-500" />
-                              <span>Product Distribution Locations</span>
-                              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                {(formData.locations || []).length} Selected
-                              </span>
-                            </label>
-                            <p className="text-[11px] text-slate-400">
-                              Distribution states and territories where this product is actively covered.
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <button
-                              type="button"
-                              onClick={handleSelectAllProductLocations}
-                              className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-                            >
-                              All 36 States
-                            </button>
-                            <span className="text-slate-300 dark:text-slate-600">|</span>
-                            <button
-                              type="button"
-                              onClick={handleClearProductLocations}
-                              className="text-[11px] font-semibold text-rose-500 hover:underline cursor-pointer"
-                            >
-                              Clear All
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Selected Locations Tags */}
-                        {Array.isArray(formData.locations) && formData.locations.length > 0 && (
-                          <div className="flex flex-wrap gap-1 p-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/5 max-h-24 overflow-y-auto">
-                            {formData.locations.map((loc, lIdx) => (
-                              <span
-                                key={lIdx}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-semibold border border-blue-500/20"
-                              >
-                                <span>{loc}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleProductLocation(loc)}
-                                  className="hover:text-rose-500 ml-0.5 cursor-pointer"
-                                >
-                                  <FiX size={10} />
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Quick Indian States Pills */}
-                        <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-black/20">
-                          {INDIAN_STATES.map((st) => {
-                            const isSelected = (formData.locations || []).includes(st);
-                            return (
-                              <button
-                                key={st}
-                                type="button"
-                                onClick={() => handleToggleProductLocation(st)}
-                                className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
-                                  isSelected
-                                    ? 'bg-blue-600 text-white border-blue-600 font-bold'
-                                    : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
-                                }`}
-                              >
-                                {isSelected ? '✓ ' : '+ '}{st}
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {/* Custom Location / State Entry */}
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={customLocationInput}
-                            onChange={(e) => setCustomLocationInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleAddCustomProductLocation(customLocationInput);
-                                setCustomLocationInput('');
-                              }
-                            }}
-                            placeholder="Type state/region or 'ALL' and press Enter..."
-                            className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleAddCustomProductLocation(customLocationInput);
-                              setCustomLocationInput('');
-                            }}
-                            disabled={!customLocationInput.trim()}
-                            className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
-                          >
-                            Add
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Company Territory Routing (companyMappings) */}
-                      <div className="space-y-3 pt-2 border-t border-slate-200/80 dark:border-white/10">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                              <FiBriefcase className="text-blue-500" />
-                              <span>Company Territory Routing</span>
-                              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                companyMappings
-                              </span>
-                            </label>
-                            <p className="text-[11px] text-slate-400">
-                              Auto-mapped from Brand Routing Matrix or customize manually per trading partner.
-                            </p>
+                      {/* Card 3: Company Territory Routing (companyMappings) */}
+                      <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                              <FiBriefcase className="text-xs" />
+                            </div>
+                            <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                              3. Territory Routing
+                            </h3>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <button
@@ -4034,9 +3937,9 @@ const Products = () => {
                             return (
                               <div
                                 key={mIdx}
-                                className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3"
+                                className="p-3.5 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-3 shadow-xs"
                               >
-                                {/* Header of mapping: Company dropdown + Delete */}
+                                {/* Header: Company dropdown + Delete */}
                                 <div className="flex items-center justify-between gap-2">
                                   <div className="flex items-center gap-2 flex-1">
                                     <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
@@ -4051,7 +3954,7 @@ const Products = () => {
                                           value: c._id,
                                           label: `${c.name} ${c.code ? `(${c.code})` : ''}`
                                         }))}
-                                        statusColor="!px-3 !py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+                                        statusColor="!px-3 !py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
                                       />
                                     </div>
                                   </div>
@@ -4068,13 +3971,13 @@ const Products = () => {
                                   )}
                                 </div>
 
-                                {/* Assigned States */}
+                                {/* Assigned States Toolbar */}
                                 <div>
-                                  <div className="flex items-center justify-between mb-1.5">
+                                  <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
                                     <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
                                       <FiMapPin className="text-[10px] text-blue-500" />
                                       <span>
-                                        Covered States ({isWildcard ? 'All / Wildcard' : mapping.states?.length || 0})
+                                        Assigned States ({isWildcard ? 'Pan-India' : mapping.states?.length || 0})
                                       </span>
                                     </span>
                                     <div className="flex items-center gap-2 text-[10px]">
@@ -4086,7 +3989,7 @@ const Products = () => {
                                             ? 'bg-purple-600 text-white font-bold'
                                             : 'text-purple-600 dark:text-purple-400 hover:underline'
                                         }`}
-                                        title="Assign pan-India / all territories wildcard (*)"
+                                        title="Assign pan-India wildcard (*)"
                                       >
                                         ★ Pan-India (*)
                                       </button>
@@ -4111,7 +4014,7 @@ const Products = () => {
 
                                   {/* Selected States Tags */}
                                   {mapping.states && mapping.states.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mb-2 p-1.5 bg-white dark:bg-slate-900/60 rounded-xl border border-slate-200/60 dark:border-white/5 max-h-24 overflow-y-auto">
+                                    <div className="flex flex-wrap gap-1 mb-2 p-1.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/60 dark:border-white/5 max-h-20 overflow-y-auto">
                                       {mapping.states.map((st, sIdx) =>
                                         st === '*' ? (
                                           <span
@@ -4147,7 +4050,7 @@ const Products = () => {
                                   )}
 
                                   {/* Quick Indian States Pills */}
-                                  <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-white/50 dark:bg-black/20 mb-2">
+                                  <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-black/20 mb-2">
                                     {INDIAN_STATES.map((st) => {
                                       const isSelected = mapping.states?.includes(st);
                                       return (
@@ -4183,8 +4086,8 @@ const Products = () => {
                                           setCustomMappingInputs((prev) => ({ ...prev, [mIdx]: '' }));
                                         }
                                       }}
-                                      placeholder="Type state/region, '*' for all, or 'ALL'..."
-                                      className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                      placeholder="Type custom region or '*' for all..."
+                                      className="flex-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                                     />
                                     <button
                                       type="button"
@@ -4205,7 +4108,7 @@ const Products = () => {
                           })}
 
                           {(!formData.companyMappings || formData.companyMappings.length === 0) && (
-                            <div className="p-4 text-center border border-dashed border-slate-300 dark:border-white/10 rounded-2xl">
+                            <div className="p-4 text-center border border-dashed border-slate-200 dark:border-white/10 rounded-xl">
                               <p className="text-xs text-slate-400 mb-2">No company routing mappings configured.</p>
                               <button
                                 type="button"
@@ -4219,54 +4122,163 @@ const Products = () => {
                         </div>
                       </div>
 
-                      {/* Description */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                          Product Description
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={formData.description}
-                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                          placeholder="e.g. Updated ultra-compact 65W GaN fast charger"
-                          className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden resize-none"
-                        />
-                      </div>
+                      {/* Card 4: Covered Locations & Catalog Status */}
+                      <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
+                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-white/5">
+                          <div className="w-6 h-6 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                            <FiMapPin className="text-xs" />
+                          </div>
+                          <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                            4. Distribution & Status
+                          </h3>
+                        </div>
 
-                      {/* Status Toggle */}
-                      <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10">
-                        <div>
-                          <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Catalog Active Status</div>
-                          <div className="text-[11px] text-slate-400">
-                            Active products appear in sales order booking screens.
+                        {/* Covered Locations Toolbar */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between flex-wrap gap-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                              Covered Distribution Territories ({(formData.locations || []).length})
+                            </label>
+                            <div className="flex items-center gap-2 text-xs">
+                              <button
+                                type="button"
+                                onClick={handleSelectAllProductLocations}
+                                className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                              >
+                                All 36 States
+                              </button>
+                              <span className="text-slate-300 dark:text-slate-600">|</span>
+                              <button
+                                type="button"
+                                onClick={handleClearProductLocations}
+                                className="text-[11px] font-semibold text-rose-500 hover:underline cursor-pointer"
+                              >
+                                Clear All
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Selected Locations Tags */}
+                          {Array.isArray(formData.locations) && formData.locations.length > 0 && (
+                            <div className="flex flex-wrap gap-1 p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-white/10 max-h-20 overflow-y-auto">
+                              {formData.locations.map((loc, lIdx) => (
+                                <span
+                                  key={lIdx}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-semibold border border-blue-500/20"
+                                >
+                                  <span>{loc}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleProductLocation(loc)}
+                                    className="hover:text-rose-500 ml-0.5 cursor-pointer"
+                                  >
+                                    <FiX size={10} />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Quick Indian States Pills */}
+                          <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-black/20">
+                            {INDIAN_STATES.map((st) => {
+                              const isSelected = (formData.locations || []).includes(st);
+                              return (
+                                <button
+                                  key={st}
+                                  type="button"
+                                  onClick={() => handleToggleProductLocation(st)}
+                                  className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-blue-600 text-white border-blue-600 font-bold'
+                                      : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
+                                  }`}
+                                >
+                                  {isSelected ? '✓ ' : '+ '}{st}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Custom Location Input */}
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={customLocationInput}
+                              onChange={(e) => setCustomLocationInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddCustomProductLocation(customLocationInput);
+                                  setCustomLocationInput('');
+                                }
+                              }}
+                              placeholder="Type custom region and press Enter..."
+                              className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleAddCustomProductLocation(customLocationInput);
+                                setCustomLocationInput('');
+                              }}
+                              disabled={!customLocationInput.trim()}
+                              className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
+                            >
+                              Add
+                            </button>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                          className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
-                            formData.isActive ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
-                          }`}
-                        >
-                          <div
-                            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                              formData.isActive ? 'translate-x-6' : 'translate-x-0'
-                            }`}
+
+                        {/* Description */}
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Product Description
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            placeholder="Detailed product specifications, warranty info, and features..."
+                            className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 resize-none leading-relaxed"
                           />
-                        </button>
+                        </div>
+
+                        {/* Status Toggle */}
+                        <div className="flex items-center justify-between p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-white/10">
+                          <div>
+                            <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Catalog Active Status</div>
+                            <div className="text-[11px] text-slate-400">
+                              Active products appear immediately across sales booking screens.
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+                            className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
+                              formData.isActive ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                            }`}
+                          >
+                            <div
+                              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                                formData.isActive ? 'translate-x-6' : 'translate-x-0'
+                              }`}
+                            />
+                          </button>
+                        </div>
                       </div>
                     </form>
                   )}
                 </div>
 
                 {/* Sticky Drawer Footer */}
-                <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
+                <div className="px-5 sm:px-6 py-4 border-t border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
                   {drawerTab === 'overview' && drawerProduct ? (
                     <>
                       <button
                         type="button"
                         onClick={handleCloseDrawer}
-                        className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
                       >
                         Close Drawer
                       </button>
@@ -4276,7 +4288,7 @@ const Products = () => {
                           setDrawerTab('edit');
                           populateProductForm(drawerProduct);
                         }}
-                        className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer"
                       >
                         <FiEdit2 className="text-xs" />
                         <span>Edit Product</span>
@@ -4303,7 +4315,7 @@ const Products = () => {
                         type="button"
                         onClick={handleSaveProduct}
                         disabled={submitting}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer disabled:opacity-50"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer disabled:opacity-50"
                       >
                         {submitting ? (
                           <>
@@ -4325,271 +4337,6 @@ const Products = () => {
           </div>,
           document.body
         )}
-
-      {/* ================= VARIANT MODAL (ADD / EDIT) ================= */}
-      {isVariantModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
-                  <FiLayers className="text-base" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    {editingVariant ? 'Edit Product Variant' : 'Add New Variant'}
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    {editingVariant ? `Update SKU ${editingVariant.sku}` : `Add variant for ${(drawerProduct || editingProduct)?.name || 'product'}`}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsVariantModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                <FiX size={16} />
-              </button>
-            </div>
-
-            {/* Modal Form */}
-            <form onSubmit={handleSaveVariantModal} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 custom-scrollbar">
-              {variantFormError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
-                  <FiAlertCircle className="shrink-0 text-sm" />
-                  <span>{variantFormError}</span>
-                </div>
-              )}
-
-              {/* Variant Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Variant Name *
-                </label>
-                <input
-                  type="text"
-                  value={variantFormData.name}
-                  onChange={(e) => setVariantFormData({ ...variantFormData, name: e.target.value })}
-                  placeholder="e.g. Midnight Black (128GB)"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
-                  required
-                />
-              </div>
-
-              {/* SKU & Price */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Variant SKU *
-                  </label>
-                  <input
-                    type="text"
-                    value={variantFormData.sku}
-                    onChange={(e) => setVariantFormData({ ...variantFormData, sku: formatEntityCode(e.target.value) })}
-                    placeholder="e.g. SONY-INZONE-H9-BLK"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Price (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={variantFormData.price}
-                    onChange={(e) => setVariantFormData({ ...variantFormData, price: e.target.value })}
-                    placeholder="e.g. 12999"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Stock */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Available Stock Quantity
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={variantFormData.stock}
-                  onChange={(e) => setVariantFormData({ ...variantFormData, stock: e.target.value })}
-                  placeholder="e.g. 50"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/40"
-                />
-              </div>
-
-              {/* Attributes (color, edition) */}
-              <div className="p-3 bg-slate-50 dark:bg-white/[0.03] rounded-xl border border-slate-200/80 dark:border-white/10 space-y-2.5">
-                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Variant Attributes
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-0.5">
-                      Color
-                    </label>
-                    <input
-                      type="text"
-                      value={variantFormData.attributes?.color || ''}
-                      onChange={(e) => setVariantFormData({
-                        ...variantFormData,
-                        attributes: { ...variantFormData.attributes, color: e.target.value }
-                      })}
-                      placeholder="e.g. Black, White"
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-0.5">
-                      Wattage / Specs
-                    </label>
-                    <input
-                      type="text"
-                      value={variantFormData.attributes?.wattage || ''}
-                      onChange={(e) => setVariantFormData({
-                        ...variantFormData,
-                        attributes: { ...variantFormData.attributes, wattage: e.target.value }
-                      })}
-                      placeholder="e.g. 65W, 100W"
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-0.5">
-                      Edition / Version
-                    </label>
-                    <input
-                      type="text"
-                      value={variantFormData.attributes?.edition || ''}
-                      onChange={(e) => setVariantFormData({
-                        ...variantFormData,
-                        attributes: { ...variantFormData.attributes, edition: e.target.value }
-                      })}
-                      placeholder="e.g. Wireless, GaN Pro"
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Active Status */}
-              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
-                <div>
-                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Active Variant</div>
-                  <div className="text-[11px] text-slate-400">Available for order placements</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setVariantFormData({ ...variantFormData, isActive: !variantFormData.isActive })}
-                  className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
-                    variantFormData.isActive ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
-                  }`}
-                >
-                  <div
-                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                      variantFormData.isActive ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Modal Buttons */}
-              <div className="pt-2 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsVariantModalOpen(false)}
-                  disabled={variantSubmitting}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={variantSubmitting}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer disabled:opacity-50"
-                >
-                  {variantSubmitting ? (
-                    <>
-                      <FiLoader className="animate-spin text-xs" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <FiSave className="text-xs" />
-                      <span>{editingVariant ? 'Update Variant' : 'Create Variant'}</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ================= DELETE VARIANT CONFIRM MODAL ================= */}
-      {deleteConfirmVariant && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full border border-slate-200 dark:border-white/10 shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0 border border-rose-500/20">
-                <FiTrash2 className="text-lg" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Delete Variant?</h3>
-                <p className="text-xs text-slate-400 mt-0.5">This will permanently remove this variant.</p>
-              </div>
-            </div>
-
-            <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10 text-xs space-y-1">
-              <div className="font-bold text-slate-800 dark:text-slate-200">
-                {deleteConfirmVariant.name || 'Unnamed Variant'}
-              </div>
-              <div className="font-mono text-slate-500">
-                SKU: {deleteConfirmVariant.sku}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setDeleteConfirmVariant(null)}
-                disabled={deletingVariant}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteVariantConfirm}
-                disabled={deletingVariant}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-rose-600/25 cursor-pointer disabled:opacity-50"
-              >
-                {deletingVariant ? (
-                  <>
-                    <FiLoader className="animate-spin text-xs" />
-                    <span>Deleting...</span>
-                  </>
-                ) : (
-                  <>
-                    <FiTrash2 className="text-xs" />
-                    <span>Delete Variant</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ================= DELETE CONFIRM MODAL ================= */}
       {deleteConfirmProduct && (
@@ -4633,7 +4380,15 @@ const Products = () => {
         categories={categories}
         brandMatrix={brandMatrix}
         existingProducts={products}
-        onImportComplete={handleImportComplete}
+        initialMode={importModalMode}
+        onImportComplete={(count) => {
+          fetchData(true);
+          if (importModalMode === 'variants') {
+            showToast(`Successfully added ${count} variant${count !== 1 ? 's' : ''} to catalog products!`);
+          } else {
+            showToast(`Successfully imported ${count} product${count !== 1 ? 's' : ''} into catalog!`);
+          }
+        }}
       />
 
       {/* Floating Bulk Action Bar */}
