@@ -1923,8 +1923,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 5. B2B Enterprise Hierarchy Tree */}
-      <div className="bg-white/40 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col justify-between">
+      {/* 5. B2B Enterprise Hierarchy Tree (Hidden on small screens) */}
+      <div className="hidden lg:flex bg-white/40 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex-col justify-between">
         <div className="absolute -top-12 -right-12 w-64 h-64 bg-cyan-500/10 dark:bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div>
