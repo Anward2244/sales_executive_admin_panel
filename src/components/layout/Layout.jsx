@@ -935,7 +935,7 @@ const Layout = () => {
                     View All Notifications &rarr;
                   </Link>
                   <Link
-                    to="/settings/notifications"
+                    to="/settings"
                     onClick={() => setIsNotificationsDropdownOpen(false)}
                     className="text-slate-400 hover:text-slate-600 dark:hover:text-white"
                   >
@@ -1448,7 +1448,7 @@ const Layout = () => {
                         </div>
                       </div>
                       <Link
-                        to="/settings/notifications"
+                        to="/settings"
                         onClick={() => setIsNotificationsDropdownOpen(false)}
                         className="px-2.5 py-1 text-[10px] font-bold bg-rose-500/20 hover:bg-rose-500/30 text-rose-600 border border-rose-500/30 rounded-xl transition-all cursor-pointer shrink-0"
                       >
@@ -1538,7 +1538,7 @@ const Layout = () => {
                       View All Notifications &rarr;
                     </Link>
                     <Link
-                      to="/settings/notifications"
+                      to="/settings"
                       onClick={() => setIsNotificationsDropdownOpen(false)}
                       className="text-slate-400 hover:text-slate-600 dark:hover:text-white font-medium flex items-center gap-1 hover:underline transition-colors"
                     >

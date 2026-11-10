@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-export const BASE_URL = import.meta.env.DEV ? '' : 'http://213.210.36.19:5001';
+export const BASE_URL = import.meta.env.DEV
+  ? ''
+  : (import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || 'http://213.210.36.19:5001');
 // export const BASE_URL_DEV = 'http://192.168.1.4:5046';
 
 
@@ -142,7 +144,7 @@ const fetchAllPages = async (primaryEndpoint, fallbackEndpoint, params = {}) => 
   const meta = resData?.meta;
 
   // If backend returned paginated meta with multiple pages and caller did not restrict to a specific page
-  if (meta && meta.totalPages > 1 && (!params.page || params.page === 1)) {
+  if (meta && meta.totalPages > 1 && params.page === undefined) {
     try {
       const pagePromises = [];
       for (let p = 2; p <= meta.totalPages; p++) {

@@ -2426,7 +2426,7 @@ const BrandRoutings = () => {
               {/* Header */}
               <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 text-lg">
+                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 text-lg shadow-md">
                     <FiUploadCloud />
                   </div>
                   <div>

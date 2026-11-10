@@ -1204,14 +1204,7 @@ const Dashboard = () => {
                 {card.delta && (
                   <span
                     title={card.deltaTooltip || card.delta}
-                    className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider transition-colors ${card.deltaType === 'up'
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                        : card.deltaType === 'down'
-                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-                        : card.deltaType === 'warning'
-                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                        : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-white/10'
-                      }`}
+                    className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider transition-colors ${card.kpiClass}`}
                   >
                     {card.delta}
                   </span>

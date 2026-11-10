@@ -2456,26 +2456,6 @@ const Products = () => {
               )}
               <FiChevronDown className={`text-[10px] transition-transform duration-200 ${isFiltersVisible ? 'rotate-180' : ''}`} />
             </button>
-
-            {/* Reset Filters */}
-            {(searchQuery || selectedCompanyFilter !== 'ALL' || selectedCategoryFilter !== 'ALL' || selectedLocationFilter !== 'ALL' || selectedBrandFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || sortBy !== 'newest') && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedCompanyFilter('ALL');
-                  setSelectedCategoryFilter('ALL');
-                  setSelectedLocationFilter('ALL');
-                  setSelectedBrandFilter('ALL');
-                  setSelectedStatusFilter('ALL');
-                  setSortBy('newest');
-                }}
-                className="px-2.5 py-1 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg transition-all cursor-pointer border border-rose-200/60 dark:border-rose-900/40 shrink-0"
-                title="Reset all filters"
-              >
-                Reset
-              </button>
-            )}
           </div>
         </div>
 

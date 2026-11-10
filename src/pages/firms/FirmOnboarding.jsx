@@ -912,21 +912,6 @@ const FirmOnboarding = () => {
               </button>
             )}
           </div>
-
-          {/* Reset Filters button */}
-          {(searchTerm || selectedCompany || (selectedStatus && selectedStatus !== 'ALL')) && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchInput('');
-                setSearchParams({});
-              }}
-              className="px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0"
-              title="Reset all filters"
-            >
-              Reset
-            </button>
-          )}
         </div>
       </div>
 
