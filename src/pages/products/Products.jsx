@@ -3133,13 +3133,13 @@ const Products = () => {
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {/* Price Card */}
                         <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/80 dark:border-white/10">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                          <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 truncate">
                             Pricing
                           </p>
                           <p className="text-sm sm:text-base font-mono font-bold text-emerald-600 dark:text-emerald-400 truncate">
                             {getProductPriceInfo(drawerProduct).formatted}
                           </p>
-                          <p className="text-[10px] text-slate-400 mt-1 truncate">
+                          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
                             {Array.isArray(drawerProduct.variants) && drawerProduct.variants.length > 0
                               ? `${drawerProduct.variants.length} variant${drawerProduct.variants.length > 1 ? 's' : ''}`
                               : 'Base catalog price'}
@@ -3148,13 +3148,13 @@ const Products = () => {
 
                         {/* Stock Card */}
                         <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/80 dark:border-white/10">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                          <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 truncate">
                             Total Inventory
                           </p>
                           <p className="text-sm sm:text-base font-mono font-bold text-slate-900 dark:text-white truncate">
                             {getProductStockInfo(drawerProduct).totalStock} <span className="text-xs font-normal text-slate-500">units</span>
                           </p>
-                          <p className="text-[10px] mt-1">
+                          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-1">
                             <span
                               className={`inline-flex items-center px-1.5 py-0.2 rounded font-semibold ${
                                 getProductStockInfo(drawerProduct).inStock
@@ -3169,20 +3169,20 @@ const Products = () => {
 
                         {/* Brand Card */}
                         <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/80 dark:border-white/10">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                          <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 truncate">
                             Brand
                           </p>
                           <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
                             {drawerProduct.brand || 'N/A'}
                           </p>
-                          <p className="text-[10px] text-slate-400 mt-1 truncate">
+                          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
                             Unit: <strong className="text-slate-700 dark:text-slate-300 font-mono">{drawerProduct.unit || 'PCS'}</strong>
                           </p>
                         </div>
 
                         {/* Category Card */}
                         <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/80 dark:border-white/10">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                          <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 truncate">
                             Category
                           </p>
                           {(() => {
@@ -3192,7 +3192,7 @@ const Products = () => {
                                 <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate" title={cat.name}>
                                   {cat.name}
                                 </p>
-                                <p className="text-[10px] text-slate-400 mt-1 truncate">
+                                <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
                                   {cat.code ? (
                                     <span className="px-1.5 py-0.2 rounded font-mono font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400">
                                       {cat.code}

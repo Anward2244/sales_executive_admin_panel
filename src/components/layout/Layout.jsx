@@ -1064,7 +1064,7 @@ const Layout = () => {
       {/* MOBILE OVERLAY */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 dark:bg-black/60 backdrop-blur-lg z-40 lg:hidden transition-opacity"
+          className="fixed inset-0 dark:bg-slate-900/50 backdrop-blur-xs z-40 lg:hidden transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -1073,13 +1073,13 @@ const Layout = () => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className={`
-          fixed inset-y-0 left-0 z-50 flex flex-col
+          fixed inset-y-0 right-0 lg:right-auto lg:left-0 z-50 flex flex-col
           transform transition-all duration-300 ease-in-out lg:translate-x-0 overflow-hidden
           ${isDark 
-            ? 'bg-slate-950/50 border-r border-white/10 shadow-2xl shadow-black/80 backdrop-blur-2xl' 
-            : 'bg-white/60 border-r border-slate-200/80 shadow-2xl shadow-slate-900/15 backdrop-blur-lg'
+            ? 'bg-slate-950/95 lg:bg-slate-950/50 border-l lg:border-l-0 lg:border-r border-white/10 shadow-2xl shadow-black/80 backdrop-blur-2xl' 
+            : 'bg-white/40 lg:bg-white/40 border-l lg:border-l-0 lg:border-r border-slate-200/80 shadow-2xl shadow-slate-900/15 backdrop-blur-xl lg:backdrop-blur-lg'
           }
-          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
           ${isExpanded ? 'w-72 sm:w-80' : 'lg:w-20 w-72 sm:w-80'}
         `}
       >
@@ -1098,24 +1098,38 @@ const Layout = () => {
           )
         )}
 
-        <div className={`h-16 flex items-center justify-center border-b bg-transparent shrink-0 relative overflow-hidden ${
+        <div className={`h-16 flex items-center justify-between px-4 lg:justify-center border-b bg-transparent shrink-0 relative overflow-hidden ${
           isDark ? 'border-white/10' : 'border-slate-200/80'
         }`}>
-          {/* Full Logo (Expanded) */}
-          <div className={`absolute transition-all duration-300 ease-in-out flex items-center justify-center ${isExpanded ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
-            }`}>
-            <Link to="/" data-nav-menu="true"><img src={isDark ? whatnotLogoDark : whatnotLogoLight} alt="Whatnot Sales Logo" className="h-13 w-auto object-contain" /></Link>
+          {/* Full Logo (Expanded on Desktop / Standard on Mobile) */}
+          <div className={`transition-all duration-300 ease-in-out flex items-center ${
+            isExpanded ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none lg:absolute'
+          }`}>
+            <Link to="/" data-nav-menu="true">
+              <img 
+                src={isDark ? whatnotLogoDark : whatnotLogoLight} 
+                alt="Whatnot Sales Logo" 
+                className="h-8 sm:h-9 lg:h-13 w-auto object-contain" 
+              />
+            </Link>
           </div>
 
-          {/* Collapsed App Icon */}
-          <div className={`absolute transition-all duration-300 ease-in-out flex items-center justify-center ${isExpanded ? 'opacity-0 scale-75 pointer-events-none' : 'opacity-100 scale-100'
-            }`}>
-            <Link to="/" data-nav-menu="true"><img src={isDark ? whatnotIconDark : whatnotIconLight} alt="Whatnot Sales Icon" className="h-11 w-11 object-contain" /></Link>
+          {/* Collapsed App Icon (Desktop only when collapsed) */}
+          <div className={`hidden lg:flex absolute transition-all duration-300 ease-in-out items-center justify-center ${
+            isExpanded ? 'opacity-0 scale-75 pointer-events-none' : 'opacity-100 scale-100'
+          }`}>
+            <Link to="/" data-nav-menu="true">
+              <img 
+                src={isDark ? whatnotIconDark : whatnotIconLight} 
+                alt="Whatnot Sales Icon" 
+                className="h-11 w-11 object-contain" 
+              />
+            </Link>
           </div>
 
           {/* Mobile Close Button */}
           <button
-            className={`lg:hidden absolute right-4 p-1.5 rounded-xl transition-all cursor-pointer z-10 ${
+            className={`lg:hidden p-1.5 rounded-xl transition-all cursor-pointer z-10 ${
               isDark 
                 ? 'text-slate-400 hover:text-white bg-white/5 border border-white/10 hover:bg-white/15'
                 : 'text-slate-600 hover:text-slate-900 bg-slate-100 border border-slate-200 hover:bg-slate-200'

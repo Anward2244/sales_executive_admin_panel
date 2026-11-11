@@ -1130,7 +1130,6 @@ const Dashboard = () => {
         actions={
           <div className="flex items-center gap-2.5">
             <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/10 shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
               <div className="flex flex-col text-left leading-tight">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                   {formatDateDDMMYYYY(new Date())}
@@ -1212,13 +1211,13 @@ const Dashboard = () => {
               </div>
 
               <div>
-                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate" title={card.title}>
+                <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate" title={card.title}>
                   {card.title}
                 </p>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
+                <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
                   {loading ? <SkeletonPulse className="h-7 w-28 my-1 inline-block" /> : card.value}
                 </p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
                   {card.subtitle}
                 </p>
               </div>
@@ -1300,7 +1299,7 @@ const Dashboard = () => {
                 </div> */}
 
                 {/* Range Filter */}
-                <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 shadow-md border border-slate-200/60 dark:border-white/10 text-xs font-semibold">
+                <div className="inline-flex p-1 rounded-xl kpi-icon-emerald">
                   {[
                     { id: '1w', label: '1W' },
                     { id: '1m', label: '1M' },
@@ -1313,7 +1312,7 @@ const Dashboard = () => {
                       onClick={() => setTrendRange(rng.id)}
                       className={`px-3 py-1 rounded-lg transition-all uppercase text-[11px] font-bold cursor-pointer ${trendRange === rng.id
                           ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                          : 'text-slate-700 hover:text-slate-900 dark:hover:text-white'
                         }`}
                     >
                       {rng.label}
@@ -1358,7 +1357,7 @@ const Dashboard = () => {
                 <VisxTrendChart
                   data={processedTrendData}
                   visibleSeries={visibleSeries}
-                  height={320}
+                  height={380}
                   isDark={isDark}
                 />
               )}
@@ -1368,26 +1367,26 @@ const Dashboard = () => {
           {/* Comprehensive 4-Metric Quick Stat Highlights Footer */}
           <div className="pt-4 mt-2 border-t border-slate-200/80 dark:border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center sm:text-left">
             <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Period Revenue</span>
-              <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">Period Revenue</span>
+              <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">
                 ₹{trendSummary.totalRev.toLocaleString('en-IN')}
               </span>
             </div>
             <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Total Orders</span>
-              <span className="text-sm sm:text-base font-extrabold text-blue-600 dark:text-blue-400 font-mono">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">Total Orders</span>
+              <span className="text-sm sm:text-base font-black text-blue-600 dark:text-blue-400 font-mono">
                 {trendSummary.totalOrd} Orders
               </span>
             </div>
             <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Avg Order Value</span>
-              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">Avg Order Value</span>
+              <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono">
                 ₹{trendSummary.avgOrderValue.toLocaleString('en-IN')}
               </span>
             </div>
             <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Peak Day Revenue</span>
-              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">Peak Day Revenue</span>
+              <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono">
                 ₹{trendSummary.peakRev.toLocaleString('en-IN')}
               </span>
             </div>
@@ -1414,7 +1413,7 @@ const Dashboard = () => {
                   </p>
                 </div>
               </div>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/10">
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full kpi-icon-amber">
                 4 Stages
               </span>
             </div>
@@ -1532,7 +1531,7 @@ const Dashboard = () => {
                 <p className="text-xs text-slate-500 dark:text-slate-400">Order share & revenue per partner organization</p>
               </div>
             </div>
-            <span className="px-3 py-1.5 rounded-full text-xs text-center font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+            <span className="px-3 py-1.5 rounded-full text-xs text-center font-bold kpi-icon-blue">
               {companyBreakdown.length} {companyBreakdown.length === 1 ? 'Company' : 'Companies'}
             </span>
           </div>
@@ -1608,7 +1607,7 @@ const Dashboard = () => {
                 <p className="text-xs text-slate-500 dark:text-slate-400">Representative rankings by fulfilled order sales</p>
               </div>
             </div>
-            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold kpi-icon-amber">
               {topSalesExecutives.length} {topSalesExecutives.length === 1 ? 'Leader' : 'Leaders'}
             </span>
           </div>

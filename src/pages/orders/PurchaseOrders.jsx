@@ -1157,71 +1157,71 @@ const PurchaseOrders = () => {
         {/* Total POs */}
         <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Total POs</p>
+            <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">Total POs</p>
             <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl kpi-icon-blue flex items-center justify-center text-base shrink-0">
               <FiShoppingCart />
             </span>
           </div>
-          <p className="text-xl font-black text-blue-600 mt-1 font-mono">
+          <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
             {stats.total}
           </p>
-          <p className="text-[10px] text-slate-400 mt-0.5">All recorded procurement</p>
+          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">All recorded procurement</p>
         </div>
 
         {/* Pending Review */}
-        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-amber-500/20 dark:border-amber-500/20 shadow-md">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider">Pending</p>
+            <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">Pending</p>
             <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl kpi-icon-amber flex items-center justify-center text-base shrink-0">
               <FiClock />
             </span>
           </div>
-          <p className="text-xl font-black text-amber-600 dark:text-amber-400 mt-1 font-mono">
+          <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
             {stats.pending}
           </p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Awaiting manager approval</p>
+          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Awaiting manager approval</p>
         </div>
 
         {/* Approved */}
-        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-blue-500/20 dark:border-blue-500/20 shadow-md">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Approved</p>
+            <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">Approved</p>
             <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl kpi-icon-blue flex items-center justify-center text-base shrink-0">
               <FiCheckCircle />
             </span>
           </div>
-          <p className="text-xl font-black text-blue-600 dark:text-blue-400 mt-1 font-mono">
+          <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
             {stats.approved}
           </p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Ready for dispatch</p>
+          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Ready for dispatch</p>
         </div>
 
         {/* Dispatched */}
-        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-emerald-500/20 dark:border-emerald-500/20 shadow-md">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Dispatched</p>
+            <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">Dispatched</p>
             <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl kpi-icon-emerald flex items-center justify-center text-base shrink-0">
               <FiTruck />
             </span>
           </div>
-          <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
+          <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
             {stats.dispatched}
           </p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Shipped & in transit</p>
+          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Shipped &amp; in transit</p>
         </div>
 
         {/* Total PO Value */}
         <div className="col-span-2 sm:col-span-1 lg:col-span-1 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Total Value</p>
+            <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">Total Value</p>
             <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl kpi-icon-emerald flex items-center justify-center text-base shrink-0">
               <FiActivity />
             </span>
           </div>
-          <p className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 font-mono truncate">
+          <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
             ₹{stats.totalValue.toLocaleString('en-IN')}
           </p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Total procurement</p>
+          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Total procurement</p>
         </div>
       </div>
 

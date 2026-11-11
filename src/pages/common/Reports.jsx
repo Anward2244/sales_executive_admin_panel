@@ -1037,23 +1037,23 @@ const Reports = () => {
         <div className="bg-white/60 dark:bg-slate-900/60 p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Total Orders
             </span>
             <div className="p-2.5 rounded-xl kpi-icon-blue">
               <FiShoppingBag className="text-lg" />
             </div>
           </div>
-          <div className="mt-3">
+          <div>
             {loading ? (
-              <Skeleton className="h-9 w-20 rounded-lg" />
+              <Skeleton className="h-7 w-24 rounded-lg my-1" />
             ) : (
-              <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight font-mono">
                 {summary.totalOrders || 0}
               </div>
             )}
-            <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-              <FiTrendingUp className="text-xs" />
+            <div className="mt-1 flex items-center gap-1.5 kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500">
+              <FiTrendingUp className="text-xs text-emerald-500 shrink-0" />
               <span>Active purchase requests</span>
             </div>
           </div>
@@ -1063,22 +1063,22 @@ const Reports = () => {
         <div className="bg-white/60 dark:bg-slate-900/60 p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Gross Revenue
             </span>
             <div className="p-2.5 rounded-xl kpi-icon-emerald">
               <FiDollarSign className="text-lg" />
             </div>
           </div>
-          <div className="mt-3">
+          <div>
             {loading ? (
-              <Skeleton className="h-9 w-32 rounded-lg" />
+              <Skeleton className="h-7 w-32 rounded-lg my-1" />
             ) : (
-              <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight font-mono">
                 {formatCurrency(summary.totalRevenue || 0)}
               </div>
             )}
-            <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <div className="mt-1 flex items-center gap-1.5 kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500">
               <span>Cumulative invoice value</span>
             </div>
           </div>
@@ -1088,22 +1088,22 @@ const Reports = () => {
         <div className="bg-white/60 dark:bg-slate-900/60 p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Avg. Order Value
             </span>
             <div className="p-2.5 rounded-xl kpi-icon-purple">
               <FiBarChart2 className="text-lg" />
             </div>
           </div>
-          <div className="mt-3">
+          <div>
             {loading ? (
-              <Skeleton className="h-9 w-28 rounded-lg" />
+              <Skeleton className="h-7 w-28 rounded-lg my-1" />
             ) : (
-              <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight font-mono">
                 {formatCurrency(summary.avgOrderValue || 0)}
               </div>
             )}
-            <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <div className="mt-1 flex items-center gap-1.5 kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500">
               <span>Revenue per purchase order</span>
             </div>
           </div>
@@ -1113,22 +1113,22 @@ const Reports = () => {
         <div className="bg-white/60 dark:bg-slate-900/60 p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Units Dispatched/Sold
             </span>
             <div className="p-2.5 rounded-xl kpi-icon-amber">
               <FiBox className="text-lg" />
             </div>
           </div>
-          <div className="mt-3">
+          <div>
             {loading ? (
-              <Skeleton className="h-9 w-24 rounded-lg" />
+              <Skeleton className="h-7 w-24 rounded-lg my-1" />
             ) : (
-              <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight font-mono">
                 {totalUnitsSold.toLocaleString('en-IN')}
               </div>
             )}
-            <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <div className="mt-1 flex items-center gap-1.5 kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500">
               <span>Across {productPerformance.length} catalog items</span>
             </div>
           </div>

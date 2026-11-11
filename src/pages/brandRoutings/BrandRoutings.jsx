@@ -1025,14 +1025,14 @@ const BrandRoutings = () => {
           className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-left transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-0.5 hover:border-blue-500/30 flex items-center justify-between group"
           title="Click to reset all filters and view all brands"
         >
-          <div className="space-y-0.5">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
+          <div className="space-y-0.5 min-w-0 pr-2">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider truncate">
               Brand Keys
             </span>
-            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">
+            <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
               {matrixData.length}
             </div>
-            <span className="text-[11px] text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            <span className="kpi-card-subtitle text-[11px] text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mt-0.5 block truncate">
               Reset filters &amp; show all
             </span>
           </div>
@@ -1048,14 +1048,14 @@ const BrandRoutings = () => {
           className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-left transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-0.5 hover:border-purple-500/30 flex items-center justify-between group"
           title="Click to toggle between Grouped Cards and Flat Table view"
         >
-          <div className="space-y-0.5">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
+          <div className="space-y-0.5 min-w-0 pr-2">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider truncate">
               Active Rules
             </span>
-            <div className="text-2xl font-black text-purple-600 dark:text-purple-400 tracking-tight tabular-nums">
+            <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
               {allRulesFlat.length}
             </div>
-            <span className="text-[11px] text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors flex items-center gap-1">
+            <span className="kpi-card-subtitle text-[11px] text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors mt-0.5 flex items-center gap-1 truncate">
               <span>View:</span>
               <span className="font-semibold underline">
                 {viewMode === 'table' ? 'Table View' : 'Grouped View'}
@@ -1078,13 +1078,13 @@ const BrandRoutings = () => {
           title="Click to isolate the 'ALL' Global Default fallback policy"
         >
           <div className="space-y-0.5 min-w-0 pr-2">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider truncate">
               Global Fallback
             </span>
-            <div className="text-base font-black text-emerald-600 dark:text-emerald-400 truncate tracking-tight" title={globalFallbackCompany}>
+            <div className="kpi-card-value text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1 truncate tracking-tight font-mono" title={globalFallbackCompany}>
               {globalFallbackCompany}
             </div>
-            <span className="text-[11px] text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate block">
+            <span className="kpi-card-subtitle text-[11px] text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors mt-0.5 truncate block">
               {searchBrand.toUpperCase() === 'ALL' ? 'Filtered to ALL (click to clear)' : 'Click to inspect ALL route'}
             </span>
           </div>
@@ -1095,14 +1095,14 @@ const BrandRoutings = () => {
 
         {/* Metric 4: Billing Companies */}
         <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-xs flex items-center justify-between">
-          <div className="space-y-0.5">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
+          <div className="space-y-0.5 min-w-0 pr-2">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider truncate">
               Billing Companies
             </span>
-            <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">
+            <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
               {companies.length}
             </div>
-            <span className="text-[11px] text-slate-400">
+            <span className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 block truncate">
               Allocated partner entities
             </span>
           </div>

@@ -791,69 +791,69 @@ const FirmOnboarding = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         <div className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-blue-500/30 hover:border-blue-500/60 transition-all group">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Total Requests</span>
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">Total Requests</span>
             <div className="w-10 h-10 rounded-xl kpi-icon-blue flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <FiLayers size={18} />
             </div>
           </div>
-          <p className="text-2xl font-bold mt-2 text-blue-600 dark:text-blue-400 tabular-nums">{stats.total}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">All customer submissions</p>
+          <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">{stats.total}</p>
+          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">All customer submissions</p>
         </div>
 
         <div
           className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-amber-500/30 shadow-xs hover:border-amber-500/60 transition-all group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              Pending Review
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              <span>Pending Review</span>
             </span>
             <div className="w-10 h-10 rounded-xl kpi-icon-amber flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <FiClock size={18} />
             </div>
           </div>
-          <p className="text-2xl font-bold mt-2 text-amber-600 dark:text-amber-400 tabular-nums">{stats.pending}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Requires admin / sales approval</p>
+          <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">{stats.pending}</p>
+          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Requires admin / sales approval</p>
         </div>
 
         <div
           className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-emerald-500/30 shadow-xs hover:border-emerald-500/60 transition-all group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Approved Firms</span>
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">Approved Firms</span>
             <div className="w-10 h-10 rounded-xl kpi-icon-emerald flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <FiUserCheck size={18} />
             </div>
           </div>
-          <p className="text-2xl font-bold mt-2 text-emerald-600 dark:text-emerald-400 tabular-nums">{stats.approved}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Ready for order placement</p>
+          <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">{stats.approved}</p>
+          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Ready for order placement</p>
         </div>
 
         <div
           className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-rose-500/30 shadow-xs hover:border-rose-500/60 transition-all group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">Rejected Requests</span>
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">Rejected Requests</span>
             <div className="w-10 h-10 rounded-xl kpi-icon-rose flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <FiUserX size={18} />
             </div>
           </div>
-          <p className="text-2xl font-bold mt-2 text-rose-600 dark:text-rose-400 tabular-nums">{stats.rejected}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Declined or duplicate</p>
+          <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">{stats.rejected}</p>
+          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Declined or duplicate</p>
         </div>
 
         <div
           className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-indigo-500/30 shadow-xs hover:border-indigo-500/60 transition-all group">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Credit Demand</span>
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">Credit Demand</span>
             <div className="w-10 h-10 rounded-xl kpi-icon-indigo flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <FiDollarSign size={18} />
             </div>
           </div>
-          <p className="text-xl font-bold mt-2 text-indigo-600 dark:text-indigo-400 tabular-nums truncate">
+          <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
             ₹{stats.totalCredit.toLocaleString('en-IN')}
           </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Total requested credit</p>
+          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Total requested credit</p>
         </div>
       </div>
 
