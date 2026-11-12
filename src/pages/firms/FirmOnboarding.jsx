@@ -1903,7 +1903,7 @@ const FirmOnboarding = () => {
           <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in overflow-y-auto">
             <div className="relative w-full max-w-2xl bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in zoom-in-95">
               {/* Header */}
-              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/40 to-indigo-600/40">
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
                     <FiPlus size={20} />
@@ -1912,14 +1912,14 @@ const FirmOnboarding = () => {
                     <h3 className="text-base sm:text-lg font-bold text-white">
                       New Customer Onboarding Request
                     </h3>
-                    <p className="text-[11px] font-mono text-slate-950 dark:text-slate-300 mt-0.5">
+                    <p className="text-[11px] font-mono text-blue-100 dark:text-blue-200 mt-0.5">
                       POST /firms/onboard
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => !onboardSubmitting && setIsOnboardModalOpen(false)}
-                  className="p-2 text-white hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                  className="p-2 text-white/80 hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <FiX size={18} />
                 </button>
@@ -2222,8 +2222,8 @@ const FirmOnboarding = () => {
               <div
                 className={`p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 ${
                   reviewModalState.action === 'APPROVED'
-                    ? 'bg-gradient-to-r from-emerald-600/40 to-teal-600/40'
-                    : 'bg-gradient-to-r from-rose-600/40 to-red-600/40'
+                    ? 'bg-gradient-to-r from-emerald-600/60 via-teal-600/50 to-cyan-600/50'
+                    : 'bg-gradient-to-r from-rose-600/60 via-red-600/50 to-rose-700/50'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -2246,7 +2246,11 @@ const FirmOnboarding = () => {
                         ? 'Approve Onboarding Request'
                         : 'Reject Onboarding Request'}
                     </h3>
-                    <p className="text-[11px] text-slate-950 dark:text-slate-300 mt-0.5 font-mono">
+                    <p className={`text-[11px] mt-0.5 font-mono ${
+                      reviewModalState.action === 'APPROVED'
+                        ? 'text-emerald-100 dark:text-emerald-200'
+                        : 'text-rose-100 dark:text-rose-200'
+                    }`}>
                       PATCH /firms/{reviewModalState.item._id}/review
                     </p>
                   </div>
@@ -2257,7 +2261,7 @@ const FirmOnboarding = () => {
                     !reviewModalState.submitting &&
                     setReviewModalState((prev) => ({ ...prev, isOpen: false }))
                   }
-                  className="p-2 text-white hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                  className="p-2 text-white/80 hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <FiX size={18} />
                 </button>
@@ -2408,16 +2412,16 @@ const FirmOnboarding = () => {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/80 dark:bg-slate-950/80">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base shrink-0">
-                    <FiFileText />
+              <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                    <FiFileText size={18} />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    <h4 className="text-sm sm:text-base font-bold text-white truncate">
                       {docPreviewModal.title || 'Document Preview'}
                     </h4>
-                    <p className="text-[11px] font-mono text-slate-400 truncate max-w-sm sm:max-w-md">
+                    <p className="text-[11px] font-mono text-blue-100 dark:text-blue-200 truncate max-w-sm sm:max-w-md mt-0.5">
                       {docPreviewModal.url}
                     </p>
                   </div>
@@ -2427,7 +2431,7 @@ const FirmOnboarding = () => {
                     href={docPreviewModal.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-xs font-bold transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold transition-all"
                   >
                     <FiExternalLink size={13} />
                     <span className="hidden sm:inline">Open in New Tab</span>
@@ -2436,7 +2440,7 @@ const FirmOnboarding = () => {
                   <button
                     type="button"
                     onClick={() => setDocPreviewModal({ isOpen: false, title: '', url: '' })}
-                    className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                   >
                     <FiX size={18} />
                   </button>

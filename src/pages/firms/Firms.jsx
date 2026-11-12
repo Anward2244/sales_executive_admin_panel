@@ -89,6 +89,7 @@ const Firms = () => {
   const [editFormData, setEditFormData] = useState(INITIAL_FORM_STATE);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editFormError, setEditFormError] = useState('');
+  const [isDrawerClosing, setIsDrawerClosing] = useState(false);
 
   // Global Toast
   const [successToast, setSuccessToast] = useState('');
@@ -613,12 +614,16 @@ const Firms = () => {
   }, []);
 
   const handleCloseDrawer = useCallback(() => {
-    if (editSubmitting) return;
-    setSelectedFirm(null);
-    setDrawerMode('details');
-    setFirmToEdit(null);
-    setEditFormError('');
-  }, [editSubmitting]);
+    if (editSubmitting || isDrawerClosing) return;
+    setIsDrawerClosing(true);
+    setTimeout(() => {
+      setSelectedFirm(null);
+      setDrawerMode('details');
+      setFirmToEdit(null);
+      setEditFormError('');
+      setIsDrawerClosing(false);
+    }, 280);
+  }, [editSubmitting, isDrawerClosing]);
 
   const handlePrevFirm = useCallback(() => {
     if (selectedFirmIndex > 0) {
@@ -1196,13 +1201,9 @@ const Firms = () => {
       />
 
       {/* Unified Action & Filter Bar (matching Products.jsx) */}
-      <div className={`bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2.5 sm:px-3 sm:py-2 border border-slate-200/80 dark:border-white/10 shadow-md space-y-2 transition-all duration-200 ${
-        isFiltersVisible ? 'rounded-2xl' : 'rounded-2xl lg:rounded-full'
-      }`}>
+      <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2.5 sm:px-3 sm:py-2 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-md transition-all duration-200">
         {/* Top Row: Primary Actions, Status Tabs, Filter Toggle & Reset */}
-        <div className={`flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center justify-between ${
-          isFiltersVisible ? 'pb-2 border-b border-slate-200/60 dark:border-white/5' : ''
-        }`}>
+        <div className="flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center justify-between">
           {/* Left: Action Controls */}
           <div className="flex items-center gap-2 flex-wrap">
             <button
@@ -1281,53 +1282,59 @@ const Firms = () => {
           </div>
         </div>
 
-        {/* Collapsible Filter Dropdowns Strip (matching Products.jsx) */}
-        {isFiltersVisible && (
-          <div className="flex items-center gap-2.5 flex-wrap pt-0.5 animate-in fade-in duration-150">
-            <div className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400 mr-0.5 shrink-0">
-              <FiFilter className="text-blue-500 text-xs" />
-              <span>Filters:</span>
-            </div>
+        {/* Collapsible Filter Dropdowns Strip with smooth CSS grid expansion */}
+        <div
+          className={`grid transition-all duration-300 ease-in-out ${
+            isFiltersVisible ? 'grid-rows-[1fr] opacity-100 mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/5' : 'grid-rows-[0fr] opacity-0 pointer-events-none mt-0 pt-0'
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="flex items-center gap-2.5 flex-wrap pt-0.5">
+              <div className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400 mr-0.5 shrink-0">
+                <FiFilter className="text-blue-500 text-xs" />
+                <span>Filters:</span>
+              </div>
 
-            {/* Parent Company Dropdown */}
-            <div className="min-w-[170px] sm:min-w-[190px] flex-1 sm:flex-initial">
-              <CustomDropdown
-                value={selectedCompany}
-                onChange={(val) => handleFilterChange('company', val)}
-                options={companyFilterOptions}
-                defaultLabel="All Companies"
-                statusColor={`!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 ${
-                  selectedCompany ? 'text-blue-600 dark:text-blue-400 font-bold border-blue-500/30' : 'text-slate-700 dark:text-slate-200'
-                }`}
-              />
-            </div>
+              {/* Parent Company Dropdown */}
+              <div className="min-w-[170px] sm:min-w-[190px] flex-1 sm:flex-initial">
+                <CustomDropdown
+                  value={selectedCompany}
+                  onChange={(val) => handleFilterChange('company', val)}
+                  options={companyFilterOptions}
+                  defaultLabel="All Companies"
+                  statusColor={`!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 ${
+                    selectedCompany ? 'text-blue-600 dark:text-blue-400 font-bold border-blue-500/30' : 'text-slate-700 dark:text-slate-200'
+                  }`}
+                />
+              </div>
 
-            {/* Business Type Dropdown */}
-            <div className="min-w-[170px] sm:min-w-[185px] flex-1 sm:flex-initial">
-              <CustomDropdown
-                value={selectedBusinessType}
-                onChange={(val) => handleFilterChange('businessType', val)}
-                options={businessTypeFilterOptions}
-                defaultLabel="All Business Types"
-                statusColor={`!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 ${
-                  selectedBusinessType ? 'text-blue-600 dark:text-blue-400 font-bold border-blue-500/30' : 'text-slate-700 dark:text-slate-200'
-                }`}
-              />
-            </div>
+              {/* Business Type Dropdown */}
+              <div className="min-w-[170px] sm:min-w-[185px] flex-1 sm:flex-initial">
+                <CustomDropdown
+                  value={selectedBusinessType}
+                  onChange={(val) => handleFilterChange('businessType', val)}
+                  options={businessTypeFilterOptions}
+                  defaultLabel="All Business Types"
+                  statusColor={`!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 ${
+                    selectedBusinessType ? 'text-blue-600 dark:text-blue-400 font-bold border-blue-500/30' : 'text-slate-700 dark:text-slate-200'
+                  }`}
+                />
+              </div>
 
-            {/* Clear Dropdown Filters shortcut if any active */}
-            {(selectedCompany || selectedBusinessType) && (
-              <button
-                type="button"
-                onClick={handleClearDropdowns}
-                className="px-2 py-1 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg transition-all cursor-pointer border border-rose-200/60 dark:border-rose-900/40 shrink-0"
-                title="Clear dropdown filters"
-              >
-                Clear dropdowns
-              </button>
-            )}
+              {/* Clear Dropdown Filters shortcut if any active */}
+              {(selectedCompany || selectedBusinessType) && (
+                <button
+                  type="button"
+                  onClick={handleClearDropdowns}
+                  className="px-2 py-1 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg transition-all cursor-pointer border border-rose-200/60 dark:border-rose-900/40 shrink-0"
+                  title="Clear dropdown filters"
+                >
+                  Clear dropdowns
+                </button>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Active Filter Info Strip */}
@@ -1942,16 +1949,16 @@ const Firms = () => {
             {/* Modal Dialog */}
             <div className="relative w-full max-w-2xl bg-white/20 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
               {/* Header */}
-              <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg font-black shrink-0">
-                    <FiServer />
+                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                    <FiServer size={20} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    <h3 className="text-base sm:text-lg font-bold text-white">
                       Register New Firm Entity
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-[11px] text-blue-100 dark:text-blue-200 mt-0.5">
                       Fill in the entity registration details and assign a parent company.
                     </p>
                   </div>
@@ -1961,10 +1968,10 @@ const Firms = () => {
                   type="button"
                   disabled={createSubmitting}
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer disabled:opacity-40"
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer disabled:opacity-40"
                   title="Close modal (Esc)"
                 >
-                  <FiX className="text-xl" />
+                  <FiX size={18} />
                 </button>
               </div>
 
@@ -2244,13 +2251,19 @@ const Firms = () => {
           <div className="fixed inset-0 z-[10000] overflow-hidden">
             {/* Backdrop Blur Overlay */}
             <div
-              className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+              className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
+                isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
+              }`}
               onClick={handleCloseDrawer}
             />
 
             {/* Slide-Over Drawer Container (Pinned to Right) */}
-            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
-              <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 backdrop-blur-xl">
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
+              <div
+                className={`w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto transition-transform duration-300 ease-in-out z-10 backdrop-blur-xl ${
+                  isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+                }`}
+              >
                 {/* 1. Sticky Drawer Header */}
                 <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md gap-2 sm:gap-4">
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
@@ -3248,50 +3261,70 @@ const Firms = () => {
 
       {/* Bulk Company Reassignment Modal */}
       {isBulkCompanyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-2xl mb-4">
-              <FiBriefcase />
-            </div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">Reassign Parent Company</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-              Reassign <span className="font-bold text-slate-800 dark:text-slate-200">{selectedFirmIds.length}</span> selected firms to the following parent company:
-            </p>
-
-            <div className="mt-4">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                Target Company
-              </label>
-              <CustomDropdown
-                value={bulkTargetCompanyId}
-                onChange={(val) => setBulkTargetCompanyId(val)}
-                defaultLabel="Select Target Company"
-                placeholder="Select Target Company"
-                searchable={true}
-                options={allCompanyOptions.map((c) => ({
-                  value: c.id,
-                  label: `${c.name}${c.code ? ` (${c.code})` : ''}`
-                }))}
-                statusColor="!px-3.5 !py-2.5 !bg-slate-50 dark:!bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
-              />
-            </div>
-
-            <div className="mt-6 flex items-center justify-end gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-amber-600/60 via-orange-600/50 to-amber-700/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-amber-600 text-white shadow-md shadow-amber-500/20 shrink-0">
+                  <FiBriefcase size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-white">Reassign Parent Company</h3>
+                  <p className="text-[11px] text-amber-100 dark:text-amber-200 mt-0.5">
+                    {selectedFirmIds.length} firm(s) selected
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsBulkCompanyModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
               >
-                Cancel
+                <FiX size={18} />
               </button>
-              <button
-                type="button"
-                onClick={handleBulkReassignCompany}
-                disabled={!bulkTargetCompanyId}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-600/25 cursor-pointer disabled:opacity-50"
-              >
-                Apply Reassignment
-              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-4">
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Reassign <span className="font-bold text-slate-900 dark:text-white">{selectedFirmIds.length}</span> selected firms to the following parent company:
+              </p>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                  Target Company
+                </label>
+                <CustomDropdown
+                  value={bulkTargetCompanyId}
+                  onChange={(val) => setBulkTargetCompanyId(val)}
+                  defaultLabel="Select Target Company"
+                  placeholder="Select Target Company"
+                  searchable={true}
+                  options={allCompanyOptions.map((c) => ({
+                    value: c.id,
+                    label: `${c.name}${c.code ? ` (${c.code})` : ''}`
+                  }))}
+                  statusColor="!px-3.5 !py-2.5 !bg-slate-50 dark:!bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkCompanyModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkReassignCompany}
+                  disabled={!bulkTargetCompanyId}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-600/25 cursor-pointer disabled:opacity-50"
+                >
+                  Apply Reassignment
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -3307,16 +3340,16 @@ const Firms = () => {
             />
             <div className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col z-10 animate-in zoom-in-95 duration-200">
               {/* Modal Header */}
-              <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/80 dark:bg-slate-950/80">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base shrink-0">
-                    <FiFileText />
+              <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                    <FiFileText size={18} />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    <h4 className="text-sm sm:text-base font-bold text-white truncate">
                       {docPreviewModal.title || 'Document Preview'}
                     </h4>
-                    <p className="text-[11px] font-mono text-slate-400 truncate max-w-sm sm:max-w-md">
+                    <p className="text-[11px] font-mono text-blue-100 dark:text-blue-200 truncate max-w-sm sm:max-w-md mt-0.5">
                       {docPreviewModal.url}
                     </p>
                   </div>
@@ -3326,7 +3359,7 @@ const Firms = () => {
                     href={docPreviewModal.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-xs font-bold transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold transition-all"
                   >
                     <FiExternalLink size={13} />
                     <span className="hidden sm:inline">Open in New Tab</span>
@@ -3335,7 +3368,7 @@ const Firms = () => {
                   <button
                     type="button"
                     onClick={() => setDocPreviewModal({ isOpen: false, title: '', url: '' })}
-                    className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                   >
                     <FiX size={18} />
                   </button>

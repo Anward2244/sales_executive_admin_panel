@@ -1661,16 +1661,16 @@ const BrandRoutings = () => {
             />
             <div className="relative bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200/90 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
               {/* Header */}
-              <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+              <div className="p-5 sm:px-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-cyan-600/50">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 text-lg">
-                    <FiPlay />
+                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                    <FiPlay size={18} />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    <h3 className="text-base sm:text-lg font-bold text-white">
                       Live Route Resolver Sandbox
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-[11px] font-mono text-cyan-100 dark:text-cyan-200 mt-0.5">
                       GET /brand-routings/resolve — Real-time rule evaluation engine
                     </p>
                   </div>
@@ -1678,7 +1678,7 @@ const BrandRoutings = () => {
                 <button
                   type="button"
                   onClick={() => setIsTestModalOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
                   <FiX size={18} />
                 </button>
@@ -2013,16 +2013,16 @@ const BrandRoutings = () => {
             />
             <div className="relative bg-white/40 dark:bg-slate-950/25 backdrop-blur-2xl rounded-3xl border border-slate-200/90 dark:border-white/10 shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
               {/* Modal Header */}
-              <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+              <div className="p-5 sm:px-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-indigo-600/60 via-purple-600/50 to-blue-600/50">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 text-lg">
-                    <FiGitBranch />
+                  <div className="p-2.5 rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-500/20 shrink-0">
+                    <FiGitBranch size={18} />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    <h3 className="text-base sm:text-lg font-bold text-white">
                       {modalBrand ? `Configure Routing: ${modalBrand}` : 'Configure New Brand Routing'}
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-[11px] text-indigo-100 dark:text-indigo-200 mt-0.5">
                       Define territorial routing rules and billing companies.
                     </p>
                   </div>
@@ -2030,7 +2030,7 @@ const BrandRoutings = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
                   <FiX size={18} />
                 </button>
@@ -2424,16 +2424,16 @@ const BrandRoutings = () => {
             />
             <div className="relative bg-white/40 dark:bg-slate-950/25 backdrop-blur-2xl rounded-3xl border border-slate-200/90 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10">
               {/* Header */}
-              <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+              <div className="p-5 sm:px-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-purple-600/60 via-indigo-600/50 to-blue-600/50">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 text-lg shadow-md">
-                    <FiUploadCloud />
+                  <div className="p-2.5 rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-500/20 shrink-0">
+                    <FiUploadCloud size={18} />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    <h3 className="text-base sm:text-lg font-bold text-white">
                       Bulk Brand Routing Matrix
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-[11px] text-purple-100 dark:text-purple-200 mt-0.5">
                       Deploy routing rules for multiple brands in one batch.
                     </p>
                   </div>
@@ -2441,7 +2441,7 @@ const BrandRoutings = () => {
                 <button
                   type="button"
                   onClick={() => setIsBulkModalOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
                   <FiX size={18} />
                 </button>

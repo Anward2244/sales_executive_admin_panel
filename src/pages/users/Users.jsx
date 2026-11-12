@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import { getUsersApi, getUserByIdApi, createUserApi, updateUserStatusApi, updateUserApi } from '@/api/axios';
 import {
   FiPlus, FiCheck, FiLoader, FiAlertCircle,
-  FiSearch, FiUser, FiRefreshCcw, FiX,
+  FiSearch, FiUser, FiUserPlus, FiRefreshCcw, FiX,
   FiChevronDown, FiCopy, FiCalendar, FiClock, FiPhone,
   FiMail, FiEye, FiEyeOff, FiExternalLink, FiHash, FiBriefcase,
   FiLayers, FiUserCheck, FiUserX, FiShield, FiDownload, FiCheckCircle, FiXCircle,
@@ -401,6 +401,7 @@ const UsersList = () => {
   // Right-side User Details & Edit Drawer State
   const [drawerUser, setDrawerUser] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const [drawerTab, setDrawerTab] = useState('overview'); // 'overview' | 'edit'
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [drawerSaving, setDrawerSaving] = useState(false);
@@ -466,14 +467,19 @@ const UsersList = () => {
     }
   };
 
-  // Close User Drawer handler
+  // Close User Drawer handler with smooth exit animation
   const handleCloseDrawer = () => {
-    setIsDrawerOpen(false);
-    setDrawerUser(null);
-    setDrawerSaveError('');
-    if (urlUserId) {
-      navigate('/users', { replace: true });
-    }
+    if (isDrawerClosing) return;
+    setIsDrawerClosing(true);
+    setTimeout(() => {
+      setIsDrawerOpen(false);
+      setIsDrawerClosing(false);
+      setDrawerUser(null);
+      setDrawerSaveError('');
+      if (urlUserId) {
+        navigate('/users', { replace: true });
+      }
+    }, 280);
   };
 
   // Sync with URL parameter (/users/:id)
@@ -1528,31 +1534,40 @@ const UsersList = () => {
             />
 
             {/* Modal Box */}
-            <div className="relative bg-white/20 dark:bg-slate-950/25 border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl w-full max-w-lg animate-in fade-in zoom-in-95 duration-200 z-10 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="relative bg-white/40 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 z-10">
 
               {/* Modal Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10 mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Create New User</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Add a new admin or sales executive account.</p>
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                    <FiUserPlus size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">Create New User</h3>
+                    <p className="text-[11px] text-blue-100 dark:text-blue-200 mt-0.5">
+                      Add a new admin or sales executive account.
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   disabled={submitting}
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl transition-colors cursor-pointer"
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
                   <FiX size={18} />
                 </button>
               </div>
 
-              {/* Error Message */}
-              {formError && (
-                <div className="p-3 mb-4 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
-                  <FiAlertCircle className="shrink-0" />
-                  <span>{formError}</span>
-                </div>
-              )}
+              {/* Modal Body */}
+              <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
+                {/* Error Message */}
+                {formError && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
+                    <FiAlertCircle className="shrink-0" />
+                    <span>{formError}</span>
+                  </div>
+                )}
 
               {/* Form */}
               <form onSubmit={handleCreateUser} className="space-y-4">
@@ -1697,6 +1712,7 @@ const UsersList = () => {
                   </button>
                 </div>
               </form>
+              </div>
             </div>
           </div>,
           document.body
@@ -1708,13 +1724,19 @@ const UsersList = () => {
             <div className="fixed inset-0 z-[9999] overflow-hidden">
               {/* Backdrop */}
               <div
-                className="fixed inset-0 dark:bg-slate-950/50 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+                className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
+                  isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
+                }`}
                 onClick={handleCloseDrawer}
               />
 
               {/* Slide-over Container (Pinned to Right) */}
-              <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
-                <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-900/40 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 text-left">
+              <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
+                <div
+                  className={`w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-900/40 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto z-10 text-left transition-transform duration-300 ease-in-out ${
+                    isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+                  }`}
+                >
                   {/* Sticky Drawer Header */}
                   <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 shrink-0 space-y-3">
                     {/* Top Bar: User Avatar + Name + Actions + Close */}
@@ -2362,49 +2384,69 @@ const UsersList = () => {
         {bulkRoleModalOpen &&
           createPortal(
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
-              <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-2xl mb-4 border border-amber-500/20">
-                  <FiShield />
-                </div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Change User Role</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                  Reassign role for <span className="font-bold text-slate-800 dark:text-slate-200">{selectedUserIds.size}</span> selected user account(s):
-                </p>
-
-                <div className="mt-4">
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                    Target Role
-                  </label>
-                  <CustomDropdown
-                    value={bulkSelectedRole}
-                    onChange={(val) => setBulkSelectedRole(val)}
-                    options={[
-                      { value: 'SALES_EXECUTIVE', label: 'Sales Executive' },
-                      { value: 'SALES_HEAD', label: 'Sales Head' },
-                      { value: 'ADMIN', label: 'Admin' },
-                      { value: 'WAREHOUSE', label: 'Warehouse' },
-                      { value: 'BILLING', label: 'Billing' }
-                    ]}
-                    statusColor="!px-3.5 !py-2.5 !bg-slate-50 dark:!bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                <div className="mt-6 flex items-center justify-end gap-3">
+              <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                {/* Header */}
+                <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-amber-600/60 via-orange-600/50 to-amber-700/50">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-2xl bg-amber-600 text-white shadow-md shadow-amber-500/20 shrink-0">
+                      <FiShield size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-base sm:text-lg font-bold text-white">Change User Role</h3>
+                      <p className="text-[11px] text-amber-100 dark:text-amber-200 mt-0.5 font-mono">
+                        {selectedUserIds.size} user account(s) selected
+                      </p>
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setBulkRoleModalOpen(false)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                    className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                   >
-                    Cancel
+                    <FiX size={18} />
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleBulkChangeRole}
-                    disabled={!bulkSelectedRole}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-600/25 cursor-pointer disabled:opacity-50"
-                  >
-                    Apply Role Change
-                  </button>
+                </div>
+
+                <div className="p-5 sm:p-6 space-y-4">
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Reassign role for <span className="font-bold text-slate-900 dark:text-white">{selectedUserIds.size}</span> selected user account(s):
+                  </p>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                      Target Role
+                    </label>
+                    <CustomDropdown
+                      value={bulkSelectedRole}
+                      onChange={(val) => setBulkSelectedRole(val)}
+                      options={[
+                        { value: 'SALES_EXECUTIVE', label: 'Sales Executive' },
+                        { value: 'SALES_HEAD', label: 'Sales Head' },
+                        { value: 'ADMIN', label: 'Admin' },
+                        { value: 'WAREHOUSE', label: 'Warehouse' },
+                        { value: 'BILLING', label: 'Billing' }
+                      ]}
+                      statusColor="!px-3.5 !py-2.5 !bg-slate-50 dark:!bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setBulkRoleModalOpen(false)}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBulkChangeRole}
+                      disabled={!bulkSelectedRole}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-600/25 cursor-pointer disabled:opacity-50"
+                    >
+                      Apply Role Change
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>,

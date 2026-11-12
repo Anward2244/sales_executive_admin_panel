@@ -862,18 +862,18 @@ const Companies = () => {
           />
 
           {/* Modal Box */}
-          <div className="relative bg-white/20 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl w-full max-w-lg animate-in fade-in zoom-in-95 duration-200 z-10 max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="relative bg-white/40 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 z-10">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10 mb-5">
+            <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                  <FiBriefcase className="text-xl" />
+                <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                  <FiBriefcase size={20} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                  <h3 className="text-base sm:text-lg font-bold text-white">
                     Create New Company
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-[11px] text-blue-100 dark:text-blue-200 mt-0.5">
                     Register a partner company or brand organization.
                   </p>
                 </div>
@@ -882,23 +882,25 @@ const Companies = () => {
                 type="button"
                 disabled={submitting}
                 onClick={handleCloseModal}
-                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
                 title="Close"
               >
                 <FiX size={18} />
               </button>
             </div>
 
-            {/* Error Message */}
-            {formError && (
-              <div className="p-3.5 mb-4 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2.5 animate-in fade-in duration-150">
-                <FiAlertCircle className="shrink-0 text-base" />
-                <span>{formError}</span>
-              </div>
-            )}
+            {/* Modal Body */}
+            <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
+              {/* Error Message */}
+              {formError && (
+                <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2.5 animate-in fade-in duration-150">
+                  <FiAlertCircle className="shrink-0 text-base" />
+                  <span>{formError}</span>
+                </div>
+              )}
 
-            {/* Form */}
-            <form onSubmit={handleCreateCompany} className="space-y-4">
+              {/* Form */}
+              <form onSubmit={handleCreateCompany} className="space-y-4">
               {/* Company Name */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
@@ -1025,6 +1027,7 @@ const Companies = () => {
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>,
         document.body

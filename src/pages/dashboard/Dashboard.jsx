@@ -2044,19 +2044,19 @@ const Dashboard = () => {
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
             <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 backdrop-blur-2xl">
               {/* 1. Sticky Drawer Header */}
-              <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md gap-2 sm:gap-4">
+              <div className="px-4 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50 backdrop-blur-md gap-2 sm:gap-4">
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg sm:text-xl border border-blue-500/20 shrink-0">
-                    <FiPackage />
+                  <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-lg sm:text-xl shadow-md shadow-blue-500/20 shrink-0">
+                    <FiPackage size={20} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                      <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-mono truncate">
+                      <h3 className="text-base sm:text-lg font-bold text-white font-mono truncate">
                         {selectedOrder.poNumber || selectedOrder.orderNumber || 'Order Details'}
                       </h3>
                       <CopyButton text={selectedOrder.poNumber || selectedOrder.orderNumber || selectedOrder._id} />
                     </div>
-                    <p className="text-xs text-slate-400 truncate mt-0.5">
+                    <p className="text-xs text-blue-100 dark:text-blue-200 truncate mt-0.5">
                       Created on {formatDateTimeDDMMYYYY(selectedOrder.createdAt)}
                     </p>
                   </div>
@@ -2065,17 +2065,17 @@ const Dashboard = () => {
                 {/* Header Actions: Stepping & Close */}
                 <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                   {selectedOrderIndex >= 0 && (
-                    <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
+                    <div className="flex items-center gap-0.5 sm:gap-1 bg-black/20 dark:bg-black/30 border border-white/15 rounded-xl p-0.5 sm:p-1 text-xs">
                       <button
                         type="button"
                         onClick={handlePrevOrder}
                         disabled={!canGoPrevOrder}
                         title="Previous Order (Left Arrow)"
-                        className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        className="p-1 sm:p-1.5 rounded-lg text-white hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                       >
                         <FiChevronLeft size={15} />
                       </button>
-                      <span className="px-1.5 font-mono text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
+                      <span className="px-1.5 font-mono text-[10px] sm:text-[11px] text-white font-semibold select-none">
                         {selectedOrderIndex + 1} of {recentOrders.length}
                       </span>
                       <button
@@ -2083,7 +2083,7 @@ const Dashboard = () => {
                         onClick={handleNextOrder}
                         disabled={!canGoNextOrder}
                         title="Next Order (Right Arrow)"
-                        className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        className="p-1 sm:p-1.5 rounded-lg text-white hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                       >
                         <FiChevronRight size={15} />
                       </button>
@@ -2092,7 +2092,7 @@ const Dashboard = () => {
                   <button
                     type="button"
                     onClick={() => setSelectedOrder(null)}
-                    className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                    className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
                     title="Close drawer (Esc)"
                   >
                     <FiX size={18} />

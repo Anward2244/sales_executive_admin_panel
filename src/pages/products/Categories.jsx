@@ -811,29 +811,51 @@ const Categories = () => {
               setTypedConfirmName('');
             }}
           />
-          <div className="relative bg-white/40 dark:bg-slate-950 border border-red-200 dark:border-red-500/20 rounded-3xl p-6 shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-4">
-              <FiTrash2 className="text-xl" />
+          <div className="relative bg-white/40 dark:bg-slate-950/25 border border-red-200/80 dark:border-red-500/20 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-rose-600/60 via-red-600/50 to-rose-700/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-rose-600 text-white shadow-md shadow-rose-500/20 shrink-0">
+                  <FiTrash2 size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-white">
+                    Confirm Category Deletion
+                  </h3>
+                  <p className="text-[11px] text-rose-100 dark:text-rose-200 mt-0.5 font-mono">
+                    DELETE /categories/{categoryToDelete.code || categoryToDelete._id}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteConfirmOpen(false);
+                  setCategoryToDelete(null);
+                  setTypedConfirmName('');
+                }}
+                className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+              >
+                <FiX size={18} />
+              </button>
             </div>
 
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1.5">
-              Confirm Category Deletion
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
-              This action will permanently delete{' '}
-              <strong className="text-slate-800 dark:text-white">"{categoryToDelete.name}"</strong> (
-              <span className="font-mono text-blue-600 dark:text-blue-400">{categoryToDelete.code}</span>). To confirm, please type the category name below:
-            </p>
+            <div className="p-5 sm:p-6 space-y-4">
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                This action will permanently delete{' '}
+                <strong className="text-slate-900 dark:text-white">"{categoryToDelete.name}"</strong> (
+                <span className="font-mono text-blue-600 dark:text-blue-400 font-bold">{categoryToDelete.code}</span>). To confirm, please type the category name below:
+              </p>
 
-            <input
-              type="text"
-              placeholder={`Type "${categoryToDelete.name}" to confirm`}
-              value={typedConfirmName}
-              onChange={(e) => setTypedConfirmName(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 text-sm font-medium mb-5 placeholder-slate-400"
-            />
+              <input
+                type="text"
+                placeholder={`Type "${categoryToDelete.name}" to confirm`}
+                value={typedConfirmName}
+                onChange={(e) => setTypedConfirmName(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 text-sm font-medium placeholder-slate-400"
+              />
 
-            <div className="flex gap-2.5">
+              <div className="flex gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => {
@@ -864,6 +886,7 @@ const Categories = () => {
                 )}
                 <span>Delete Category</span>
               </button>
+            </div>
             </div>
           </div>
         </div>,

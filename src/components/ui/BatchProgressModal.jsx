@@ -93,30 +93,42 @@ const BatchProgressModal = ({
     >
       <div className="bg-white/40 dark:bg-slate-950/25 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="p-5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between">
+        <div className={`p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 ${
+          isFinishedResolved
+            ? status === 'error' || (effectiveFailureCount > 0 && effectiveSuccessCount === 0)
+              ? 'bg-gradient-to-r from-rose-600/60 via-red-600/50 to-rose-700/50'
+              : 'bg-gradient-to-r from-emerald-600/60 via-teal-600/50 to-cyan-600/50'
+            : 'bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50'
+        }`}>
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg border transition-all ${
+            <div className={`p-2.5 rounded-2xl text-white shadow-md ${
               isFinishedResolved
-                ? (status === 'error' || (effectiveFailureCount > 0 && effectiveSuccessCount === 0)
-                    ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                    : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20')
-                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                ? status === 'error' || (effectiveFailureCount > 0 && effectiveSuccessCount === 0)
+                  ? 'bg-rose-600 shadow-rose-500/20'
+                  : 'bg-emerald-600 shadow-emerald-500/20'
+                : 'bg-blue-600 shadow-blue-500/20'
             }`}>
               {isFinishedResolved ? (
                 status === 'error' || (effectiveFailureCount > 0 && effectiveSuccessCount === 0) ? (
-                  <FiXCircle />
+                  <FiXCircle size={20} />
                 ) : (
-                  <FiCheckCircle />
+                  <FiCheckCircle size={20} />
                 )
               ) : (
-                <FiPlay className="animate-spin" />
+                <FiPlay size={20} className="animate-spin" />
               )}
             </div>
             <div>
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+              <h3 className="font-bold text-base sm:text-lg text-white">
                 {displayTitle}
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className={`text-[11px] mt-0.5 ${
+                isFinishedResolved
+                  ? status === 'error' || (effectiveFailureCount > 0 && effectiveSuccessCount === 0)
+                    ? 'text-rose-100 dark:text-rose-200'
+                    : 'text-emerald-100 dark:text-emerald-200'
+                  : 'text-blue-100 dark:text-blue-200'
+              }`}>
                 {isFinishedResolved
                   ? (status === 'error' ? 'Batch operation stopped or encountered errors.' : 'Batch operation completed.')
                   : `Processing ${current} of ${total} items (${pct}%)...`}
@@ -127,10 +139,10 @@ const BatchProgressModal = ({
           <button
             type="button"
             onClick={handleHeaderClose}
-            className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white cursor-pointer transition-all"
+            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
             title={isFinishedResolved ? 'Close' : 'Cancel & Close'}
           >
-            <FiX size={16} />
+            <FiX size={18} />
           </button>
         </div>
 

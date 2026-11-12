@@ -195,12 +195,19 @@ const PurchaseOrders = () => {
     ? String(navTargetId).trim()
     : null;
 
+  const [isDrawerClosing, setIsDrawerClosing] = useState(false);
+
   const handleCloseDetailsDrawer = useCallback(() => {
-    setSelectedOrder(null);
-    if (navTargetId || navTargetPoNum) {
-      navigate('/purchase-orders', { replace: true, state: {} });
-    }
-  }, [navTargetId, navTargetPoNum, navigate]);
+    if (isDrawerClosing) return;
+    setIsDrawerClosing(true);
+    setTimeout(() => {
+      setSelectedOrder(null);
+      setIsDrawerClosing(false);
+      if (navTargetId || navTargetPoNum) {
+        navigate('/purchase-orders', { replace: true, state: {} });
+      }
+    }, 280);
+  }, [isDrawerClosing, navTargetId, navTargetPoNum, navigate]);
 
   // Orders state
   const [orders, setOrders] = useState([]);
@@ -1790,13 +1797,19 @@ const PurchaseOrders = () => {
           <div className="fixed inset-0 z-[10000] overflow-hidden">
             {/* Backdrop Blur Overlay */}
             <div
-              className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+              className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
+                isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
+              }`}
               onClick={handleCloseDetailsDrawer}
             />
 
             {/* Slide-Over Drawer Container (Pinned to Right) */}
-            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
-              <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10">
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
+              <div
+                className={`w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto transition-transform duration-300 ease-in-out z-10 ${
+                  isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+                }`}
+              >
                 {/* 1. Sticky Drawer Header */}
                 <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 gap-2 sm:gap-4">
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
@@ -2261,66 +2274,65 @@ const PurchaseOrders = () => {
                   </div>
                 )}
               </div>
+            </div>
 
-                </div>
+            {/* 3. Sticky Action Footer */}
+            <div className="shrink-0 p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/90 dark:bg-slate-950/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handleCloseDetailsDrawer}
+                className="px-4 py-2.5 rounded-xl bg-slate-200/80 hover:bg-slate-300 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer transition-colors"
+              >
+                Close Drawer
+              </button>
 
-                {/* 3. Sticky Action Footer */}
-                <div className="shrink-0 p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/90 dark:bg-slate-950/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedOrder(null)}
-                    className="px-4 py-2.5 rounded-xl bg-slate-200/80 hover:bg-slate-300 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer transition-colors"
-                  >
-                    Close Drawer
-                  </button>
+              {/* Workflow Buttons right in details */}
+              {isAdmin && (
+                <div className="flex items-center gap-2">
+                  {selectedOrder.status === 'PENDING' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ord = selectedOrder;
+                          handleOpenRejectModal(ord);
+                        }}
+                        className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center gap-1.5 border border-rose-500/20 cursor-pointer"
+                      >
+                        <FiX />
+                        <span>Reject PO</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApproveOrder(selectedOrder)}
+                        className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer"
+                      >
+                        <FiCheck />
+                        <span>Approve PO</span>
+                      </button>
+                    </>
+                  )}
 
-                  {/* Workflow Buttons right in details */}
-                  {isAdmin && (
-                    <div className="flex items-center gap-2">
-                      {selectedOrder.status === 'PENDING' && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const ord = selectedOrder;
-                              handleOpenRejectModal(ord);
-                            }}
-                            className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center gap-1.5 border border-rose-500/20 cursor-pointer"
-                          >
-                            <FiX />
-                            <span>Reject PO</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleApproveOrder(selectedOrder)}
-                            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer"
-                          >
-                            <FiCheck />
-                            <span>Approve PO</span>
-                          </button>
-                        </>
-                      )}
-
-                      {selectedOrder.status === 'APPROVED' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const ord = selectedOrder;
-                            handleOpenDispatchModal(ord);
-                          }}
-                          className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-600/20 cursor-pointer"
-                        >
-                          <FiTruck />
-                          <span>Dispatch Order</span>
-                        </button>
-                      )}
-                    </div>
+                  {selectedOrder.status === 'APPROVED' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ord = selectedOrder;
+                        handleOpenDispatchModal(ord);
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-600/20 cursor-pointer"
+                    >
+                      <FiTruck />
+                      <span>Dispatch Order</span>
+                    </button>
                   )}
                 </div>
-              </div>
+              )}
             </div>
-          </div>,
-          document.body
+          </div>
+        </div>
+      </div>,
+      document.body
         )}
 
       {/* =========================================================================
@@ -2333,17 +2345,18 @@ const PurchaseOrders = () => {
               className="absolute inset-0 dark:bg-slate-950/50 backdrop-blur-lg animate-fade-in"
               onClick={() => !createSubmitting && setIsCreateModalOpen(false)}
             />
-            <div className="relative bg-white/40 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-200 z-10">
-              <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/80 dark:border-white/10">
+            <div className="relative bg-white/40 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 z-10">
+              {/* Header */}
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl border border-blue-500/20">
-                    <FiPlus />
+                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                    <FiPlus size={20} />
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                    <h3 className="text-base sm:text-lg font-bold text-white">
                       Create Purchase Order
                     </h3>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-[11px] font-mono text-blue-100 dark:text-blue-200 mt-0.5">
                       POST /purchase-orders with structured line items.
                     </p>
                   </div>
@@ -2353,7 +2366,7 @@ const PurchaseOrders = () => {
                   <button
                     type="button"
                     onClick={handleFillSample}
-                    className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                    className="px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white border border-white/20 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
                     title="Load sample festival delivery PO payload"
                   >
                     <span>⚡ Load Sample</span>
@@ -2362,19 +2375,21 @@ const PurchaseOrders = () => {
                     type="button"
                     onClick={() => setIsCreateModalOpen(false)}
                     disabled={createSubmitting}
-                    className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                    className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
                   >
                     <FiX size={18} />
                   </button>
                 </div>
               </div>
 
-              {createError && (
-                <div className="p-3.5 mb-4 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
-                  <FiAlertCircle className="shrink-0" />
-                  <span>{createError}</span>
-                </div>
-              )}
+              {/* Form Content */}
+              <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
+                {createError && (
+                  <div className="p-3.5 mb-4 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
+                    <FiAlertCircle className="shrink-0" />
+                    <span>{createError}</span>
+                  </div>
+                )}
 
               <form onSubmit={handleCreateOrderSubmit} className="space-y-4">
                 {/* Company & Firm selection */}
@@ -2621,6 +2636,7 @@ const PurchaseOrders = () => {
                   </button>
                 </div>
               </form>
+              </div>
             </div>
           </div>,
           document.body
@@ -2636,70 +2652,83 @@ const PurchaseOrders = () => {
               className="absolute inset-0 dark:bg-slate-950/50 backdrop-blur-lg animate-fade-in"
               onClick={() => !rejectSubmitting && setRejectModalOrder(null)}
             />
-            <div className="relative bg-white/40 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200 z-10">
-              <div className="flex items-center gap-3 pb-4 mb-4 border-b border-slate-200/80 dark:border-white/10">
-                <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center text-xl">
-                  <FiXCircle />
+            <div className="relative bg-white/40 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 z-10">
+              {/* Header */}
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-rose-600/60 via-red-600/50 to-rose-700/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-rose-600 text-white shadow-md shadow-rose-500/20 shrink-0">
+                    <FiXCircle size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">
+                      Reject Purchase Order
+                    </h3>
+                    <p className="text-[11px] text-rose-100 dark:text-rose-200 mt-0.5">
+                      Mandatory reason required (PATCH /reject).
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Reject Purchase Order
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Mandatory reason required (PATCH /reject).
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setRejectModalOrder(null)}
+                  disabled={rejectSubmitting}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                >
+                  <FiX size={18} />
+                </button>
               </div>
 
-              {rejectError && (
-                <div className="p-3 mb-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold">
-                  {rejectError}
-                </div>
-              )}
+              <div className="p-5 sm:p-6 space-y-4">
+                {rejectError && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold">
+                    {rejectError}
+                  </div>
+                )}
 
-              <form onSubmit={handleConfirmReject} className="space-y-4">
-                <p className="text-xs text-slate-600 dark:text-slate-300">
-                  Please provide a detailed justification for rejecting order{' '}
-                  <strong className="font-mono text-slate-900 dark:text-white">
-                    {rejectModalOrder.poNumber || rejectModalOrder.orderNumber || rejectModalOrder._id}
-                  </strong>
-                  .
-                </p>
+                <form onSubmit={handleConfirmReject} className="space-y-4">
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Please provide a detailed justification for rejecting order{' '}
+                    <strong className="font-mono text-slate-900 dark:text-white">
+                      {rejectModalOrder.poNumber || rejectModalOrder.orderNumber || rejectModalOrder._id}
+                    </strong>
+                    .
+                  </p>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                    Rejection Reason <span className="text-rose-500">*</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    required
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    disabled={rejectSubmitting}
-                    placeholder="e.g. Insufficient credit limit, item unavailable in requested quantity..."
-                    className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/30 resize-none"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Rejection Reason <span className="text-rose-500">*</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      disabled={rejectSubmitting}
+                      placeholder="e.g. Insufficient credit limit, item unavailable in requested quantity..."
+                      className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/30 resize-none"
+                    />
+                  </div>
 
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setRejectModalOrder(null)}
-                    disabled={rejectSubmitting}
-                    className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={rejectSubmitting}
-                    className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-all shadow-md shadow-rose-600/25 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {rejectSubmitting && <FiLoader className="animate-spin text-xs" />}
-                    <span>{rejectSubmitting ? 'Rejecting...' : 'Confirm Reject'}</span>
-                  </button>
-                </div>
-              </form>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setRejectModalOrder(null)}
+                      disabled={rejectSubmitting}
+                      className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={rejectSubmitting}
+                      className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-all shadow-md shadow-rose-600/25 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {rejectSubmitting && <FiLoader className="animate-spin text-xs" />}
+                      <span>{rejectSubmitting ? 'Rejecting...' : 'Confirm Reject'}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>,
           document.body
@@ -2715,63 +2744,76 @@ const PurchaseOrders = () => {
               className="absolute inset-0 dark:bg-slate-950/60 backdrop-blur-lg animate-fade-in"
               onClick={() => !dispatchSubmitting && setDispatchModalOrder(null)}
             />
-            <div className="relative bg-white/40 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200 z-10">
-              <div className="flex items-center gap-3 pb-4 mb-4 border-b border-slate-200/80 dark:border-white/10">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 flex items-center justify-center text-xl">
-                  <FiTruck />
+            <div className="relative bg-white/40 dark:bg-slate-950/25 border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 z-10">
+              {/* Header */}
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-cyan-600/60 via-blue-600/50 to-indigo-600/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-cyan-600 text-white shadow-md shadow-cyan-500/20 shrink-0">
+                    <FiTruck size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">
+                      Dispatch Purchase Order
+                    </h3>
+                    <p className="text-[11px] text-cyan-100 dark:text-cyan-200 mt-0.5">
+                      Advance status from APPROVED to DISPATCHED.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Dispatch Purchase Order
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Advance status from APPROVED to DISPATCHED.
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setDispatchModalOrder(null)}
+                  disabled={dispatchSubmitting}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                >
+                  <FiX size={18} />
+                </button>
               </div>
 
-              <form onSubmit={handleConfirmDispatch} className="space-y-4">
-                <p className="text-xs text-slate-600 dark:text-slate-300">
-                  Confirm shipment and dispatch of Purchase Order{' '}
-                  <strong className="font-mono text-slate-900 dark:text-white">
-                    {dispatchModalOrder.poNumber || dispatchModalOrder.orderNumber || dispatchModalOrder._id}
-                  </strong>
-                  .
-                </p>
+              <div className="p-5 sm:p-6 space-y-4">
+                <form onSubmit={handleConfirmDispatch} className="space-y-4">
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Confirm shipment and dispatch of Purchase Order{' '}
+                    <strong className="font-mono text-slate-900 dark:text-white">
+                      {dispatchModalOrder.poNumber || dispatchModalOrder.orderNumber || dispatchModalOrder._id}
+                    </strong>
+                    .
+                  </p>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                    Dispatch / Courier Notes (Optional)
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={dispatchNotes}
-                    onChange={(e) => setDispatchNotes(e.target.value)}
-                    disabled={dispatchSubmitting}
-                    placeholder="e.g. Courier tracking #TRK99241 via BlueDart Logistics..."
-                    className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/30 resize-none"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Dispatch / Courier Notes (Optional)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={dispatchNotes}
+                      onChange={(e) => setDispatchNotes(e.target.value)}
+                      disabled={dispatchSubmitting}
+                      placeholder="e.g. Courier tracking #TRK99241 via BlueDart Logistics..."
+                      className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/30 resize-none"
+                    />
+                  </div>
 
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setDispatchModalOrder(null)}
-                    disabled={dispatchSubmitting}
-                    className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={dispatchSubmitting}
-                    className="flex-1 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl text-xs transition-all shadow-md shadow-cyan-600/25 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {dispatchSubmitting && <FiLoader className="animate-spin text-xs" />}
-                    <span>{dispatchSubmitting ? 'Dispatching...' : 'Confirm Dispatch'}</span>
-                  </button>
-                </div>
-              </form>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setDispatchModalOrder(null)}
+                      disabled={dispatchSubmitting}
+                      className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={dispatchSubmitting}
+                      className="flex-1 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl text-xs transition-all shadow-md shadow-cyan-600/25 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {dispatchSubmitting && <FiLoader className="animate-spin text-xs" />}
+                      <span>{dispatchSubmitting ? 'Dispatching...' : 'Confirm Dispatch'}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>,
           document.body
@@ -2859,52 +2901,63 @@ const PurchaseOrders = () => {
       {/* ================= BULK APPROVE REMARKS MODAL ================= */}
       {bulkActionModal === 'approve' &&
         createPortal(
-          <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
-                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold">
-                  <FiCheckCircle size={18} />
-                  <span className="text-sm">Bulk Approve Orders</span>
+          <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in">
+            <div className="bg-white/40 dark:bg-slate-950/25 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                    <FiCheckCircle size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">Bulk Approve Orders</h3>
+                    <p className="text-[11px] text-blue-100 dark:text-blue-200 mt-0.5 font-mono">
+                      {selectedOrderIds.size} order(s) selected
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setBulkActionModal(null)}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
-                  <FiX size={16} />
+                  <FiX size={18} />
                 </button>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                You are about to approve <span className="font-bold font-mono text-blue-600">{selectedOrderIds.size}</span> selected order(s).
-                Only orders in PENDING status will be updated to APPROVED.
-              </p>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Approval Notes / Remarks (Optional)
-                </label>
-                <textarea
-                  rows={3}
-                  value={bulkApproveRemarks}
-                  onChange={(e) => setBulkApproveRemarks(e.target.value)}
-                  placeholder="e.g. Bulk approved by procurement director."
-                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setBulkActionModal(null)}
-                  className="flex-1 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={executeBulkApprove}
-                  className="flex-1 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-all cursor-pointer"
-                >
-                  Confirm Approval
-                </button>
+
+              <div className="p-5 sm:p-6 space-y-4">
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  You are about to approve <span className="font-bold font-mono text-blue-600">{selectedOrderIds.size}</span> selected order(s).
+                  Only orders in PENDING status will be updated to APPROVED.
+                </p>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Approval Notes / Remarks (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={bulkApproveRemarks}
+                    onChange={(e) => setBulkApproveRemarks(e.target.value)}
+                    placeholder="e.g. Bulk approved by procurement director."
+                    className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setBulkActionModal(null)}
+                    className="flex-1 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={executeBulkApprove}
+                    className="flex-1 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-all cursor-pointer"
+                  >
+                    Confirm Approval
+                  </button>
+                </div>
               </div>
             </div>
           </div>,
@@ -2914,75 +2967,86 @@ const PurchaseOrders = () => {
       {/* ================= BULK DISPATCH MODAL ================= */}
       {bulkActionModal === 'dispatch' &&
         createPortal(
-          <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
-                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
-                  <FiTruck size={18} />
-                  <span className="text-sm">Bulk Dispatch Orders</span>
+          <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in">
+            <div className="bg-white/40 dark:bg-slate-950/25 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-emerald-600/60 via-teal-600/50 to-cyan-600/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/20 shrink-0">
+                    <FiTruck size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">Bulk Dispatch Orders</h3>
+                    <p className="text-[11px] text-emerald-100 dark:text-emerald-200 mt-0.5 font-mono">
+                      {selectedOrderIds.size} order(s) selected
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setBulkActionModal(null)}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
-                  <FiX size={16} />
+                  <FiX size={18} />
                 </button>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                Only orders in <span className="font-bold text-blue-500">APPROVED</span> status will be moved to <span className="font-bold text-emerald-500">DISPATCHED</span>.
-              </p>
-              <div className="space-y-3 text-xs">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Logistics Carrier Partner
-                  </label>
-                  <input
-                    type="text"
-                    value={bulkDispatchData.carrier}
-                    onChange={(e) => setBulkDispatchData((p) => ({ ...p, carrier: e.target.value }))}
-                    className="w-full p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
-                  />
+
+              <div className="p-5 sm:p-6 space-y-4">
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  Only orders in <span className="font-bold text-blue-500">APPROVED</span> status will be moved to <span className="font-bold text-emerald-500">DISPATCHED</span>.
+                </p>
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Logistics Carrier Partner
+                    </label>
+                    <input
+                      type="text"
+                      value={bulkDispatchData.carrier}
+                      onChange={(e) => setBulkDispatchData((p) => ({ ...p, carrier: e.target.value }))}
+                      className="w-full p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Tracking Number Prefix
+                    </label>
+                    <input
+                      type="text"
+                      value={bulkDispatchData.trackingPrefix}
+                      onChange={(e) => setBulkDispatchData((p) => ({ ...p, trackingPrefix: e.target.value }))}
+                      className="w-full p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 font-mono text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Dispatch Notes
+                    </label>
+                    <input
+                      type="text"
+                      value={bulkDispatchData.notes}
+                      onChange={(e) => setBulkDispatchData((p) => ({ ...p, notes: e.target.value }))}
+                      placeholder="e.g. Dispatched from main warehouse"
+                      className="w-full p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Tracking Number Prefix
-                  </label>
-                  <input
-                    type="text"
-                    value={bulkDispatchData.trackingPrefix}
-                    onChange={(e) => setBulkDispatchData((p) => ({ ...p, trackingPrefix: e.target.value }))}
-                    className="w-full p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 font-mono text-slate-900 dark:text-white"
-                  />
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setBulkActionModal(null)}
+                    className="flex-1 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={executeBulkDispatch}
+                    className="flex-1 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md transition-all cursor-pointer"
+                  >
+                    Confirm Dispatch
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Dispatch Notes
-                  </label>
-                  <input
-                    type="text"
-                    value={bulkDispatchData.notes}
-                    onChange={(e) => setBulkDispatchData((p) => ({ ...p, notes: e.target.value }))}
-                    placeholder="e.g. Dispatched from main warehouse"
-                    className="w-full p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setBulkActionModal(null)}
-                  className="flex-1 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={executeBulkDispatch}
-                  className="flex-1 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md transition-all cursor-pointer"
-                >
-                  Confirm Dispatch
-                </button>
               </div>
             </div>
           </div>,
@@ -2992,51 +3056,62 @@ const PurchaseOrders = () => {
       {/* ================= BULK REJECT MODAL ================= */}
       {bulkActionModal === 'reject' &&
         createPortal(
-          <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
-                <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold">
-                  <FiXCircle size={18} />
-                  <span className="text-sm">Bulk Reject Orders</span>
+          <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in">
+            <div className="bg-white/40 dark:bg-slate-950/25 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-rose-600/60 via-red-600/50 to-rose-700/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-rose-600 text-white shadow-md shadow-rose-500/20 shrink-0">
+                    <FiXCircle size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">Bulk Reject Orders</h3>
+                    <p className="text-[11px] text-rose-100 dark:text-rose-200 mt-0.5 font-mono">
+                      {selectedOrderIds.size} order(s) selected
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setBulkActionModal(null)}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
-                  <FiX size={16} />
+                  <FiX size={18} />
                 </button>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                You are about to reject <span className="font-bold font-mono text-rose-600">{selectedOrderIds.size}</span> selected order(s). This is an irreversible status change.
-              </p>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Mandatory Rejection Reason *
-                </label>
-                <textarea
-                  rows={3}
-                  value={bulkRejectReason}
-                  onChange={(e) => setBulkRejectReason(e.target.value)}
-                  placeholder="State clear operational reason (e.g. inventory shortage, pricing issue)..."
-                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500"
-                />
-              </div>
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setBulkActionModal(null)}
-                  className="flex-1 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={executeBulkReject}
-                  className="flex-1 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-md transition-all cursor-pointer"
-                >
-                  Confirm Rejection
-                </button>
+
+              <div className="p-5 sm:p-6 space-y-4">
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  You are about to reject <span className="font-bold font-mono text-rose-600">{selectedOrderIds.size}</span> selected order(s). This is an irreversible status change.
+                </p>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Mandatory Rejection Reason *
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={bulkRejectReason}
+                    onChange={(e) => setBulkRejectReason(e.target.value)}
+                    placeholder="State clear operational reason (e.g. inventory shortage, pricing issue)..."
+                    className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setBulkActionModal(null)}
+                    className="flex-1 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={executeBulkReject}
+                    className="flex-1 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-md transition-all cursor-pointer"
+                  >
+                    Confirm Rejection
+                  </button>
+                </div>
               </div>
             </div>
           </div>,

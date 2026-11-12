@@ -2425,29 +2425,29 @@ const BulkProductImportModal = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* ================= MODAL HEADER ================= */}
-        <div className="p-5 sm:px-6 border-b border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/70 dark:bg-slate-800/50">
+        <div className={`p-5 sm:px-6 border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 ${
+          importMode === 'variants'
+            ? 'bg-gradient-to-r from-indigo-600/60 via-purple-600/50 to-pink-600/50'
+            : 'bg-gradient-to-r from-emerald-600/60 via-teal-600/50 to-cyan-600/50'
+        }`}>
           <div className="flex items-center gap-3">
-            <span className={`p-2.5 rounded-2xl ${
+            <span className={`p-2.5 rounded-2xl text-white shadow-md ${
               importMode === 'variants'
-                ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
-                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                ? 'bg-indigo-600 shadow-indigo-500/20'
+                : 'bg-emerald-600 shadow-emerald-500/20'
             }`}>
               {importMode === 'variants' ? <FiLayers className="text-xl" /> : <FiUploadCloud className="text-xl" />}
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                <h3 className="text-base sm:text-lg font-bold text-white">
                   {importMode === 'variants' ? 'Bulk Product Variants Import' : 'Bulk Products Import'}
                 </h3>
-                <span className={`px-2 py-0.5 text-[11px] font-semibold rounded-full border ${
-                  importMode === 'variants'
-                    ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
-                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                }`}>
+                <span className="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-white/20 text-white border border-white/20">
                   Excel (.xlsx / .csv)
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-white/80 mt-0.5">
                 {importMode === 'variants'
                   ? 'Attach color, wattage, and edition variants to existing products in the catalog.'
                   : 'Upload catalog spreadsheets mapped to trading company codes and distribution territories.'}
@@ -2458,14 +2458,14 @@ const BulkProductImportModal = ({
           <div className="flex items-center gap-3 self-end sm:self-center">
             {/* Mode Switcher Tabs */}
             {step === 'upload' && (
-              <div className="flex items-center gap-1 p-1 bg-slate-200/60 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-white/5">
+              <div className="flex items-center gap-1 p-1 bg-black/20 dark:bg-black/40 rounded-2xl border border-white/10">
                 <button
                   type="button"
                   onClick={() => setImportMode('products')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     importMode === 'products'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-white/80 hover:text-white'
                   }`}
                 >
                   <FiPackage className="text-xs" />
@@ -2476,8 +2476,8 @@ const BulkProductImportModal = ({
                   onClick={() => setImportMode('variants')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     importMode === 'variants'
-                      ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-white/80 hover:text-white'
                   }`}
                 >
                   <FiLayers className="text-xs" />
@@ -2489,7 +2489,7 @@ const BulkProductImportModal = ({
             <button
               type="button"
               onClick={handleCloseModal}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+              className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
             >
               <FiX className="text-lg" />
             </button>
@@ -3700,28 +3700,40 @@ const BulkProductImportModal = ({
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-xs animate-in fade-in duration-150">
             <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
               {/* Modal Header */}
-              <div className="p-4 px-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-slate-800/60">
+              <div className={`p-5 sm:px-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 ${
+                inspectingRow.errors.length > 0
+                  ? 'bg-gradient-to-r from-rose-600/60 via-red-600/50 to-rose-700/50'
+                  : inspectingRow.warnings.length > 0
+                  ? 'bg-gradient-to-r from-amber-600/60 via-orange-600/50 to-amber-700/50'
+                  : 'bg-gradient-to-r from-emerald-600/60 via-teal-600/50 to-cyan-600/50'
+              }`}>
                 <div className="flex items-center gap-3">
-                  <span className={`p-2 rounded-xl text-lg ${
+                  <span className={`p-2.5 rounded-2xl text-white shadow-md ${
                     inspectingRow.errors.length > 0
-                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                      ? 'bg-rose-600 shadow-rose-500/20'
                       : inspectingRow.warnings.length > 0
-                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      ? 'bg-amber-600 shadow-amber-500/20'
+                      : 'bg-emerald-600 shadow-emerald-500/20'
                   }`}>
                     {inspectingRow.errors.length > 0 ? (
-                      <FiAlertCircle />
+                      <FiAlertCircle size={20} />
                     ) : inspectingRow.warnings.length > 0 ? (
-                      <FiAlertTriangle />
+                      <FiAlertTriangle size={20} />
                     ) : (
-                      <FiCheckCircle />
+                      <FiCheckCircle size={20} />
                     )}
                   </span>
                   <div>
-                    <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                    <h4 className="text-base sm:text-lg font-bold text-white">
                       Row #{inspectingRow.rowIndex} • Cell Issues Inspector
                     </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-md">
+                    <p className={`text-[11px] truncate max-w-md mt-0.5 ${
+                      inspectingRow.errors.length > 0
+                        ? 'text-rose-100 dark:text-rose-200'
+                        : inspectingRow.warnings.length > 0
+                        ? 'text-amber-100 dark:text-amber-200'
+                        : 'text-emerald-100 dark:text-emerald-200'
+                    }`}>
                       {inspectingRow.name || '<Untitled Product>'} ({inspectingRow.sku || 'No SKU'})
                     </p>
                   </div>
@@ -3729,9 +3741,9 @@ const BulkProductImportModal = ({
                 <button
                   type="button"
                   onClick={() => setInspectingRowId(null)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                  className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                 >
-                  <FiX className="text-lg" />
+                  <FiX size={18} />
                 </button>
               </div>
 

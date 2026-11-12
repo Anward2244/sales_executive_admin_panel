@@ -179,6 +179,7 @@ const Products = () => {
 
   // Drawer, Form & Modal States
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const [drawerTab, setDrawerTab] = useState('overview'); // 'overview' | 'edit'
   const [drawerProduct, setDrawerProduct] = useState(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -1013,12 +1014,17 @@ const Products = () => {
     setIsDrawerOpen(true);
   };
 
-  // Close Drawer
+  // Close Drawer with smooth exit slide
   const handleCloseDrawer = () => {
-    setIsDrawerOpen(false);
-    setDrawerProduct(null);
-    setEditingProduct(null);
-    setFormError('');
+    if (isDrawerClosing) return;
+    setIsDrawerClosing(true);
+    setTimeout(() => {
+      setIsDrawerOpen(false);
+      setIsDrawerClosing(false);
+      setDrawerProduct(null);
+      setEditingProduct(null);
+      setFormError('');
+    }, 280);
   };
 
   // Stepping navigation across products in drawer
@@ -2243,9 +2249,9 @@ const Products = () => {
       )}
 
       {/* Actions & Filters Bar - Ultra Compact */}
-      <div className={`relative z-30 bg-white/50 dark:bg-slate-900/60 p-2.5 sm:px-3 sm:py-2 border border-slate-200/80 dark:border-white/10 shadow-xs space-y-1.5 transition-all duration-200 ${isFiltersVisible ? 'rounded-2xl' : 'rounded-2xl sm:rounded-full'}`}>
+      <div className="relative z-30 bg-white/50 dark:bg-slate-900/60 p-2.5 sm:px-3 sm:py-2 border border-slate-200/80 dark:border-white/10 shadow-xs rounded-2xl transition-all duration-300">
         {/* Top Row: Primary Actions, Filter Toggle & Sort / Reset */}
-        <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 ${isFiltersVisible ? 'pb-1.5 border-b border-slate-200/60 dark:border-white/5' : ''}`}>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
           {/* Action Controls */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* Actions Dropdown */}
@@ -2459,93 +2465,101 @@ const Products = () => {
           </div>
         </div>
 
-        {/* Bottom Row: Filter Dropdowns Strip (Collapsible) */}
-        {isFiltersVisible && (
-          <div className="flex items-center gap-2 flex-wrap pt-0.5 animate-in fade-in duration-150">
-            <div className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400 mr-0.5 shrink-0">
-              <FiFilter className="text-blue-500 text-xs" />
-              <span>Filters:</span>
-            </div>
-
-            {/* Company Filter */}
-            <div className="min-w-[130px] flex-1 sm:flex-initial">
-              <CustomDropdown
-                value={selectedCompanyFilter}
-                onChange={(val) => setSelectedCompanyFilter(val)}
-                options={[
-                  { value: 'ALL', label: 'All Companies' },
-                  ...companies.map((c) => ({
-                    value: c._id,
-                    label: c.code ? `${c.code} - ${c.name}` : c.name
-                  }))
-                ]}
-                statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
-              />
-            </div>
-
-            {/* Location Filter */}
-            {uniqueLocations.length > 0 && (
-              <div className="min-w-[120px] flex-1 sm:flex-initial">
-                <CustomDropdown
-                  value={selectedLocationFilter}
-                  onChange={(val) => setSelectedLocationFilter(val)}
-                  options={[
-                    { value: 'ALL', label: 'All Locations' },
-                    ...uniqueLocations.map((loc) => ({ value: loc, label: loc }))
-                  ]}
-                  statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
-                />
+        {/* Bottom Row: Filter Dropdowns Strip (Smooth Animated Reveal) */}
+        <div
+          className={`grid transition-all duration-300 ease-in-out ${
+            isFiltersVisible
+              ? 'grid-rows-[1fr] opacity-100 pt-2 border-t border-slate-200/60 dark:border-white/5 mt-2'
+              : 'grid-rows-[0fr] opacity-0 pointer-events-none mt-0 border-t-0'
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="flex items-center gap-2 flex-wrap pt-0.5">
+              <div className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400 mr-0.5 shrink-0">
+                <FiFilter className="text-blue-500 text-xs" />
+                <span>Filters:</span>
               </div>
-            )}
 
-            {/* Brand Filter */}
-            {uniqueBrands.length > 0 && (
-              <div className="min-w-[110px] flex-1 sm:flex-initial">
+              {/* Company Filter */}
+              <div className="min-w-[130px] flex-1 sm:flex-initial">
                 <CustomDropdown
-                  value={selectedBrandFilter}
-                  onChange={(val) => setSelectedBrandFilter(val)}
+                  value={selectedCompanyFilter}
+                  onChange={(val) => setSelectedCompanyFilter(val)}
                   options={[
-                    { value: 'ALL', label: 'All Brands' },
-                    ...uniqueBrands.map((b) => ({ value: b, label: b }))
-                  ]}
-                  statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
-                />
-              </div>
-            )}
-
-            {/* Category Filter */}
-            {categories.length > 0 && (
-              <div className="min-w-[125px] flex-1 sm:flex-initial">
-                <CustomDropdown
-                  value={selectedCategoryFilter}
-                  onChange={(val) => setSelectedCategoryFilter(val)}
-                  options={[
-                    { value: 'ALL', label: 'All Categories' },
-                    ...categories.map((c) => ({
+                    { value: 'ALL', label: 'All Companies' },
+                    ...companies.map((c) => ({
                       value: c._id,
-                      label: c.name || c.code
+                      label: c.code ? `${c.code} - ${c.name}` : c.name
                     }))
                   ]}
                   statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
                 />
               </div>
-            )}
 
-            {/* Status Filter */}
-            <div className="min-w-[110px] flex-1 sm:flex-initial">
-              <CustomDropdown
-                value={selectedStatusFilter}
-                onChange={(val) => setSelectedStatusFilter(val)}
-                options={[
-                  { value: 'ALL', label: 'All Statuses' },
-                  { value: 'ACTIVE', label: 'Active Only' },
-                  { value: 'INACTIVE', label: 'Inactive Only' }
-                ]}
-                statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
-              />
+              {/* Location Filter */}
+              {uniqueLocations.length > 0 && (
+                <div className="min-w-[120px] flex-1 sm:flex-initial">
+                  <CustomDropdown
+                    value={selectedLocationFilter}
+                    onChange={(val) => setSelectedLocationFilter(val)}
+                    options={[
+                      { value: 'ALL', label: 'All Locations' },
+                      ...uniqueLocations.map((loc) => ({ value: loc, label: loc }))
+                    ]}
+                    statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                  />
+                </div>
+              )}
+
+              {/* Brand Filter */}
+              {uniqueBrands.length > 0 && (
+                <div className="min-w-[110px] flex-1 sm:flex-initial">
+                  <CustomDropdown
+                    value={selectedBrandFilter}
+                    onChange={(val) => setSelectedBrandFilter(val)}
+                    options={[
+                      { value: 'ALL', label: 'All Brands' },
+                      ...uniqueBrands.map((b) => ({ value: b, label: b }))
+                    ]}
+                    statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                  />
+                </div>
+              )}
+
+              {/* Category Filter */}
+              {categories.length > 0 && (
+                <div className="min-w-[125px] flex-1 sm:flex-initial">
+                  <CustomDropdown
+                    value={selectedCategoryFilter}
+                    onChange={(val) => setSelectedCategoryFilter(val)}
+                    options={[
+                      { value: 'ALL', label: 'All Categories' },
+                      ...categories.map((c) => ({
+                        value: c._id,
+                        label: c.name || c.code
+                      }))
+                    ]}
+                    statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                  />
+                </div>
+              )}
+
+              {/* Status Filter */}
+              <div className="min-w-[110px] flex-1 sm:flex-initial">
+                <CustomDropdown
+                  value={selectedStatusFilter}
+                  onChange={(val) => setSelectedStatusFilter(val)}
+                  options={[
+                    { value: 'ALL', label: 'All Statuses' },
+                    { value: 'ACTIVE', label: 'Active Only' },
+                    { value: 'INACTIVE', label: 'Inactive Only' }
+                  ]}
+                  statusColor="!px-2.5 !py-1 text-xs font-semibold rounded-lg bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200"
+                />
+              </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Main Content Area */}
@@ -2996,53 +3010,59 @@ const Products = () => {
           <div className="fixed inset-0 z-[9999] overflow-hidden">
             {/* Backdrop */}
             <div
-              className="fixed inset-0 dark:bg-slate-950/50 backdrop-blur-lg transition-opacity animate-in fade-in duration-300"
+              className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
+                isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
+              }`}
               onClick={handleCloseDrawer}
             />
 
             {/* Slide-over Container (Pinned to Right) */}
-            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
-              <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl bg-white/40 dark:bg-slate-900/25 border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 text-left overflow-hidden">
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-4 pointer-events-none">
+              <div
+                className={`w-screen max-w-full sm:max-w-xl md:max-w-xl lg:max-w-2xl bg-white/20 dark:bg-slate-900 border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto z-10 text-left overflow-hidden transition-transform duration-300 ease-in-out ${
+                  isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+                }`}
+              >
                 {/* Sticky Drawer Header */}
-                <div className="px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 space-y-3.5">
+                <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0 space-y-2.5">
                   {/* Top Bar: Icon + Title + Status + Close Button */}
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
-                        <FiPackage className="text-xl" />
+                  <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-xl bg-blue-600 text-white shadow-sm flex items-center justify-center shrink-0">
+                        <FiPackage size={17} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate tracking-tight">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h2 className="text-sm sm:text-base font-bold text-white truncate tracking-tight">
                             {drawerProduct ? drawerProduct.name : 'Add New Product'}
                           </h2>
                           {drawerProduct && (
                             <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                 drawerProduct.isActive !== false
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                  : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
+                                  ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-400/30'
+                                  : 'bg-white/15 text-slate-200 border border-white/20'
                               }`}
                             >
                               <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  drawerProduct.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                                className={`w-1 h-1 rounded-full ${
+                                  drawerProduct.isActive !== false ? 'bg-emerald-400 animate-pulse' : 'bg-slate-300'
                                 }`}
                               />
                               {drawerProduct.isActive !== false ? 'Active' : 'Inactive'}
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center gap-1.5 mt-0.5">
                           {drawerProduct ? (
                             <div className="flex items-center gap-1.5">
-                              <span className="font-mono text-xs font-semibold text-slate-500 dark:text-slate-400">
+                              <span className="font-mono text-[11px] font-medium text-blue-100/90">
                                 {drawerProduct.sku}
                               </span>
-                              <CopyButton text={drawerProduct.sku} size={11} />
+                              <CopyButton text={drawerProduct.sku} size={10} className="text-blue-100/80 hover:text-white" />
                             </div>
                           ) : (
-                            <p className="text-xs text-slate-400 truncate">Configure new catalog product with pricing, variants, and routing</p>
+                            <p className="text-[11px] text-blue-100/80 truncate">Configure new catalog product with variants and routing</p>
                           )}
                         </div>
                       </div>
@@ -3051,31 +3071,31 @@ const Products = () => {
                     <button
                       type="button"
                       onClick={handleCloseDrawer}
-                      className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer shrink-0"
+                      className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer shrink-0"
                       title="Close drawer (Esc)"
                     >
-                      <FiX size={20} />
+                      <FiX size={18} />
                     </button>
                   </div>
 
                   {/* Sub-Bar: Overview / Edit Switcher & Stepper Navigation */}
                   {drawerProduct && (
-                    <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-white/5 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/15 flex-wrap sm:flex-nowrap">
                       {/* Segmented Tab Pill */}
-                      <div className="flex items-center p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
+                      <div className="flex items-center p-0.5 bg-black/20 backdrop-blur-md rounded-lg border border-white/15">
                         <button
                           type="button"
                           onClick={() => {
                             setDrawerTab('overview');
                             setFormError('');
                           }}
-                          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
                             drawerTab === 'overview'
-                              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                              ? 'bg-white text-blue-700 shadow-xs'
+                              : 'text-white/80 hover:text-white hover:bg-white/10'
                           }`}
                         >
-                          <FiEye className="text-xs" />
+                          <FiEye className="text-[11px]" />
                           <span>Overview</span>
                         </button>
                         <button
@@ -3084,40 +3104,40 @@ const Products = () => {
                             setDrawerTab('edit');
                             setFormError('');
                           }}
-                          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
                             drawerTab === 'edit'
-                              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                              ? 'bg-white text-blue-700 shadow-xs'
+                              : 'text-white/80 hover:text-white hover:bg-white/10'
                           }`}
                         >
-                          <FiEdit2 className="text-xs" />
+                          <FiEdit2 className="text-[11px]" />
                           <span>Edit Details</span>
                         </button>
                       </div>
 
                       {/* Stepper Navigation */}
                       {selectedProductIndex >= 0 && filteredProducts.length > 1 && (
-                        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl px-2 py-1 text-xs">
+                        <div className="flex items-center gap-1 bg-black/20 backdrop-blur-md border border-white/15 rounded-lg px-2 py-0.5 text-[11px]">
                           <button
                             type="button"
                             onClick={handlePrevProduct}
                             disabled={!canGoPrevProduct}
                             title="Previous Product (Left Arrow)"
-                            className="p-1 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            className="p-0.5 rounded text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                           >
-                            <FiChevronLeft size={16} />
+                            <FiChevronLeft size={14} />
                           </button>
-                          <span className="font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 select-none">
-                            {selectedProductIndex + 1} of {filteredProducts.length}
+                          <span className="font-mono text-[10px] font-semibold text-white select-none px-1">
+                            {selectedProductIndex + 1} / {filteredProducts.length}
                           </span>
                           <button
                             type="button"
                             onClick={handleNextProduct}
                             disabled={!canGoNextProduct}
                             title="Next Product (Right Arrow)"
-                            className="p-1 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            className="p-0.5 rounded text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                           >
-                            <FiChevronRight size={16} />
+                            <FiChevronRight size={14} />
                           </button>
                         </div>
                       )}
@@ -3126,100 +3146,88 @@ const Products = () => {
                 </div>
 
                 {/* Scrollable Body Content */}
-                <div className="flex-1 overflow-y-auto p-5 sm:p-6 custom-scrollbar space-y-5">
+                <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 custom-scrollbar space-y-3">
                   {drawerTab === 'overview' && drawerProduct ? (
                     <>
-                      {/* 1. Highlight Metrics Cards */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {/* Price Card */}
-                        <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/80 dark:border-white/10">
-                          <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 truncate">
-                            Pricing
-                          </p>
-                          <p className="text-sm sm:text-base font-mono font-bold text-emerald-600 dark:text-emerald-400 truncate">
-                            {getProductPriceInfo(drawerProduct).formatted}
-                          </p>
-                          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
-                            {Array.isArray(drawerProduct.variants) && drawerProduct.variants.length > 0
-                              ? `${drawerProduct.variants.length} variant${drawerProduct.variants.length > 1 ? 's' : ''}`
-                              : 'Base catalog price'}
-                          </p>
+                      {/* 1. Product Summary & Specifications Card */}
+                      <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-white/10 p-3 shadow-xs space-y-2.5">
+                        <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-white/5 pb-2">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                            <FiTag className="text-blue-500 text-xs" />
+                            <span>Catalog Specifications</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-[10px] font-mono text-slate-400">
+                            <span>ID: {drawerProduct._id}</span>
+                            <CopyButton text={drawerProduct._id} size={10} />
+                          </div>
                         </div>
 
-                        {/* Stock Card */}
-                        <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/80 dark:border-white/10">
-                          <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 truncate">
-                            Total Inventory
-                          </p>
-                          <p className="text-sm sm:text-base font-mono font-bold text-slate-900 dark:text-white truncate">
-                            {getProductStockInfo(drawerProduct).totalStock} <span className="text-xs font-normal text-slate-500">units</span>
-                          </p>
-                          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-                            <span
-                              className={`inline-flex items-center px-1.5 py-0.2 rounded font-semibold ${
-                                getProductStockInfo(drawerProduct).inStock
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                              }`}
-                            >
-                              {getProductStockInfo(drawerProduct).inStock ? 'In Stock' : 'Out of Stock'}
+                        {/* Grid of Key Info */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {/* Brand */}
+                          <div className="p-2.5 bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200/60 dark:border-white/5 shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Brand</span>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate block mt-0.5">
+                              {drawerProduct.brand || '—'}
                             </span>
-                          </p>
-                        </div>
+                          </div>
 
-                        {/* Brand Card */}
-                        <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/80 dark:border-white/10">
-                          <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 truncate">
-                            Brand
-                          </p>
-                          <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
-                            {drawerProduct.brand || 'N/A'}
-                          </p>
-                          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
-                            Unit: <strong className="text-slate-700 dark:text-slate-300 font-mono">{drawerProduct.unit || 'PCS'}</strong>
-                          </p>
-                        </div>
+                          {/* Unit */}
+                          <div className="p-2.5 bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200/60 dark:border-white/5 shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Unit</span>
+                            <span className="text-xs font-bold font-mono text-slate-900 dark:text-white truncate block mt-0.5">
+                              {drawerProduct.unit || 'PCS'}
+                            </span>
+                          </div>
 
-                        {/* Category Card */}
-                        <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-slate-200/80 dark:border-white/10">
-                          <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 truncate">
-                            Category
-                          </p>
-                          {(() => {
-                            const cat = getDrawerCategoryDetails(drawerProduct);
-                            return cat ? (
-                              <>
-                                <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate" title={cat.name}>
+                          {/* Category */}
+                          <div className="p-2.5 bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200/60 dark:border-white/5 shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Category</span>
+                            {(() => {
+                              const cat = getDrawerCategoryDetails(drawerProduct);
+                              return cat ? (
+                                <span className="text-xs font-bold text-slate-900 dark:text-white truncate block mt-0.5" title={cat.name}>
                                   {cat.name}
-                                </p>
-                                <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
-                                  {cat.code ? (
-                                    <span className="px-1.5 py-0.2 rounded font-mono font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                                      {cat.code}
-                                    </span>
-                                  ) : (
-                                    'Standard Category'
-                                  )}
-                                </p>
-                              </>
-                            ) : (
-                              <p className="text-xs text-slate-400 italic">Unassigned</p>
-                            );
-                          })()}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-slate-400 italic block mt-0.5">Unassigned</span>
+                              );
+                            })()}
+                          </div>
+
+                          {/* Scope / Distribution */}
+                          <div className="p-2.5 bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200/60 dark:border-white/5 shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Coverage</span>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate block mt-0.5">
+                              {(drawerProduct.locations || []).length >= 36 ? 'Pan-India' : `${(drawerProduct.locations || []).length} States`}
+                            </span>
+                          </div>
                         </div>
+
+                        {/* Price Card & Stock Card commented out as requested */}
+                        {/*
+                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/60 dark:border-white/5">
+                          <div>
+                            <span className="text-[10px] text-slate-400">Price: {getProductPriceInfo(drawerProduct).formatted}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400">Stock: {getProductStockInfo(drawerProduct).totalStock}</span>
+                          </div>
+                        </div>
+                        */}
                       </div>
 
-                      {/* 2. Product Variants & Inventory */}
-                      <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3.5">
+                      {/* 2. Product Variants */}
+                      <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-white/10 p-3 shadow-xs space-y-2.5">
                         <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                              <FiLayers className="text-sm" />
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                              <FiLayers className="text-xs" />
                             </div>
-                            <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                              Product Variants & Inventory
+                            <h3 className="text-xs font-bold text-slate-900 dark:text-white">
+                              Product Variants
                             </h3>
-                            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                               {Array.isArray(drawerProduct.variants) ? drawerProduct.variants.length : 0}
                             </span>
                           </div>
@@ -3227,43 +3235,43 @@ const Products = () => {
                           <button
                             type="button"
                             onClick={handleAddVariantInDrawer}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold rounded-lg transition-all shadow-xs cursor-pointer"
                           >
-                            <FiPlus className="text-xs" />
+                            <FiPlus className="text-[10px]" />
                             <span>Add Variant</span>
                           </button>
                         </div>
 
                         {Array.isArray(drawerProduct.variants) && drawerProduct.variants.length > 0 ? (
-                          <div className="space-y-2.5">
+                          <div className="space-y-2">
                             {drawerProduct.variants.map((variant, vIdx) => {
-                              const vPrice = variant.price !== undefined && variant.price !== null ? Number(variant.price) : 0;
-                              const vStock = variant.stock !== undefined && variant.stock !== null ? Number(variant.stock) : 0;
+                              // const vPrice = variant.price !== undefined && variant.price !== null ? Number(variant.price) : 0;
+                              // const vStock = variant.stock !== undefined && variant.stock !== null ? Number(variant.stock) : 0;
                               const attrs = variant.attributes && typeof variant.attributes === 'object' ? variant.attributes : {};
 
                               return (
                                 <div
                                   key={variant._id || vIdx}
-                                  className="p-3.5 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/70 dark:border-white/10 shadow-xs space-y-2.5 transition-all hover:border-slate-300 dark:hover:border-white/20"
+                                  className="p-2.5 bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200/70 dark:border-white/10 shadow-2xs space-y-1.5 transition-all hover:border-slate-300 dark:hover:border-white/20"
                                 >
                                   {/* Row 1: Header info + Actions */}
-                                  <div className="flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                      <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <span className="w-4 h-4 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 text-[9px] font-bold flex items-center justify-center shrink-0">
                                         {vIdx + 1}
                                       </span>
-                                      <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                                      <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
                                         {variant.name || `Variant #${vIdx + 1}`}
                                       </span>
-                                      <div className="flex items-center gap-1 font-mono text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-white/5">
+                                      <div className="flex items-center gap-1 font-mono text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-1.5 py-0.2 rounded border border-slate-200/60 dark:border-white/5">
                                         <span>{variant.sku}</span>
-                                        <CopyButton text={variant.sku} size={10} />
+                                        <CopyButton text={variant.sku} size={9} />
                                       </div>
                                     </div>
 
-                                    <div className="flex items-center gap-1.5 shrink-0">
+                                    <div className="flex items-center gap-1 shrink-0">
                                       <span
-                                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        className={`inline-flex items-center px-1.5 py-0.2 rounded-full text-[9px] font-bold ${
                                           variant.isActive !== false
                                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                                             : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
@@ -3274,61 +3282,64 @@ const Products = () => {
                                       <button
                                         type="button"
                                         onClick={() => handleEditVariantInDrawer(vIdx)}
-                                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
+                                        className="p-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
                                         title="Edit this variant in form"
                                       >
-                                        <FiEdit2 size={13} />
+                                        <FiEdit2 size={12} />
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => handleDeleteVariantInOverview(variant)}
-                                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors cursor-pointer"
+                                        className="p-1 rounded text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors cursor-pointer"
                                         title="Delete this variant"
                                       >
-                                        <FiTrash2 size={13} />
+                                        <FiTrash2 size={12} />
                                       </button>
                                     </div>
                                   </div>
 
-                                  {/* Row 2: Attributes, Stock & Price */}
-                                  <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs flex-wrap gap-2">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                  {/* Row 2: Attributes */}
+                                  {Object.keys(attrs).length > 0 && (
+                                    <div className="pt-1 border-t border-slate-100 dark:border-white/5 flex items-center gap-1.5 flex-wrap">
                                       {Object.entries(attrs).map(([key, val]) =>
                                         val ? (
                                           <span
                                             key={key}
-                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-[11px] font-medium text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5"
+                                            className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/5 text-[10px] font-medium text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5"
                                           >
-                                            <span className="text-[10px] text-slate-400 capitalize">{key}:</span>
+                                            <span className="text-[9px] text-slate-400 capitalize">{key}:</span>
                                             <span className="font-semibold">{val}</span>
                                           </span>
                                         ) : null
                                       )}
+                                      {/* Stock count commented out as requested
                                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-[11px] text-slate-600 dark:text-slate-300 font-medium">
                                         Stock: <strong className="font-mono text-slate-900 dark:text-white">{vStock}</strong>
                                       </span>
+                                      */}
+                                      {/* Price display commented out as requested
+                                      <div className="text-sm font-mono font-bold text-slate-900 dark:text-white">
+                                        ₹{vPrice.toLocaleString('en-IN')}
+                                      </div>
+                                      */}
                                     </div>
-
-                                    <div className="text-sm font-mono font-bold text-slate-900 dark:text-white">
-                                      ₹{vPrice.toLocaleString('en-IN')}
-                                    </div>
-                                  </div>
+                                  )}
                                 </div>
                               );
                             })}
                           </div>
                         ) : (
-                          <div className="p-6 text-center bg-white dark:bg-slate-800/60 rounded-xl border border-dashed border-slate-200 dark:border-white/10 space-y-2">
-                            <FiPackage className="text-2xl text-slate-400 mx-auto" />
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              No variants registered. Base catalog item will be sold as a single SKU.
+                          <div className="p-4 text-center bg-white dark:bg-slate-800/60 rounded-lg border border-dashed border-slate-200 dark:border-white/10 space-y-1.5">
+                            <FiPackage className="text-lg text-slate-400 mx-auto" />
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              No variants registered. Base catalog item is sold as a single SKU.
                             </p>
                             <button
                               type="button"
                               onClick={handleAddVariantInDrawer}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold rounded-lg transition-all shadow-xs cursor-pointer"
                             >
-                              <FiPlus className="text-xs" />
+                              <FiPlus className="text-[10px]" />
                               <span>Add First Variant</span>
                             </button>
                           </div>
@@ -3337,23 +3348,23 @@ const Products = () => {
 
                       {/* 3. Company Territory Routing (companyMappings) */}
                       {Array.isArray(drawerProduct.companyMappings) && drawerProduct.companyMappings.length > 0 ? (
-                        <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3.5">
+                        <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-white/10 p-3 shadow-xs space-y-2.5">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                                <FiBriefcase className="text-sm" />
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-5 h-5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                <FiBriefcase className="text-xs" />
                               </div>
-                              <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                              <h3 className="text-xs font-bold text-slate-900 dark:text-white">
                                 Territory Routing
                               </h3>
-                              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                                 {drawerProduct.companyMappings.length} Partner{drawerProduct.companyMappings.length > 1 ? 's' : ''}
                               </span>
                             </div>
-                            <span className="text-[10px] font-mono text-slate-400">companyMappings</span>
+                            <span className="text-[9px] font-mono text-slate-400">companyMappings</span>
                           </div>
 
-                          <div className="space-y-2.5">
+                          <div className="space-y-2">
                             {drawerProduct.companyMappings.map((mapping, idx) => {
                               const compObj =
                                 typeof mapping.companyId === 'object' && mapping.companyId !== null
@@ -3368,42 +3379,42 @@ const Products = () => {
                               return (
                                 <div
                                   key={idx}
-                                  className="p-3.5 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/70 dark:border-white/10 space-y-2 shadow-xs"
+                                  className="p-2.5 bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200/70 dark:border-white/10 space-y-1.5 shadow-2xs"
                                 >
                                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                                    <div className="flex items-center gap-2">
-                                      <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="w-4 h-4 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-bold flex items-center justify-center shrink-0">
                                         {idx + 1}
                                       </span>
-                                      <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                                      <span className="text-xs font-bold text-slate-900 dark:text-white">
                                         {compName}
                                       </span>
                                       {compCode && (
-                                        <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                        <span className="px-1.5 py-0.2 rounded font-mono text-[9px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                                           {compCode}
                                         </span>
                                       )}
                                     </div>
-                                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
                                       {isWildcard ? (
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20">
-                                          ★ Pan-India (All Territories)
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[9px] font-bold border border-purple-500/20">
+                                          ★ Pan-India
                                         </span>
                                       ) : (
-                                        `${states.length} state${states.length === 1 ? '' : 's'} assigned`
+                                        `${states.length} state${states.length === 1 ? '' : 's'}`
                                       )}
                                     </span>
                                   </div>
 
                                   {!isWildcard && states.length > 0 && (
-                                    <div className="pt-1">
+                                    <div className="pt-0.5">
                                       <div className="flex flex-wrap gap-1">
                                         {(isExpanded ? states : states.slice(0, 6)).map((st, sIdx) => (
                                           <span
                                             key={sIdx}
-                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 text-[10px] font-medium border border-slate-200/60 dark:border-white/5"
+                                            className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 text-[9px] font-medium border border-slate-200/60 dark:border-white/5"
                                           >
-                                            <FiMapPin className="text-[9px] text-blue-500 shrink-0" />
+                                            <FiMapPin className="text-[8px] text-blue-500 shrink-0" />
                                             <span>{st}</span>
                                           </span>
                                         ))}
@@ -3416,9 +3427,9 @@ const Products = () => {
                                                 [idx]: !prev[idx]
                                               }))
                                             }
-                                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline px-1.5 py-0.5 cursor-pointer"
+                                            className="text-[9px] font-bold text-blue-600 dark:text-blue-400 hover:underline px-1 py-0.2 cursor-pointer"
                                           >
-                                            {isExpanded ? 'Show less' : `+${states.length - 6} more`}
+                                            {isExpanded ? 'Less' : `+${states.length - 6} more`}
                                           </button>
                                         )}
                                       </div>
@@ -3431,12 +3442,12 @@ const Products = () => {
                         </div>
                       ) : (
                         /* Single Trading / Partner Company Fallback */
-                        <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                              <FiBriefcase className="text-sm" />
+                        <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-white/10 p-3 shadow-xs space-y-2">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                              <FiBriefcase className="text-xs" />
                             </div>
-                            <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                            <h3 className="text-xs font-bold text-slate-900 dark:text-white">
                               Trading Partner Company
                             </h3>
                           </div>
@@ -3444,28 +3455,28 @@ const Products = () => {
                           {(() => {
                             const comp = getDrawerCompanyDetails(drawerProduct);
                             return (
-                              <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/70 dark:border-white/10">
+                              <div className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200/70 dark:border-white/10 shadow-2xs">
                                 <div className="space-y-0.5">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-bold text-slate-900 dark:text-white">
                                       {comp.name}
                                     </span>
                                     {comp.code && (
-                                      <span className="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md border border-blue-500/20">
+                                      <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded border border-blue-500/20">
                                         {comp.code}
                                       </span>
                                     )}
                                   </div>
                                   {comp.id && (
-                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
+                                    <div className="flex items-center gap-1 text-[9px] text-slate-400 font-mono">
                                       <span>ID: {comp.id}</span>
-                                      <CopyButton text={comp.id} size={10} />
+                                      <CopyButton text={comp.id} size={9} />
                                     </div>
                                   )}
                                 </div>
 
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                                  <FiCheckCircle className="text-xs" />
+                                <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                                  <FiCheckCircle className="text-[10px]" />
                                   <span>Mapped</span>
                                 </span>
                               </div>
@@ -3475,33 +3486,33 @@ const Products = () => {
                       )}
 
                       {/* 4. Covered Locations */}
-                      <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                      <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-white/10 p-3 shadow-xs space-y-2">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                              <FiMapPin className="text-sm" />
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                              <FiMapPin className="text-xs" />
                             </div>
-                            <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                            <h3 className="text-xs font-bold text-slate-900 dark:text-white">
                               Covered Locations
                             </h3>
                           </div>
-                          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                             {(drawerProduct.locations || []).length} Assigned
                           </span>
                         </div>
 
                         {Array.isArray(drawerProduct.locations) && drawerProduct.locations.length >= 36 ? (
-                          <div className="p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/70 dark:border-white/10 flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              <FiGlobe className="text-blue-500 text-sm shrink-0" />
-                              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                                Pan-India Distribution (All 36 States & Union Territories covered)
+                          <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <FiGlobe className="text-blue-500 text-xs shrink-0" />
+                              <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                                Pan-India Distribution (All 36 States & UTs covered)
                               </span>
                             </div>
                             <button
                               type="button"
                               onClick={() => setExpandedOverviewLocations((prev) => !prev)}
-                              className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer shrink-0"
+                              className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer shrink-0"
                             >
                               {expandedOverviewLocations ? 'Collapse' : 'View all'}
                             </button>
@@ -3510,43 +3521,43 @@ const Products = () => {
 
                         {Array.isArray(drawerProduct.locations) && drawerProduct.locations.length > 0 ? (
                           (drawerProduct.locations.length < 36 || expandedOverviewLocations) && (
-                            <div className="flex flex-wrap gap-1.5 pt-1">
+                            <div className="flex flex-wrap gap-1 pt-0.5">
                               {drawerProduct.locations.map((loc, idx) => (
                                 <span
                                   key={idx}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-[11px] font-medium text-slate-800 dark:text-slate-200 border border-slate-200/70 dark:border-white/10 shadow-2xs"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white dark:bg-slate-800 text-[10px] font-medium text-slate-800 dark:text-slate-200 border border-slate-200/70 dark:border-white/10 shadow-2xs"
                                 >
-                                  <FiGlobe className="text-blue-500 text-[10px] shrink-0" />
+                                  <FiGlobe className="text-blue-500 text-[9px] shrink-0" />
                                   <span>{loc}</span>
                                 </span>
                               ))}
                             </div>
                           )
                         ) : (
-                          <div className="p-3 text-center text-slate-400 text-xs italic bg-white dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-white/10">
+                          <div className="p-2 text-center text-slate-400 text-[11px] italic bg-white dark:bg-slate-800/40 rounded-lg border border-dashed border-slate-200 dark:border-white/10">
                             All territories fallback.
                           </div>
                         )}
                       </div>
 
                       {/* 5. Product Description */}
-                      <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
-                        <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-white/10 p-3 shadow-xs space-y-1.5">
+                        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                           Product Description
                         </h3>
-                        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-[11.5px] text-slate-700 dark:text-slate-300 leading-normal whitespace-pre-wrap pl-2 border-l-2 border-blue-500/50">
                           {drawerProduct.description || 'No detailed description provided.'}
                         </p>
                       </div>
 
                       {/* 6. Metadata Strip */}
-                      <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-400">
-                        <div className="flex items-center gap-2 flex-wrap">
+                      <div className="pt-1.5 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-medium">Product ID:</span>
                           <span className="font-mono text-slate-600 dark:text-slate-300 font-semibold">{drawerProduct._id}</span>
-                          <CopyButton text={drawerProduct._id} size={10} />
+                          <CopyButton text={drawerProduct._id} size={9} />
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2.5">
                           <span>Created: <strong className="font-mono text-slate-600 dark:text-slate-300">{formatDateTimeDDMMYYYY(drawerProduct.createdAt)}</strong></span>
                           <span>Updated: <strong className="font-mono text-slate-600 dark:text-slate-300">{formatDateTimeDDMMYYYY(drawerProduct.updatedAt)}</strong></span>
                         </div>
@@ -3554,18 +3565,18 @@ const Products = () => {
                     </>
                   ) : (
                     /* Edit or Create Form */
-                    <form onSubmit={handleSaveProduct} className="space-y-5">
+                    <form onSubmit={handleSaveProduct} className="space-y-3.5">
                       {formError && (
-                        <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2">
-                          <FiAlertCircle className="shrink-0 text-base" />
+                        <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-semibold flex items-center gap-2">
+                          <FiAlertCircle className="shrink-0 text-sm" />
                           <span>{formError}</span>
                         </div>
                       )}
 
                       {/* Card 1: Core Product Information */}
-                      <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
-                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-white/5">
-                          <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                      <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-white/10 p-3 shadow-xs space-y-2.5">
+                        <div className="flex items-center gap-1.5 pb-1.5 border-b border-slate-200/60 dark:border-white/5">
+                          <div className="w-5 h-5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                             <FiTag className="text-xs" />
                           </div>
                           <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -3575,7 +3586,7 @@ const Products = () => {
 
                         {/* Product Name */}
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-0.5">
                             Product Name *
                           </label>
                           <input
@@ -3583,15 +3594,15 @@ const Products = () => {
                             value={formData.name}
                             onChange={(e) => handleNameChange(e.target.value)}
                             placeholder="e.g. Sony Inzone H9 Wireless Headset"
-                            className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30"
+                            className="w-full px-3 py-1.5 h-8.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                             required
                           />
                         </div>
 
-                        {/* SKU, Brand, Category Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {/* SKU, Unit, Brand, Category Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           <div>
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-0.5">
                               SKU Code *
                             </label>
                             <input
@@ -3599,19 +3610,33 @@ const Products = () => {
                               value={formData.sku}
                               onChange={(e) => setFormData({ ...formData, sku: formatEntityCode(e.target.value), skuManual: true })}
                               placeholder="e.g. SONY-INZONE-H9"
-                              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 font-semibold"
+                              className="w-full px-3 py-1.5 h-8.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-semibold"
                               required
                             />
                           </div>
 
                           <div>
-                            <div className="flex items-center justify-between mb-1">
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-0.5">
+                              Measurement Unit *
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.unit}
+                              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                              placeholder="e.g. PCS, BOX, SET"
+                              className="w-full px-3 py-1.5 h-8.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                                 Brand Name *
                               </label>
                               {activeBrandGroup && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-md border border-emerald-500/20">
-                                  <FiZap className="text-[9px]" />
+                                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1 py-0.2 rounded border border-emerald-500/20">
+                                  <FiZap className="text-[8px]" />
                                   <span>Matrix</span>
                                 </span>
                               )}
@@ -3624,12 +3649,12 @@ const Products = () => {
                               searchable={true}
                               allowCustom={true}
                               options={brandOptions}
-                              statusColor="!px-3 !py-2 !bg-white dark:!bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
+                              statusColor="!px-3 !py-1.5 !h-8.5 !bg-white dark:!bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-0.5">
                               Category
                             </label>
                             <CustomDropdown
@@ -3645,53 +3670,37 @@ const Products = () => {
                                   label: `${c.name}${c.code ? ` (${c.code})` : ''}`
                                 }))
                               ]}
-                              statusColor="!px-3 !py-2 !bg-white dark:!bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
+                              statusColor="!px-3 !py-1.5 !h-8.5 !bg-white dark:!bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white"
                             />
                           </div>
                         </div>
 
-                        {/* Base Price & Unit */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                              Base Price (₹)
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="any"
-                              value={formData.price}
-                              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                              placeholder="0 (or define per variant)"
-                              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                              Measurement Unit *
-                            </label>
-                            <input
-                              type="text"
-                              value={formData.unit}
-                              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                              placeholder="e.g. PCS, BOX, SET"
-                              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden"
-                              required
-                            />
-                          </div>
-                        </div>
+                        {/* Base Price input commented out as requested */}
+                        {/* <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Base Price (₹)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={formData.price}
+                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                            placeholder="0 (or define per variant)"
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30"
+                          />
+                        </div> */}
                       </div>
 
-                      {/* Card 2: Product Variants & Inventory */}
-                      <div id="drawer-variants-section" className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
-                        <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/5">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                      {/* Card 2: Product Variants */}
+                      <div id="drawer-variants-section" className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-white/10 p-3 shadow-xs space-y-2.5">
+                        <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-white/5">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                               <FiLayers className="text-xs" />
                             </div>
                             <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                              2. Variants & Inventory
+                              2. Product Variants
                             </h3>
                             {Array.isArray(formData.variants) && formData.variants.length > 0 && (
                               <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
@@ -3702,35 +3711,35 @@ const Products = () => {
                           <button
                             type="button"
                             onClick={handleAddVariantRow}
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold rounded-lg transition-all shadow-xs cursor-pointer"
                           >
-                            <FiPlus className="text-xs" />
+                            <FiPlus className="text-[10px]" />
                             <span>Add Variant</span>
                           </button>
                         </div>
 
                         {Array.isArray(formData.variants) && formData.variants.length > 0 ? (
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             {formData.variants.map((v, vIdx) => (
                               <div
                                 key={v._id || vIdx}
                                 id={`drawer-variant-row-${vIdx}`}
-                                className="p-3.5 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-3 shadow-xs"
+                                className="p-2.5 bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200/80 dark:border-white/10 space-y-2 shadow-2xs"
                               >
                                 <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="w-4 h-4 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-bold flex items-center justify-center shrink-0">
                                       {vIdx + 1}
                                     </span>
                                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                                       {v.name || `Variant #${vIdx + 1}`}
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1.5">
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateVariantField(vIdx, 'isActive', v.isActive === false)}
-                                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                                      className={`px-1.5 py-0.2 rounded text-[9px] font-bold transition-all cursor-pointer ${
                                         v.isActive !== false
                                           ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                                           : 'bg-slate-200 dark:bg-white/10 text-slate-500'
@@ -3741,15 +3750,15 @@ const Products = () => {
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveVariantRow(vIdx)}
-                                      className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                                      className="p-1 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
                                       title="Remove this variant"
                                     >
-                                      <FiTrash2 size={13} />
+                                      <FiTrash2 size={12} />
                                     </button>
                                   </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                   <div>
                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
                                       Variant Name *
@@ -3759,7 +3768,7 @@ const Products = () => {
                                       value={v.name || ''}
                                       onChange={(e) => handleUpdateVariantField(vIdx, 'name', e.target.value)}
                                       placeholder="e.g. Midnight Black (128GB)"
-                                      className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                      className="w-full px-2.5 py-1 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-md text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
 
@@ -3772,10 +3781,11 @@ const Products = () => {
                                       value={v.sku || ''}
                                       onChange={(e) => handleUpdateVariantField(vIdx, 'sku', formatEntityCode(e.target.value))}
                                       placeholder="e.g. SONY-H9-BLK"
-                                      className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-semibold"
+                                      className="w-full px-2.5 py-1 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-md text-xs font-mono uppercase text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-semibold"
                                     />
                                   </div>
 
+                                  {/* Variant Price input commented out as requested
                                   <div>
                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
                                       Price (₹)
@@ -3790,7 +3800,9 @@ const Products = () => {
                                       className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
+                                  */}
 
+                                  {/* Variant Stock Count input commented out as requested
                                   <div>
                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
                                       Stock Count
@@ -3804,10 +3816,11 @@ const Products = () => {
                                       className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
+                                  */}
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-slate-100 dark:border-white/5">
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-1">
                                     <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
                                       Color:
                                     </label>
@@ -3816,11 +3829,11 @@ const Products = () => {
                                       value={v.attributes?.color || ''}
                                       onChange={(e) => handleUpdateVariantAttribute(vIdx, 'color', e.target.value)}
                                       placeholder="e.g. Black"
-                                      className="flex-1 px-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                      className="flex-1 px-2 py-0.5 h-7 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-md text-[11px] text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
 
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-1">
                                     <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
                                       Wattage:
                                     </label>
@@ -3829,11 +3842,11 @@ const Products = () => {
                                       value={v.attributes?.wattage || ''}
                                       onChange={(e) => handleUpdateVariantAttribute(vIdx, 'wattage', e.target.value)}
                                       placeholder="e.g. 65W"
-                                      className="flex-1 px-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                      className="flex-1 px-2 py-0.5 h-7 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-md text-[11px] text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
 
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-1">
                                     <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
                                       Edition:
                                     </label>
@@ -3842,7 +3855,7 @@ const Products = () => {
                                       value={v.attributes?.edition || ''}
                                       onChange={(e) => handleUpdateVariantAttribute(vIdx, 'edition', e.target.value)}
                                       placeholder="e.g. Wireless"
-                                      className="flex-1 px-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                      className="flex-1 px-2 py-0.5 h-7 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-md text-[11px] text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
                                 </div>
@@ -3850,19 +3863,19 @@ const Products = () => {
                             ))}
                           </div>
                         ) : (
-                          <div className="p-4 text-center bg-white dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-white/10">
-                            <p className="text-xs text-slate-400">
-                              No variants added. The item will use the base price. Click "+ Add Variant" to configure options.
+                          <div className="p-3 text-center bg-white dark:bg-slate-800/40 rounded-lg border border-dashed border-slate-200 dark:border-white/10">
+                            <p className="text-[11px] text-slate-400">
+                              No variants added. Click "+ Add Variant" to configure options.
                             </p>
                           </div>
                         )}
                       </div>
 
                       {/* Card 3: Company Territory Routing (companyMappings) */}
-                      <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
-                        <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/5">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                      <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-white/10 p-3 shadow-xs space-y-2.5">
+                        <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-white/5">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                               <FiBriefcase className="text-xs" />
                             </div>
                             <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -3874,18 +3887,18 @@ const Products = () => {
                               type="button"
                               onClick={handleManualSyncBrandRouting}
                               disabled={isAutoMappingBrand || !formData.brand}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/20 transition-all cursor-pointer disabled:opacity-40"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-md border border-emerald-500/20 transition-all cursor-pointer disabled:opacity-40"
                               title="Fetch and re-apply routing matrix rules for this brand"
                             >
-                              <FiZap className={`text-xs ${isAutoMappingBrand ? 'animate-spin' : ''}`} />
+                              <FiZap className={`text-[10px] ${isAutoMappingBrand ? 'animate-spin' : ''}`} />
                               <span>Sync Matrix</span>
                             </button>
                             <button
                               type="button"
                               onClick={handleAddCompanyMapping}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-500/20 transition-all cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-md border border-blue-500/20 transition-all cursor-pointer"
                             >
-                              <FiPlus className="text-xs" />
+                              <FiPlus className="text-[10px]" />
                               <span>Add Partner</span>
                             </button>
                           </div>
@@ -3893,23 +3906,23 @@ const Products = () => {
 
                         {/* Auto-Mapped Notification Banner */}
                         {autoMappedBanner && (
-                          <div className="flex items-center justify-between p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-700 dark:text-blue-300 text-xs animate-in fade-in duration-200">
-                            <div className="flex items-center gap-2">
-                              <FiZap className="text-sm shrink-0 text-blue-500" />
+                          <div className="flex items-center justify-between p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-700 dark:text-blue-300 text-[11px] animate-in fade-in duration-200">
+                            <div className="flex items-center gap-1.5">
+                              <FiZap className="text-xs shrink-0 text-blue-500" />
                               <span className="font-medium">{autoMappedBanner}</span>
                             </div>
                             <button
                               type="button"
                               onClick={() => setAutoMappedBanner(null)}
-                              className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer ml-2"
+                              className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer ml-1"
                             >
-                              <FiX size={12} />
+                              <FiX size={11} />
                             </button>
                           </div>
                         )}
 
                         {/* Mapping Cards */}
-                        <div className="space-y-3">
+                        <div className="space-y-2.5">
                           {(formData.companyMappings || []).map((mapping, mIdx) => {
                             const compCount = (formData.companyMappings || []).length;
                             const isWildcard = (mapping.states || []).includes('*');
@@ -3917,12 +3930,12 @@ const Products = () => {
                             return (
                               <div
                                 key={mIdx}
-                                className="p-3.5 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-3 shadow-xs"
+                                className="p-2.5 bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200/80 dark:border-white/10 space-y-2 shadow-2xs"
                               >
                                 {/* Header: Company dropdown + Delete */}
                                 <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2 flex-1">
-                                    <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                  <div className="flex items-center gap-1.5 flex-1">
+                                    <span className="w-4 h-4 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-bold flex items-center justify-center shrink-0">
                                       {mIdx + 1}
                                     </span>
                                     <div className="flex-1">
@@ -3934,7 +3947,7 @@ const Products = () => {
                                           value: c._id,
                                           label: `${c.name} ${c.code ? `(${c.code})` : ''}`
                                         }))}
-                                        statusColor="!px-3 !py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+                                        statusColor="!px-2.5 !py-1 !h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-md text-xs font-semibold text-slate-900 dark:text-white"
                                       />
                                     </div>
                                   </div>
@@ -3943,35 +3956,35 @@ const Products = () => {
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveCompanyMapping(mIdx)}
-                                      className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all cursor-pointer shrink-0"
+                                      className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-md transition-all cursor-pointer shrink-0"
                                       title="Remove this company mapping"
                                     >
-                                      <FiTrash2 className="text-sm" />
+                                      <FiTrash2 className="text-xs" />
                                     </button>
                                   )}
                                 </div>
 
                                 {/* Assigned States Toolbar */}
                                 <div>
-                                  <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
-                                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                                      <FiMapPin className="text-[10px] text-blue-500" />
+                                  <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+                                    <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                      <FiMapPin className="text-[9px] text-blue-500" />
                                       <span>
                                         Assigned States ({isWildcard ? 'Pan-India' : mapping.states?.length || 0})
                                       </span>
                                     </span>
-                                    <div className="flex items-center gap-2 text-[10px]">
+                                    <div className="flex items-center gap-1.5 text-[9px]">
                                       <button
                                         type="button"
                                         onClick={() => handleToggleWildcardMapping(mIdx)}
-                                        className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
+                                        className={`px-1.5 py-0.2 rounded font-semibold transition-all cursor-pointer ${
                                           isWildcard
                                             ? 'bg-purple-600 text-white font-bold'
                                             : 'text-purple-600 dark:text-purple-400 hover:underline'
                                         }`}
                                         title="Assign pan-India wildcard (*)"
                                       >
-                                        ★ Pan-India (*)
+                                        ★ Pan-India
                                       </button>
                                       <span className="text-slate-300 dark:text-slate-600">|</span>
                                       <button
@@ -3979,7 +3992,7 @@ const Products = () => {
                                         onClick={() => handleSelectAllStatesForMapping(mIdx)}
                                         className="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
                                       >
-                                        All 36 States
+                                        All 36
                                       </button>
                                       <span className="text-slate-300 dark:text-slate-600">|</span>
                                       <button
@@ -3994,26 +4007,26 @@ const Products = () => {
 
                                   {/* Selected States Tags */}
                                   {mapping.states && mapping.states.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mb-2 p-1.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/60 dark:border-white/5 max-h-20 overflow-y-auto">
+                                    <div className="flex flex-wrap gap-1 mb-1.5 p-1 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200/60 dark:border-white/5 max-h-16 overflow-y-auto">
                                       {mapping.states.map((st, sIdx) =>
                                         st === '*' ? (
                                           <span
                                             key={sIdx}
-                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold border border-purple-500/20"
+                                            className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[9px] font-bold border border-purple-500/20"
                                           >
-                                            <span>★ Pan-India Wildcard (*)</span>
+                                            <span>★ Pan-India</span>
                                             <button
                                               type="button"
                                               onClick={() => handleToggleWildcardMapping(mIdx)}
                                               className="hover:text-rose-500 ml-0.5 cursor-pointer"
                                             >
-                                              <FiX size={10} />
+                                              <FiX size={8} />
                                             </button>
                                           </span>
                                         ) : (
                                           <span
                                             key={sIdx}
-                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-semibold border border-blue-500/20"
+                                            className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-semibold border border-blue-500/20"
                                           >
                                             <span>{st}</span>
                                             <button
@@ -4021,7 +4034,7 @@ const Products = () => {
                                               onClick={() => handleToggleMappingState(mIdx, st)}
                                               className="hover:text-rose-500 ml-0.5 cursor-pointer"
                                             >
-                                              <FiX size={10} />
+                                              <FiX size={8} />
                                             </button>
                                           </span>
                                         )
@@ -4030,7 +4043,7 @@ const Products = () => {
                                   )}
 
                                   {/* Quick Indian States Pills */}
-                                  <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-black/20 mb-2">
+                                  <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto p-1 rounded-lg border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-black/20 mb-1.5">
                                     {INDIAN_STATES.map((st) => {
                                       const isSelected = mapping.states?.includes(st);
                                       return (
@@ -4038,7 +4051,7 @@ const Products = () => {
                                           key={st}
                                           type="button"
                                           onClick={() => handleToggleMappingState(mIdx, st)}
-                                          className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                                          className={`text-[9px] px-1.5 py-0.2 rounded border transition-all cursor-pointer ${
                                             isSelected
                                               ? 'bg-blue-600 text-white border-blue-600 font-bold'
                                               : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
@@ -4051,7 +4064,7 @@ const Products = () => {
                                   </div>
 
                                   {/* Custom Location / State Entry */}
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1.5">
                                     <input
                                       type="text"
                                       value={customMappingInputs[mIdx] || ''}
@@ -4067,7 +4080,7 @@ const Products = () => {
                                         }
                                       }}
                                       placeholder="Type custom region or '*' for all..."
-                                      className="flex-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                                      className="flex-1 px-2.5 py-1 h-7.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-md text-[11px] text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                                     />
                                     <button
                                       type="button"
@@ -4077,7 +4090,7 @@ const Products = () => {
                                         setCustomMappingInputs((prev) => ({ ...prev, [mIdx]: '' }));
                                       }}
                                       disabled={!(customMappingInputs[mIdx] || '').trim()}
-                                      className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
+                                      className="px-2.5 py-1 h-7.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-[11px] font-semibold rounded-md transition-all cursor-pointer disabled:opacity-40"
                                     >
                                       Add
                                     </button>
@@ -4088,12 +4101,12 @@ const Products = () => {
                           })}
 
                           {(!formData.companyMappings || formData.companyMappings.length === 0) && (
-                            <div className="p-4 text-center border border-dashed border-slate-200 dark:border-white/10 rounded-xl">
-                              <p className="text-xs text-slate-400 mb-2">No company routing mappings configured.</p>
+                            <div className="p-3 text-center border border-dashed border-slate-200 dark:border-white/10 rounded-lg">
+                              <p className="text-[11px] text-slate-400 mb-1.5">No company routing mappings configured.</p>
                               <button
                                 type="button"
                                 onClick={handleAddCompanyMapping}
-                                className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors"
+                                className="px-2.5 py-1 bg-blue-600 text-white rounded-md text-[11px] font-semibold hover:bg-blue-700 transition-colors"
                               >
                                 + Add Partner Company
                               </button>
@@ -4103,9 +4116,9 @@ const Products = () => {
                       </div>
 
                       {/* Card 4: Covered Locations & Catalog Status */}
-                      <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-white/[0.02] rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-4">
-                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-white/5">
-                          <div className="w-6 h-6 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                      <div className="bg-slate-50/90 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-white/10 p-3 shadow-xs space-y-2.5">
+                        <div className="flex items-center gap-1.5 pb-1.5 border-b border-slate-200/60 dark:border-white/5">
+                          <div className="w-5 h-5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
                             <FiMapPin className="text-xs" />
                           </div>
                           <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -4114,16 +4127,16 @@ const Products = () => {
                         </div>
 
                         {/* Covered Locations Toolbar */}
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           <div className="flex items-center justify-between flex-wrap gap-1">
-                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                               Covered Distribution Territories ({(formData.locations || []).length})
                             </label>
-                            <div className="flex items-center gap-2 text-xs">
+                            <div className="flex items-center gap-1.5 text-[9px]">
                               <button
                                 type="button"
                                 onClick={handleSelectAllProductLocations}
-                                className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                className="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
                               >
                                 All 36 States
                               </button>
@@ -4131,7 +4144,7 @@ const Products = () => {
                               <button
                                 type="button"
                                 onClick={handleClearProductLocations}
-                                className="text-[11px] font-semibold text-rose-500 hover:underline cursor-pointer"
+                                className="text-rose-500 hover:underline font-semibold cursor-pointer"
                               >
                                 Clear All
                               </button>
@@ -4140,11 +4153,11 @@ const Products = () => {
 
                           {/* Selected Locations Tags */}
                           {Array.isArray(formData.locations) && formData.locations.length > 0 && (
-                            <div className="flex flex-wrap gap-1 p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-white/10 max-h-20 overflow-y-auto">
+                            <div className="flex flex-wrap gap-1 p-1 bg-white dark:bg-slate-900 rounded-md border border-slate-200/80 dark:border-white/10 max-h-16 overflow-y-auto">
                               {formData.locations.map((loc, lIdx) => (
                                 <span
                                   key={lIdx}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-semibold border border-blue-500/20"
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9px] font-semibold border border-blue-500/20"
                                 >
                                   <span>{loc}</span>
                                   <button
@@ -4152,7 +4165,7 @@ const Products = () => {
                                     onClick={() => handleToggleProductLocation(loc)}
                                     className="hover:text-rose-500 ml-0.5 cursor-pointer"
                                   >
-                                    <FiX size={10} />
+                                    <FiX size={8} />
                                   </button>
                                 </span>
                               ))}
@@ -4160,7 +4173,7 @@ const Products = () => {
                           )}
 
                           {/* Quick Indian States Pills */}
-                          <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-black/20">
+                          <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto p-1 rounded-md border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-black/20">
                             {INDIAN_STATES.map((st) => {
                               const isSelected = (formData.locations || []).includes(st);
                               return (
@@ -4168,7 +4181,7 @@ const Products = () => {
                                   key={st}
                                   type="button"
                                   onClick={() => handleToggleProductLocation(st)}
-                                  className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                                  className={`text-[9px] px-1.5 py-0.2 rounded border transition-all cursor-pointer ${
                                     isSelected
                                       ? 'bg-blue-600 text-white border-blue-600 font-bold'
                                       : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
@@ -4181,7 +4194,7 @@ const Products = () => {
                           </div>
 
                           {/* Custom Location Input */}
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             <input
                               type="text"
                               value={customLocationInput}
@@ -4194,7 +4207,7 @@ const Products = () => {
                                 }
                               }}
                               placeholder="Type custom region and press Enter..."
-                              className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                              className="flex-1 px-2.5 py-1 h-7.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-md text-[11px] text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                             />
                             <button
                               type="button"
@@ -4203,7 +4216,7 @@ const Products = () => {
                                 setCustomLocationInput('');
                               }}
                               disabled={!customLocationInput.trim()}
-                              className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
+                              className="px-2.5 py-1 h-7.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-[11px] font-semibold rounded-md transition-all cursor-pointer disabled:opacity-40"
                             >
                               Add
                             </button>
@@ -4212,36 +4225,36 @@ const Products = () => {
 
                         {/* Description */}
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-0.5">
                             Product Description
                           </label>
                           <textarea
-                            rows={3}
+                            rows={2}
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             placeholder="Detailed product specifications, warranty info, and features..."
-                            className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 resize-none leading-relaxed"
+                            className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500 resize-none leading-normal"
                           />
                         </div>
 
                         {/* Status Toggle */}
-                        <div className="flex items-center justify-between p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-white/10">
+                        <div className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200/80 dark:border-white/10">
                           <div>
                             <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Catalog Active Status</div>
-                            <div className="text-[11px] text-slate-400">
+                            <div className="text-[10px] text-slate-400">
                               Active products appear immediately across sales booking screens.
                             </div>
                           </div>
                           <button
                             type="button"
                             onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                            className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
+                            className={`w-10 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors ${
                               formData.isActive ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
                             }`}
                           >
                             <div
                               className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                                formData.isActive ? 'translate-x-6' : 'translate-x-0'
+                                formData.isActive ? 'translate-x-5' : 'translate-x-0'
                               }`}
                             />
                           </button>
@@ -4252,15 +4265,15 @@ const Products = () => {
                 </div>
 
                 {/* Sticky Drawer Footer */}
-                <div className="px-5 sm:px-6 py-4 border-t border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
+                <div className="px-4 sm:px-5 py-2.5 border-t border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md flex items-center justify-between gap-2.5 shrink-0">
                   {drawerTab === 'overview' && drawerProduct ? (
                     <>
                       <button
                         type="button"
                         onClick={handleCloseDrawer}
-                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg transition-all cursor-pointer"
                       >
-                        Close Drawer
+                        Close
                       </button>
                       <button
                         type="button"
@@ -4268,9 +4281,9 @@ const Products = () => {
                           setDrawerTab('edit');
                           populateProductForm(drawerProduct);
                         }}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 cursor-pointer"
+                        className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-all shadow-xs cursor-pointer"
                       >
-                        <FiEdit2 className="text-xs" />
+                        <FiEdit2 className="text-[11px]" />
                         <span>Edit Product</span>
                       </button>
                     </>
@@ -4287,7 +4300,7 @@ const Products = () => {
                           }
                         }}
                         disabled={submitting}
-                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg transition-all cursor-pointer"
                       >
                         {drawerProduct ? 'Back to Overview' : 'Cancel'}
                       </button>
@@ -4295,16 +4308,16 @@ const Products = () => {
                         type="button"
                         onClick={handleSaveProduct}
                         disabled={submitting}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-all shadow-md shadow-blue-600/25 cursor-pointer disabled:opacity-50"
                       >
                         {submitting ? (
                           <>
-                            <FiLoader className="text-sm animate-spin" />
+                            <FiLoader className="text-xs animate-spin" />
                             <span>Saving...</span>
                           </>
                         ) : (
                           <>
-                            <FiSave className="text-sm" />
+                            <FiSave className="text-xs" />
                             <span>{drawerProduct ? 'Update Product' : 'Create Product'}</span>
                           </>
                         )}
@@ -4321,32 +4334,53 @@ const Products = () => {
       {/* ================= DELETE CONFIRM MODAL ================= */}
       {deleteConfirmProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-lg animate-in fade-in duration-200">
-          <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center text-2xl mb-4">
-              <FiTrash2 />
-            </div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Catalog Product?</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-              Are you sure you want to delete <span className="font-bold text-slate-800 dark:text-slate-200">"{deleteConfirmProduct.name}"</span>? This will permanently remove the product from the catalog.
-            </p>
-
-            <div className="mt-6 flex items-center justify-end gap-3">
+          <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-rose-600/60 via-red-600/50 to-rose-700/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-rose-600 text-white shadow-md shadow-rose-500/20 shrink-0">
+                  <FiTrash2 size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-white">Delete Catalog Product?</h3>
+                  <p className="text-[11px] text-rose-100 dark:text-rose-200 mt-0.5 font-mono">
+                    DELETE /products/{deleteConfirmProduct.sku || deleteConfirmProduct._id}
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setDeleteConfirmProduct(null)}
                 disabled={deleting}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
               >
-                Cancel
+                <FiX size={18} />
               </button>
-              <button
-                type="button"
-                onClick={handleDeleteProduct}
-                disabled={deleting}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-rose-600/25 cursor-pointer disabled:opacity-50"
-              >
-                {deleting ? 'Deleting...' : 'Confirm Delete'}
-              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-4">
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Are you sure you want to delete <span className="font-bold text-slate-900 dark:text-white">"{deleteConfirmProduct.name}"</span>? This will permanently remove the product from the catalog.
+              </p>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmProduct(null)}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteProduct}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-rose-600/25 cursor-pointer disabled:opacity-50"
+                >
+                  {deleting ? 'Deleting...' : 'Confirm Delete'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -4451,49 +4485,69 @@ const Products = () => {
       {isBulkCompanyModalOpen &&
         createPortal(
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 my-auto">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-2xl mb-4 border border-amber-500/20">
-                <FiBriefcase />
-              </div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Reassign Products to Company</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                Reassign <span className="font-bold text-slate-800 dark:text-slate-200">{selectedProductIds.length}</span> selected products to the following partner company:
-              </p>
-
-              <div className="mt-4">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                  Target Partner Company
-                </label>
-                <CustomDropdown
-                  value={bulkTargetCompanyId}
-                  onChange={(val) => setBulkTargetCompanyId(val)}
-                  defaultLabel="Select Target Partner Company"
-                  placeholder="Select Target Partner Company"
-                  searchable={true}
-                  options={companies.map((c) => ({
-                    value: c._id,
-                    label: `${c.name}${c.code ? ` (${c.code})` : ''}`
-                  }))}
-                  statusColor="!px-3.5 !py-2.5 !bg-slate-50 dark:!bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div className="mt-6 flex items-center justify-end gap-3">
+            <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 my-auto">
+              {/* Header */}
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-amber-600/60 via-orange-600/50 to-amber-700/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-amber-600 text-white shadow-md shadow-amber-500/20 shrink-0">
+                    <FiBriefcase size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">Reassign Company</h3>
+                    <p className="text-[11px] text-amber-100 dark:text-amber-200 mt-0.5 font-mono">
+                      {selectedProductIds.length} product(s) selected
+                    </p>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => setIsBulkCompanyModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
-                  Cancel
+                  <FiX size={18} />
                 </button>
-                <button
-                  type="button"
-                  onClick={handleBulkMoveCompany}
-                  disabled={!bulkTargetCompanyId}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-600/25 cursor-pointer disabled:opacity-50"
-                >
-                  Apply Reassignment
-                </button>
+              </div>
+
+              <div className="p-5 sm:p-6 space-y-4">
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Reassign <span className="font-bold text-slate-900 dark:text-white">{selectedProductIds.length}</span> selected products to the following partner company:
+                </p>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                    Target Partner Company
+                  </label>
+                  <CustomDropdown
+                    value={bulkTargetCompanyId}
+                    onChange={(val) => setBulkTargetCompanyId(val)}
+                    defaultLabel="Select Target Partner Company"
+                    placeholder="Select Target Partner Company"
+                    searchable={true}
+                    options={companies.map((c) => ({
+                      value: c._id,
+                      label: `${c.name}${c.code ? ` (${c.code})` : ''}`
+                    }))}
+                    statusColor="!px-3.5 !py-2.5 !bg-slate-50 dark:!bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsBulkCompanyModalOpen(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBulkMoveCompany}
+                    disabled={!bulkTargetCompanyId}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-600/25 cursor-pointer disabled:opacity-50"
+                  >
+                    Apply Reassignment
+                  </button>
+                </div>
               </div>
             </div>
           </div>,
@@ -4504,23 +4558,34 @@ const Products = () => {
       {isBulkLocationModalOpen &&
         createPortal(
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-xl p-6 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] my-auto">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl shrink-0 border border-blue-500/20">
-                  <FiMapPin />
+            <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] my-auto animate-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                    <FiMapPin size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">
+                      Bulk Reassign Distribution Locations
+                    </h3>
+                    <p className="text-[11px] text-blue-100 dark:text-blue-200 mt-0.5 font-mono">
+                      {selectedProductIds.length} product(s) selected
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Bulk Reassign Distribution Locations
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Update covered territories for <span className="font-bold text-slate-800 dark:text-slate-200">{selectedProductIds.length}</span> selected products.
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkLocationModalOpen(false)}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                >
+                  <FiX size={18} />
+                </button>
               </div>
 
-              {/* Mode Selector Tabs */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4 p-1 bg-slate-100 dark:bg-white/5 rounded-2xl">
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
+                {/* Mode Selector Tabs */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4 p-1 bg-slate-100 dark:bg-white/5 rounded-2xl">
                 {[
                   { id: 'sync-matrix', label: 'Sync Matrix', desc: 'By Brand', icon: FiZap },
                   { id: 'replace', label: 'Replace', desc: 'Overwrite' },
@@ -4760,7 +4825,8 @@ const Products = () => {
               )}
 
               {/* Footer */}
-              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3 shrink-0">
+              </div>
+              <div className="p-4 sm:px-6 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-end gap-3 shrink-0 bg-slate-50/50 dark:bg-white/[0.02]">
                 <button
                   type="button"
                   onClick={() => setIsBulkLocationModalOpen(false)}
@@ -4791,22 +4857,32 @@ const Products = () => {
       {isBulkEditModalOpen &&
         createPortal(
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 dark:bg-slate-950/50 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-xl p-6 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] my-auto">
-              <div className="flex items-center gap-3 mb-4 shrink-0">
-                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-2xl shrink-0 border border-purple-500/20">
-                  <FiEdit2 />
+            <div className="bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] my-auto animate-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-purple-600/60 via-indigo-600/50 to-blue-600/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-500/20 shrink-0">
+                    <FiEdit2 size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">
+                      Bulk Edit Products
+                    </h3>
+                    <p className="text-[11px] text-purple-100 dark:text-purple-200 mt-0.5 font-mono">
+                      {selectedProductIds.length} product(s) selected
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Bulk Edit Products
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Update common properties across <span className="font-bold text-slate-800 dark:text-slate-200">{selectedProductIds.length}</span> selected products using the single product API.
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkEditModalOpen(false)}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                >
+                  <FiX size={18} />
+                </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 pr-1">
                 {/* Category */}
                 <div className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -5017,7 +5093,7 @@ const Products = () => {
               </div>
 
               {/* Modal Actions */}
-              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3 shrink-0">
+              <div className="p-4 sm:px-6 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-end gap-3 shrink-0 bg-slate-50/50 dark:bg-white/[0.02]">
                 <button
                   type="button"
                   onClick={() => setIsBulkEditModalOpen(false)}

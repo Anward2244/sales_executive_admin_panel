@@ -1857,19 +1857,19 @@ const Reports = () => {
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
             <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto animate-in slide-in-from-right duration-300 z-10">
               {/* Sticky Header with Stepper */}
-              <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md gap-2 sm:gap-4">
+              <div className="px-4 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50 backdrop-blur-md gap-2 sm:gap-4">
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                  <div className="p-2 sm:p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl shrink-0">
-                    <FiFileText className="text-lg sm:text-xl" />
+                  <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-lg sm:text-xl shadow-md shadow-blue-500/20 shrink-0">
+                    <FiFileText size={20} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                      <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-mono truncate">
+                      <h3 className="text-base sm:text-lg font-bold text-white font-mono truncate">
                         {selectedOrder.poNumber}
                       </h3>
                       <CopyButton text={selectedOrder.poNumber} />
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                    <p className="text-xs text-blue-100 dark:text-blue-200 truncate mt-0.5">
                       Created on {formatDateTime(selectedOrder.createdAt)}
                     </p>
                   </div>
@@ -1878,17 +1878,17 @@ const Reports = () => {
                 <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                   {/* Stepper Navigation */}
                   {filteredOrders.length > 1 && (
-                    <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-xl p-0.5 border border-slate-200/60 dark:border-white/10">
+                    <div className="flex items-center bg-black/20 dark:bg-black/30 border border-white/15 rounded-xl p-0.5 sm:p-1 text-xs">
                       <button
                         type="button"
                         onClick={handlePrevOrder}
                         disabled={!hasPrevOrder}
                         title="Previous order (Left arrow)"
-                        className="p-1 sm:p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                        className="p-1 sm:p-1.5 rounded-lg text-white hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
                       >
                         <FiChevronLeft size={15} />
                       </button>
-                      <span className="text-[10px] sm:text-[11px] font-mono px-1.5 sm:px-2 text-slate-500 font-semibold select-none">
+                      <span className="text-[10px] sm:text-[11px] font-mono px-1.5 sm:px-2 text-white font-semibold select-none">
                         {selectedOrderIndex >= 0 ? `${selectedOrderIndex + 1} of ${filteredOrders.length}` : ''}
                       </span>
                       <button
@@ -1896,7 +1896,7 @@ const Reports = () => {
                         onClick={handleNextOrder}
                         disabled={!hasNextOrder}
                         title="Next order (Right arrow)"
-                        className="p-1 sm:p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                        className="p-1 sm:p-1.5 rounded-lg text-white hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
                       >
                         <FiChevronRight size={15} />
                       </button>
@@ -1906,10 +1906,10 @@ const Reports = () => {
                   <button
                     type="button"
                     onClick={() => setSelectedOrder(null)}
-                    className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                    className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
                     title="Close (Esc)"
                   >
-                    <FiX className="text-lg" />
+                    <FiX size={18} />
                   </button>
                 </div>
               </div>
