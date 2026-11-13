@@ -616,7 +616,7 @@ const ProductPerformanceChart = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         {/* Top Revenue Leader */}
         <div className="p-3.5 rounded-2xl bg-purple-500/5 dark:bg-purple-500/10 border border-purple-500/20 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 kpi-icon-purple rounded-xl flex items-center justify-center shrink-0">
             <FiAward className="text-lg" />
           </div>
           <div className="min-w-0 flex-1">
@@ -634,7 +634,7 @@ const ProductPerformanceChart = ({
 
         {/* Top Volume Leader */}
         <div className="p-3.5 rounded-2xl bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 kpi-icon-blue rounded-xl flex items-center justify-center shrink-0">
             <FiBox className="text-lg" />
           </div>
           <div className="min-w-0 flex-1">
@@ -652,7 +652,7 @@ const ProductPerformanceChart = ({
 
         {/* Dynamic Metric Contribution */}
         <div className="p-3.5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 kpi-icon-emerald rounded-xl flex items-center justify-center shrink-0">
             <FiTrendingUp className="text-lg" />
           </div>
           <div className="min-w-0 flex-1">

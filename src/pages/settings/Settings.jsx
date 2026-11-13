@@ -358,7 +358,7 @@ const Settings = () => {
       <PageHeader
         title="Panel Settings"
         icon={FiSettings}
-        description="Configure your workspace appearance, theme preferences, live notification channels, and panel telemetry."
+        description="Manage theme, notifications, and panel preferences."
       />
 
       {/* Floating Status / Feedback Toast */}

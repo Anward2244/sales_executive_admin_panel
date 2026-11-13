@@ -547,7 +547,7 @@ const Notifications = () => {
       <PageHeader
         title="In-App Notifications"
         icon={FiBell}
-        description="Streamlined split inbox for instant triage, real-time alerts, and direct purchase order shortcuts."
+        description="Real-time system alerts and order updates."
         badgeText={
           notifications.length > 0
             ? `${unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}`

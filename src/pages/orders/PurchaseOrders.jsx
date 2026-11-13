@@ -1119,7 +1119,7 @@ const PurchaseOrders = () => {
       {/* Page Header */}
       <PageHeader
         title="Purchase Orders"
-        subtitle="Issue vendor purchase orders, review incoming procurement, approve orders, and manage warehouse dispatching."
+        subtitle="Create, review, and track vendor purchase orders."
         badgeIcon={FiShoppingCart}
         actions={
           <div className="flex items-center gap-2 w-full sm:w-auto">

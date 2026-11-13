@@ -932,7 +932,7 @@ const BrandRoutings = () => {
       {/* ================= PAGE HEADER ================= */}
       <PageHeader
         title="Brand Routing Matrix"
-        description="Configure dynamic billing partner allocation rules by brand and Indian territories."
+        description="Configure partner routing rules by brand and territory."
         icon={FiGitBranch}
       >
         <div className="flex items-center gap-2 flex-wrap">

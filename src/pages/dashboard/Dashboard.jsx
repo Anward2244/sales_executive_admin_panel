@@ -1124,7 +1124,7 @@ const Dashboard = () => {
       {/* Top Header */}
       <PageHeader
         title="Dashboard Overview"
-        subtitle="Real-time performance analytics, order lifecycle pipeline, partner performance, and recent procurement stream."
+        subtitle="Real-time analytics and order pipeline overview."
         badgeIcon={FiTrendingUp}
         showBackButton={false}
         actions={

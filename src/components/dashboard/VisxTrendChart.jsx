@@ -190,8 +190,8 @@ const InnerTrendChart = ({
           />
           {/* Orders Bar Indigo/Blue Gradient */}
           <linearGradient id="mix-order-bar-gradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#60a5fa" stopOpacity={isDark ? 0.85 : 0.9} />
-            <stop offset="100%" stopColor="#3b82f6" stopOpacity={isDark ? 0.55 : 0.65} />
+            <stop offset="0%" stopColor="#3b82f6" stopOpacity={isDark ? 0.85 : 0.9} />
+            <stop offset="100%" stopColor="#ccddf9ff" stopOpacity={isDark ? 0.55 : 0.65} />
           </linearGradient>
           {/* Active Orders Bar Hover Gradient */}
           <linearGradient id="mix-order-bar-hover" x1="0" y1="0" x2="0" y2="1">

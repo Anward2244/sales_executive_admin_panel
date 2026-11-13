@@ -554,7 +554,7 @@ const EmailNotifications = () => {
       <PageHeader
         title="Email Notifications"
         icon={FiMail}
-        description="Streamlined delivery inbox for automated Purchase Order emails, dispatch tracking, and direct recipient management."
+        description="Track automated PO emails and delivery status."
         badgeText={
           logs.length > 0
             ? `${logs.length} Total Logs${metrics.failed > 0 ? ` • ${metrics.failed} failed` : ''}`

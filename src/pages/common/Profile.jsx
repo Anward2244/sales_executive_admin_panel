@@ -363,7 +363,7 @@ const Profile = () => {
               )}
             </div>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">
-              Account identity, system credentials, security, and administrative telemetry.
+              Manage account credentials and security settings.
             </p>
           </div>
         </div>

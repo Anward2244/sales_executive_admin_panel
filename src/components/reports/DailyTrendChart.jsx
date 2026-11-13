@@ -533,7 +533,7 @@ export default function DailyTrendChart({
         {/* Header & Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="p-2 rounded-xl kpi-icon-emerald">
               <FiTrendingUp className="text-lg" />
             </div>
             <div>

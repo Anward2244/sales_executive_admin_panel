@@ -15,7 +15,7 @@ import { useConfirm } from '@/context/ConfirmationContext';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import GmailLink from '@/components/ui/GmailLink';
-import { BulkActionBar, BatchProgressModal, BackButton } from '@/components/ui';
+import { BulkActionBar, BatchProgressModal, BackButton, PageHeader } from '@/components/ui';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { createPortal } from 'react-dom';
 import { formatPhone, formatEntityCode } from '@/utils/formatters';
@@ -961,52 +961,44 @@ const UsersList = () => {
       <div className="relative space-y-4 min-h-full z-0 isolate w-full">
 
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <BackButton />
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-                <FiUser className="text-blue-600 dark:text-blue-400" />
-                Users List
-              </h1>
+        <PageHeader
+          title="Users List"
+          icon={FiUser}
+          subtitle="Manage user accounts, roles, and permissions."
+          className="mb-4"
+          action={
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full md:w-80">
+                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-400 z-10" />
+                <input
+                  type="text"
+                  placeholder="Search by name, email, code, role..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-black/40 shadow-xs dark:shadow-inner backdrop-blur-md text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-medium transition-all"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchInput('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+                  >
+                    <FiX className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              
+              <button
+                onClick={() => fetchUsers(false)}
+                disabled={loading}
+                className="p-2.5 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs shrink-0"
+                title="Refresh Users"
+              >
+                <FiRefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
+              </button>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
-              Manage system administrators, sales executives, and user accounts.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 w-full md:w-auto">
-
-            <div className="relative w-full md:w-80">
-              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-400 z-10" />
-              <input
-                type="text"
-                placeholder="Search by name, email, code, role..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-black/40 shadow-xs dark:shadow-inner backdrop-blur-md text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-medium transition-all"
-              />
-              {searchInput && (
-                <button
-                  type="button"
-                  onClick={() => setSearchInput('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
-                >
-                  <FiX className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-            
-            <button
-              onClick={() => fetchUsers(false)}
-              disabled={loading}
-              className="p-2.5 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs shrink-0"
-              title="Refresh Users"
-            >
-              <FiRefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
-            </button>
-          </div>
-        </div>
+          }
+        />
 
         {/* Users Count, Filters & Action Bar */}
         <div className="relative z-20 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 p-2.5 sm:px-3 sm:py-2 bg-white/40 dark:bg-black/20 border border-slate-200/80 dark:border-white/10 rounded-2xl lg:rounded-full backdrop-blur-xl shadow-md shadow-slate-500/10 dark:shadow-none text-xs font-semibold text-slate-600 dark:text-slate-400">

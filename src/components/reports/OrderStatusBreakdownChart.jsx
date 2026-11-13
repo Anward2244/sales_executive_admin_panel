@@ -198,28 +198,28 @@ function InnerBarChart({
           <LinearGradient
             id="grad-pending"
             from="#f59e0b"
-            to="#d97706"
+            to="#ffe4c5ff"
             fromOpacity={0.95}
             toOpacity={0.65}
           />
           <LinearGradient
             id="grad-approved"
             from="#10b981"
-            to="#059669"
+            to="#a4f1d8ff"
             fromOpacity={0.95}
             toOpacity={0.65}
           />
           <LinearGradient
             id="grad-dispatched"
             from="#3b82f6"
-            to="#2563eb"
+            to="#acc6ffff"
             fromOpacity={0.95}
             toOpacity={0.65}
           />
           <LinearGradient
             id="grad-rejected"
             from="#f43f5e"
-            to="#e11d48"
+            to="#feb4c4ff"
             fromOpacity={0.95}
             toOpacity={0.65}
           />
@@ -536,7 +536,7 @@ export default function OrderStatusBreakdownChart({
         {/* Header & Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+            <div className="p-2 rounded-xl kpi-icon-blue">
               <FiBarChart2 className="text-lg" />
             </div>
             <div>

@@ -182,14 +182,14 @@ const SearchResults = () => {
   return (
     <div className="relative space-y-6 min-h-full z-0">
       {/* Header Section */}
-      <div className="flex flex-col gap-2 mb-8">
-        <div className="flex items-center gap-3 flex-wrap">
-          <BackButton />
+      <div className="flex items-start gap-3 mb-8">
+        <BackButton className="mt-1" />
+        <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Search Results</h1>
+          <p className="text-slate-400 font-medium mt-1">
+            Showing results for: <span className="text-blue-500 font-bold">"{query}"</span>
+          </p>
         </div>
-        <p className="text-slate-400 font-medium">
-          Showing results for: <span className="text-blue-500 font-bold">"{query}"</span>
-        </p>
       </div>
 
       {/* Loading State */}

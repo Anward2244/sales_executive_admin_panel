@@ -77,6 +77,7 @@ const Companies = () => {
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [drawerMode, setDrawerMode] = useState('details'); // 'details' | 'edit'
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [editFormData, setEditFormData] = useState(INITIAL_FORM);
   const [editSubmitting, setEditSubmitting] = useState(false);
@@ -145,12 +146,16 @@ const Companies = () => {
   };
 
   const handleCloseDrawer = () => {
-    if (editSubmitting) return;
-    setIsDrawerOpen(false);
-    setEditError(null);
-    if (routeCompanyId) {
-      navigate('/companies', { replace: true });
-    }
+    if (editSubmitting || isDrawerClosing) return;
+    setIsDrawerClosing(true);
+    setTimeout(() => {
+      setIsDrawerOpen(false);
+      setIsDrawerClosing(false);
+      setEditError(null);
+      if (routeCompanyId) {
+        navigate('/companies', { replace: true });
+      }
+    }, 280);
   };
 
   const handleEditInputChange = (e) => {
@@ -304,7 +309,19 @@ const Companies = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCreateModalOpen, submitting, isDrawerOpen, editSubmitting, routeCompanyId]);
+  }, [isCreateModalOpen, submitting, isDrawerOpen, isDrawerClosing, editSubmitting, routeCompanyId]);
+
+  // Prevent background scroll when Drawer or Modal is open
+  useEffect(() => {
+    if (isDrawerOpen || isDrawerClosing || isCreateModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isDrawerOpen, isDrawerClosing, isCreateModalOpen]);
 
   // Derived filtered companies (debounced)
   const filteredCompanies = useMemo(() => {
@@ -510,7 +527,7 @@ const Companies = () => {
       <PageHeader
         title="Companies"
         icon={FiBriefcase}
-        description="Manage and organize partner companies, brand entities, and operational organizations."
+        description="Manage partner companies and brand entities."
         action={
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <div className="relative w-full sm:w-80">
@@ -1034,16 +1051,20 @@ const Companies = () => {
       )}
 
       {/* Slide-Over Drawer for Company Details & Edits */}
-      {isDrawerOpen && createPortal(
+      {(isDrawerOpen || isDrawerClosing) && createPortal(
         <div className="fixed inset-0 z-[10000] overflow-hidden">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 dark:bg-slate-950/50 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+            className={`fixed inset-0 dark:bg-slate-950/50 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
+              isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
+            }`}
             onClick={handleCloseDrawer}
           />
 
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
-            <div className="w-screen max-w-full sm:max-w-xl bg-white/30 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out animate-in slide-in-from-right duration-300">
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
+            <div className={`w-screen max-w-full sm:max-w-xl bg-white/30 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col transform pointer-events-auto transition-transform duration-300 ease-in-out ${
+              isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+            }`}>
               
               {/* Drawer Top Header */}
               <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-slate-950/40 backdrop-blur-md">

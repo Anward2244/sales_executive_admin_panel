@@ -171,6 +171,7 @@ const Reports = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [productViewMode, setProductViewMode] = useState('chart'); // 'chart' | 'table'
   const [catalogProducts, setCatalogProducts] = useState([]);
@@ -718,16 +719,25 @@ const Reports = () => {
     }
   };
 
+  const handleCloseDrawer = useCallback(() => {
+    if (isDrawerClosing) return;
+    setIsDrawerClosing(true);
+    setTimeout(() => {
+      setSelectedOrder(null);
+      setIsDrawerClosing(false);
+    }, 280);
+  }, [isDrawerClosing]);
+
   // Keyboard navigation & body scroll lock for Order Details Drawer
   useEffect(() => {
-    if (!selectedOrder) return;
+    if (!selectedOrder && !isDrawerClosing) return;
 
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        setSelectedOrder(null);
+        handleCloseDrawer();
       } else if (e.key === 'ArrowLeft' && hasPrevOrder) {
         handlePrevOrder();
       } else if (e.key === 'ArrowRight' && hasNextOrder) {
@@ -740,7 +750,7 @@ const Reports = () => {
       document.body.style.overflow = originalOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedOrder, hasPrevOrder, hasNextOrder, selectedOrderIndex]);
+  }, [selectedOrder, isDrawerClosing, hasPrevOrder, hasNextOrder, selectedOrderIndex, handleCloseDrawer]);
 
   // CSV Export Generators
   const exportToCSV = (filename, rows) => {
@@ -881,7 +891,7 @@ const Reports = () => {
       {/* Header */}
       <PageHeader
         title="Reports & Analytics"
-        subtitle="Live metrics, financial summaries, sales trends, and product performance analysis."
+        subtitle="Sales metrics, revenue trends, and performance insights."
         badgeIcon={FiPieChart}
         actions={
           <div className="flex items-center gap-2.5 relative">
@@ -1164,7 +1174,7 @@ const Reports = () => {
       <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
         <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-2xl">
+            <div className="p-2.5 kpi-icon-purple rounded-2xl">
               <FiBox className="text-xl" />
             </div>
             <div>
@@ -1846,16 +1856,20 @@ const Reports = () => {
       </div>
 
       {/* Order Details Slide-Over Drawer */}
-      {selectedOrder && (
+      {(selectedOrder || isDrawerClosing) && (
         <div className="fixed inset-0 z-[10000] overflow-hidden">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
-            onClick={() => setSelectedOrder(null)}
+            className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
+              isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
+            }`}
+            onClick={handleCloseDrawer}
           />
 
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
-            <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto animate-in slide-in-from-right duration-300 z-10">
+            <div className={`w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto transition-transform duration-300 ease-in-out z-10 ${
+              isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+            }`}>
               {/* Sticky Header with Stepper */}
               <div className="px-4 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50 backdrop-blur-md gap-2 sm:gap-4">
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
@@ -1905,7 +1919,7 @@ const Reports = () => {
 
                   <button
                     type="button"
-                    onClick={() => setSelectedOrder(null)}
+                    onClick={handleCloseDrawer}
                     className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
                     title="Close (Esc)"
                   >
@@ -2172,7 +2186,7 @@ const Reports = () => {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setSelectedOrder(null)}
+                  onClick={handleCloseDrawer}
                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white text-xs font-bold rounded-xl transition-all cursor-pointer ml-auto"
                 >
                   Close

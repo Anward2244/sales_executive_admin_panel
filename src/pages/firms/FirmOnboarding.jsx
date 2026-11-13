@@ -62,6 +62,7 @@ const FirmOnboarding = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
@@ -374,6 +375,15 @@ const FirmOnboarding = () => {
     }
   }, [selectedRequestIndex, sortedRequests]);
 
+  const handleCloseDrawer = useCallback(() => {
+    if (isDrawerClosing) return;
+    setIsDrawerClosing(true);
+    setTimeout(() => {
+      setSelectedRequest(null);
+      setIsDrawerClosing(false);
+    }, 280);
+  }, [isDrawerClosing]);
+
   // Drawer keyboard shortcuts (Left/Right arrow to cycle requests, Esc to close)
   useEffect(() => {
     if (!selectedRequest || docPreviewModal.isOpen) return;
@@ -382,7 +392,7 @@ const FirmOnboarding = () => {
         return;
       }
       if (e.key === 'Escape') {
-        setSelectedRequest(null);
+        handleCloseDrawer();
       } else if (e.key === 'ArrowLeft') {
         if (canGoPrevRequest) handlePrevRequest();
       } else if (e.key === 'ArrowRight') {
@@ -391,11 +401,11 @@ const FirmOnboarding = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedRequest, canGoPrevRequest, canGoNextRequest, handlePrevRequest, handleNextRequest, docPreviewModal.isOpen]);
+  }, [selectedRequest, canGoPrevRequest, canGoNextRequest, handlePrevRequest, handleNextRequest, docPreviewModal.isOpen, handleCloseDrawer]);
 
   // Prevent background scroll when Drawer is open
   useEffect(() => {
-    if (selectedRequest) {
+    if (selectedRequest || isDrawerClosing) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -403,7 +413,7 @@ const FirmOnboarding = () => {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [selectedRequest]);
+  }, [selectedRequest, isDrawerClosing]);
 
   // Pagination
   const totalPages = Math.ceil(sortedRequests.length / rowsPerPage) || 1;
@@ -721,7 +731,7 @@ const FirmOnboarding = () => {
         title="Firm Onboarding"
         icon={FiUserCheck}
         badgeIcon={FiUserCheck}
-        subtitle="Review, approve, and initiate customer onboarding requests across enterprise companies"
+        subtitle="Review and approve customer onboarding requests."
         actions={
           <div className="flex items-center flex-wrap gap-2.5">
             {/* Live Polling Status Indicator / Toggle */}
@@ -1284,13 +1294,19 @@ const FirmOnboarding = () => {
           <div className="fixed inset-0 z-[10000] overflow-hidden">
             {/* Backdrop Blur Overlay */}
             <div
-              className="fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
-              onClick={() => setSelectedRequest(null)}
+              className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
+                isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
+              }`}
+              onClick={handleCloseDrawer}
             />
 
             {/* Slide-Over Drawer Container (Pinned to Right) */}
-            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
-              <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10">
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
+              <div
+                className={`w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto transition-transform duration-300 ease-in-out z-10 ${
+                  isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+                }`}
+              >
                 {/* 1. Sticky Drawer Header */}
                 <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md gap-2 sm:gap-4">
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
@@ -1344,7 +1360,7 @@ const FirmOnboarding = () => {
                     )}
                     <button
                       type="button"
-                      onClick={() => setSelectedRequest(null)}
+                      onClick={handleCloseDrawer}
                       title="Close drawer (Esc)"
                       className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
                     >
@@ -1884,7 +1900,8 @@ const FirmOnboarding = () => {
                       </>
                     )}
                     <button
-                      onClick={() => setSelectedRequest(null)}
+                      type="button"
+                      onClick={handleCloseDrawer}
                       className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                     >
                       Close Drawer

@@ -1165,7 +1165,7 @@ const Firms = () => {
       <PageHeader
         title="Firms List"
         icon={FiServer}
-        description="Manage business firms, regulatory profiles, GST compliance, and entity branches."
+        description="Manage business firms, GST profiles, and branches."
         action={
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <div className="relative w-full sm:w-80">

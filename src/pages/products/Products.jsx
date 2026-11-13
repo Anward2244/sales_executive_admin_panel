@@ -2193,7 +2193,7 @@ const Products = () => {
       {/* Header */}
       <PageHeader
         title="Products Catalog"
-        subtitle="Manage product portfolio, SKU inventory, brand collections, and distribution territories."
+        subtitle="Manage products, inventory SKUs, and catalog."
         badgeIcon={FiPackage}
         actions={
           <div className="flex items-center gap-2 w-full sm:w-auto">
