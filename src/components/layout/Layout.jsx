@@ -71,6 +71,15 @@ const Layout = () => {
       return;
     }
 
+    // Hide when a right slide-over drawer is currently open in the DOM
+    const isDrawerOpen = typeof document !== 'undefined' && Boolean(
+      document.querySelector('div.fixed.inset-y-0.right-0')
+    );
+    if (isDrawerOpen) {
+      if (showScrollTop) setShowScrollTop(false);
+      return;
+    }
+
     const mainTop = mainRef.current ? mainRef.current.scrollTop : 0;
     const winTop = window.pageYOffset || document.documentElement?.scrollTop || document.body?.scrollTop || 0;
     let anyContainerTop = 0;
@@ -118,6 +127,15 @@ const Layout = () => {
       mainEl.addEventListener('scroll', handleEvents, { passive: true });
     }
 
+    // Watch for drawer open/close mutations in document.body
+    let observer = null;
+    if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+      observer = new MutationObserver(() => {
+        checkScrollState();
+      });
+      observer.observe(document.body, { childList: true });
+    }
+
     // Safety polling every 300ms to guarantee detection in all browser environments
     const intervalId = setInterval(checkScrollState, 300);
 
@@ -127,6 +145,9 @@ const Layout = () => {
       window.removeEventListener('touchmove', handleEvents, { capture: true });
       if (mainEl) {
         mainEl.removeEventListener('scroll', handleEvents);
+      }
+      if (observer) {
+        observer.disconnect();
       }
       clearInterval(intervalId);
     };
@@ -1735,7 +1756,7 @@ const Layout = () => {
             position: 'fixed',
             bottom: '64px',
             right: '24px',
-            zIndex: 999999,
+            zIndex: 40,
             opacity: showScrollTop ? 1 : 0,
             transform: showScrollTop ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.8)',
             pointerEvents: showScrollTop ? 'auto' : 'none',

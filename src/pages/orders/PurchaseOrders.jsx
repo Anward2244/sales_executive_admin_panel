@@ -53,7 +53,7 @@ import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import PageHeader from '@/components/ui/PageHeader';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
-import { BulkActionBar, BatchProgressModal, TableToolbar, SegmentedTabs } from '@/components/ui';
+import { BulkActionBar, BatchProgressModal, TableToolbar, SegmentedTabs, StatusBadge } from '@/components/ui';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { useDisplayPreferences, getDensityStyles } from '@/utils/displayPreferences';
 import { useToast } from '@/context/ToastContext';
@@ -1811,72 +1811,63 @@ const PurchaseOrders = () => {
                 }`}
               >
                 {/* 1. Sticky Drawer Header */}
-                <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 gap-2 sm:gap-4">
-                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base sm:text-lg border border-blue-500/20 shrink-0">
-                      <FiPackage />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-mono truncate">
-                          {selectedOrder.poNumber || selectedOrder.orderNumber || 'Purchase Order'}
-                        </h3>
-                        <CopyButton text={selectedOrder.poNumber || selectedOrder.orderNumber || selectedOrder._id} />
-                        {loadingDetails && <FiLoader className="text-blue-500 animate-spin text-sm" />}
-                        {(() => {
-                          const badge = getStatusBadge(selectedOrder.status);
-                          const BadgeIcon = badge.icon;
-                          return (
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${badge.className}`}
-                            >
-                              <BadgeIcon className="text-[11px]" />
-                              <span>{badge.label}</span>
-                            </span>
-                          );
-                        })()}
+                <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0">
+                  <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-xl bg-blue-600 text-white shadow-sm flex items-center justify-center shrink-0">
+                        <FiPackage size={17} />
                       </div>
-                      <p className="text-xs text-slate-400 truncate mt-0.5">
-                        Created on {formatDateTimeDDMMYYYY(selectedOrder.createdAt)}
-                      </p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-sm sm:text-base font-bold text-white font-mono truncate tracking-tight">
+                            {selectedOrder.poNumber || selectedOrder.orderNumber || 'Purchase Order'}
+                          </h3>
+                          <CopyButton text={selectedOrder.poNumber || selectedOrder.orderNumber || selectedOrder._id} size={10} className="text-blue-100/80 hover:text-white" />
+                          {loadingDetails && <FiLoader className="text-white animate-spin text-xs" />}
+                          <StatusBadge status={selectedOrder.status} size="xs" isHeader />
+                        </div>
+                        <p className="text-[11px] text-blue-100/80 truncate mt-0.5">
+                          Created on {formatDateTimeDDMMYYYY(selectedOrder.createdAt)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Header Actions: Quick Order Stepping + Close */}
-                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                    {selectedOrderIndex >= 0 && (
-                      <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
-                        <button
-                          type="button"
-                          onClick={handlePrevOrder}
-                          disabled={!canGoPrevOrder}
-                          title="Previous Order (Left Arrow)"
-                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                        >
-                          <FiChevronLeft size={15} />
-                        </button>
-                        <span className="px-1.5 font-mono text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
-                          {selectedOrderIndex + 1} of {filteredOrders.length}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={handleNextOrder}
-                          disabled={!canGoNextOrder}
-                          title="Next Order (Right Arrow)"
-                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                        >
-                          <FiChevronRight size={15} />
-                        </button>
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleCloseDetailsDrawer}
-                      title="Close drawer (Esc)"
-                      className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
-                    >
-                      <FiX size={18} />
-                    </button>
+                    {/* Header Actions: Quick Order Stepping + Close */}
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                      {selectedOrderIndex >= 0 && (
+                        <div className="flex items-center gap-1 bg-black/20 backdrop-blur-md border border-white/15 rounded-lg px-2 py-0.5 text-[11px]">
+                          <button
+                            type="button"
+                            onClick={handlePrevOrder}
+                            disabled={!canGoPrevOrder}
+                            title="Previous Order (Left Arrow)"
+                            className="p-0.5 rounded text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          >
+                            <FiChevronLeft size={14} />
+                          </button>
+                          <span className="font-mono text-[10px] font-semibold text-white select-none px-1">
+                            {selectedOrderIndex + 1} / {filteredOrders.length}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleNextOrder}
+                            disabled={!canGoNextOrder}
+                            title="Next Order (Right Arrow)"
+                            className="p-0.5 rounded text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          >
+                            <FiChevronRight size={14} />
+                          </button>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleCloseDetailsDrawer}
+                        title="Close drawer (Esc)"
+                        className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer shrink-0"
+                      >
+                        <FiX size={18} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 

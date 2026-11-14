@@ -128,6 +128,7 @@ const Dashboard = () => {
   // Chart 1 controls - Mixed Chart series toggles & range
   const [visibleSeries, setVisibleSeries] = useState({ revenue: true, orders: true });
   const [trendRange, setTrendRange] = useState('1w'); // '1w' | '1m' | '1y' | 'custom'
+  const [trendOffset, setTrendOffset] = useState(0); // 0 = current period, -1 = 1 period ago (e.g., last week/month/year)
   const [trendStartDate, setTrendStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 29);
@@ -136,6 +137,125 @@ const Dashboard = () => {
   const [trendEndDate, setTrendEndDate] = useState(() => {
     return new Date().toISOString().split('T')[0];
   });
+
+  const handleTrendRangeChange = (newRange) => {
+    setTrendRange(newRange);
+    setTrendOffset(0);
+  };
+
+  const handlePrevTrendPeriod = () => {
+    if (trendRange === 'custom') {
+      const s = new Date(trendStartDate);
+      const e = new Date(trendEndDate);
+      const diffDays = Math.max(1, Math.round((e - s) / 86400000)) + 1;
+      const newS = new Date(s);
+      const newE = new Date(e);
+      newS.setDate(newS.getDate() - diffDays);
+      newE.setDate(newE.getDate() - diffDays);
+      setTrendStartDate(newS.toISOString().split('T')[0]);
+      setTrendEndDate(newE.toISOString().split('T')[0]);
+    } else {
+      setTrendOffset((prev) => prev - 1);
+    }
+  };
+
+  const handleNextTrendPeriod = () => {
+    if (trendRange === 'custom') {
+      const s = new Date(trendStartDate);
+      const e = new Date(trendEndDate);
+      const diffDays = Math.max(1, Math.round((e - s) / 86400000)) + 1;
+      const newS = new Date(s);
+      const newE = new Date(e);
+      newS.setDate(newS.getDate() + diffDays);
+      newE.setDate(newE.getDate() + diffDays);
+      const todayDate = new Date();
+      if (newE > todayDate) {
+        const shiftBack = Math.round((newE - todayDate) / 86400000);
+        newS.setDate(newS.getDate() - shiftBack);
+        newE.setTime(todayDate.getTime());
+      }
+      setTrendStartDate(newS.toISOString().split('T')[0]);
+      setTrendEndDate(newE.toISOString().split('T')[0]);
+    } else {
+      setTrendOffset((prev) => Math.min(0, prev + 1));
+    }
+  };
+
+  const handleResetTrendPeriod = () => {
+    setTrendOffset(0);
+  };
+
+  const canGoNextTrend = trendRange === 'custom'
+    ? trendEndDate < new Date().toISOString().split('T')[0]
+    : trendOffset < 0;
+
+  const trendPeriodInfo = useMemo(() => {
+    const today = new Date();
+    const formatDate = (d) => {
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    };
+
+    if (trendRange === 'custom') {
+      const s = trendStartDate ? new Date(`${trendStartDate}T00:00:00`) : new Date(Date.now() - 29 * 86400000);
+      const e = trendEndDate ? new Date(`${trendEndDate}T23:59:59.999`) : new Date();
+      return {
+        label: `${formatDate(s)} – ${formatDate(e)}`,
+        badge: 'Custom'
+      };
+    }
+
+    if (trendRange === '1w' || trendRange === '7d') {
+      const anchor = new Date(today);
+      anchor.setDate(today.getDate() + trendOffset * 7);
+      const start = new Date(anchor);
+      start.setDate(anchor.getDate() - 6);
+
+      let badge = 'This Week';
+      if (trendOffset === -1) badge = 'Last Week';
+      else if (trendOffset === -2) badge = '2 Weeks Ago';
+      else if (trendOffset < -2) badge = `${Math.abs(trendOffset)} Weeks Ago`;
+
+      return {
+        label: `${formatDate(start)} – ${formatDate(anchor)}`,
+        badge
+      };
+    }
+
+    if (trendRange === '1m' || trendRange === '30d') {
+      const anchor = new Date(today);
+      anchor.setDate(today.getDate() + trendOffset * 30);
+      const start = new Date(anchor);
+      start.setDate(anchor.getDate() - 29);
+
+      let badge = 'This Month';
+      if (trendOffset === -1) badge = 'Last Month';
+      else if (trendOffset === -2) badge = '2 Months Ago';
+      else if (trendOffset < -2) badge = `${Math.abs(trendOffset)} Months Ago`;
+
+      return {
+        label: `${formatDate(start)} – ${formatDate(anchor)}`,
+        badge
+      };
+    }
+
+    if (trendRange === '1y') {
+      const formatMonthYear = (d) => d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+      const start = new Date(today.getFullYear(), today.getMonth() + (trendOffset * 12) - 11, 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + (trendOffset * 12), 1);
+
+      let badge = 'Current 12M';
+      if (trendOffset === -1) badge = 'Last Year';
+      else if (trendOffset === -2) badge = '2 Years Ago';
+      else if (trendOffset < -2) badge = `${Math.abs(trendOffset)} Years Ago`;
+
+      return {
+        label: `${formatMonthYear(start)} – ${formatMonthYear(end)}`,
+        badge
+      };
+    }
+
+    return { label: 'Current Window', badge: 'Current' };
+  }, [trendRange, trendOffset, trendStartDate, trendEndDate]);
 
   // Tree controls - Revenue vs PO Volume
   const [treemapMetric, setTreemapMetric] = useState('revenue'); // 'revenue' | 'orders'
@@ -410,11 +530,13 @@ const Dashboard = () => {
     }
 
     if (trendRange === '1w' || trendRange === '7d') {
-      // 1 Week: Exactly last 7 consecutive calendar days (Today - 6 to Today)
+      // 1 Week: 7 consecutive calendar days with trendOffset
+      const anchor = new Date(today);
+      anchor.setDate(today.getDate() + trendOffset * 7);
       const result = [];
       for (let i = 6; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
+        const d = new Date(anchor);
+        d.setDate(anchor.getDate() - i);
         const key = d.toISOString().split('T')[0];
         result.push(dateMap[key] || { date: key, revenue: 0, orders: 0 });
       }
@@ -422,11 +544,13 @@ const Dashboard = () => {
     }
 
     if (trendRange === '1m' || trendRange === '30d') {
-      // 1 Month: Exactly last 30 consecutive calendar days (Today - 29 to Today)
+      // 1 Month: 30 consecutive calendar days with trendOffset
+      const anchor = new Date(today);
+      anchor.setDate(today.getDate() + trendOffset * 30);
       const result = [];
       for (let i = 29; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
+        const d = new Date(anchor);
+        d.setDate(anchor.getDate() - i);
         const key = d.toISOString().split('T')[0];
         result.push(dateMap[key] || { date: key, revenue: 0, orders: 0 });
       }
@@ -434,10 +558,10 @@ const Dashboard = () => {
     }
 
     if (trendRange === '1y') {
-      // 1 Year: Past 12 months aggregated by month (1st of each month)
+      // 1 Year: 12 months aggregated by month with trendOffset
       const result = [];
       for (let i = 11; i >= 0; i--) {
-        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const d = new Date(today.getFullYear(), today.getMonth() + (trendOffset * 12) - i, 1);
         const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         let monthRev = 0;
         let monthOrd = 0;
@@ -467,7 +591,7 @@ const Dashboard = () => {
       fallback.push({ date: key, revenue: 0, orders: 0 });
     }
     return fallback;
-  }, [allPurchaseOrders, recentOrders, reportsData, trendRange, trendStartDate, trendEndDate]);
+  }, [allPurchaseOrders, recentOrders, reportsData, trendRange, trendOffset, trendStartDate, trendEndDate]);
 
   // Aggregate metrics for Chart 1 stat footer
   const trendSummary = useMemo(() => {
@@ -1240,66 +1364,30 @@ const Dashboard = () => {
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
           <div>
-            {/* Header with Title, Series Legend Toggles, and Range Selector */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-white/10">
+            {/* Header with Title and Unified Range + Period Navigator */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 pb-4 border-b border-slate-200/80 dark:border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl kpi-icon-emerald flex items-center justify-center text-lg border border-emerald-500/20 shadow-xs">
+                <div className="w-10 h-10 rounded-xl kpi-icon-emerald flex items-center justify-center text-lg border border-emerald-500/20 shadow-xs shrink-0">
                   <FiTrendingUp />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                    <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
                       Revenue & Orders Velocity
                     </h2>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Dual-axis view of gross revenue (₹) and daily order count
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span>Dual-axis view of gross revenue (₹) and daily order count</span>
+                    <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">•</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200 hidden sm:inline">{trendPeriodInfo.label}</span>
                   </p>
                 </div>
               </div>
 
-              {/* Controls: Series Legend Toggles & Time Range */}
-              <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                {/* Series Legend Toggles */}
-                {/* <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold gap-1">
-                  <button
-                    type="button"
-                    onClick={() => toggleSeries('revenue')}
-                    className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                      visibleSeries.revenue
-                        ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-bold'
-                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 opacity-60'
-                    }`}
-                    title="Toggle Revenue series"
-                  >
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        visibleSeries.revenue ? 'bg-emerald-500' : 'bg-slate-400'
-                      }`}
-                    />
-                    <span>Revenue (₹)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleSeries('orders')}
-                    className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                      visibleSeries.orders
-                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
-                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 opacity-60'
-                    }`}
-                    title="Toggle Orders series"
-                  >
-                    <span
-                      className={`w-2 h-2 rounded-sm ${
-                        visibleSeries.orders ? 'bg-blue-500' : 'bg-slate-400'
-                      }`}
-                    />
-                    <span>Orders</span>
-                  </button>
-                </div> */}
-
+              {/* Controls: Range Selector + Unified Period Stepper */}
+              <div className="flex items-center gap-2 self-start lg:self-auto shrink-0 flex-wrap sm:flex-nowrap">
                 {/* Range Filter */}
-                <div className="inline-flex p-1 rounded-xl kpi-icon-emerald">
+                <div className="inline-flex items-center h-8 p-1 rounded-xl kpi-icon-emerald">
                   {[
                     { id: '1w', label: '1W' },
                     { id: '1m', label: '1M' },
@@ -1309,15 +1397,56 @@ const Dashboard = () => {
                     <button
                       key={rng.id}
                       type="button"
-                      onClick={() => setTrendRange(rng.id)}
-                      className={`px-3 py-1 rounded-lg transition-all uppercase text-[11px] font-bold cursor-pointer ${trendRange === rng.id
+                      onClick={() => handleTrendRangeChange(rng.id)}
+                      className={`h-6 px-2.5 rounded-lg transition-all uppercase text-[11px] font-bold cursor-pointer flex items-center justify-center ${
+                        trendRange === rng.id
                           ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
                           : 'text-slate-700 hover:text-slate-900 dark:hover:text-white'
-                        }`}
+                      }`}
                     >
                       {rng.label}
                     </button>
                   ))}
+                </div>
+
+                {/* Period Navigator: Prev [Period Badge + Current Reset] Next */}
+                <div className="inline-flex items-center h-8 px-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 shadow-xs">
+                  <button
+                    type="button"
+                    onClick={handlePrevTrendPeriod}
+                    title="Previous period (e.g. Last Week, Last Month)"
+                    className="w-6 h-6 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer flex items-center justify-center active:scale-95"
+                  >
+                    <FiChevronLeft size={14} />
+                  </button>
+
+                  <div className="px-2 text-center flex items-center justify-center min-w-[76px]">
+                    <span
+                      onClick={trendOffset !== 0 ? handleResetTrendPeriod : undefined}
+                      title={trendOffset !== 0 ? 'Click to jump to current period' : undefined}
+                      className={`text-[11px] font-bold whitespace-nowrap transition-colors ${
+                        trendOffset !== 0
+                          ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer'
+                          : 'text-slate-700 dark:text-slate-200'
+                      }`}
+                    >
+                      {trendPeriodInfo.badge || trendPeriodInfo.label}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleNextTrendPeriod}
+                    disabled={!canGoNextTrend}
+                    title={canGoNextTrend ? 'Next period' : 'At current period'}
+                    className={`w-6 h-6 rounded-lg transition-all flex items-center justify-center ${
+                      canGoNextTrend
+                        ? 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer active:scale-95'
+                        : 'text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-40'
+                    }`}
+                  >
+                    <FiChevronRight size={14} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -1349,8 +1478,33 @@ const Dashboard = () => {
               </div>
             )}
 
-            {/* Chart Canvas */}
-            <div className="pt-4 min-h-[320px]">
+            {/* Chart Canvas with Floating Side Navigation Chevrons */}
+            <div className="pt-4 min-h-[320px] relative group/chart">
+              {/* Floating Left Arrow on Chart Edge */}
+              <button
+                type="button"
+                onClick={handlePrevTrendPeriod}
+                title="Previous period (e.g. Last Week)"
+                className="absolute left-1 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 shadow-lg flex items-center justify-center opacity-0 group-hover/chart:opacity-90 hover:!opacity-100 hover:scale-110 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer"
+              >
+                <FiChevronLeft size={18} />
+              </button>
+
+              {/* Floating Right Arrow on Chart Edge */}
+              <button
+                type="button"
+                onClick={handleNextTrendPeriod}
+                disabled={!canGoNextTrend}
+                title={canGoNextTrend ? 'Next period' : 'At current period'}
+                className={`absolute right-1 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-white/10 shadow-lg flex items-center justify-center transition-all ${
+                  canGoNextTrend
+                    ? 'text-slate-700 dark:text-slate-200 opacity-0 group-hover/chart:opacity-90 hover:!opacity-100 hover:scale-110 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer'
+                    : 'opacity-0 pointer-events-none'
+                }`}
+              >
+                <FiChevronRight size={18} />
+              </button>
+
               {loading ? (
                 <ChartCardSkeleton height={320} />
               ) : (
@@ -2044,59 +2198,61 @@ const Dashboard = () => {
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
             <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 backdrop-blur-2xl">
               {/* 1. Sticky Drawer Header */}
-              <div className="px-4 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50 backdrop-blur-md gap-2 sm:gap-4">
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-lg sm:text-xl shadow-md shadow-blue-500/20 shrink-0">
-                    <FiPackage size={20} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                      <h3 className="text-base sm:text-lg font-bold text-white font-mono truncate">
-                        {selectedOrder.poNumber || selectedOrder.orderNumber || 'Order Details'}
-                      </h3>
-                      <CopyButton text={selectedOrder.poNumber || selectedOrder.orderNumber || selectedOrder._id} />
+              <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0">
+                <div className="flex items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white shadow-sm flex items-center justify-center shrink-0">
+                      <FiPackage size={17} />
                     </div>
-                    <p className="text-xs text-blue-100 dark:text-blue-200 truncate mt-0.5">
-                      Created on {formatDateTimeDDMMYYYY(selectedOrder.createdAt)}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <h3 className="text-sm sm:text-base font-bold text-white font-mono truncate tracking-tight">
+                          {selectedOrder.poNumber || selectedOrder.orderNumber || 'Order Details'}
+                        </h3>
+                        <CopyButton text={selectedOrder.poNumber || selectedOrder.orderNumber || selectedOrder._id} size={10} className="text-blue-100/80 hover:text-white" />
+                      </div>
+                      <p className="text-[11px] text-blue-100/80 truncate mt-0.5">
+                        Created on {formatDateTimeDDMMYYYY(selectedOrder.createdAt)}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Header Actions: Stepping & Close */}
-                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                  {selectedOrderIndex >= 0 && (
-                    <div className="flex items-center gap-0.5 sm:gap-1 bg-black/20 dark:bg-black/30 border border-white/15 rounded-xl p-0.5 sm:p-1 text-xs">
-                      <button
-                        type="button"
-                        onClick={handlePrevOrder}
-                        disabled={!canGoPrevOrder}
-                        title="Previous Order (Left Arrow)"
-                        className="p-1 sm:p-1.5 rounded-lg text-white hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                      >
-                        <FiChevronLeft size={15} />
-                      </button>
-                      <span className="px-1.5 font-mono text-[10px] sm:text-[11px] text-white font-semibold select-none">
-                        {selectedOrderIndex + 1} of {recentOrders.length}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleNextOrder}
-                        disabled={!canGoNextOrder}
-                        title="Next Order (Right Arrow)"
-                        className="p-1 sm:p-1.5 rounded-lg text-white hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                      >
-                        <FiChevronRight size={15} />
-                      </button>
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedOrder(null)}
-                    className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-                    title="Close drawer (Esc)"
-                  >
-                    <FiX size={18} />
-                  </button>
+                  {/* Header Actions: Stepping & Close */}
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    {selectedOrderIndex >= 0 && (
+                      <div className="flex items-center gap-1 bg-black/20 backdrop-blur-md border border-white/15 rounded-lg px-2 py-0.5 text-[11px]">
+                        <button
+                          type="button"
+                          onClick={handlePrevOrder}
+                          disabled={!canGoPrevOrder}
+                          title="Previous Order (Left Arrow)"
+                          className="p-0.5 rounded text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <FiChevronLeft size={14} />
+                        </button>
+                        <span className="font-mono text-[10px] font-semibold text-white select-none px-1">
+                          {selectedOrderIndex + 1} / {recentOrders.length}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleNextOrder}
+                          disabled={!canGoNextOrder}
+                          title="Next Order (Right Arrow)"
+                          className="p-0.5 rounded text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <FiChevronRight size={14} />
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrder(null)}
+                      className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer shrink-0"
+                      title="Close drawer (Esc)"
+                    >
+                      <FiX size={18} />
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -1730,75 +1730,83 @@ const UsersList = () => {
                   }`}
                 >
                   {/* Sticky Drawer Header */}
-                  <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 shrink-0 space-y-3">
+                  <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0 space-y-2.5">
                     {/* Top Bar: User Avatar + Name + Actions + Close */}
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         {drawerUser.profileImage ? (
                           <img
                             src={drawerUser.profileImage}
                             alt={getUserFullName(drawerUser)}
-                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover border border-slate-200 dark:border-white/10 shadow-xs shrink-0"
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-white/20 shadow-xs shrink-0"
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
                         ) : (
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-sm sm:text-base font-extrabold shrink-0 border border-blue-500/20 shadow-xs">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xs sm:text-sm font-extrabold shrink-0 border border-white/20 shadow-xs">
                             {[drawerUser.firstName?.[0], drawerUser.lastName?.[0]].filter(Boolean).join('').toUpperCase() || 'U'}
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
+                            <h2 className="text-sm sm:text-base font-bold text-white truncate tracking-tight">
                               {getUserFullName(drawerUser)}
                             </h2>
                             <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold ${
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                 drawerUser.isActive !== false
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                                  ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-400/30'
+                                  : 'bg-rose-500/20 text-rose-100 border border-rose-400/30'
                               }`}
                             >
-                              <span className={`w-1.5 h-1.5 rounded-full mr-1 ${drawerUser.isActive !== false ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                              <span className={`w-1.5 h-1.5 rounded-full mr-1 ${drawerUser.isActive !== false ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
                               {drawerUser.isActive !== false ? 'Active' : 'Inactive'}
                             </span>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold border ${getRoleBadgeClass(drawerUser.role)}`}>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border bg-white/15 text-white border-white/20">
                               {formatRoleName(drawerUser.role)}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
-                            <GmailLink email={drawerUser.email} showIcon={true} iconSize={12} className="text-xs text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium" />
+                            <GmailLink
+                              email={drawerUser.email}
+                              showIcon={true}
+                              iconSize={13}
+                              iconClassName="text-white shrink-0"
+                              copyClassName="text-blue-100 hover:text-white transition-colors"
+                              copySize={11}
+                              className="text-[11px] text-blue-100 hover:text-white font-medium"
+                            />
                             {drawerUser.employeeCode && (
                               <>
-                                <span className="text-slate-300 dark:text-slate-600 text-xs">•</span>
-                                <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
+                                <span className="text-white/40 text-xs">•</span>
+                                <span className="font-mono text-[11px] font-bold text-blue-100">
                                   #{drawerUser.employeeCode}
                                 </span>
-                                <CopyButton text={drawerUser.employeeCode} size={11} title="Copy Employee Code" />
+                                <CopyButton text={drawerUser.employeeCode} size={11} title="Copy Employee Code" className="text-blue-100 hover:text-white" />
                               </>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                         <button
                           type="button"
                           onClick={handleToggleDrawerUserStatus}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                             drawerUser.isActive !== false
-                              ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                              : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                              ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-100 border-rose-400/30'
+                              : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 border-emerald-400/30'
                           }`}
                           title={drawerUser.isActive !== false ? 'Deactivate Account' : 'Activate Account'}
                         >
-                          <FiPower size={13} />
+                          <FiPower size={12} />
                           <span className="hidden sm:inline">{drawerUser.isActive !== false ? 'Deactivate' : 'Activate'}</span>
                         </button>
 
                         <button
                           type="button"
                           onClick={handleCloseDrawer}
-                          className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer shrink-0"
+                          className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer shrink-0"
                           title="Close drawer (Esc)"
                         >
                           <FiX size={18} />
@@ -1807,21 +1815,21 @@ const UsersList = () => {
                     </div>
 
                     {/* Bottom Sub-Bar: Mode Selector Tabs & Stepper Navigation */}
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/40 dark:border-white/5 flex-wrap sm:flex-nowrap">
-                      <div className="flex items-center p-0.5 sm:p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/15 flex-wrap sm:flex-nowrap">
+                      <div className="flex items-center p-0.5 bg-black/20 backdrop-blur-md rounded-lg border border-white/15">
                         <button
                           type="button"
                           onClick={() => {
                             setDrawerTab('overview');
                             setDrawerSaveError('');
                           }}
-                          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
                             drawerTab === 'overview'
-                              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                              ? 'bg-white text-blue-700 shadow-xs'
+                              : 'text-white/80 hover:text-white hover:bg-white/10'
                           }`}
                         >
-                          <FiEye className="text-xs" />
+                          <FiEye className="text-[11px]" />
                           <span>Overview</span>
                         </button>
                         <button
@@ -1830,40 +1838,40 @@ const UsersList = () => {
                             setDrawerTab('edit');
                             setDrawerSaveError('');
                           }}
-                          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
                             drawerTab === 'edit'
-                              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                              ? 'bg-white text-blue-700 shadow-xs'
+                              : 'text-white/80 hover:text-white hover:bg-white/10'
                           }`}
                         >
-                          <FiEdit2 className="text-xs" />
+                          <FiEdit2 className="text-[11px]" />
                           <span>Edit Profile</span>
                         </button>
                       </div>
 
                       {/* User Stepper Navigation */}
                       {selectedUserIndex >= 0 && sortedUsers.length > 1 && (
-                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
+                        <div className="flex items-center gap-1 bg-black/20 backdrop-blur-md border border-white/15 rounded-lg px-2 py-0.5 text-[11px]">
                           <button
                             type="button"
                             onClick={handlePrevUser}
                             disabled={!canGoPrevUser}
                             title="Previous User (Left Arrow)"
-                            className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            className="p-0.5 rounded text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                           >
-                            <FiChevronLeft size={15} />
+                            <FiChevronLeft size={14} />
                           </button>
-                          <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
-                            {selectedUserIndex + 1} of {sortedUsers.length}
+                          <span className="font-mono text-[10px] font-semibold text-white select-none px-1">
+                            {selectedUserIndex + 1} / {sortedUsers.length}
                           </span>
                           <button
                             type="button"
                             onClick={handleNextUser}
                             disabled={!canGoNextUser}
                             title="Next User (Right Arrow)"
-                            className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            className="p-0.5 rounded text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                           >
-                            <FiChevronRight size={15} />
+                            <FiChevronRight size={14} />
                           </button>
                         </div>
                       )}

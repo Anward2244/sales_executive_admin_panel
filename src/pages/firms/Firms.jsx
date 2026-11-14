@@ -2265,98 +2265,105 @@ const Firms = () => {
                 }`}
               >
                 {/* 1. Sticky Drawer Header */}
-                <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md gap-2 sm:gap-4">
-                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-base sm:text-lg font-black shrink-0 shadow-sm">
-                      {selectedFirm.firmName ? selectedFirm.firmName.charAt(0).toUpperCase() : 'F'}
+                <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-xl bg-blue-600 text-white shadow-sm flex items-center justify-center text-sm font-black shrink-0">
+                        {selectedFirm.firmName ? selectedFirm.firmName.charAt(0).toUpperCase() : 'F'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-sm sm:text-base font-bold text-white truncate tracking-tight">
+                            {selectedFirm.firmName}
+                          </h3>
+                          {selectedFirm.firmCode && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-white/15 text-white font-mono text-[10px] sm:text-[11px] font-bold border border-white/20">
+                              {selectedFirm.firmCode}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] sm:text-[11px] text-blue-100/90 font-mono">ID: {selectedFirm._id}</span>
+                          <CopyButton text={selectedFirm._id} size={10} className="text-blue-100/80 hover:text-white" />
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
-                          {selectedFirm.firmName}
-                        </h3>
-                        <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono text-[10px] sm:text-xs font-bold border border-blue-500/20">
-                          {selectedFirm.firmCode}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[10px] sm:text-xs text-slate-400 font-mono">ID: {selectedFirm._id}</span>
-                        <CopyButton text={selectedFirm._id} />
-                      </div>
+
+                    {/* Close button */}
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                      <button
+                        type="button"
+                        disabled={editSubmitting}
+                        onClick={handleCloseDrawer}
+                        className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer shrink-0 disabled:opacity-40"
+                        title="Close drawer (Esc)"
+                      >
+                        <FiX size={18} />
+                      </button>
                     </div>
                   </div>
 
-                  {/* Header Actions: Stepping & Close */}
-                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                  {/* Sub-Bar: Overview / Edit Switcher & Stepper Navigation */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/15 flex-wrap sm:flex-nowrap">
+                    {/* Segmented Tab Pill */}
+                    <div className="flex items-center p-0.5 bg-black/20 backdrop-blur-md rounded-lg border border-white/15">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDrawerMode('details');
+                          setEditFormError('');
+                        }}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                          drawerMode === 'details'
+                            ? 'bg-white text-blue-700 shadow-xs'
+                            : 'text-white/80 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        <FiEye className="text-[11px]" />
+                        <span>Overview & Details</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleOpenDrawer(selectedFirm, 'edit');
+                        }}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                          drawerMode === 'edit'
+                            ? 'bg-white text-blue-700 shadow-xs'
+                            : 'text-white/80 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        <FiEdit2 className="text-[11px]" />
+                        <span>Edit Firm</span>
+                      </button>
+                    </div>
+
+                    {/* Stepper Navigation */}
                     {selectedFirmIndex >= 0 && sortedFirms.length > 1 && (
-                      <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
+                      <div className="flex items-center gap-1 bg-black/20 backdrop-blur-md border border-white/15 rounded-lg px-2 py-0.5 text-[11px]">
                         <button
                           type="button"
                           onClick={handlePrevFirm}
                           disabled={!canGoPrevFirm}
                           title="Previous Firm (Left Arrow)"
-                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="p-0.5 rounded text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
-                          <FiChevronLeft size={15} />
+                          <FiChevronLeft size={14} />
                         </button>
-                        <span className="px-1.5 font-mono text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
-                          {selectedFirmIndex + 1} of {sortedFirms.length}
+                        <span className="font-mono text-[10px] font-semibold text-white select-none px-1">
+                          {selectedFirmIndex + 1} / {sortedFirms.length}
                         </span>
                         <button
                           type="button"
                           onClick={handleNextFirm}
                           disabled={!canGoNextFirm}
                           title="Next Firm (Right Arrow)"
-                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="p-0.5 rounded text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
-                          <FiChevronRight size={15} />
+                          <FiChevronRight size={14} />
                         </button>
                       </div>
                     )}
-                    <button
-                      type="button"
-                      disabled={editSubmitting}
-                      onClick={handleCloseDrawer}
-                      className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer disabled:opacity-40"
-                      title="Close drawer (Esc)"
-                    >
-                      <FiX size={18} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Tab Switcher: View Details vs. Edit Firm */}
-                <div className="px-4 sm:px-6 py-2.5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md shrink-0">
-                  <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDrawerMode('details');
-                        setEditFormError('');
-                      }}
-                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                        drawerMode === 'details'
-                          ? 'bg-white dark:bg-white/15 text-blue-600 dark:text-white shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                      }`}
-                    >
-                      <FiEye className="text-sm" />
-                      <span>Overview & Details</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleOpenDrawer(selectedFirm, 'edit');
-                      }}
-                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                        drawerMode === 'edit'
-                          ? 'bg-white dark:bg-white/15 text-blue-600 dark:text-white shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                      }`}
-                    >
-                      <FiEdit2 className="text-sm" />
-                      <span>Edit Firm</span>
-                    </button>
                   </div>
                 </div>
 

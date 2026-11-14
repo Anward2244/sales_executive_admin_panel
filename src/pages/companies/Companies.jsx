@@ -1067,67 +1067,60 @@ const Companies = () => {
             }`}>
               
               {/* Drawer Top Header */}
-              <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-slate-950/40 backdrop-blur-md">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
-                      <FiBriefcase className="text-base sm:text-lg" />
+              <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0 space-y-2.5">
+                <div className="flex items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white shadow-sm flex items-center justify-center shrink-0">
+                      <FiBriefcase size={17} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight truncate">
-                        {selectedCompany ? selectedCompany.name : 'Company Details'}
-                      </h2>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
+                          {selectedCompany ? selectedCompany.name : 'Company Details'}
+                        </h2>
+                        {selectedCompany && (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              selectedCompany.isActive !== false
+                                ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-400/30'
+                                : 'bg-white/15 text-slate-200 border border-white/20'
+                            }`}
+                          >
+                            <span
+                              className={`w-1 h-1 rounded-full ${
+                                selectedCompany.isActive !== false ? 'bg-emerald-400 animate-pulse' : 'bg-slate-300'
+                              }`}
+                            />
+                            {selectedCompany.isActive !== false ? 'Active' : 'Inactive'}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
                         {selectedCompany?.code && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/10 text-slate-800 dark:text-slate-200 font-mono text-[10px] sm:text-[11px] font-bold">
-                            <FiTag className="text-[10px] text-slate-400" />
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/15 text-white font-mono text-[10px] sm:text-[11px] font-bold border border-white/20">
+                            <FiTag className="text-[10px] text-blue-200" />
                             {selectedCompany.code}
                           </span>
                         )}
                         {selectedCompany?._id && (
                           <div className="flex items-center gap-1">
-                            <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 font-mono">
+                            <span className="text-[10px] sm:text-[11px] text-blue-100/90 font-mono">
                               {selectedCompany._id}
                             </span>
-                            <CopyButton text={selectedCompany._id} size={10} />
+                            <CopyButton text={selectedCompany._id} size={10} className="text-blue-100/80 hover:text-white" />
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Stepper Navigation & Close button */}
+                  {/* Close button */}
                   <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                    {selectedCompanyIndex >= 0 && sortedCompanies.length > 1 && (
-                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl p-0.5 sm:p-1 text-xs">
-                        <button
-                          type="button"
-                          onClick={handlePrevCompany}
-                          disabled={!canGoPrevCompany}
-                          title="Previous Company (Left Arrow)"
-                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                        >
-                          <FiChevronLeft size={15} />
-                        </button>
-                        <span className="px-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 font-semibold select-none">
-                          {selectedCompanyIndex + 1} of {sortedCompanies.length}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={handleNextCompany}
-                          disabled={!canGoNextCompany}
-                          title="Next Company (Right Arrow)"
-                          className="p-1 sm:p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                        >
-                          <FiChevronRight size={15} />
-                        </button>
-                      </div>
-                    )}
                     <button
                       type="button"
                       disabled={editSubmitting}
                       onClick={handleCloseDrawer}
-                      className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0 disabled:opacity-40"
+                      className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer shrink-0 disabled:opacity-40"
                       title="Close drawer (Esc)"
                     >
                       <FiX size={18} />
@@ -1135,47 +1128,77 @@ const Companies = () => {
                   </div>
                 </div>
 
-                {/* Tab Switcher: View Details vs. Edit Company */}
-                <div className="flex items-center gap-1.5 p-1 mt-3 bg-slate-200/60 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDrawerMode('details');
-                      setEditError(null);
-                    }}
-                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                      drawerMode === 'details'
-                        ? 'bg-white dark:bg-white/15 text-blue-600 dark:text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                    }`}
-                  >
-                    <FiEye className="text-sm" />
-                    <span>Overview & Details</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDrawerMode('edit');
-                      setEditError(null);
-                      if (selectedCompany) {
-                        setEditFormData({
-                          name: selectedCompany.name || '',
-                          code: selectedCompany.code || '',
-                          description: selectedCompany.description || '',
-                          logo: selectedCompany.logo || '',
-                          isActive: Boolean(selectedCompany.isActive)
-                        });
-                      }
-                    }}
-                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                      drawerMode === 'edit'
-                        ? 'bg-white dark:bg-white/15 text-blue-600 dark:text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                    }`}
-                  >
-                    <FiEdit2 className="text-sm" />
-                    <span>Edit Company</span>
-                  </button>
+                {/* Sub-Bar: Overview / Edit Switcher & Stepper Navigation */}
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/15 flex-wrap sm:flex-nowrap">
+                  {/* Segmented Tab Pill */}
+                  <div className="flex items-center p-0.5 bg-black/20 backdrop-blur-md rounded-lg border border-white/15">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDrawerMode('details');
+                        setEditError(null);
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                        drawerMode === 'details'
+                          ? 'bg-white text-blue-700 shadow-xs'
+                          : 'text-white/80 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <FiEye className="text-[11px]" />
+                      <span>Overview & Details</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDrawerMode('edit');
+                        setEditError(null);
+                        if (selectedCompany) {
+                          setEditFormData({
+                            name: selectedCompany.name || '',
+                            code: selectedCompany.code || '',
+                            description: selectedCompany.description || '',
+                            logo: selectedCompany.logo || '',
+                            isActive: Boolean(selectedCompany.isActive)
+                          });
+                        }
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                        drawerMode === 'edit'
+                          ? 'bg-white text-blue-700 shadow-xs'
+                          : 'text-white/80 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <FiEdit2 className="text-[11px]" />
+                      <span>Edit Company</span>
+                    </button>
+                  </div>
+
+                  {/* Stepper Navigation */}
+                  {selectedCompanyIndex >= 0 && sortedCompanies.length > 1 && (
+                    <div className="flex items-center gap-1 bg-black/20 backdrop-blur-md border border-white/15 rounded-lg px-2 py-0.5 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={handlePrevCompany}
+                        disabled={!canGoPrevCompany}
+                        title="Previous Company (Left Arrow)"
+                        className="p-0.5 rounded text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      >
+                        <FiChevronLeft size={14} />
+                      </button>
+                      <span className="font-mono text-[10px] font-semibold text-white select-none px-1">
+                        {selectedCompanyIndex + 1} / {sortedCompanies.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleNextCompany}
+                        disabled={!canGoNextCompany}
+                        title="Next Company (Right Arrow)"
+                        className="p-0.5 rounded text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      >
+                        <FiChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 

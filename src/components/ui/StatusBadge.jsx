@@ -128,6 +128,61 @@ const STATUS_CONFIGS = {
   }
 };
 
+const HEADER_STATUS_CONFIGS = {
+  APPROVED: {
+    colorClass: 'bg-emerald-500 text-emerald-100 border-emerald-400/40 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-emerald-300'
+  },
+  ACTIVE: {
+    colorClass: 'bg-emerald-500 text-emerald-100 border-emerald-400/40 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-emerald-300'
+  },
+  DELIVERED: {
+    colorClass: 'bg-emerald-500 text-emerald-100 border-emerald-400/40 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-emerald-300'
+  },
+  SENT: {
+    colorClass: 'bg-emerald-500 text-emerald-100 border-emerald-400/40 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-emerald-300'
+  },
+  PENDING: {
+    colorClass: 'bg-amber-500 text-amber-100 border-amber-400/40 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-amber-300'
+  },
+  QUEUED: {
+    colorClass: 'bg-amber-500 text-amber-100 border-amber-400/40 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-amber-300'
+  },
+  PROCESSING: {
+    colorClass: 'bg-amber-500 text-amber-100 border-amber-400/40 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-amber-300'
+  },
+  DISPATCHED: {
+    colorClass: 'bg-sky-500 text-sky-100 border-sky-400/40 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-sky-300'
+  },
+  REJECTED: {
+    colorClass: 'bg-rose-500 text-rose-100 border-rose-400/40 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-rose-300'
+  },
+  FAILED: {
+    colorClass: 'bg-rose-500 text-rose-100 border-rose-400/40 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-rose-300'
+  },
+  CANCELLED: {
+    colorClass: 'bg-slate-500 text-slate-100 border-slate-400/40 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-slate-300'
+  },
+  INACTIVE: {
+    colorClass: 'bg-white/15 text-slate-200 border-white/20 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-slate-300'
+  },
+  SUSPENDED: {
+    colorClass: 'bg-rose-500 text-rose-100 border-rose-400/40 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-rose-300'
+  }
+};
+
 const VARIANT_CONFIGS = {
   success: {
     colorClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
@@ -170,15 +225,20 @@ const StatusBadge = ({
   showIcon = true,
   dot = false,
   size = 'sm',
+  isHeader = false,
   className = '',
   ...props
 }) => {
   const normKey = (status || '').toUpperCase();
   const config = STATUS_CONFIGS[normKey] || {};
   const variantConfig = variant ? VARIANT_CONFIGS[variant] : null;
+  const headerConfig = isHeader ? (HEADER_STATUS_CONFIGS[normKey] || {
+    colorClass: 'bg-white/15 text-white border-white/20 shadow-xs backdrop-blur-xs',
+    dotClass: 'bg-white'
+  }) : null;
 
-  const colorClass = variantConfig?.colorClass || config.colorClass || 'bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20';
-  const dotColorClass = variantConfig?.dotClass || config.dotClass || 'bg-slate-400';
+  const colorClass = headerConfig?.colorClass || variantConfig?.colorClass || config.colorClass || 'bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20';
+  const dotColorClass = headerConfig?.dotClass || variantConfig?.dotClass || config.dotClass || 'bg-slate-400';
   const displayLabel = label || config.label || (status ? String(status).replace(/_/g, ' ') : 'N/A');
   const IconComponent = CustomIcon !== undefined ? CustomIcon : (showIcon ? config.icon : null);
   const sizeClass = SIZE_CLASSES[size] || SIZE_CLASSES.sm;

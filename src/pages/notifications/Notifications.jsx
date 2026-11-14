@@ -1138,7 +1138,7 @@ const Notifications = () => {
 
       {/* ================= MOBILE DETAIL DRAWER MODAL (< lg screens) ================= */}
       {isMobileDetailOpen && selectedNotification && (
-        <div className="lg:hidden fixed inset-0 z-50 overflow-hidden">
+        <div className="lg:hidden fixed inset-0 z-[10000] overflow-hidden">
           <div
             className="fixed inset-0 dark:bg-slate-950/50 backdrop-blur-md transition-opacity"
             onClick={() => setIsMobileDetailOpen(false)}
@@ -1147,24 +1147,32 @@ const Notifications = () => {
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 pointer-events-none">
             <div className="w-screen max-w-md bg-white/40 dark:bg-slate-950/25 border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto animate-in slide-in-from-right duration-200">
               {/* Drawer Header */}
-              <div className="px-4 py-3.5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-bold shrink-0">
-                    <FiBell />
+              <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0">
+                <div className="flex items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white shadow-sm flex items-center justify-center shrink-0">
+                      <FiBell size={17} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm sm:text-base font-bold text-white truncate tracking-tight">
+                        Notification Details
+                      </h3>
+                      <p className="text-[11px] text-blue-100/80 truncate mt-0.5">
+                        {selectedNotification.createdAt ? formatDateTime(selectedNotification.createdAt) : 'Alert Overview'}
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                    Notification Details
-                  </h3>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsMobileDetailOpen(false)}
-                    className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer"
-                  >
-                    <FiX size={18} />
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileDetailOpen(false)}
+                      className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer shrink-0"
+                      title="Close drawer"
+                    >
+                      <FiX size={18} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
