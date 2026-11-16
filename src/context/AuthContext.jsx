@@ -41,6 +41,31 @@ export const AuthProvider = ({ children }) => {
               const name = `${decoded.firstName || ''} ${decoded.lastName || ''}`.trim() || decoded.email;
               setUser({ id: decoded.id, _id: decoded.id, role, name, email: decoded.email, token });
             }
+
+            // Silently sync latest admin profile in background to keep avatar/name current
+            api.get('/v1/admin/profile')
+              .then((res) => {
+                const profileData = res.data?.data || res.data?.user || res.data;
+                if (profileData && typeof profileData === 'object') {
+                  const newAvatar = profileData.profileImage || profileData.avatar;
+                  const newName =
+                    profileData.fullName ||
+                    `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim();
+
+                  setUser((prev) => {
+                    const merged = {
+                      ...(prev || {}),
+                      ...profileData,
+                      avatar: newAvatar || prev?.avatar,
+                      profileImage: newAvatar || prev?.profileImage,
+                      name: newName || prev?.name
+                    };
+                    sessionStorage.setItem('user', JSON.stringify(merged));
+                    return merged;
+                  });
+                }
+              })
+              .catch(() => {});
           }
         } catch {
           logout();

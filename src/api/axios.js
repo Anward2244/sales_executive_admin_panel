@@ -78,10 +78,94 @@ export const resetPasswordApi = async (data) => {
 
 export const getProfileApi = async () => {
   try {
-    return await api.get('/v1/auth/me');
+    return await api.get('/v1/admin/profile');
   } catch (err) {
     if (err.response?.status === 404) {
-      return await api.get('/auth/me');
+      try {
+        return await api.get('/admin/profile');
+      } catch (innerErr) {
+        if (innerErr.response?.status === 404) {
+          return await api.get('/v1/auth/me');
+        }
+        throw innerErr;
+      }
+    }
+    throw err;
+  }
+};
+
+export const getAdminProfileApi = getProfileApi;
+
+export const getAdminProfileActivityApi = async () => {
+  try {
+    return await api.get('/v1/admin/profile/activity');
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.get('/admin/profile/activity');
+    }
+    throw err;
+  }
+};
+
+export const patchAdminProfileApi = async (data) => {
+  try {
+    return await api.patch('/v1/admin/profile', data);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.patch('/admin/profile', data);
+    }
+    throw err;
+  }
+};
+
+export const putAdminProfileApi = async (data) => {
+  try {
+    return await api.put('/v1/admin/profile', data);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.put('/admin/profile', data);
+    }
+    throw err;
+  }
+};
+
+export const changeAdminPasswordApi = async (data) => {
+  try {
+    return await api.post('/v1/admin/profile/change-password', data);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.post('/admin/profile/change-password', data);
+    }
+    throw err;
+  }
+};
+
+export const uploadAdminAvatarApi = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    return await api.post('/v1/admin/profile/avatar', formData);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      try {
+        return await api.post('/admin/profile/avatar', formData);
+      } catch (inner404) {
+        throw err;
+      }
+    }
+    // If server expected 'avatar' instead of 'file'
+    if (
+      err.response?.data?.message?.toLowerCase().includes('unexpected file field') ||
+      err.response?.status === 500
+    ) {
+      const altForm = new FormData();
+      altForm.append('avatar', file);
+      try {
+        return await api.post('/v1/admin/profile/avatar', altForm);
+      } catch (innerErr) {
+        throw err;
+      }
     }
     throw err;
   }
@@ -89,14 +173,23 @@ export const getProfileApi = async () => {
 
 export const updateProfileApi = async (data) => {
   try {
-    return await api.patch('/v1/auth/me', data);
+    return await patchAdminProfileApi(data);
   } catch (err) {
-    if (err.response?.status === 404) {
-      return await api.patch('/auth/me', data);
+    if (err.response?.status === 404 || err.response?.status === 405) {
+      try {
+        return await putAdminProfileApi(data);
+      } catch (putErr) {
+        if (putErr.response?.status === 404) {
+          return await api.patch('/v1/auth/me', data);
+        }
+        throw putErr;
+      }
     }
     throw err;
   }
 };
+
+export const updateAdminProfileApi = updateProfileApi;
 
 export const getDashboardMetricsApi = async () => {
   try {

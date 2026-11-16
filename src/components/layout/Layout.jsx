@@ -50,6 +50,25 @@ const Layout = () => {
   const mainRef = useRef(null);
   const [pollingConfigVersion, setPollingConfigVersion] = useState(0);
 
+  // Profile Header States
+  const [headerImgError, setHeaderImgError] = useState(false);
+  const [mobileImgError, setMobileImgError] = useState(false);
+
+  const userAvatar = user?.profileImage || user?.avatar;
+  const userName =
+    user?.fullName ||
+    user?.name ||
+    (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '') ||
+    user?.email ||
+    'Admin Account';
+  const userRole = (user?.rawRole || user?.role || 'Administrator').replace(/_/g, ' ');
+  const userInitial = (userName?.[0] || user?.email?.[0] || 'A').toUpperCase();
+
+  useEffect(() => {
+    setHeaderImgError(false);
+    setMobileImgError(false);
+  }, [userAvatar]);
+
   useEffect(() => {
     const handleSettingsChange = () => {
       setPollingConfigVersion(v => v + 1);
@@ -970,14 +989,23 @@ const Layout = () => {
           {/* Mobile Profile Dropdown */}
           <div className="relative" ref={mobileProfileDropdownRef}>
             <div
-              className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center !text-white font-bold text-xs shadow-inner cursor-pointer select-none active:scale-95 transition-transform"
+              className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center !text-white font-bold text-xs shadow-inner cursor-pointer select-none active:scale-95 transition-transform border border-slate-200/80 dark:border-white/10 shrink-0"
               onClick={() => {
                 setIsProfileDropdownOpen(!isProfileDropdownOpen);
                 setIsNotificationsDropdownOpen(false);
               }}
               title="Profile menu"
             >
-              {user?.email ? user.email.charAt(0).toUpperCase() : (user?.name ? user.name.charAt(0).toUpperCase() : 'U')}
+              {userAvatar && !mobileImgError ? (
+                <img
+                  src={userAvatar}
+                  alt={userName}
+                  onError={() => setMobileImgError(true)}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{userInitial}</span>
+              )}
             </div>
 
             {/* Dropdown Menu */}
@@ -987,13 +1015,22 @@ const Layout = () => {
                   ? 'bg-slate-900/50 border-white/10 shadow-black/50' 
                   : 'bg-white/40 border-slate-200/90 shadow-slate-900/15'
               }`}>
-                <div className={`px-4 py-2.5 border-b mb-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
-                  <p className={`text-sm font-semibold line-clamp-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                    {user?.name || user?.email || 'User'}
-                  </p>
-                  <p className={`text-xs capitalize ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {user?.role || 'Administrator'}
-                  </p>
+                <div className={`px-4 py-2.5 border-b mb-1 flex items-center gap-2.5 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xs shadow-inner shrink-0 border border-slate-200/80 dark:border-white/10">
+                    {userAvatar && !mobileImgError ? (
+                      <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{userInitial}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                      {userName}
+                    </p>
+                    <p className={`text-xs truncate capitalize ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {userRole}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Theme Switch Toggle */}
@@ -1595,14 +1632,27 @@ const Layout = () => {
                   setIsNotificationsDropdownOpen(false);
                 }}
               >
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center !text-white font-bold text-xs shadow-inner">
-                  {user?.email ? user.email.charAt(0).toUpperCase() : (user?.name ? user.name.charAt(0).toUpperCase() : 'U')}
+                <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center !text-white font-bold text-xs shadow-inner shrink-0 border border-slate-200/80 dark:border-white/10">
+                  {userAvatar && !headerImgError ? (
+                    <img
+                      src={userAvatar}
+                      alt={userName}
+                      onError={() => setHeaderImgError(true)}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>{userInitial}</span>
+                  )}
                 </div>
-                <div className="ml-3 hidden md:block">
-                  <p className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>Admin Account</p>
-                  <p className={`text-[10px] uppercase ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Administrator</p>
+                <div className="ml-3 hidden md:block text-left">
+                  <p className={`text-xs font-bold truncate max-w-[150px] ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                    {userName}
+                  </p>
+                  <p className={`text-[10px] uppercase font-semibold tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {userRole}
+                  </p>
                 </div>
-                <FiChevronDown className={`ml-2 transition-colors ${isDark ? 'text-slate-400 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-900'}`} />
+                <FiChevronDown className={`ml-2 text-sm transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''} ${isDark ? 'text-slate-400 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-900'}`} />
               </div>
 
               {/* Dropdown Menu */}
@@ -1612,13 +1662,22 @@ const Layout = () => {
                     ? 'bg-slate-900/50 border-white/10 shadow-black/50' 
                     : 'bg-white/10 border-slate-200 shadow-slate-900/40'
                 }`}>
-                  <div className={`px-4 py-2.5 border-b mb-1 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
-                    <p className={`text-sm font-semibold line-clamp-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                      {user?.name || user?.email || 'User'}
-                    </p>
-                    <p className={`text-xs capitalize ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                      {user?.role || 'Administrator'}
-                    </p>
+                  <div className={`px-4 py-2.5 border-b mb-1 flex items-center gap-2.5 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
+                    <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xs shadow-inner shrink-0 border border-slate-200/80 dark:border-white/10">
+                      {userAvatar && !headerImgError ? (
+                        <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{userInitial}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                        {userName}
+                      </p>
+                      <p className={`text-xs truncate capitalize ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {userRole}
+                      </p>
+                    </div>
                   </div>
 
                   <Link

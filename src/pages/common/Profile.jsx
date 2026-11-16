@@ -1,49 +1,57 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import {
   FiUser,
   FiLock,
   FiSave,
   FiEdit2,
-  FiHelpCircle,
-  FiArrowLeft,
   FiMail,
   FiPhone,
   FiShield,
   FiCalendar,
   FiClock,
-  FiCopy,
-  FiCheck,
   FiRefreshCw,
   FiEye,
   FiEyeOff,
   FiCheckCircle,
   FiAlertCircle,
-  FiHash,
-  FiActivity
+  FiActivity,
+  FiUsers,
+  FiBriefcase,
+  FiShoppingBag,
+  FiGlobe,
+  FiKey,
+  FiLayers,
+  FiImage,
+  FiPhoneCall,
+  FiCamera,
+  FiXCircle,
+  FiSearch,
+  FiCheck,
+  FiX,
+  FiExternalLink
 } from 'react-icons/fi';
-import { api, getProfileApi, updateProfileApi } from '@/api/axios';
+import {
+  getProfileApi,
+  getAdminProfileActivityApi,
+  patchAdminProfileApi,
+  putAdminProfileApi,
+  changeAdminPasswordApi,
+  uploadAdminAvatarApi
+} from '@/api/axios';
+import {
+  PageHeader,
+  SegmentedTabs,
+  StatusBadge,
+  CopyButton,
+  GmailLink,
+  Card,
+  EmptyState
+} from '@/components/ui';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
-import BackButton from '@/components/ui/BackButton';
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return 'N/A';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }).format(d);
-  } catch {
-    return dateStr;
-  }
-};
+import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
+import { formatPhone } from '@/utils/formatters';
 
 const formatRelativeTime = (dateStr) => {
   if (!dateStr) return '';
@@ -59,883 +67,1496 @@ const formatRelativeTime = (dateStr) => {
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays === 1) return 'Yesterday';
-    return `${diffDays} days ago`;
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return formatDateDDMMYYYY(dateStr);
   } catch {
     return '';
   }
 };
 
-const Profile = () => {
-  const navigate = useNavigate();
-  const { user, updateUser } = useAuth();
+const PERMISSION_DETAILS = {
+  MANAGE_USERS: {
+    title: 'User Management',
+    desc: 'Create, modify, and assign credentials and access roles across administrators and sales executives.'
+  },
+  MANAGE_FIRMS: {
+    title: 'Firm Administration',
+    desc: 'Oversee registered commercial firms, modify enterprise details, and configure credit profiles.'
+  },
+  APPROVE_FIRMS: {
+    title: 'Firm Verification & Approval',
+    desc: 'Review submitted firm KYC documentation, assign operational credit limits, and authorize trading.'
+  },
+  MANAGE_PURCHASE_ORDERS: {
+    title: 'Purchase Order Oversight',
+    desc: 'Full administrative authority to evaluate, approve, dispatch, and regulate commercial purchase orders.'
+  },
+  VIEW_REPORTS: {
+    title: 'Analytics & Reporting',
+    desc: 'Access consolidated administrative dashboards, revenue trends, fulfillment velocity, and sales metrics.'
+  }
+};
 
+const DEFAULT_PROFILE = {
+  _id: '',
+  id: '',
+  firstName: 'System',
+  lastName: 'Admin',
+  fullName: 'System Admin',
+  email: 'admin@whatnot.in',
+  phone: '+919876543210',
+  role: 'ADMIN',
+  profileImage: '',
+  avatar: '',
+  reportingManager: 'Board of Directors',
+  territory: 'All Territories (National)',
+  emergencyContact: '+919811223344',
+  assignedCompanyIds: [],
+  companies: [],
+  isActive: true,
+  permissions: [
+    'MANAGE_USERS',
+    'MANAGE_FIRMS',
+    'APPROVE_FIRMS',
+    'MANAGE_PURCHASE_ORDERS',
+    'VIEW_REPORTS'
+  ],
+  stats: {
+    totalSalesExecutives: 0,
+    totalFirms: 0,
+    pendingOnboardings: 0,
+    totalPurchaseOrders: 0,
+    pendingOrders: 0
+  },
+  lastLoginAt: '',
+  createdAt: '',
+  updatedAt: ''
+};
+
+const Profile = () => {
+  const { user: authUser, updateUser } = useAuth();
+  const { toast } = useToast();
+  const fileInputRef = useRef(null);
+
+  // Core Data States
+  const [profileData, setProfileData] = useState(DEFAULT_PROFILE);
+  const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [copiedId, setCopiedId] = useState(false);
-  const [copiedEmail, setCopiedEmail] = useState(false);
-  const [copiedPhone, setCopiedPhone] = useState(false);
-  const [activeTab, setActiveTab] = useState('personal'); // 'personal', 'security', 'config', 'audit'
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
-  // Password visibility toggles
+  // Edit Profile Form State
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    profileImage: '',
+    reportingManager: '',
+    territory: '',
+    emergencyContact: ''
+  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  // Activity Tab Filters
+  const [activitySearch, setActivitySearch] = useState('');
+  const [activityTypeFilter, setActivityTypeFilter] = useState('ALL');
+
+  // Security / Password Form State
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
-  // Status feedback message
-  const [notification, setNotification] = useState(null); // { type: 'success' | 'error', message: '' }
+  // Sync state helper
+  const syncProfileToForm = (data) => {
+    setFormData({
+      firstName: data.firstName || '',
+      lastName: data.lastName || '',
+      email: data.email || '',
+      phone: data.phone || '',
+      profileImage: data.profileImage || data.avatar || '',
+      reportingManager: data.reportingManager || '',
+      territory: data.territory || '',
+      emergencyContact: data.emergencyContact || ''
+    });
+  };
 
-  // Profile Data State
-  const [profileData, setProfileData] = useState({
-    _id: user?._id || user?.id || '',
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    role: user?.role || '',
-    employeeCode: user?.employeeCode || '',
-    isActive: user?.isActive !== undefined ? user.isActive : true,
-    createdAt: user?.createdAt || '',
-    updatedAt: user?.updatedAt || '',
-    lastLoginAt: user?.lastLoginAt || ''
-  });
-
-  // Editable Form Data State
-  const [formData, setFormData] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-    supportNumber: '',
-    supportEmail: ''
-  });
-
-  // Fetch Profile from GET /auth/me & App Config
-  const fetchProfileAndConfig = async (isManualRefresh = false) => {
-    if (isManualRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
+  // Fetch Profile Data
+  const fetchProfile = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    else setRefreshing(true);
 
     try {
-      // 1. Fetch Profile via /auth/me
-      let fetchedProfile = null;
-      try {
-        const profileRes = await getProfileApi();
-        const resData = profileRes.data || {};
-        fetchedProfile = resData.data || resData.user || resData;
-      } catch (profileErr) {
-        console.warn('API /auth/me call error:', profileErr?.message);
-        if (user) {
-          fetchedProfile = user;
-        }
-      }
+      const res = await getProfileApi();
+      const payload = res.data?.data || res.data?.user || res.data || {};
 
-      if (fetchedProfile) {
-        const mergedProfile = {
-          _id: fetchedProfile._id || fetchedProfile.id || '',
-          firstName: fetchedProfile.firstName || '',
-          lastName: fetchedProfile.lastName || '',
-          email: fetchedProfile.email || '',
-          phone: fetchedProfile.phone || '',
-          role: (fetchedProfile.role || '').toUpperCase(),
-          employeeCode: fetchedProfile.employeeCode || '',
-          isActive: fetchedProfile.isActive !== undefined ? fetchedProfile.isActive : true,
-          createdAt: fetchedProfile.createdAt || '',
-          updatedAt: fetchedProfile.updatedAt || '',
-          lastLoginAt: fetchedProfile.lastLoginAt || ''
-        };
+      const merged = {
+        ...DEFAULT_PROFILE,
+        ...payload,
+        stats: {
+          ...DEFAULT_PROFILE.stats,
+          ...(payload.stats || {})
+        },
+        permissions: Array.isArray(payload.permissions) && payload.permissions.length > 0
+          ? payload.permissions
+          : DEFAULT_PROFILE.permissions,
+        companies: Array.isArray(payload.companies)
+          ? payload.companies
+          : DEFAULT_PROFILE.companies
+      };
 
-        setProfileData(mergedProfile);
-        setFormData(prev => ({
-          ...prev,
-          firstName: mergedProfile.firstName,
-          lastName: mergedProfile.lastName,
-          email: mergedProfile.email,
-          phone: mergedProfile.phone
-        }));
+      setProfileData(merged);
+      syncProfileToForm(merged);
+      setImgError(false);
 
-        // Sync with AuthContext so Layout, Header, and Sidebar update
-        if (updateUser) {
-          updateUser({
-            _id: mergedProfile._id,
-            id: mergedProfile._id,
-            firstName: mergedProfile.firstName,
-            lastName: mergedProfile.lastName,
-            name: `${mergedProfile.firstName} ${mergedProfile.lastName}`.trim(),
-            email: mergedProfile.email,
-            phone: mergedProfile.phone,
-            role: mergedProfile.role,
-            employeeCode: mergedProfile.employeeCode,
-            isActive: mergedProfile.isActive,
-            createdAt: mergedProfile.createdAt,
-            updatedAt: mergedProfile.updatedAt,
-            lastLoginAt: mergedProfile.lastLoginAt
-          });
-        }
-      }
-
-      // 2. Fetch App Config for support credentials
-      try {
-        const configRes = await api.get('/app-config');
-        if (configRes.data) {
-          setFormData(prev => ({
-            ...prev,
-            supportNumber: configRes.data.supportNumber || configRes.data.data?.supportNumber || prev.supportNumber,
-            supportEmail: configRes.data.supportEmail || configRes.data.data?.supportEmail || prev.supportEmail
-          }));
-        }
-      } catch (configErr) {
-        console.log('App config fetch note:', configErr?.message);
-      }
-
-      if (isManualRefresh) {
-        showNotification('success', 'Profile data refreshed successfully from server!');
+      if (updateUser) {
+        updateUser({
+          ...merged,
+          name: merged.fullName || `${merged.firstName} ${merged.lastName}`.trim(),
+          avatar: merged.profileImage || merged.avatar
+        });
       }
     } catch (err) {
-      console.error('Error in profile initialisation:', err);
-      if (isManualRefresh) {
-        showNotification('error', 'Failed to refresh profile from server.');
-      }
+      console.error('Error fetching admin profile:', err);
+      toast.error(err.response?.data?.message || 'Failed to load profile details.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
+  // Fetch Activity Timeline
+  const fetchActivities = async () => {
+    setActivitiesLoading(true);
+    try {
+      const res = await getAdminProfileActivityApi();
+      const items = Array.isArray(res.data?.data)
+        ? res.data.data
+        : Array.isArray(res.data)
+        ? res.data
+        : [];
+      setActivities(items);
+    } catch (err) {
+      console.warn('Could not fetch activity timeline:', err);
+    } finally {
+      setActivitiesLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchProfileAndConfig();
+    fetchProfile();
+    fetchActivities();
   }, []);
 
-  const showNotification = (type, message) => {
-    setNotification({ type, message });
-    setTimeout(() => {
-      setNotification(null);
-    }, 4500);
-  };
+  // Avatar Upload Handler
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleCopy = (text, type) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text);
-    if (type === 'id') {
-      setCopiedId(true);
-      setTimeout(() => setCopiedId(false), 2000);
-    } else if (type === 'email') {
-      setCopiedEmail(true);
-      setTimeout(() => setCopiedEmail(false), 2000);
-    } else if (type === 'phone') {
-      setCopiedPhone(true);
-      setTimeout(() => setCopiedPhone(false), 2000);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Basic password validation if user attempted password change
-    if (formData.newPassword) {
-      if (formData.newPassword.length < 6) {
-        showNotification('error', 'New password must be at least 6 characters long.');
-        return;
-      }
-      if (formData.newPassword !== formData.confirmPassword) {
-        showNotification('error', 'New password and confirmation password do not match.');
-        return;
-      }
+    // Validate size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Avatar file size must be less than 10MB.');
+      return;
     }
 
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload an image file (JPEG, PNG, WEBP).');
+      return;
+    }
+
+    setUploadingAvatar(true);
     try {
-      // 1. Update Profile if endpoint exists
-      const profilePayload = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone
-      };
+      const res = await uploadAdminAvatarApi(file);
+      const resData = res.data || {};
+      const payload = resData.data || resData.user || resData;
 
-      if (formData.currentPassword && formData.newPassword) {
-        profilePayload.currentPassword = formData.currentPassword;
-        profilePayload.newPassword = formData.newPassword;
-      }
+      const newAvatarUrl =
+        payload.avatarUrl ||
+        payload.avatar ||
+        payload.profileImage ||
+        payload.url ||
+        payload.imageUrl ||
+        resData.avatarUrl ||
+        resData.avatar ||
+        resData.profileImage ||
+        resData.url;
 
-      try {
-        await updateProfileApi(profilePayload);
-      } catch (updateErr) {
-        console.warn('Backend profile update note:', updateErr?.message);
-      }
+      if (newAvatarUrl) {
+        setProfileData((prev) => ({
+          ...prev,
+          profileImage: newAvatarUrl,
+          avatar: newAvatarUrl
+        }));
+        setFormData((prev) => ({
+          ...prev,
+          profileImage: newAvatarUrl
+        }));
+        setImgError(false);
 
-      // 2. Update App Support Config if support fields were populated
-      if (formData.supportNumber || formData.supportEmail) {
-        try {
-          await api.put('/app-config/update', {
-            supportNumber: formData.supportNumber,
-            supportEmail: formData.supportEmail
+        if (updateUser) {
+          updateUser({
+            profileImage: newAvatarUrl,
+            avatar: newAvatarUrl
           });
-        } catch (configErr) {
-          console.warn('App config update note:', configErr?.message);
         }
       }
 
-      // Update local profile state
-      const updatedProfile = {
-        ...profileData,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        updatedAt: new Date().toISOString()
-      };
-      setProfileData(updatedProfile);
-
-      if (updateUser) {
-        updateUser({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          name: `${formData.firstName} ${formData.lastName}`.trim(),
-          phone: formData.phone,
-          updatedAt: updatedProfile.updatedAt
-        });
+      toast.success(resData.message || 'Avatar updated successfully!');
+    } catch (err) {
+      console.error('Error uploading avatar:', err);
+      toast.error(err.response?.data?.message || 'Failed to upload avatar image.');
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
-
-      setFormData(prev => ({
-        ...prev,
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      }));
-
-      setIsEditing(false);
-      showNotification('success', 'Profile and preferences updated successfully!');
-    } catch (error) {
-      showNotification('error', 'Failed to update profile: ' + (error.response?.data?.message || error.message));
     }
   };
 
-  const initials = `${(profileData.firstName || user?.firstName || profileData.email || 'U').charAt(0)}${profileData.lastName?.charAt(0) || ''}`.toUpperCase();
-  const fullName = `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+  // Form Field Change Handler
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    let formattedValue = value;
+    if (name === 'phone' || name === 'emergencyContact') {
+      formattedValue = formatPhone(value);
+    }
+    setFormData((prev) => ({
+      ...prev,
+      [name]: formattedValue
+    }));
+  };
+
+  // Profile Save Handler (PATCH / PUT)
+  const handleProfileSave = async (e) => {
+    e.preventDefault();
+    setSavingProfile(true);
+
+    const payload = {
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      profileImage: formData.profileImage.trim(),
+      reportingManager: formData.reportingManager.trim(),
+      territory: formData.territory.trim(),
+      emergencyContact: formData.emergencyContact.trim()
+    };
+
+    try {
+      let res;
+      try {
+        res = await patchAdminProfileApi(payload);
+      } catch (patchErr) {
+        if (patchErr.response?.status === 405 || patchErr.response?.status === 404) {
+          res = await putAdminProfileApi(payload);
+        } else {
+          throw patchErr;
+        }
+      }
+
+      const resData = res.data || {};
+      const updated = resData.data || resData.user || resData;
+
+      setProfileData((prev) => ({
+        ...prev,
+        ...payload,
+        ...(typeof updated === 'object' ? updated : {})
+      }));
+
+      setIsEditing(false);
+
+      if (updateUser) {
+        updateUser({
+          ...payload,
+          name: `${payload.firstName} ${payload.lastName}`.trim()
+        });
+      }
+
+      toast.success(resData.message || 'Profile information updated successfully!');
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      toast.error(err.response?.data?.message || 'Failed to update profile information.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  // Password Change Handler
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!passwordForm.currentPassword) {
+      toast.error('Please enter your current password.');
+      return;
+    }
+    if (!passwordForm.newPassword) {
+      toast.error('Please enter your new password.');
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters long.');
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('New password and confirmation password do not match.');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const res = await changeAdminPasswordApi({
+        currentPassword: passwordForm.currentPassword,
+        oldPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+        confirmPassword: passwordForm.confirmPassword
+      });
+
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+
+      toast.success(res.data?.message || 'Password changed successfully!');
+    } catch (err) {
+      console.error('Error changing password:', err);
+      toast.error(
+        err.response?.data?.message ||
+          'Failed to update password. Please check your current password.'
+      );
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // Filtered Activities
+  const filteredActivities = useMemo(() => {
+    return activities.filter((act) => {
+      const matchesType =
+        activityTypeFilter === 'ALL' || act.type === activityTypeFilter;
+      const matchesSearch =
+        !activitySearch.trim() ||
+        (act.title && act.title.toLowerCase().includes(activitySearch.toLowerCase())) ||
+        (act.details && act.details.toLowerCase().includes(activitySearch.toLowerCase()));
+      return matchesType && matchesSearch;
+    });
+  }, [activities, activityTypeFilter, activitySearch]);
+
+  // Derived user display properties
+  const displayName =
+    profileData.fullName ||
+    `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim() ||
+    'System Administrator';
+
+  const avatarUrl = profileData.profileImage || profileData.avatar;
+  const initials = `${profileData.firstName?.[0] || 'A'}${profileData.lastName?.[0] || ''}`.toUpperCase();
+
+  // Tabs configuration for SegmentedTabs
+  const tabs = [
+    { id: 'overview', label: 'Overview & Info', icon: FiUser },
+    { id: 'activity', label: 'Activity Timeline', icon: FiActivity, count: activities.length },
+    { id: 'permissions', label: 'Permissions', icon: FiShield, count: profileData.permissions?.length || 0 },
+    { id: 'companies', label: 'Assigned Companies', icon: FiLayers, count: profileData.companies?.length || 0 },
+    { id: 'security', label: 'Security & Password', icon: FiLock }
+  ];
+
+  if (loading) {
+    return (
+      <div className="space-y-6 max-w-7xl mx-auto pb-12">
+        <PageHeader
+          title="Admin Profile"
+          icon={FiShield}
+          subtitle="Loading your profile credentials and organizational configuration..."
+        />
+        <ProfileSkeleton />
+      </div>
+    );
+  }
 
   return (
-    <div className="relative space-y-6 min-h-full pb-10 text-slate-800 dark:text-slate-100">
-      {/* Toast / Notification Banner */}
-      {notification && (
-        <div
-          className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl backdrop-blur-xl border transition-all animate-in fade-in slide-in-from-top-4 ${notification.type === 'success'
-              ? 'bg-emerald-50 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200 shadow-emerald-900/10 dark:shadow-emerald-900/30'
-              : 'bg-rose-50 dark:bg-rose-950/80 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200 shadow-rose-900/10 dark:shadow-rose-900/30'
-            }`}
-        >
-          {notification.type === 'success' ? (
-            <FiCheckCircle className="text-xl text-emerald-600 dark:text-emerald-400 shrink-0" />
-          ) : (
-            <FiAlertCircle className="text-xl text-rose-600 dark:text-rose-400 shrink-0" />
-          )}
-          <span className="text-sm font-semibold">{notification.message}</span>
-          <button
-            onClick={() => setNotification(null)}
-            className="ml-2 text-xs opacity-60 hover:opacity-100 cursor-pointer"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Header */}
+      <PageHeader
+        title="Admin Profile"
+        icon={FiShield}
+        subtitle="Manage your personal credentials, organizational assignments, security settings, and audit activity."
+        action={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                fetchProfile(true);
+                fetchActivities();
+              }}
+              disabled={refreshing}
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 transition-all cursor-pointer shadow-xs"
+              title="Refresh Profile Data"
+            >
+              <FiRefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
+              <span>Refresh</span>
+            </button>
+          </div>
+        }
+      />
 
-      {/* Header Section */}
-      <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-2 z-10">
-        <div className="flex items-center gap-4">
-          <BackButton forceVisible={true} fallback="/dashboard" />
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Admin Profile</h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30">
-                {profileData.role}
-              </span>
-              {profileData.isActive && (
-                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
-                  Active
-                </span>
-              )}
+      {/* Hero Banner: Profile Identity & Metadata */}
+      <div className="relative overflow-hidden rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 p-6 sm:p-8 shadow-xl shadow-slate-900/5">
+        {/* Subtle Decorative Ambient Background Glow */}
+        <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-blue-500/10 dark:bg-blue-600/10 filter blur-3xl pointer-events-none" />
+        <div className="absolute -left-20 -bottom-20 w-80 h-80 rounded-full bg-purple-500/10 dark:bg-purple-600/10 filter blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          {/* Avatar + Main Info */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6">
+            {/* Avatar with Camera upload button */}
+            <div className="relative shrink-0 group">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-800 shadow-xl bg-white flex items-center justify-center text-white text-3xl font-black">
+                {avatarUrl && !imgError ? (
+                  <img
+                    src={avatarUrl}
+                    alt={displayName}
+                    onError={() => setImgError(true)}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <span>{initials}</span>
+                )}
+              </div>
+
+              {/* Status Ring / Indicator */}
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center shadow-md">
+                <span className={`w-3.5 h-3.5 rounded-full ${profileData.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+              </div>
+
+              {/* Hidden File Input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+
+              {/* Camera Upload Overlay */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                className="absolute inset-0 rounded-2xl bg-black/50 backdrop-blur-xs text-white opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 cursor-pointer disabled:cursor-not-allowed"
+                title="Change Avatar Image"
+              >
+                {uploadingAvatar ? (
+                  <FiRefreshCw className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <FiCamera className="w-6 h-6" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Change</span>
+                  </>
+                )}
+              </button>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">
-              Manage account credentials and security settings.
+
+            {/* Profile Credentials */}
+            <div className="space-y-2 min-w-0">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                  {displayName}
+                </h1>
+                <StatusBadge status={profileData.role || 'ADMIN'} size="sm" />
+                <StatusBadge status={profileData.isActive ? 'ACTIVE' : 'INACTIVE'} size="sm" />
+              </div>
+
+              {/* Meta Chips */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {profileData.email && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <FiMail className="text-blue-500 shrink-0" />
+                    <GmailLink
+                      email={profileData.email}
+                      copySize={12}
+                      className="truncate max-w-xs hover:underline"
+                    />
+                  </div>
+                )}
+
+                {profileData.phone && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <FiPhone className="text-emerald-500 shrink-0" />
+                    <span>{profileData.phone}</span>
+                    <CopyButton text={profileData.phone} size={12} />
+                  </div>
+                )}
+
+                {profileData.territory && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <FiGlobe className="text-purple-500 shrink-0" />
+                    <span>{profileData.territory}</span>
+                  </div>
+                )}
+
+                {profileData.reportingManager && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <FiBriefcase className="text-amber-500 shrink-0" />
+                    <span>Reports to: {profileData.reportingManager}</span>
+                  </div>
+                )}
+
+                {profileData.emergencyContact && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200/80 dark:border-rose-500/20 text-xs font-semibold text-rose-700 dark:text-rose-400">
+                    <FiPhoneCall className="text-rose-500 shrink-0" />
+                    <span>Emergency SOS: {profileData.emergencyContact}</span>
+                    <CopyButton text={profileData.emergencyContact} size={12} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right ID & Timestamp Badges */}
+          <div className="flex md:flex-col items-start md:items-end justify-between w-full md:w-auto gap-3 pt-4 md:pt-0 border-t md:border-t-0 border-slate-200/80 dark:border-white/10">
+            {profileData._id && (
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <span className="font-mono text-[11px] bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-lg border border-slate-200/80 dark:border-white/10">
+                  ID: {profileData._id}
+                </span>
+                <CopyButton text={profileData._id} size={12} />
+              </div>
+            )}
+
+            {profileData.lastLoginAt && (
+              <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400" title={formatDateTimeDDMMYYYY(profileData.lastLoginAt)}>
+                <FiClock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                <span>Last Login: <strong>{formatRelativeTime(profileData.lastLoginAt)}</strong></span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Stats Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {/* Total Sales Executives */}
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group hover:shadow-lg transition-all duration-200 flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
+          <div className="flex items-center justify-between">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
+              Sales Executives
+            </span>
+            <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl kpi-icon-blue flex items-center justify-center text-base shrink-0 group-hover:scale-105 transition-transform">
+              <FiUsers />
+            </span>
+          </div>
+          <div>
+            <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
+              {profileData.stats?.totalSalesExecutives ?? 0}
+            </p>
+            <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+              Active field workforce
             </p>
           </div>
         </div>
 
-        {/* Header Action Buttons */}
-        <div className="flex items-center gap-3 self-stretch md:self-auto">
-          <button
-            onClick={() => fetchProfileAndConfig(true)}
-            disabled={refreshing || loading}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all border border-slate-200/80 dark:border-white/10 text-sm font-semibold cursor-pointer active:scale-95 disabled:opacity-50"
-            title="Refresh Profile from API"
-          >
-            <FiRefreshCw className={`text-base ${refreshing ? 'animate-spin text-blue-500 dark:text-blue-400' : ''}`} />
-            <span className="hidden sm:inline">{refreshing ? 'Syncing...' : 'Refresh'}</span>
-          </button>
+        {/* Total Firms */}
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group hover:shadow-lg transition-all duration-200 flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
+          <div className="flex items-center justify-between">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
+              Total Firms
+            </span>
+            <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl kpi-icon-emerald flex items-center justify-center text-base shrink-0 group-hover:scale-105 transition-transform">
+              <FiBriefcase />
+            </span>
+          </div>
+          <div>
+            <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
+              {profileData.stats?.totalFirms ?? 0}
+            </p>
+            <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+              Registered enterprises
+            </p>
+          </div>
+        </div>
 
-          <button
-            type="button"
-            onClick={() => setIsEditing(!isEditing)}
-            className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl transition-all text-sm font-bold shadow-lg cursor-pointer active:scale-95 border ${isEditing
-                ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border-rose-500/30 hover:bg-rose-500/30'
-                : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-400/30 shadow-blue-600/20'
-              }`}
-          >
-            {isEditing ? (
-              <>Cancel Editing</>
-            ) : (
-              <>
-                <FiEdit2 className="text-sm" /> Edit Profile
-              </>
-            )}
-          </button>
+        {/* Pending Onboardings */}
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group hover:shadow-lg transition-all duration-200 flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
+          <div className="flex items-center justify-between">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
+              Pending Onboarding
+            </span>
+            <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl kpi-icon-amber flex items-center justify-center text-base shrink-0 group-hover:scale-105 transition-transform">
+              <FiClock />
+            </span>
+          </div>
+          <div>
+            <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
+              {profileData.stats?.pendingOnboardings ?? 0}
+            </p>
+            <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+              Awaiting KYC review
+            </p>
+          </div>
+        </div>
+
+        {/* Total Purchase Orders */}
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group hover:shadow-lg transition-all duration-200 flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
+          <div className="flex items-center justify-between">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
+              Total POs
+            </span>
+            <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl kpi-icon-purple flex items-center justify-center text-base shrink-0 group-hover:scale-105 transition-transform">
+              <FiShoppingBag />
+            </span>
+          </div>
+          <div>
+            <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
+              {profileData.stats?.totalPurchaseOrders ?? 0}
+            </p>
+            <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+              Consolidated procurement
+            </p>
+          </div>
+        </div>
+
+        {/* Pending Orders */}
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md relative overflow-hidden group hover:shadow-lg transition-all duration-200 flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform" />
+          <div className="flex items-center justify-between">
+            <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
+              Pending POs
+            </span>
+            <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl kpi-icon-rose flex items-center justify-center text-base shrink-0 group-hover:scale-105 transition-transform">
+              <FiAlertCircle />
+            </span>
+          </div>
+          <div>
+            <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
+              {profileData.stats?.pendingOrders ?? 0}
+            </p>
+            <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+              Needs review & dispatch
+            </p>
+          </div>
         </div>
       </div>
 
-      {loading ? (
-        <ProfileSkeleton />
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* ================= LEFT COLUMN: HERO IDENTITY CARD ================= */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Main User Card */}
-            <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl shadow-slate-500/20 dark:shadow-black/40 rounded-3xl p-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16"></div>
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-600/10 rounded-full blur-2xl pointer-events-none -ml-12 -mb-12"></div>
+      {/* Segmented Navigation Tabs */}
+      <SegmentedTabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+      />
 
-              <div className="flex flex-col items-center text-center relative z-10">
-                {/* Avatar with Gradient Border */}
-                <div className="relative mb-4 group">
-                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 p-0.5 shadow-xl shadow-blue-500/20">
-                    <div className="w-full h-full bg-white dark:bg-slate-950/80 rounded-[22px] flex items-center justify-center backdrop-blur-md">
-                      <span className="text-3xl font-black text-blue-600 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-tr dark:from-blue-200 dark:via-white dark:to-indigo-200">
-                        {initials}
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white dark:border-slate-950 flex items-center justify-center ${profileData.isActive ? 'bg-emerald-500' : 'bg-rose-500'
-                      }`}
-                    title={profileData.isActive ? 'Active Account' : 'Inactive'}
-                  >
-                    <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
-                  </div>
-                </div>
-
-                {/* Name & Role */}
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{fullName}</h2>
-                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5">
-                  <FiMail className="text-blue-500 dark:text-blue-400 text-xs" /> {profileData.email}
+      {/* ========================================================
+          TAB 1: OVERVIEW & PERSONAL INFORMATION
+          ======================================================== */}
+      {activeTab === 'overview' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-200">
+          {/* Main Edit Form (8 cols) */}
+          <div className="lg:col-span-8 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 p-6 sm:p-7 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-slate-200/80 dark:border-white/10 mb-6 gap-3">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                  Personal & Organizational Details
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  Update your contact details, administrative assignments, and profile metadata.
                 </p>
-
-                <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
-                  <span className="px-3 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-300 rounded-xl text-xs font-bold uppercase tracking-wider border border-blue-500/25 flex items-center gap-1">
-                    <FiShield className="text-xs" /> {profileData.role}
-                  </span>
-                  <span className="px-3 py-1 bg-purple-500/10 text-purple-600 dark:text-purple-300 rounded-xl text-xs font-bold tracking-wider border border-purple-500/25 flex items-center gap-1">
-                    <FiHash className="text-xs" /> {profileData.employeeCode}
-                  </span>
-                </div>
-
-                {/* Divider */}
-                <div className="w-full border-t border-slate-200/80 dark:border-white/10 my-6"></div>
-
-                {/* Quick Contact & Info List */}
-                <div className="w-full space-y-3 text-left">
-                  {/* User ID with 1-click Copy */}
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-                        <FiHash className="text-sm" />
-                      </div>
-                      <div className="overflow-hidden">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Account ID</p>
-                        <p className="text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 truncate">{profileData._id}</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(profileData._id, 'id')}
-                      className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0 ml-2"
-                      title="Copy Account ID"
-                    >
-                      {copiedId ? <FiCheck className="text-emerald-500 dark:text-emerald-400 text-sm" /> : <FiCopy className="text-sm" />}
-                    </button>
-                  </div>
-
-                  {/* Email with 1-click Copy */}
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                        <FiMail className="text-sm" />
-                      </div>
-                      <div className="overflow-hidden">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Email Address</p>
-                        <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">{profileData.email}</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(profileData.email, 'email')}
-                      className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0 ml-2"
-                      title="Copy Email"
-                    >
-                      {copiedEmail ? <FiCheck className="text-emerald-500 dark:text-emerald-400 text-sm" /> : <FiCopy className="text-sm" />}
-                    </button>
-                  </div>
-
-                  {/* Phone with 1-click Copy */}
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
-                        <FiPhone className="text-sm" />
-                      </div>
-                      <div className="overflow-hidden">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Contact Phone</p>
-                        <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">{profileData.phone || 'Not provided'}</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(profileData.phone, 'phone')}
-                      className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0 ml-2"
-                      title="Copy Phone"
-                    >
-                      {copiedPhone ? <FiCheck className="text-emerald-500 dark:text-emerald-400 text-sm" /> : <FiCopy className="text-sm" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Activity & Timestamp Telemetry Card */}
-            <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl shadow-slate-500/20 dark:shadow-black/40 rounded-3xl p-6 relative overflow-hidden">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2 mb-4">
-                <FiActivity className="text-blue-500 dark:text-blue-400" /> Account Telemetry
-              </h3>
-
-              <div className="space-y-3.5 text-xs">
-                <div className="flex items-start justify-between pb-3 border-b border-slate-200/60 dark:border-white/5">
-                  <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
-                    <FiClock className="text-blue-500 dark:text-blue-400" /> Last Login
-                  </span>
-                  <div className="text-right">
-                    <p className="font-semibold text-slate-800 dark:text-slate-200">{formatDate(profileData.lastLoginAt)}</p>
-                    <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">{formatRelativeTime(profileData.lastLoginAt)}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start justify-between pb-3 border-b border-slate-200/60 dark:border-white/5">
-                  <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
-                    <FiCalendar className="text-emerald-500 dark:text-emerald-400" /> Member Since
-                  </span>
-                  <div className="text-right">
-                    <p className="font-semibold text-slate-800 dark:text-slate-200">{formatDate(profileData.createdAt)}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{formatRelativeTime(profileData.createdAt)}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start justify-between">
-                  <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
-                    <FiRefreshCw className="text-violet-500 dark:text-violet-400" /> Last Updated
-                  </span>
-                  <div className="text-right">
-                    <p className="font-semibold text-slate-800 dark:text-slate-200">{formatDate(profileData.updatedAt)}</p>
-                    <p className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">{formatRelativeTime(profileData.updatedAt)}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ================= RIGHT COLUMN: TABBED PROFILE DETAILS ================= */}
-          <div className="lg:col-span-8">
-            <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl shadow-slate-500/20 dark:shadow-black/40 rounded-3xl p-6 sm:p-8 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-b from-slate-50/50 dark:from-white/5 to-transparent pointer-events-none"></div>
-
-              {/* Navigation Tabs */}
-              <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 dark:border-white/10 pb-4 mb-6 relative z-10">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('personal')}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${activeTab === 'personal'
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-white/10 border border-slate-200/60 dark:border-transparent'
-                    }`}
-                >
-                  <FiUser className="text-base" /> Personal Details
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('security')}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${activeTab === 'security'
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-white/10 border border-slate-200/60 dark:border-transparent'
-                    }`}
-                >
-                  <FiLock className="text-base" /> Security & Passwords
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('config')}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${activeTab === 'config'
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-white/10 border border-slate-200/60 dark:border-transparent'
-                    }`}
-                >
-                  <FiHelpCircle className="text-base" /> App Support Config
-                </button>
               </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
-                {/* TAB 1: PERSONAL INFORMATION */}
-                {activeTab === 'personal' && (
-                  <div className="space-y-6 animate-in fade-in duration-200">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-white/10">
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                          <FiUser className="text-blue-500 dark:text-blue-400" /> Personal & Account Information
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          Update your administrator identity details and communication numbers.
-                        </p>
-                      </div>
-                      {isEditing && (
-                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/20">
-                          Editing Mode Active
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      {/* First Name */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                          First Name
-                        </label>
-                        <input
-                          type="text"
-                          name="firstName"
-                          value={formData.firstName}
-                          onChange={handleChange}
-                          disabled={!isEditing}
-                          placeholder="e.g. System"
-                          className="w-full px-4 py-3 bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-black/50 transition-all text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-50 dark:disabled:bg-black/20 placeholder-slate-400 dark:placeholder-slate-600 shadow-xs dark:shadow-inner backdrop-blur-md"
-                          required
-                        />
-                      </div>
-
-                      {/* Last Name */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                          Last Name
-                        </label>
-                        <input
-                          type="text"
-                          name="lastName"
-                          value={formData.lastName}
-                          onChange={handleChange}
-                          disabled={!isEditing}
-                          placeholder="e.g. Admin"
-                          className="w-full px-4 py-3 bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-black/50 transition-all text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-50 dark:disabled:bg-black/20 placeholder-slate-400 dark:placeholder-slate-600 shadow-xs dark:shadow-inner backdrop-blur-md"
-                          required
-                        />
-                      </div>
-
-                      {/* Email */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                            Email Address
-                          </label>
-                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                            <FiCheckCircle className="text-xs" /> Verified
-                          </span>
-                        </div>
-                        <div className="relative">
-                          <input
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            disabled={true} // System login email is protected
-                            className="w-full px-4 py-3 pl-10 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 rounded-xl focus:outline-none transition-all text-sm font-medium opacity-90 cursor-not-allowed shadow-xs dark:shadow-inner backdrop-blur-md"
-                          />
-                          <FiMail className="absolute left-3.5 top-3.5 text-slate-400 dark:text-slate-500 text-sm" />
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-1">
-                          Login email is managed via IAM credentials and root administration.
-                        </p>
-                      </div>
-
-                      {/* Contact Phone */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                          Contact Phone
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="tel"
-                            name="phone"
-                            value={formData.phone}
-                            onChange={handleChange}
-                            disabled={!isEditing}
-                            placeholder="+919876543210"
-                            className="w-full px-4 py-3 pl-10 bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-black/50 transition-all text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-50 dark:disabled:bg-black/20 placeholder-slate-400 dark:placeholder-slate-600 shadow-xs dark:shadow-inner backdrop-blur-md"
-                          />
-                          <FiPhone className="absolute left-3.5 top-3.5 text-slate-400 dark:text-slate-500 text-sm" />
-                        </div>
-                      </div>
-
-                      {/* Employee Code (System Read-only) */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                          Employee Code
-                        </label>
-                        <div className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-slate-300 rounded-xl text-sm font-mono font-semibold flex items-center justify-between">
-                          <span>{profileData.employeeCode}</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/25">
-                            Assigned
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* System Access Role */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                          Role & Clearance
-                        </label>
-                        <div className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-slate-300 rounded-xl text-sm font-bold flex items-center justify-between">
-                          <span className="flex items-center gap-2">
-                            <FiShield className="text-blue-500 dark:text-blue-400" /> {profileData.role}
-                          </span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/25">
-                            Full Access
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 2: SECURITY & PASSWORDS */}
-                {activeTab === 'security' && (
-                  <div className="space-y-6 animate-in fade-in duration-200">
-                    <div className="pb-2 border-b border-slate-200/80 dark:border-white/10">
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <FiLock className="text-blue-500 dark:text-blue-400" /> Security & Password Management
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Ensure your account remains secure with strong administrative credentials.
-                      </p>
-                    </div>
-
-                    {!isEditing && (
-                      <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <FiShield className="text-2xl text-blue-500 dark:text-blue-400 shrink-0" />
-                          <div>
-                            <p className="text-sm font-bold text-blue-900 dark:text-blue-200">Credential Protection Enabled</p>
-                            <p className="text-xs text-slate-600 dark:text-slate-400">
-                              Click 'Edit Profile' at the top right to enable password modification.
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setIsEditing(true)}
-                          className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer"
-                        >
-                          Enable Edit
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      {/* Current Password */}
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                          Current Password
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={showCurrentPassword ? 'text' : 'password'}
-                            name="currentPassword"
-                            value={formData.currentPassword}
-                            onChange={handleChange}
-                            disabled={!isEditing}
-                            placeholder="••••••••••••"
-                            className="w-full px-4 py-3 pr-12 bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-black/50 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50 dark:disabled:bg-black/20 placeholder-slate-400 dark:placeholder-slate-600 shadow-xs dark:shadow-inner backdrop-blur-md"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                            className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-                          >
-                            {showCurrentPassword ? <FiEyeOff className="text-sm" /> : <FiEye className="text-sm" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* New Password */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                          New Password
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={showNewPassword ? 'text' : 'password'}
-                            name="newPassword"
-                            value={formData.newPassword}
-                            onChange={handleChange}
-                            disabled={!isEditing}
-                            placeholder="••••••••••••"
-                            className="w-full px-4 py-3 pr-12 bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-black/50 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50 dark:disabled:bg-black/20 placeholder-slate-400 dark:placeholder-slate-600 shadow-xs dark:shadow-inner backdrop-blur-md"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                            className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-                          >
-                            {showNewPassword ? <FiEyeOff className="text-sm" /> : <FiEye className="text-sm" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Confirm New Password */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                          Confirm New Password
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            name="confirmPassword"
-                            value={formData.confirmPassword}
-                            onChange={handleChange}
-                            disabled={!isEditing}
-                            placeholder="••••••••••••"
-                            className="w-full px-4 py-3 pr-12 bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-black/50 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50 dark:disabled:bg-black/20 placeholder-slate-400 dark:placeholder-slate-600 shadow-xs dark:shadow-inner backdrop-blur-md"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-                          >
-                            {showConfirmPassword ? <FiEyeOff className="text-sm" /> : <FiEye className="text-sm" />}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Password Checklist Box */}
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/70 dark:border-white/5 text-xs space-y-2">
-                      <p className="font-bold text-slate-700 dark:text-slate-300">Security Best Practices:</p>
-                      <ul className="list-disc list-inside text-slate-500 dark:text-slate-400 space-y-1">
-                        <li>Use at least 8 characters with a mix of letters, numbers, and symbols.</li>
-                        <li>Avoid sharing administrator credentials across multiple team members.</li>
-                        <li>Regularly rotate passwords every 90 days for administrative compliance.</li>
-                      </ul>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 3: APP SUPPORT CONFIGURATION */}
-                {activeTab === 'config' && (
-                  <div className="space-y-6 animate-in fade-in duration-200">
-                    <div className="pb-2 border-b border-slate-200/80 dark:border-white/10">
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <FiHelpCircle className="text-blue-500 dark:text-blue-400" /> Mobile & Web App Support Config
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Configure customer contact endpoints shown across customer-facing portals.
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      {/* Support Number */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                          Support Hotline Number
-                        </label>
-                        <input
-                          type="text"
-                          name="supportNumber"
-                          value={formData.supportNumber}
-                          onChange={handleChange}
-                          disabled={!isEditing}
-                          placeholder="e.g. +91 9876543210"
-                          className="w-full px-4 py-3 bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-black/50 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50 dark:disabled:bg-black/20 placeholder-slate-400 dark:placeholder-slate-600 shadow-xs dark:shadow-inner backdrop-blur-md"
-                        />
-                        <p className="text-[11px] text-slate-500 mt-1">
-                          Displayed in mobile help center for customer direct calling.
-                        </p>
-                      </div>
-
-                      {/* Support Email */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                          Helpdesk Support Email
-                        </label>
-                        <input
-                          type="email"
-                          name="supportEmail"
-                          value={formData.supportEmail}
-                          onChange={handleChange}
-                          disabled={!isEditing}
-                          placeholder="e.g. support@whatnot.in"
-                          className="w-full px-4 py-3 bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-black/50 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50 dark:disabled:bg-black/20 placeholder-slate-400 dark:placeholder-slate-600 shadow-xs dark:shadow-inner backdrop-blur-md"
-                        />
-                        <p className="text-[11px] text-slate-500 mt-1">
-                          Used for incoming tickets, feedback, and customer grievance routing.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Save / Actions Footer */}
-                {isEditing && (
-                  <div className="flex items-center justify-between pt-6 border-t border-slate-200/80 dark:border-white/10">
+              {/* Edit / Save Actions on Top Right */}
+              <div className="flex items-center gap-2 shrink-0">
+                {!isEditing ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 transition-all cursor-pointer shadow-xs hover:shadow-md"
+                  >
+                    <FiEdit2 className="w-3.5 h-3.5" />
+                    <span>Edit Details</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => {
+                        syncProfileToForm(profileData);
                         setIsEditing(false);
-                        // Reset formData to current profileData
-                        setFormData(prev => ({
-                          ...prev,
-                          firstName: profileData.firstName,
-                          lastName: profileData.lastName,
-                          phone: profileData.phone,
-                          currentPassword: '',
-                          newPassword: '',
-                          confirmPassword: ''
-                        }));
                       }}
-                      className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 hover:bg-slate-200 dark:bg-transparent dark:hover:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-sm font-semibold transition-all cursor-pointer"
+                      disabled={savingProfile}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
                     >
-                      Discard Changes
+                      <FiX className="w-3.5 h-3.5" />
+                      <span>Cancel</span>
                     </button>
-
                     <button
                       type="submit"
-                      className="flex items-center justify-center gap-2 px-7 py-2.5 text-white text-sm font-bold rounded-xl transition-all bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-indigo-500 shadow-xl shadow-blue-600/30 active:scale-95 cursor-pointer"
+                      form="profile-form"
+                      disabled={savingProfile}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-md shadow-blue-500/20 cursor-pointer disabled:opacity-50"
                     >
-                      <FiSave className="text-base" /> Save Changes
+                      {savingProfile ? (
+                        <>
+                          <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FiSave className="w-3.5 h-3.5" />
+                          <span>Save Changes</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
-              </form>
+              </div>
             </div>
+
+            <form id="profile-form" onSubmit={handleProfileSave} className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* First Name */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    First Name <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      required
+                      placeholder="e.g. System"
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                        !isEditing
+                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Last Name */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Last Name <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      required
+                      placeholder="e.g. Admin"
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                        !isEditing
+                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                      }`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Email Address */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Email Address <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      required
+                      placeholder="admin@whatnot.in"
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                        !isEditing
+                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Phone Number */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Phone Number
+                  </label>
+                  <div className="relative">
+                    <FiPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      placeholder="+91 98765 43210"
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                        !isEditing
+                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                      }`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Reporting Manager */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Reporting Manager
+                  </label>
+                  <div className="relative">
+                    <FiBriefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      name="reportingManager"
+                      value={formData.reportingManager}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      placeholder="e.g. Board of Directors"
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                        !isEditing
+                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Territory */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Territory
+                  </label>
+                  <div className="relative">
+                    <FiGlobe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      name="territory"
+                      value={formData.territory}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      placeholder="e.g. All Territories (National)"
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                        !isEditing
+                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                      }`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Emergency Contact */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Emergency Contact (SOS)
+                  </label>
+                  <div className="relative">
+                    <FiPhoneCall className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      name="emergencyContact"
+                      value={formData.emergencyContact}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      placeholder="+91 98112 23344"
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                        !isEditing
+                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Profile Image URL */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Profile Image URL
+                  </label>
+                  <div className="relative">
+                    <FiImage className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="url"
+                      name="profileImage"
+                      value={formData.profileImage}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      placeholder="https://... or upload above"
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                        !isEditing
+                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                      }`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Action Buttons (Visible when editing) */}
+              {isEditing && (
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200/80 dark:border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      syncProfileToForm(profileData);
+                      setIsEditing(false);
+                    }}
+                    disabled={savingProfile}
+                    className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => syncProfileToForm(profileData)}
+                    disabled={savingProfile}
+                    className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    Reset Form
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingProfile}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-md shadow-blue-500/20 cursor-pointer disabled:opacity-50"
+                  >
+                    {savingProfile ? (
+                      <>
+                        <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving Changes...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FiSave className="w-3.5 h-3.5" />
+                        <span>Save Changes</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </form>
+          </div>
+
+          {/* Side Info Cards (4 cols) */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Account Details Card */}
+            <div className="rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 p-6 shadow-sm space-y-4">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <FiShield className="text-blue-500" />
+                <span>Account Specification</span>
+              </h4>
+
+              <div className="space-y-3 text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/5">
+                  <span className="text-slate-500 dark:text-slate-400">Account Role</span>
+                  <StatusBadge status={profileData.role || 'ADMIN'} size="sm" />
+                </div>
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/5">
+                  <span className="text-slate-500 dark:text-slate-400">System Status</span>
+                  <StatusBadge status={profileData.isActive ? 'ACTIVE' : 'INACTIVE'} size="sm" />
+                </div>
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/5">
+                  <span className="text-slate-500 dark:text-slate-400">Registration Date</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    {formatDateDDMMYYYY(profileData.createdAt) || 'N/A'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/5">
+                  <span className="text-slate-500 dark:text-slate-400">Last Profile Update</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    {formatDateDDMMYYYY(profileData.updatedAt) || 'N/A'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Assigned Companies</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">
+                    {profileData.companies?.length || 0} Enterprises
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Security Prompt */}
+            <div className="rounded-3xl bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20 border border-blue-200/70 dark:border-blue-500/20 p-6 space-y-3">
+              <div className="flex items-center gap-2.5 text-blue-700 dark:text-blue-400 font-bold text-sm">
+                <FiLock className="w-4 h-4" />
+                <span>Security Reminder</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                As a national administrator, your credentials carry critical operational permissions.
+                Ensure you rotate passwords periodically and never share administrative credentials.
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveTab('security')}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline pt-1 cursor-pointer"
+              >
+                <span>Change Password</span>
+                <FiExternalLink className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          TAB 2: ACTIVITY TIMELINE
+          ======================================================== */}
+      {activeTab === 'activity' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          {/* Filter & Search Bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-sm">
+            {/* Filter buttons */}
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setActivityTypeFilter('ALL')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activityTypeFilter === 'ALL'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                All Activities ({activities.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivityTypeFilter('PURCHASE_ORDER_REVIEW')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activityTypeFilter === 'PURCHASE_ORDER_REVIEW'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Purchase Orders
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivityTypeFilter('FIRM_REVIEW')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activityTypeFilter === 'FIRM_REVIEW'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Firm Reviews
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative sm:w-72">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+              <input
+                type="text"
+                value={activitySearch}
+                onChange={(e) => setActivitySearch(e.target.value)}
+                placeholder="Search audit trail..."
+                className="w-full pl-9 pr-8 py-1.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              />
+              {activitySearch && (
+                <button
+                  type="button"
+                  onClick={() => setActivitySearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                >
+                  <FiX className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Activity Stream Container */}
+          <div className="rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 p-6 shadow-sm">
+            {activitiesLoading ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400">
+                <FiRefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+                <span className="text-xs font-semibold">Loading activity stream...</span>
+              </div>
+            ) : filteredActivities.length === 0 ? (
+              <EmptyState
+                icon={FiActivity}
+                title="No activities recorded"
+                description={
+                  activitySearch || activityTypeFilter !== 'ALL'
+                    ? 'No matching activities found for the selected filter.'
+                    : 'There are no logged administrative actions recorded for this account yet.'
+                }
+              />
+            ) : (
+              <div className="space-y-4">
+                {filteredActivities.map((act, index) => {
+                  const isPO = act.type === 'PURCHASE_ORDER_REVIEW';
+                  const isApproved = act.title?.includes('APPROVED');
+                  const isRejected = act.title?.includes('REJECTED');
+                  const isDispatched = act.title?.includes('DISPATCHED');
+
+                  return (
+                    <div
+                      key={index}
+                      className="p-4 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 hover:border-blue-500/30 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                    >
+                      <div className="flex items-start sm:items-center gap-3.5">
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0 ${
+                            isPO
+                              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          }`}
+                        >
+                          {isPO ? <FiShoppingBag /> : <FiBriefcase />}
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold text-slate-900 dark:text-white">
+                              {act.title}
+                            </span>
+                            {isApproved && <StatusBadge status="APPROVED" size="sm" />}
+                            {isRejected && <StatusBadge status="REJECTED" size="sm" />}
+                            {isDispatched && <StatusBadge status="DISPATCHED" size="sm" />}
+                          </div>
+
+                          {act.details && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                              {act.details}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-slate-400 shrink-0 self-end sm:self-center">
+                        <FiClock className="w-3.5 h-3.5" />
+                        <span title={formatDateTimeDDMMYYYY(act.timestamp)}>
+                          {formatRelativeTime(act.timestamp)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          TAB 3: PERMISSIONS
+          ======================================================== */}
+      {activeTab === 'permissions' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="p-5 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Authorized Role Permissions
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                These privileges are granted by system role ({profileData.role || 'ADMIN'}) across all commercial operations.
+              </p>
+            </div>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              {profileData.permissions?.length || 0} Active Keys
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {profileData.permissions?.map((permKey) => {
+              const meta = PERMISSION_DETAILS[permKey] || {
+                title: permKey.replace(/_/g, ' '),
+                desc: 'Administrative authority granted to your system account.'
+              };
+
+              return (
+                <div
+                  key={permKey}
+                  className="p-5 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-sm space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base">
+                      <FiKey />
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      <FiCheckCircle className="w-3 h-3" />
+                      <span>Active</span>
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                      {meta.title}
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                      {meta.desc}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                    <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500 uppercase">
+                      {permKey}
+                    </span>
+                    <CopyButton text={permKey} size={12} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          TAB 4: ASSIGNED COMPANIES
+          ======================================================== */}
+      {activeTab === 'companies' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="p-5 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Assigned Corporate Entities
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Companies linked to your administrative workspace for inventory and order management.
+              </p>
+            </div>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              {profileData.companies?.length || 0} Registered
+            </span>
+          </div>
+
+          {(!profileData.companies || profileData.companies.length === 0) ? (
+            <EmptyState
+              icon={FiLayers}
+              title="No companies assigned"
+              description="Your account currently operates at the national level with overarching system access."
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {profileData.companies.map((comp, idx) => (
+                <div
+                  key={comp._id || idx}
+                  className="p-5 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-sm space-y-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm">
+                      {comp.logo ? (
+                        <img src={comp.logo} alt={comp.name} className="w-full h-full object-cover rounded-xl" />
+                      ) : (
+                        <span>{comp.name?.[0] || 'C'}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                        {comp.name || 'Company Name'}
+                      </h4>
+                      {comp.code && (
+                        <span className="inline-block mt-0.5 px-2 py-0.5 text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md">
+                          {comp.code}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {comp._id && (
+                    <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-400">
+                      <span className="font-mono text-[11px] truncate max-w-[180px]">
+                        ID: {comp._id}
+                      </span>
+                      <CopyButton text={comp._id} size={12} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          TAB 5: SECURITY & PASSWORD
+          ======================================================== */}
+      {activeTab === 'security' && (
+        <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-200">
+          <div className="rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 p-6 sm:p-8 shadow-sm">
+            <div className="flex items-center gap-3 pb-5 border-b border-slate-200/80 dark:border-white/10 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
+                <FiLock />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                  Change Account Password
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Update your security credentials to protect administrative access.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              {/* Current Password */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Current Password <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <FiKey className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={passwordForm.currentPassword}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))
+                    }
+                    required
+                    placeholder="Enter current password"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword((prev) => !prev)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                  >
+                    {showCurrentPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  New Password <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={passwordForm.newPassword}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
+                    }
+                    required
+                    placeholder="Enter new password (min. 6 chars)"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((prev) => !prev)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                  >
+                    {showNewPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Confirm New Password <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                    }
+                    required
+                    placeholder="Repeat new password"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                  >
+                    {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Password Requirements Checklist */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 space-y-1.5 text-xs">
+                <div className="flex items-center gap-2">
+                  {passwordForm.newPassword.length >= 6 ? (
+                    <FiCheck className="text-emerald-500 font-bold" />
+                  ) : (
+                    <FiAlertCircle className="text-slate-400" />
+                  )}
+                  <span
+                    className={
+                      passwordForm.newPassword.length >= 6
+                        ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                        : 'text-slate-500'
+                    }
+                  >
+                    At least 6 characters in length
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {passwordForm.newPassword &&
+                  passwordForm.newPassword === passwordForm.confirmPassword ? (
+                    <FiCheck className="text-emerald-500 font-bold" />
+                  ) : (
+                    <FiAlertCircle className="text-slate-400" />
+                  )}
+                  <span
+                    className={
+                      passwordForm.newPassword &&
+                      passwordForm.newPassword === passwordForm.confirmPassword
+                        ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                        : 'text-slate-500'
+                    }
+                  >
+                    Passwords match
+                  </span>
+                </div>
+              </div>
+
+              {/* Submit button */}
+              <div className="pt-3">
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-md shadow-blue-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  {passwordLoading ? (
+                    <>
+                      <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Updating Password...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiLock className="w-3.5 h-3.5" />
+                      <span>Update Password</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
