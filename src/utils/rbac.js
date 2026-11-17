@@ -57,6 +57,8 @@ export const isRouteAllowed = (path, userMenus = [], userRole = '') => {
     checkPath = '/';
   } else if (path.startsWith('/firms/onboarding')) {
     checkPath = '/firms/onboarding';
+  } else if (path.startsWith('/firms/admin-onboard') || path.startsWith('/firms/admin-onboarding') || path.startsWith('/firms/creators')) {
+    checkPath = '/firms/admin-onboard';
   } else if (path.startsWith('/firms')) {
     checkPath = '/firms';
   } else if (path.startsWith('/notifications/emails') || path.startsWith('/emails')) {

@@ -1126,7 +1126,7 @@ const Reports = () => {
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10">
+            <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 shadow-md">
               {[
                 { id: '1w', label: '1W' },
                 { id: '1m', label: '1M' },

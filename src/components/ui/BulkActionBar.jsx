@@ -29,7 +29,7 @@ const BulkActionBar = ({
 
   return createPortal(
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-4xl animate-in fade-in slide-in-from-bottom-5 duration-200">
-      <div className="bg-white/90 dark:bg-slate-950/95 text-slate-800 dark:text-white backdrop-blur-2xl rounded-2xl p-3 sm:p-4 border border-slate-200/90 dark:border-white/10 shadow-2xl shadow-slate-900/15 dark:shadow-black/70 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="bg-white dark:bg-slate-950/95 text-slate-800 dark:text-white rounded-2xl p-3 sm:p-4 border border-slate-200/90 dark:border-white/10 shadow-2xl shadow-slate-900/15 dark:shadow-black/70 flex flex-col md:flex-row items-center justify-between gap-3">
         {/* Left: Count chip & Quick selectors */}
         <div className="flex items-center gap-2.5 flex-wrap">
           <div className="flex items-center gap-2">

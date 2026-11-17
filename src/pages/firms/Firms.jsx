@@ -2892,7 +2892,7 @@ const Firms = () => {
                       Registered on: {selectedFirm.createdAt ? formatDateTimeDDMMYYYY(selectedFirm.createdAt) : '-'}
                     </p>
                   </div>
-
+                    
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400">Reviewed / Updated</span>
                     <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-0.5">

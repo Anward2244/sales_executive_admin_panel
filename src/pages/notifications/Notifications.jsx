@@ -1158,7 +1158,7 @@ const Notifications = () => {
                         Notification Details
                       </h3>
                       <p className="text-[11px] text-blue-100/80 truncate mt-0.5">
-                        {selectedNotification.createdAt ? formatDateTime(selectedNotification.createdAt) : 'Alert Overview'}
+                        {selectedNotification.createdAt ? formatDateTimeDDMMYYYY(selectedNotification.createdAt) : 'Alert Overview'}
                       </p>
                     </div>
                   </div>

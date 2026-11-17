@@ -15,6 +15,7 @@ const Categories = lazy(() => import('@/pages/products/Categories'));
 const Companies = lazy(() => import('@/pages/companies/Companies'));
 const Firms = lazy(() => import('@/pages/firms/Firms'));
 const FirmOnboarding = lazy(() => import('@/pages/firms/FirmOnboarding'));
+const FirmAdminOnboarding = lazy(() => import('@/pages/firms/FirmAdminOnboarding'));
 const Notifications = lazy(() => import('@/pages/notifications/Notifications'));
 const EmailNotifications = lazy(() => import('@/pages/notifications/EmailNotifications'));
 const Products = lazy(() => import('@/pages/products/Products'));
@@ -49,6 +50,10 @@ function App() {
                         <Route path="/firms" element={<Firms />} />
                         <Route path="/firms/onboarding" element={<FirmOnboarding />} />
                         <Route path="/firms/onboarding-requests" element={<Navigate to="/firms/onboarding" replace />} />
+                        <Route path="/firms/admin-onboard" element={<FirmAdminOnboarding />} />
+                        <Route path="/firms/admin-onboarding" element={<Navigate to="/firms/admin-onboard" replace />} />
+                        <Route path="/firms/creators" element={<Navigate to="/firms/admin-onboard" replace />} />
+                        <Route path="/firms/creators/:salesExecutiveId" element={<FirmAdminOnboarding />} />
                         <Route path="/firms/list" element={<Navigate to="/firms" replace />} />
                         <Route path="/notifications" element={<Notifications />} />
                         <Route path="/notifications/emails" element={<EmailNotifications />} />

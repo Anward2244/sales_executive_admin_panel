@@ -1187,7 +1187,7 @@ const EmailNotifications = () => {
                         Email Delivery Details
                       </h3>
                       <p className="text-[11px] text-blue-100/80 truncate mt-0.5">
-                        {selectedLog.createdAt ? formatDateTime(selectedLog.createdAt) : 'Delivery Overview'}
+                        {selectedLog.createdAt ? formatDateTimeDDMMYYYY(selectedLog.createdAt) : 'Delivery Overview'}
                       </p>
                     </div>
                   </div>

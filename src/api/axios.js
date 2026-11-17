@@ -416,6 +416,52 @@ export const rejectFirmOnboardingApi = async (id, rejectionReason = '') => {
   return reviewFirmApi(id, { approvalStatus: 'REJECTED', rejectionReason });
 };
 
+// Admin Onboarding & Creator APIs
+export const adminOnboardFirmApi = async (firmData) => {
+  try {
+    return await api.post('/v1/firms/admin/onboard', firmData);
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.post('/firms/admin/onboard', firmData);
+    }
+    throw err;
+  }
+};
+
+export const getFirmOnboardingStatsApi = async () => {
+  try {
+    return await api.get('/v1/firms/admin/onboarding-stats');
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.get('/firms/admin/onboarding-stats');
+    }
+    throw err;
+  }
+};
+
+export const getFirmCreatorsApi = async (params = {}) => {
+  try {
+    return await api.get('/v1/firms/admin/creators', { params });
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.get('/firms/admin/creators', { params });
+    }
+    throw err;
+  }
+};
+
+export const getFirmsByCreatorApi = async (salesExecutiveId, params = {}) => {
+  try {
+    return await api.get(`/v1/firms/admin/creators/${salesExecutiveId}`, { params });
+  } catch (err) {
+    if (err.response?.status === 404) {
+      return await api.get(`/firms/admin/creators/${salesExecutiveId}`, { params });
+    }
+    throw err;
+  }
+};
+
+
 
 export const getUsersApi = async (params = {}) => {
   return fetchAllPages('/v1/users', '/users', params);

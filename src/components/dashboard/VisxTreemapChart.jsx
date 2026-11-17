@@ -1605,8 +1605,8 @@ const InnerHierarchyChart = ({
           style={{
             left: `${Math.round(safeLeft)}px`,
             top: `${Math.round(safeTop)}px`,
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.96)',
-            backdropFilter: 'blur(16px)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.2)' : 'rgba(255, 255, 255, 0.2)',
+            backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(16px)',
             color: isDark ? '#ffffff' : '#0f172a',
             border: isDark ? '1px solid rgba(255, 255, 255, 0.16)' : '1px solid rgba(226, 232, 240, 0.95)',
