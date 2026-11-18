@@ -52,6 +52,21 @@ const DEFAULT_THEMES = {
     bg: 'bg-emerald-600',
     activeBadgeClass: 'bg-emerald-800 text-white',
     badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+  },
+  sent: {
+    bg: 'bg-emerald-600',
+    activeBadgeClass: 'bg-emerald-800 text-white',
+    badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+  },
+  failed: {
+    bg: 'bg-rose-600',
+    activeBadgeClass: 'bg-rose-800 text-white',
+    badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+  },
+  queued: {
+    bg: 'bg-amber-600',
+    activeBadgeClass: 'bg-amber-800 text-white',
+    badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
   }
 };
 
@@ -146,7 +161,7 @@ const SegmentedTabs = ({
       }
       checkScroll();
     },
-    [activeItem?.id, activeBg, scrollToActiveTab, checkScroll]
+    [activeItem?.id, activeItem?.count, activeBg, scrollToActiveTab, checkScroll]
   );
 
   useIsomorphicLayoutEffect(() => {
@@ -262,6 +277,7 @@ const SegmentedTabs = ({
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               } ${tabClassName}`}
             >
+              {tab.icon && <span className="shrink-0">{tab.icon}</span>}
               <span>{tab.label || tab.id}</span>
               {tab.count !== undefined && tab.count !== null && (
                 <span

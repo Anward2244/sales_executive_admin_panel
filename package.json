@@ -13,6 +13,7 @@
   "dependencies": {
     "@lordicon/react": "^1.11.0",
     "@react-spring/web": "^10.1.2",
+    "@svg-maps/india": "^2.0.0",
     "@tailwindcss/vite": "^4.2.3",
     "@visx/visx": "^4.0.0",
     "apex-grid": "^3.4.0",

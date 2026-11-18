@@ -510,16 +510,30 @@ const Products = () => {
       });
   }, [products, debouncedSearchQuery, selectedCompanyFilter, selectedCategoryFilter, selectedLocationFilter, selectedBrandFilter, selectedStatusFilter, sortBy, categories]);
 
-  // Product count statistics
-  const { activeCount, inactiveCount } = useMemo(() => {
+  // Product & variant count statistics
+  const { activeCount, inactiveCount, totalVariantsCount } = useMemo(() => {
     let active = 0;
     let inactive = 0;
+    let totalVars = 0;
     products.forEach((p) => {
       if (p.isActive) active++;
       else inactive++;
+      const vCount = Array.isArray(p?.variants)
+        ? p.variants.length
+        : (Number(p?.variantCount || p?.variantsCount) || 0);
+      totalVars += vCount;
     });
-    return { activeCount: active, inactiveCount: inactive };
+    return { activeCount: active, inactiveCount: inactive, totalVariantsCount: totalVars };
   }, [products]);
+
+  const filteredVariantsCount = useMemo(() => {
+    return filteredProducts.reduce((acc, p) => {
+      const vCount = Array.isArray(p?.variants)
+        ? p.variants.length
+        : (Number(p?.variantCount || p?.variantsCount) || 0);
+      return acc + vCount;
+    }, 0);
+  }, [filteredProducts]);
 
   // Count active non-default filters
   const activeFiltersCount = useMemo(() => {
@@ -2195,6 +2209,11 @@ const Products = () => {
         title="Products Catalog"
         subtitle="Manage products, inventory SKUs, and catalog."
         badgeIcon={FiPackage}
+        badgeText={
+          products.length > 0
+            ? `${products.length} Products • ${totalVariantsCount} ${totalVariantsCount === 1 ? 'Variant' : 'Variants'}`
+            : null
+        }
         actions={
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="relative w-full sm:w-72">
@@ -2617,9 +2636,14 @@ const Products = () => {
                 <span className="text-slate-500 font-semibold">
                   {inactiveCount} Inactive
                 </span>
+                <span className="inline-block w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                <span className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-semibold">
+                  <FiLayers className="text-[11px]" />
+                  <span>{totalVariantsCount} {totalVariantsCount === 1 ? 'Variant' : 'Variants'}</span>
+                </span>
                 {filteredProducts.length !== products.length && (
                   <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-500/20">
-                    {filteredProducts.length} shown
+                    {filteredProducts.length} shown ({filteredVariantsCount} variants)
                   </span>
                 )}
               </div>
@@ -2654,7 +2678,17 @@ const Products = () => {
                     <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Category</th>
                   )}
                   {isColVisible('variants') && (
-                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Variants & Stock</th>
+                    <th className={`${densityStyles.th} text-center whitespace-nowrap`}>
+                      <div className="inline-flex items-center gap-1.5 justify-center">
+                        <span>Variants & Stock</span>
+                        <span
+                          className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 tabular-nums"
+                          title="Total variants"
+                        >
+                          {filteredProducts.length !== products.length ? `${filteredVariantsCount}/${totalVariantsCount}` : totalVariantsCount}
+                        </span>
+                      </div>
+                    </th>
                   )}
                   {isColVisible('price') && (
                     <th className={`${densityStyles.th} text-center whitespace-nowrap`}>Price (INR)</th>

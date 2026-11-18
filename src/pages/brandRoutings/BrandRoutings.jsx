@@ -40,6 +40,7 @@ import {
   getCompaniesApi
 } from '@/api/axios';
 import { INDIAN_STATES } from '@/utils/indianStates';
+import IndiaBrandRoutingMap from '@/components/brandRoutings/IndiaBrandRoutingMap';
 import PageHeader from '@/components/ui/PageHeader';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import CopyButton from '@/components/ui/CopyButton';
@@ -118,7 +119,7 @@ const BrandRoutings = () => {
   const debouncedSearchBrand = useDebounce(searchBrand, 200);
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState('ALL');
   const [selectedStateFilter, setSelectedStateFilter] = useState('ALL');
-  const [viewMode, setViewMode] = useState('grouped'); // 'grouped' | 'table'
+  const [viewMode, setViewMode] = useState('grouped'); // 'grouped' | 'table' | 'map'
 
   // Expand state for state chips in grouped view (keyed by rule identifier)
   const [expandedStatesByBrand, setExpandedStatesByBrand] = useState({});
@@ -1041,12 +1042,12 @@ const BrandRoutings = () => {
           </div>
         </button>
 
-        {/* Metric 2: Active Rules (Click to toggle Grouped vs Table View) */}
+        {/* Metric 2: Active Rules (Click to toggle Grouped vs Table vs Map View) */}
         <button
           type="button"
-          onClick={() => setViewMode((prev) => (prev === 'grouped' ? 'table' : 'grouped'))}
+          onClick={() => setViewMode((prev) => (prev === 'grouped' ? 'table' : prev === 'table' ? 'map' : 'grouped'))}
           className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-left transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-0.5 hover:border-purple-500/30 flex items-center justify-between group"
-          title="Click to toggle between Grouped Cards and Flat Table view"
+          title="Click to cycle between Grouped Cards, Table, and India Map view"
         >
           <div className="space-y-0.5 min-w-0 pr-2">
             <span className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider truncate">
@@ -1058,7 +1059,7 @@ const BrandRoutings = () => {
             <span className="kpi-card-subtitle text-[11px] text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors mt-0.5 flex items-center gap-1 truncate">
               <span>View:</span>
               <span className="font-semibold underline">
-                {viewMode === 'table' ? 'Table View' : 'Grouped View'}
+                {viewMode === 'table' ? 'Table View' : viewMode === 'map' ? 'India Map' : 'Grouped View'}
               </span>
             </span>
           </div>
@@ -1178,6 +1179,7 @@ const BrandRoutings = () => {
                   ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
+              title="Grouped Cards by Brand"
             >
               <FiGrid className="text-xs" />
               <span>By Brand</span>
@@ -1189,9 +1191,22 @@ const BrandRoutings = () => {
                   ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
+              title="Flat Rules Data Table"
             >
               <FiList className="text-xs" />
               <span>All Rules</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('map')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${viewMode === 'map'
+                  ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              title="Interactive India State Map"
+            >
+              <FiMapPin className="text-xs" />
+              <span>India Map</span>
             </button>
           </div>
         </div>
@@ -1239,6 +1254,14 @@ const BrandRoutings = () => {
               : 'Configure your first brand routing rule matrix to automate billing allocation.'}
           </p>
         </div>
+      ) : viewMode === 'map' ? (
+        /* ================= INTERACTIVE INDIA MAP GRAPH ================= */
+        <IndiaBrandRoutingMap
+          matrixData={filteredMatrix}
+          companies={companies}
+          onOpenConfigure={handleOpenConfigure}
+          onOpenAdd={() => handleOpenConfigure()}
+        />
       ) : viewMode === 'grouped' ? (
         /* ================= GROUPED BRAND VIEW ================= */
         <div className="space-y-3.5">

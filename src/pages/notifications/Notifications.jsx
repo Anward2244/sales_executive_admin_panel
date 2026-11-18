@@ -32,6 +32,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
+import SegmentedTabs from '@/components/ui/SegmentedTabs';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import { useToast } from '@/context/ToastContext';
@@ -635,57 +636,36 @@ const Notifications = () => {
             {/* Filter pills & Type selector */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
               {/* Status Segmented Tabs */}
-              <div className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-white/5 rounded-full shadow-md border border-slate-200/60 dark:border-white/10 overflow-x-auto self-start sm:self-auto shrink-0">
-                {[
+              <SegmentedTabs
+                tabs={[
                   {
                     id: 'all',
                     label: 'All',
                     count: notifications.length,
-                    badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
                     bg: 'bg-blue-600',
+                    badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
                     activeBadgeClass: 'bg-blue-800'
                   },
                   {
                     id: 'unread',
                     label: 'Unread',
                     count: unreadCount,
-                    badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
                     bg: 'bg-rose-600',
+                    badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
                     activeBadgeClass: 'bg-rose-800'
                   },
                   {
                     id: 'read',
                     label: 'Read',
                     count: readCount,
-                    badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
                     bg: 'bg-emerald-600',
+                    badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
                     activeBadgeClass: 'bg-emerald-800'
                   }
-                ].map((tab) => {
-                  const isActive = statusFilter === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => handleStatusFilterChange(tab.id)}
-                      className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                        isActive
-                          ? `${tab.bg} text-white shadow-xs font-bold`
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <span>{tab.label}</span>
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isActive ? tab.activeBadgeClass + ' text-white' : tab.badgeClass
-                        }`}
-                      >
-                        {tab.count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+                ]}
+                activeTab={statusFilter}
+                onChange={handleStatusFilterChange}
+              />
 
               {availableTypes.length > 0 && (
                 <div className="min-w-[130px]">
