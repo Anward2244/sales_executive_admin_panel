@@ -712,16 +712,14 @@ const FirmAdminOnboarding = () => {
             <button
               type="button"
               onClick={() => setIsPollingActive((prev) => !prev)}
-              className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 ${
-                isPollingActive
-                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
-                  : 'border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'
-              }`}
+              className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 ${isPollingActive
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                : 'border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'
+                }`}
               title={
                 isPollingActive
-                  ? `Live polling active (every 15s). Click to pause.${
-                      lastPolledAt ? ` Last checked at ${lastPolledAt.toLocaleTimeString()}` : ''
-                    }`
+                  ? `Live polling active (every 15s). Click to pause.${lastPolledAt ? ` Last checked at ${lastPolledAt.toLocaleTimeString()}` : ''
+                  }`
                   : 'Polling paused. Click to resume auto-polling.'
               }
             >
@@ -730,9 +728,8 @@ const FirmAdminOnboarding = () => {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 )}
                 <span
-                  className={`relative inline-flex rounded-full h-2 w-2 ${
-                    isPollingActive ? 'bg-emerald-500' : 'bg-slate-400'
-                  }`}
+                  className={`relative inline-flex rounded-full h-2 w-2 ${isPollingActive ? 'bg-emerald-500' : 'bg-slate-400'
+                    }`}
                 ></span>
               </span>
               <span className="text-[11px] font-mono font-bold">
@@ -973,9 +970,8 @@ const FirmAdminOnboarding = () => {
               title="No Sales Creators Found"
               description={
                 searchTerm || selectedCompanyFilter !== 'ALL'
-                  ? `No sales creators match ${
-                      selectedCompanyObj ? `company "${selectedCompanyObj.name}"` : 'your filter criteria'
-                    }${searchTerm ? ` and search "${searchTerm}"` : ''}.`
+                  ? `No sales creators match ${selectedCompanyObj ? `company "${selectedCompanyObj.name}"` : 'your filter criteria'
+                  }${searchTerm ? ` and search "${searchTerm}"` : ''}.`
                   : 'No sales executives have created onboarding requests yet.'
               }
               action={
@@ -1024,7 +1020,7 @@ const FirmAdminOnboarding = () => {
                     {/* Creator Header */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-base flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
+                        <div className="w-12 h-12 rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 text-white font-bold text-base flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
                           {creator.profileImage ? (
                             <img
                               src={creator.profileImage}
@@ -1078,7 +1074,7 @@ const FirmAdminOnboarding = () => {
                     </div>
 
                     {/* Performance Metrics Badges */}
-                    <div className="grid grid-cols-4 gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 text-center">
+                    <div className="grid grid-cols-4 gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-white/2 border border-slate-200/60 dark:border-white/5 text-center">
                       <div>
                         <span className="block text-[9px] uppercase font-bold text-slate-400">Total</span>
                         <span className="text-sm font-black font-mono text-slate-900 dark:text-white">
@@ -1185,7 +1181,7 @@ const FirmAdminOnboarding = () => {
               {/* Header */}
               <div className="p-5 border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-900/80 backdrop-blur-md flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-black text-lg flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
+                  <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-blue-600 to-indigo-600 text-white font-black text-lg flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
                     {(selectedCreator.fullName || selectedCreator.firstName || 'S').charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
@@ -1230,7 +1226,7 @@ const FirmAdminOnboarding = () => {
 
               {/* Sub-Header Stats Banner */}
               {creatorFirmsMeta?.summary && (
-                <div className="px-5 py-3 bg-blue-50/50 dark:bg-white/[0.02] border-b border-slate-200/80 dark:border-white/5 flex items-center justify-between flex-wrap gap-3">
+                <div className="px-5 py-3 bg-blue-50/50 dark:bg-white/2 border-b border-slate-200/80 dark:border-white/5 flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-4 text-xs font-bold">
                     <span className="text-slate-600 dark:text-slate-300">
                       Total Firms: <strong className="text-slate-900 dark:text-white font-mono">{creatorFirmsMeta.summary.total}</strong>
@@ -1288,11 +1284,10 @@ const FirmAdminOnboarding = () => {
                     <button
                       key={st}
                       onClick={() => setCreatorFirmsStatusFilter(st)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                        creatorFirmsStatusFilter === st
-                          ? 'bg-blue-600 text-white shadow-xs'
-                          : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
-                      }`}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${creatorFirmsStatusFilter === st
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                        }`}
                     >
                       {st}
                     </button>
@@ -1482,7 +1477,7 @@ const FirmAdminOnboarding = () => {
               {/* Scrollable details */}
               <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs custom-scrollbar">
                 {/* Company Info */}
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-2">
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/2 border border-slate-200/60 dark:border-white/5 space-y-2">
                   <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                     Associated Company
                   </span>
@@ -1532,7 +1527,7 @@ const FirmAdminOnboarding = () => {
                   <h4 className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
                     Contact & Location
                   </h4>
-                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
                     <div>
                       <span className="text-[10px] text-slate-400">Contact Person</span>
                       <p className="font-bold text-slate-800 dark:text-slate-200">{selectedFirm.contactPerson || 'N/A'}</p>
@@ -1573,7 +1568,7 @@ const FirmAdminOnboarding = () => {
                   <h4 className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
                     Tax, KYC & Banking
                   </h4>
-                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
                     <div>
                       <span className="text-[10px] text-slate-400">GSTIN</span>
                       <p className="font-mono font-bold text-slate-800 dark:text-slate-200">{selectedFirm.gstin || 'Not Provided'}</p>
@@ -1633,7 +1628,7 @@ const FirmAdminOnboarding = () => {
                 </div>
 
                 {/* Creator & Submitter Info */}
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-1">
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/2 border border-slate-200/60 dark:border-white/5 space-y-1">
                   <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                     Attributed Sales Executive
                   </span>
@@ -2381,7 +2376,7 @@ const FirmAdminOnboarding = () => {
 
                     {/* Declaration Agreed */}
                     <div className="sm:col-span-2 pt-1">
-                      <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+                      <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
                         <input
                           type="checkbox"
                           id="declarationAgreed"

@@ -391,8 +391,8 @@ const Products = () => {
       const locList = Array.isArray(p.locations) && p.locations.length > 0
         ? p.locations
         : (Array.isArray(p.companyMappings)
-            ? p.companyMappings.flatMap((m) => m?.states || [])
-            : []);
+          ? p.companyMappings.flatMap((m) => m?.states || [])
+          : []);
       locList.forEach((loc) => {
         if (loc && typeof loc === 'string') {
           locSet.add(loc.trim());
@@ -421,8 +421,8 @@ const Products = () => {
           const productLocs = Array.isArray(product.locations) && product.locations.length > 0
             ? product.locations
             : (Array.isArray(product.companyMappings)
-                ? product.companyMappings.flatMap((m) => m?.states || [])
-                : []);
+              ? product.companyMappings.flatMap((m) => m?.states || [])
+              : []);
           if (!productLocs.includes(selectedLocationFilter)) {
             return false;
           }
@@ -472,8 +472,8 @@ const Products = () => {
           const locsList = Array.isArray(product.locations) && product.locations.length > 0
             ? product.locations
             : (Array.isArray(product.companyMappings)
-                ? product.companyMappings.flatMap((m) => m?.states || [])
-                : []);
+              ? product.companyMappings.flatMap((m) => m?.states || [])
+              : []);
           const locsStr = locsList.join(' ').toLowerCase();
 
           // Also match variant attributes, names, and SKUs
@@ -831,14 +831,14 @@ const Products = () => {
       isActive: product.isActive !== undefined ? Boolean(product.isActive) : true,
       variants: Array.isArray(product.variants)
         ? product.variants.map((v) => ({
-            name: v.name || '',
-            sku: v.sku || '',
-            price: v.price !== undefined ? v.price : '',
-            stock: v.stock !== undefined ? v.stock : '',
-            attributes: v.attributes && typeof v.attributes === 'object' ? { ...v.attributes } : {},
-            isActive: v.isActive !== false,
-            _id: v._id
-          }))
+          name: v.name || '',
+          sku: v.sku || '',
+          price: v.price !== undefined ? v.price : '',
+          stock: v.stock !== undefined ? v.stock : '',
+          attributes: v.attributes && typeof v.attributes === 'object' ? { ...v.attributes } : {},
+          isActive: v.isActive !== false,
+          _id: v._id
+        }))
         : []
     });
     setCustomLocationInput('');
@@ -1411,16 +1411,16 @@ const Products = () => {
     // Format & sanitize variants
     const cleanVariants = Array.isArray(formData.variants)
       ? formData.variants
-          .filter((v) => v && (v.name?.trim() || v.sku?.trim()))
-          .map((v) => ({
-            ...(v._id ? { _id: v._id } : {}),
-            name: String(v.name || '').trim(),
-            sku: String(v.sku || '').trim().toUpperCase(),
-            price: v.price !== undefined && v.price !== '' && !isNaN(Number(v.price)) ? Number(v.price) : 0,
-            stock: v.stock !== undefined && v.stock !== '' && !isNaN(Number(v.stock)) ? Number(v.stock) : 0,
-            attributes: v.attributes && typeof v.attributes === 'object' ? v.attributes : {},
-            isActive: v.isActive !== false
-          }))
+        .filter((v) => v && (v.name?.trim() || v.sku?.trim()))
+        .map((v) => ({
+          ...(v._id ? { _id: v._id } : {}),
+          name: String(v.name || '').trim(),
+          sku: String(v.sku || '').trim().toUpperCase(),
+          price: v.price !== undefined && v.price !== '' && !isNaN(Number(v.price)) ? Number(v.price) : 0,
+          stock: v.stock !== undefined && v.stock !== '' && !isNaN(Number(v.stock)) ? Number(v.stock) : 0,
+          attributes: v.attributes && typeof v.attributes === 'object' ? v.attributes : {},
+          isActive: v.isActive !== false
+        }))
       : [];
 
     setSubmitting(true);
@@ -2425,11 +2425,10 @@ const Products = () => {
                 setIsBulkMode((prev) => !prev);
                 if (isBulkMode) setSelectedProductIds([]);
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 border text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 ${
-                isBulkMode
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 border text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 ${isBulkMode
                   ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20'
                   : 'bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-slate-700 dark:text-slate-200'
-              }`}
+                }`}
             >
               <FiLayers className={`text-xs ${isBulkMode ? 'text-white' : 'text-blue-500'}`} />
               <span>Bulk Operations</span>
@@ -2465,11 +2464,10 @@ const Products = () => {
             <button
               type="button"
               onClick={() => setIsFiltersVisible((prev) => !prev)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs shadow-md font-bold rounded-lg border transition-all cursor-pointer shrink-0 ${
-                isFiltersVisible
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs shadow-md font-bold rounded-lg border transition-all cursor-pointer shrink-0 ${isFiltersVisible
                   ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
                   : 'bg-white dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-white/10 hover:border-slate-300'
-              }`}
+                }`}
               title={isFiltersVisible ? 'Collapse filter dropdowns' : 'Show filter dropdowns'}
             >
               <FiFilter className="text-xs" />
@@ -2486,11 +2484,10 @@ const Products = () => {
 
         {/* Bottom Row: Filter Dropdowns Strip (Smooth Animated Reveal) */}
         <div
-          className={`grid transition-all duration-300 ease-in-out ${
-            isFiltersVisible
+          className={`grid transition-all duration-300 ease-in-out ${isFiltersVisible
               ? 'grid-rows-[1fr] opacity-100 pt-2 border-t border-slate-200/60 dark:border-white/5 mt-2'
               : 'grid-rows-[0fr] opacity-0 pointer-events-none mt-0 border-t-0'
-          }`}
+            }`}
         >
           <div className="overflow-hidden">
             <div className="flex items-center gap-2 flex-wrap pt-0.5">
@@ -2723,8 +2720,8 @@ const Products = () => {
                   const locations = Array.isArray(product.locations) && product.locations.length > 0
                     ? product.locations
                     : (Array.isArray(product.companyMappings)
-                        ? Array.from(new Set(product.companyMappings.flatMap((m) => m?.states || [])))
-                        : []);
+                      ? Array.from(new Set(product.companyMappings.flatMap((m) => m?.states || [])))
+                      : []);
                   const matchedCat = categories.find((c) => c._id === pCatId);
                   const categoryName = typeof product.categoryId === 'object' && product.categoryId?.name
                     ? product.categoryId.name
@@ -2736,11 +2733,10 @@ const Products = () => {
                   return (
                     <tr
                       key={product._id}
-                      className={`hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors ${
-                        isBulkMode && isSelected
+                      className={`hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors ${isBulkMode && isSelected
                           ? 'bg-blue-50/60 dark:bg-blue-900/10'
                           : ''
-                      }`}
+                        }`}
                     >
                       {isBulkMode && (
                         <td className={`${densityStyles.td} text-center`} onClick={(e) => e.stopPropagation()}>
@@ -2926,11 +2922,10 @@ const Products = () => {
                       {isColVisible('status') && (
                         <td className={`${densityStyles.td} text-center whitespace-nowrap`}>
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                              product.isActive
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${product.isActive
                                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                                 : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20'
-                            }`}
+                              }`}
                           >
                             {product.isActive ? 'Active' : 'Inactive'}
                           </span>
@@ -2980,7 +2975,7 @@ const Products = () => {
 
           {/* ================= ATTACHED PAGINATION CONTROLS ================= */}
           {filteredProducts.length > 0 && (
-            <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-white/[0.02]">
+            <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-white/2">
               <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                 <span>
                   Showing <strong className="text-slate-800 dark:text-slate-200">{indexOfFirstItem + 1}</strong> to{' '}
@@ -3012,11 +3007,10 @@ const Products = () => {
                         key={idx}
                         type="button"
                         onClick={() => setCurrentPage(page)}
-                        className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          currentPage === page
+                        className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${currentPage === page
                             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
                             : 'border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
-                        }`}
+                          }`}
                       >
                         {page}
                       </button>
@@ -3044,18 +3038,16 @@ const Products = () => {
           <div className="fixed inset-0 z-[9999] overflow-hidden">
             {/* Backdrop */}
             <div
-              className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
-                isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
-              }`}
+              className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
+                }`}
               onClick={handleCloseDrawer}
             />
 
             {/* Slide-over Container (Pinned to Right) */}
             <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-4 pointer-events-none">
               <div
-                className={`w-screen max-w-full sm:max-w-xl md:max-w-xl lg:max-w-2xl bg-white/20 dark:bg-slate-900 border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto z-10 text-left overflow-hidden transition-transform duration-300 ease-in-out ${
-                  isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
-                }`}
+                className={`w-screen max-w-full sm:max-w-xl md:max-w-xl lg:max-w-2xl bg-white/20 dark:bg-slate-900 border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto z-10 text-left overflow-hidden transition-transform duration-300 ease-in-out ${isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+                  }`}
               >
                 {/* Sticky Drawer Header */}
                 <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0 space-y-2.5">
@@ -3072,16 +3064,14 @@ const Products = () => {
                           </h2>
                           {drawerProduct && (
                             <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                drawerProduct.isActive !== false
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${drawerProduct.isActive !== false
                                   ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-400/30'
                                   : 'bg-white/15 text-slate-200 border border-white/20'
-                              }`}
+                                }`}
                             >
                               <span
-                                className={`w-1 h-1 rounded-full ${
-                                  drawerProduct.isActive !== false ? 'bg-emerald-400 animate-pulse' : 'bg-slate-300'
-                                }`}
+                                className={`w-1 h-1 rounded-full ${drawerProduct.isActive !== false ? 'bg-emerald-400 animate-pulse' : 'bg-slate-300'
+                                  }`}
                               />
                               {drawerProduct.isActive !== false ? 'Active' : 'Inactive'}
                             </span>
@@ -3123,11 +3113,10 @@ const Products = () => {
                             setDrawerTab('overview');
                             setFormError('');
                           }}
-                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-                            drawerTab === 'overview'
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${drawerTab === 'overview'
                               ? 'bg-white text-blue-700 shadow-xs'
                               : 'text-white/80 hover:text-white hover:bg-white/10'
-                          }`}
+                            }`}
                         >
                           <FiEye className="text-[11px]" />
                           <span>Overview</span>
@@ -3138,11 +3127,10 @@ const Products = () => {
                             setDrawerTab('edit');
                             setFormError('');
                           }}
-                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-                            drawerTab === 'edit'
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${drawerTab === 'edit'
                               ? 'bg-white text-blue-700 shadow-xs'
                               : 'text-white/80 hover:text-white hover:bg-white/10'
-                          }`}
+                            }`}
                         >
                           <FiEdit2 className="text-[11px]" />
                           <span>Edit Details</span>
@@ -3305,11 +3293,10 @@ const Products = () => {
 
                                     <div className="flex items-center gap-1 shrink-0">
                                       <span
-                                        className={`inline-flex items-center px-1.5 py-0.2 rounded-full text-[9px] font-bold ${
-                                          variant.isActive !== false
+                                        className={`inline-flex items-center px-1.5 py-0.2 rounded-full text-[9px] font-bold ${variant.isActive !== false
                                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                                             : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
-                                        }`}
+                                          }`}
                                       >
                                         {variant.isActive !== false ? 'Active' : 'Inactive'}
                                       </span>
@@ -3773,11 +3760,10 @@ const Products = () => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateVariantField(vIdx, 'isActive', v.isActive === false)}
-                                      className={`px-1.5 py-0.2 rounded text-[9px] font-bold transition-all cursor-pointer ${
-                                        v.isActive !== false
+                                      className={`px-1.5 py-0.2 rounded text-[9px] font-bold transition-all cursor-pointer ${v.isActive !== false
                                           ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                                           : 'bg-slate-200 dark:bg-white/10 text-slate-500'
-                                      }`}
+                                        }`}
                                     >
                                       {v.isActive !== false ? 'Active' : 'Inactive'}
                                     </button>
@@ -4011,11 +3997,10 @@ const Products = () => {
                                       <button
                                         type="button"
                                         onClick={() => handleToggleWildcardMapping(mIdx)}
-                                        className={`px-1.5 py-0.2 rounded font-semibold transition-all cursor-pointer ${
-                                          isWildcard
+                                        className={`px-1.5 py-0.2 rounded font-semibold transition-all cursor-pointer ${isWildcard
                                             ? 'bg-purple-600 text-white font-bold'
                                             : 'text-purple-600 dark:text-purple-400 hover:underline'
-                                        }`}
+                                          }`}
                                         title="Assign pan-India wildcard (*)"
                                       >
                                         ★ Pan-India
@@ -4085,11 +4070,10 @@ const Products = () => {
                                           key={st}
                                           type="button"
                                           onClick={() => handleToggleMappingState(mIdx, st)}
-                                          className={`text-[9px] px-1.5 py-0.2 rounded border transition-all cursor-pointer ${
-                                            isSelected
+                                          className={`text-[9px] px-1.5 py-0.2 rounded border transition-all cursor-pointer ${isSelected
                                               ? 'bg-blue-600 text-white border-blue-600 font-bold'
                                               : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
-                                          }`}
+                                            }`}
                                         >
                                           {isSelected ? '✓ ' : '+ '}{st}
                                         </button>
@@ -4215,11 +4199,10 @@ const Products = () => {
                                   key={st}
                                   type="button"
                                   onClick={() => handleToggleProductLocation(st)}
-                                  className={`text-[9px] px-1.5 py-0.2 rounded border transition-all cursor-pointer ${
-                                    isSelected
+                                  className={`text-[9px] px-1.5 py-0.2 rounded border transition-all cursor-pointer ${isSelected
                                       ? 'bg-blue-600 text-white border-blue-600 font-bold'
                                       : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
-                                  }`}
+                                    }`}
                                 >
                                   {isSelected ? '✓ ' : '+ '}{st}
                                 </button>
@@ -4282,14 +4265,12 @@ const Products = () => {
                           <button
                             type="button"
                             onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                            className={`w-10 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors ${
-                              formData.isActive ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
-                            }`}
+                            className={`w-10 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors ${formData.isActive ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                              }`}
                           >
                             <div
-                              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                                formData.isActive ? 'translate-x-5' : 'translate-x-0'
-                              }`}
+                              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${formData.isActive ? 'translate-x-5' : 'translate-x-0'
+                                }`}
                             />
                           </button>
                         </div>
@@ -4620,156 +4601,171 @@ const Products = () => {
               <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
                 {/* Mode Selector Tabs */}
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4 p-1 bg-slate-100 dark:bg-white/5 rounded-2xl">
-                {[
-                  { id: 'sync-matrix', label: 'Sync Matrix', desc: 'By Brand', icon: FiZap },
-                  { id: 'replace', label: 'Replace', desc: 'Overwrite' },
-                  { id: 'append', label: 'Append', desc: 'Add to existing' },
-                  { id: 'all', label: 'All 36 States', desc: 'Pan-India' },
-                  { id: 'clear', label: 'Clear All', desc: 'Remove' }
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setBulkLocationMode(tab.id)}
-                    className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      bulkLocationMode === tab.id
-                        ? tab.id === 'sync-matrix'
-                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                          : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <div className="truncate flex items-center justify-center gap-1">
-                      {tab.icon && <tab.icon className="text-xs shrink-0" />}
-                      <span>{tab.label}</span>
-                    </div>
-                    <div className="text-[10px] font-normal opacity-70 truncate">{tab.desc}</div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Sync Matrix View */}
-              {bulkLocationMode === 'sync-matrix' && (
-                <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-                  <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-xs text-blue-800 dark:text-blue-300 space-y-1.5">
-                    <p className="font-bold flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400">
-                      <FiZap className="text-base" /> Sync Locations According to Brand Matrix
-                    </p>
-                    <p className="leading-relaxed">
-                      Each selected product will be evaluated against the configured rules in the <strong>Brand Routing Matrix</strong>. The product's covered distribution locations and trading partner mappings will be automatically assigned based on its specific brand.
-                    </p>
-                  </div>
-
-                  {/* Selected products brand summary */}
-                  {(() => {
-                    const selectedProds = products.filter((p) => selectedProductIds.includes(p._id));
-                    const brandCounts = {};
-                    selectedProds.forEach((p) => {
-                      const b = (p.brand || 'Unassigned').trim();
-                      brandCounts[b] = (brandCounts[b] || 0) + 1;
-                    });
-                    const uniqueBrandList = Object.entries(brandCounts);
-
-                    return (
-                      <div className="space-y-2 p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                          <span>Brands in Selection ({uniqueBrandList.length})</span>
-                          <span className="text-[10px] font-mono text-slate-400">
-                            {selectedProductIds.length} Total Products
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pt-1">
-                          {uniqueBrandList.map(([bName, count]) => {
-                            const hasMatrixRule = (brandMatrix || []).some(
-                              (bm) => bm.brand && bm.brand.trim().toLowerCase() === bName.toLowerCase()
-                            );
-                            return (
-                              <span
-                                key={bName}
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border ${
-                                  hasMatrixRule
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                                }`}
-                              >
-                                <FiZap className="text-[11px]" />
-                                <span>{bName}</span>
-                                <span className="text-[10px] font-mono opacity-80">({count})</span>
-                                {hasMatrixRule ? (
-                                  <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
-                                    ✓ Configured
-                                  </span>
-                                ) : (
-                                  <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400">
-                                    (Fallback)
-                                  </span>
-                                )}
-                              </span>
-                            );
-                          })}
-                        </div>
+                  {[
+                    { id: 'sync-matrix', label: 'Sync Matrix', desc: 'By Brand', icon: FiZap },
+                    { id: 'replace', label: 'Replace', desc: 'Overwrite' },
+                    { id: 'append', label: 'Append', desc: 'Add to existing' },
+                    { id: 'all', label: 'All 36 States', desc: 'Pan-India' },
+                    { id: 'clear', label: 'Clear All', desc: 'Remove' }
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setBulkLocationMode(tab.id)}
+                      className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all cursor-pointer ${bulkLocationMode === tab.id
+                          ? tab.id === 'sync-matrix'
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                            : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                    >
+                      <div className="truncate flex items-center justify-center gap-1">
+                        {tab.icon && <tab.icon className="text-xs shrink-0" />}
+                        <span>{tab.label}</span>
                       </div>
-                    );
-                  })()}
+                      <div className="text-[10px] font-normal opacity-70 truncate">{tab.desc}</div>
+                    </button>
+                  ))}
                 </div>
-              )}
 
-              {/* State selection UI for 'replace' and 'append' */}
-              {(bulkLocationMode === 'replace' || bulkLocationMode === 'append') && (
-                <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">
-                      Selected States ({bulkLocations.length})
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setBulkLocations([...INDIAN_STATES])}
-                        className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-                      >
-                        Select All 36
-                      </button>
-                      <span className="text-slate-300 dark:text-slate-700">|</span>
-                      <button
-                        type="button"
-                        onClick={() => setBulkLocations([])}
-                        className="text-[11px] font-semibold text-rose-500 hover:underline cursor-pointer"
-                      >
-                        Clear
-                      </button>
+                {/* Sync Matrix View */}
+                {bulkLocationMode === 'sync-matrix' && (
+                  <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-xs text-blue-800 dark:text-blue-300 space-y-1.5">
+                      <p className="font-bold flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400">
+                        <FiZap className="text-base" /> Sync Locations According to Brand Matrix
+                      </p>
+                      <p className="leading-relaxed">
+                        Each selected product will be evaluated against the configured rules in the <strong>Brand Routing Matrix</strong>. The product's covered distribution locations and trading partner mappings will be automatically assigned based on its specific brand.
+                      </p>
                     </div>
+
+                    {/* Selected products brand summary */}
+                    {(() => {
+                      const selectedProds = products.filter((p) => selectedProductIds.includes(p._id));
+                      const brandCounts = {};
+                      selectedProds.forEach((p) => {
+                        const b = (p.brand || 'Unassigned').trim();
+                        brandCounts[b] = (brandCounts[b] || 0) + 1;
+                      });
+                      const uniqueBrandList = Object.entries(brandCounts);
+
+                      return (
+                        <div className="space-y-2 p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            <span>Brands in Selection ({uniqueBrandList.length})</span>
+                            <span className="text-[10px] font-mono text-slate-400">
+                              {selectedProductIds.length} Total Products
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pt-1">
+                            {uniqueBrandList.map(([bName, count]) => {
+                              const hasMatrixRule = (brandMatrix || []).some(
+                                (bm) => bm.brand && bm.brand.trim().toLowerCase() === bName.toLowerCase()
+                              );
+                              return (
+                                <span
+                                  key={bName}
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border ${hasMatrixRule
+                                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                                    }`}
+                                >
+                                  <FiZap className="text-[11px]" />
+                                  <span>{bName}</span>
+                                  <span className="text-[10px] font-mono opacity-80">({count})</span>
+                                  {hasMatrixRule ? (
+                                    <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                                      ✓ Configured
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400">
+                                      (Fallback)
+                                    </span>
+                                  )}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
+                )}
 
-                  {/* Selected pills */}
-                  {bulkLocations.length > 0 && (
-                    <div className="flex flex-wrap gap-1 p-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/5 max-h-28 overflow-y-auto">
-                      {bulkLocations.map((st, sIdx) => (
-                        <span
-                          key={sIdx}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-semibold border border-blue-500/20"
+                {/* State selection UI for 'replace' and 'append' */}
+                {(bulkLocationMode === 'replace' || bulkLocationMode === 'append') && (
+                  <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-700 dark:text-slate-300">
+                        Selected States ({bulkLocations.length})
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setBulkLocations([...INDIAN_STATES])}
+                          className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                         >
-                          <span>{st}</span>
-                          <button
-                            type="button"
-                            onClick={() => setBulkLocations((prev) => prev.filter((s) => s !== st))}
-                            className="hover:text-rose-500 cursor-pointer"
-                          >
-                            <FiX size={11} />
-                          </button>
-                        </span>
-                      ))}
+                          Select All 36
+                        </button>
+                        <span className="text-slate-300 dark:text-slate-700">|</span>
+                        <button
+                          type="button"
+                          onClick={() => setBulkLocations([])}
+                          className="text-[11px] font-semibold text-rose-500 hover:underline cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      </div>
                     </div>
-                  )}
 
-                  {/* Custom input */}
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={bulkCustomLocationInput}
-                      onChange={(e) => setBulkCustomLocationInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
+                    {/* Selected pills */}
+                    {bulkLocations.length > 0 && (
+                      <div className="flex flex-wrap gap-1 p-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/5 max-h-28 overflow-y-auto">
+                        {bulkLocations.map((st, sIdx) => (
+                          <span
+                            key={sIdx}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-semibold border border-blue-500/20"
+                          >
+                            <span>{st}</span>
+                            <button
+                              type="button"
+                              onClick={() => setBulkLocations((prev) => prev.filter((s) => s !== st))}
+                              className="hover:text-rose-500 cursor-pointer"
+                            >
+                              <FiX size={11} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Custom input */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={bulkCustomLocationInput}
+                        onChange={(e) => setBulkCustomLocationInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const val = bulkCustomLocationInput.trim();
+                            if (val) {
+                              if (isAllKeyword(val)) {
+                                setBulkLocations([...INDIAN_STATES]);
+                              } else if (!bulkLocations.includes(val)) {
+                                setBulkLocations((prev) => [...prev, val]);
+                              }
+                              setBulkCustomLocationInput('');
+                            }
+                          }
+                        }}
+                        placeholder="Type state/region name and press Enter..."
+                        className="flex-1 px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
                           const val = bulkCustomLocationInput.trim();
                           if (val) {
                             if (isAllKeyword(val)) {
@@ -4779,88 +4775,70 @@ const Products = () => {
                             }
                             setBulkCustomLocationInput('');
                           }
-                        }
-                      }}
-                      placeholder="Type state/region name and press Enter..."
-                      className="flex-1 px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const val = bulkCustomLocationInput.trim();
-                        if (val) {
-                          if (isAllKeyword(val)) {
-                            setBulkLocations([...INDIAN_STATES]);
-                          } else if (!bulkLocations.includes(val)) {
-                            setBulkLocations((prev) => [...prev, val]);
-                          }
-                          setBulkCustomLocationInput('');
-                        }
-                      }}
-                      disabled={!bulkCustomLocationInput.trim()}
-                      className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
-                    >
-                      Add
-                    </button>
-                  </div>
+                        }}
+                        disabled={!bulkCustomLocationInput.trim()}
+                        className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        Add
+                      </button>
+                    </div>
 
-                  {/* Quick Indian States Pills */}
-                  <div className="space-y-1.5">
-                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                      Quick Pick (All 36 Indian States & UTs):
-                    </span>
-                    <div className="flex flex-wrap gap-1 max-h-36 overflow-y-auto p-2 rounded-xl border border-slate-200/80 dark:border-white/5 bg-slate-50/50 dark:bg-black/20">
-                      {INDIAN_STATES.map((st) => {
-                        const isSelected = bulkLocations.includes(st);
-                        return (
-                          <button
-                            key={st}
-                            type="button"
-                            onClick={() => {
-                              setBulkLocations((prev) =>
-                                prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]
-                              );
-                            }}
-                            className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-blue-600 text-white border-blue-600 font-bold'
-                                : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
-                            }`}
-                          >
-                            {isSelected ? '✓ ' : '+ '}{st}
-                          </button>
-                        );
-                      })}
+                    {/* Quick Indian States Pills */}
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                        Quick Pick (All 36 Indian States & UTs):
+                      </span>
+                      <div className="flex flex-wrap gap-1 max-h-36 overflow-y-auto p-2 rounded-xl border border-slate-200/80 dark:border-white/5 bg-slate-50/50 dark:bg-black/20">
+                        {INDIAN_STATES.map((st) => {
+                          const isSelected = bulkLocations.includes(st);
+                          return (
+                            <button
+                              key={st}
+                              type="button"
+                              onClick={() => {
+                                setBulkLocations((prev) =>
+                                  prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]
+                                );
+                              }}
+                              className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${isSelected
+                                  ? 'bg-blue-600 text-white border-blue-600 font-bold'
+                                  : 'bg-white hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10'
+                                }`}
+                            >
+                              {isSelected ? '✓ ' : '+ '}{st}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {bulkLocationMode === 'all' && (
-                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-xs text-blue-700 dark:text-blue-300">
-                  <p className="font-bold flex items-center gap-1.5 mb-1">
-                    <FiGlobe className="text-sm" /> All 36 States & Union Territories
-                  </p>
-                  <p>
-                    Every selected product will be configured for pan-India distribution across all 28 states and 8 union territories.
-                  </p>
-                </div>
-              )}
+                {bulkLocationMode === 'all' && (
+                  <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-xs text-blue-700 dark:text-blue-300">
+                    <p className="font-bold flex items-center gap-1.5 mb-1">
+                      <FiGlobe className="text-sm" /> All 36 States & Union Territories
+                    </p>
+                    <p>
+                      Every selected product will be configured for pan-India distribution across all 28 states and 8 union territories.
+                    </p>
+                  </div>
+                )}
 
-              {bulkLocationMode === 'clear' && (
-                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-xs text-rose-700 dark:text-rose-300">
-                  <p className="font-bold flex items-center gap-1.5 mb-1">
-                    <FiAlertCircle className="text-sm" /> Clear All Covered Locations
-                  </p>
-                  <p>
-                    All location and territory associations will be removed from the {selectedProductIds.length} selected products.
-                  </p>
-                </div>
-              )}
+                {bulkLocationMode === 'clear' && (
+                  <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-xs text-rose-700 dark:text-rose-300">
+                    <p className="font-bold flex items-center gap-1.5 mb-1">
+                      <FiAlertCircle className="text-sm" /> Clear All Covered Locations
+                    </p>
+                    <p>
+                      All location and territory associations will be removed from the {selectedProductIds.length} selected products.
+                    </p>
+                  </div>
+                )}
 
-              {/* Footer */}
+                {/* Footer */}
               </div>
-              <div className="p-4 sm:px-6 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-end gap-3 shrink-0 bg-slate-50/50 dark:bg-white/[0.02]">
+              <div className="p-4 sm:px-6 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-end gap-3 shrink-0 bg-slate-50/50 dark:bg-white/2">
                 <button
                   type="button"
                   onClick={() => setIsBulkLocationModalOpen(false)}
@@ -5127,7 +5105,7 @@ const Products = () => {
               </div>
 
               {/* Modal Actions */}
-              <div className="p-4 sm:px-6 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-end gap-3 shrink-0 bg-slate-50/50 dark:bg-white/[0.02]">
+              <div className="p-4 sm:px-6 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-end gap-3 shrink-0 bg-slate-50/50 dark:bg-white/2">
                 <button
                   type="button"
                   onClick={() => setIsBulkEditModalOpen(false)}

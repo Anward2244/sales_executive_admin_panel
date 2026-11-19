@@ -288,11 +288,10 @@ const Categories = () => {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl backdrop-blur-xl border transition-all animate-in fade-in slide-in-from-top-4 ${
-            toast.type === 'success'
+          className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl backdrop-blur-xl border transition-all animate-in fade-in slide-in-from-top-4 ${toast.type === 'success'
               ? 'bg-emerald-50 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200'
               : 'bg-rose-50 dark:bg-rose-950/80 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200'
-          }`}
+            }`}
         >
           {toast.type === 'success' ? (
             <FiCheckCircle className="text-xl text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -363,11 +362,10 @@ const Categories = () => {
             <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200/80 dark:border-white/10">
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${
-                    editingId
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${editingId
                       ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
                       : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
-                  }`}
+                    }`}
                 >
                   {editingId ? <FiEdit2 /> : <FiPlus />}
                 </div>
@@ -557,7 +555,7 @@ const Categories = () => {
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                  <tr className="bg-slate-50/70 dark:bg-white/[0.02] border-b border-slate-200/80 dark:border-white/10">
+                  <tr className="bg-slate-50/70 dark:bg-white/2 border-b border-slate-200/80 dark:border-white/10">
                     <th className="px-4 py-3.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-12 text-center">
                       S.No.
                     </th>
@@ -594,9 +592,8 @@ const Categories = () => {
                       return (
                         <tr
                           key={category._id || index}
-                          className={`hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors ${
-                            isRowEditing ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
-                          }`}
+                          className={`hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors ${isRowEditing ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
+                            }`}
                         >
                           {/* S.No */}
                           <td className="px-4 py-3 text-center text-slate-500 dark:text-slate-400 font-mono font-medium">
@@ -641,16 +638,14 @@ const Categories = () => {
                           {/* Status */}
                           <td className="px-4 py-3 text-center">
                             <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                category.isActive !== false
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${category.isActive !== false
                                   ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
                                   : 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20'
-                              }`}
+                                }`}
                             >
                               <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  category.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'
-                                }`}
+                                className={`w-1.5 h-1.5 rounded-full ${category.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'
+                                  }`}
                               />
                               <span>{category.isActive !== false ? 'ACTIVE' : 'INACTIVE'}</span>
                             </span>
@@ -677,11 +672,10 @@ const Categories = () => {
                               <button
                                 type="button"
                                 onClick={() => handleEdit(category)}
-                                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                                  isRowEditing
+                                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isRowEditing
                                     ? 'bg-blue-600 text-white'
                                     : 'text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-500/10'
-                                }`}
+                                  }`}
                                 title="Edit Category"
                               >
                                 <FiEdit2 className="text-sm" />
@@ -755,11 +749,10 @@ const Categories = () => {
                       key={pageNum}
                       type="button"
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold transition-all ${
-                        currentPage === pageNum
+                      className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold transition-all ${currentPage === pageNum
                           ? 'bg-blue-600 text-white shadow-sm'
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
-                      }`}
+                        }`}
                     >
                       {pageNum}
                     </button>
@@ -836,37 +829,37 @@ const Categories = () => {
               />
 
               <div className="flex gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setDeleteConfirmOpen(false);
-                  setCategoryToDelete(null);
-                  setTypedConfirmName('');
-                }}
-                className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-sm transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={typedConfirmName !== categoryToDelete.name || actionLoadingId === categoryToDelete._id}
-                onClick={() => {
-                  const targetId = categoryToDelete._id;
-                  setDeleteConfirmOpen(false);
-                  setCategoryToDelete(null);
-                  setTypedConfirmName('');
-                  handleDelete(targetId);
-                }}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-rose-600/25 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {actionLoadingId === categoryToDelete._id ? (
-                  <FiLoader className="animate-spin text-base" />
-                ) : (
-                  <FiTrash2 className="text-base" />
-                )}
-                <span>Delete Category</span>
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteConfirmOpen(false);
+                    setCategoryToDelete(null);
+                    setTypedConfirmName('');
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-sm transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={typedConfirmName !== categoryToDelete.name || actionLoadingId === categoryToDelete._id}
+                  onClick={() => {
+                    const targetId = categoryToDelete._id;
+                    setDeleteConfirmOpen(false);
+                    setCategoryToDelete(null);
+                    setTypedConfirmName('');
+                    handleDelete(targetId);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-rose-600/25 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {actionLoadingId === categoryToDelete._id ? (
+                    <FiLoader className="animate-spin text-base" />
+                  ) : (
+                    <FiTrash2 className="text-base" />
+                  )}
+                  <span>Delete Category</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>,

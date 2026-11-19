@@ -629,12 +629,12 @@ const FirmOnboarding = () => {
         prev.map((r) =>
           r._id === item._id
             ? {
-                ...r,
-                approvalStatus: action,
-                ...(action === 'APPROVED' ? { isActive: true } : {}),
-                ...(action === 'REJECTED' ? { rejectionReason: finalRejectionReason } : {}),
-                updatedAt: new Date().toISOString()
-              }
+              ...r,
+              approvalStatus: action,
+              ...(action === 'APPROVED' ? { isActive: true } : {}),
+              ...(action === 'REJECTED' ? { rejectionReason: finalRejectionReason } : {}),
+              updatedAt: new Date().toISOString()
+            }
             : r
         )
       );
@@ -738,16 +738,14 @@ const FirmOnboarding = () => {
             <button
               type="button"
               onClick={() => setIsPollingActive((prev) => !prev)}
-              className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 ${
-                isPollingActive
+              className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 ${isPollingActive
                   ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
                   : 'border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'
-              }`}
+                }`}
               title={
                 isPollingActive
-                  ? `Live polling active (every 15s). Click to pause.${
-                      lastPolledAt ? ` Last checked at ${lastPolledAt.toLocaleTimeString()}` : ''
-                    }`
+                  ? `Live polling active (every 15s). Click to pause.${lastPolledAt ? ` Last checked at ${lastPolledAt.toLocaleTimeString()}` : ''
+                  }`
                   : 'Polling paused. Click to resume auto-polling.'
               }
             >
@@ -756,9 +754,8 @@ const FirmOnboarding = () => {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 )}
                 <span
-                  className={`relative inline-flex rounded-full h-2 w-2 ${
-                    isPollingActive ? 'bg-emerald-500' : 'bg-slate-400'
-                  }`}
+                  className={`relative inline-flex rounded-full h-2 w-2 ${isPollingActive ? 'bg-emerald-500' : 'bg-slate-400'
+                    }`}
                 ></span>
               </span>
               <span className="text-[11px] font-mono font-bold">
@@ -896,9 +893,8 @@ const FirmOnboarding = () => {
                 }))
               ]}
               defaultLabel="All Companies"
-              statusColor={`!px-3 !py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-black/20 font-bold ${
-                selectedCompany ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'
-              }`}
+              statusColor={`!px-3 !py-1.5 text-xs rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-black/20 font-bold ${selectedCompany ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'
+                }`}
             />
           </div>
 
@@ -1225,7 +1221,7 @@ const FirmOnboarding = () => {
 
         {/* Pagination Bar */}
         {sortedRequests.length > 0 && (
-          <div className="px-5 py-3.5 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-white/[0.02]">
+          <div className="px-5 py-3.5 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-white/2">
             <div className="flex items-center gap-3">
               <span>
                 Showing <strong className="text-slate-800 dark:text-slate-200">{indexOfFirstItem + 1}</strong> to{' '}
@@ -1258,11 +1254,10 @@ const FirmOnboarding = () => {
                         key={pg}
                         type="button"
                         onClick={() => handlePageChange(pg)}
-                        className={`min-w-7 h-7 px-2 flex items-center justify-center rounded-lg font-bold transition-colors cursor-pointer ${
-                          currentPage === pg
+                        className={`min-w-7 h-7 px-2 flex items-center justify-center rounded-lg font-bold transition-colors cursor-pointer ${currentPage === pg
                             ? 'bg-blue-600 text-white shadow-xs'
                             : 'border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300'
-                        }`}
+                          }`}
                       >
                         {pg}
                       </button>
@@ -1294,18 +1289,16 @@ const FirmOnboarding = () => {
           <div className="fixed inset-0 z-[10000] overflow-hidden">
             {/* Backdrop Blur Overlay */}
             <div
-              className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
-                isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
-              }`}
+              className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
+                }`}
               onClick={handleCloseDrawer}
             />
 
             {/* Slide-Over Drawer Container (Pinned to Right) */}
             <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
               <div
-                className={`w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto transition-transform duration-300 ease-in-out z-10 ${
-                  isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
-                }`}
+                className={`w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto transition-transform duration-300 ease-in-out z-10 ${isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+                  }`}
               >
                 {/* 1. Sticky Drawer Header */}
                 <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0">
@@ -1373,503 +1366,503 @@ const FirmOnboarding = () => {
 
                 {/* 2. Scrollable Body Content */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-7 space-y-5 sm:space-y-6 text-xs text-slate-600 dark:text-slate-300 custom-scrollbar">
-                {/* Rejection Alert if Rejected */}
-                {(selectedRequest.approvalStatus || '').toUpperCase() === 'REJECTED' &&
-                  selectedRequest.rejectionReason && (
-                    <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-start gap-2.5">
-                      <FiAlertCircle size={18} className="shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-bold">Rejection Reason</p>
-                        <p className="text-xs mt-0.5 leading-relaxed">
-                          {selectedRequest.rejectionReason}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                {/* Parent Company Profile */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {selectedRequest.companyId?.logo ? (
-                      <img
-                        src={selectedRequest.companyId.logo}
-                        alt="Company Logo"
-                        className="w-10 h-10 rounded-xl object-contain bg-white dark:bg-slate-800 p-1 border border-slate-200 dark:border-white/10"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
-                        <FiBriefcase size={18} />
-                      </div>
-                    )}
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400">Parent Company</span>
-                      <p className="text-sm font-bold text-slate-800 dark:text-white">
-                        {selectedRequest.companyId?.name || selectedRequest.companyId?.code || 'Company'}
-                      </p>
-                    </div>
-                  </div>
-                  {selectedRequest.companyId?.code && (
-                    <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-200/80 dark:bg-white/10 px-2.5 py-1 rounded-lg">
-                      {selectedRequest.companyId.code}
-                    </span>
-                  )}
-                </div>
-
-                {/* Grid 1: Business Profile & Contact Rep */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* Business Entity Profile */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
-                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiBriefcase className="text-blue-500 text-xs shrink-0" />
-                      <span>Business & Establishment</span>
-                    </p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Business Type</span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 bg-slate-200/60 dark:bg-white/10 px-2 py-0.5 rounded text-[11px]">
-                          {selectedRequest.businessType || 'Proprietorship'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Established Date</span>
-                        <span className="font-semibold text-xs text-slate-700 dark:text-slate-200 font-mono">
-                          {selectedRequest.dateOfEstablishment ? formatDateDDMMYYYY(selectedRequest.dateOfEstablishment) : '-'}
-                        </span>
-                      </div>
-                      {selectedRequest.website && (
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Website</span>
-                          <a
-                            href={selectedRequest.website.startsWith('http') ? selectedRequest.website : `https://${selectedRequest.website}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 truncate max-w-[170px]"
-                          >
-                            <FiGlobe size={11} />
-                            <span className="truncate">{selectedRequest.website}</span>
-                          </a>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Cash Discount</span>
-                        <span className="font-semibold text-xs text-emerald-600 dark:text-emerald-400 font-mono">
-                          {selectedRequest.cashDiscount !== undefined && selectedRequest.cashDiscount !== null ? `${selectedRequest.cashDiscount}%` : '0%'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Contact Representative */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
-                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiUser className="text-indigo-500 text-xs shrink-0" />
-                      <span>Contact Representative</span>
-                    </p>
-                    <div className="space-y-2">
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Name & Designation</span>
-                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                          {selectedRequest.contactPerson || '-'}
-                          {selectedRequest.designation && (
-                            <span className="text-slate-400 text-[10px] font-normal block">
-                              {selectedRequest.designation}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Primary Phone</span>
-                        <div className="flex items-center gap-1 text-xs text-slate-700 dark:text-slate-200 font-semibold font-mono">
-                          <span>{selectedRequest.phone || '-'}</span>
-                          {selectedRequest.phone && <CopyButton text={selectedRequest.phone} size={11} />}
-                        </div>
-                      </div>
-                      {selectedRequest.alternatePhone && (
+                  {/* Rejection Alert if Rejected */}
+                  {(selectedRequest.approvalStatus || '').toUpperCase() === 'REJECTED' &&
+                    selectedRequest.rejectionReason && (
+                      <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-start gap-2.5">
+                        <FiAlertCircle size={18} className="shrink-0 mt-0.5" />
                         <div>
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Alternate Phone</span>
-                          <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300 font-mono font-medium">
-                            <span>{selectedRequest.alternatePhone}</span>
-                            <CopyButton text={selectedRequest.alternatePhone} size={11} />
-                          </div>
-                        </div>
-                      )}
-                      {selectedRequest.email && (
-                        <div>
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Email Address</span>
-                          <div className="mt-0.5">
-                            <GmailLink email={selectedRequest.email} label={selectedRequest.email} className="text-xs font-medium" />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Grid 2: Premises & Financial Terms */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* Premises & Operating Address */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
-                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiMapPin className="text-rose-500 text-xs shrink-0" />
-                      <span>Premises & Address</span>
-                    </p>
-                    <div className="space-y-2">
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Registered Address</span>
-                        <p className="text-xs font-medium text-slate-700 dark:text-slate-200 leading-relaxed">
-                          {selectedRequest.address || '-'}
-                        </p>
-                      </div>
-                      {selectedRequest.branchAddress && (
-                        <div>
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Branch Address</span>
-                          <p className="text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
-                            {selectedRequest.branchAddress}
+                          <p className="font-bold">Rejection Reason</p>
+                          <p className="text-xs mt-0.5 leading-relaxed">
+                            {selectedRequest.rejectionReason}
                           </p>
                         </div>
-                      )}
-                      <div className="pt-1.5 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">City, State, PIN</span>
-                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300 text-right">
-                          {[selectedRequest.city, selectedRequest.state, selectedRequest.pincode].filter(Boolean).join(', ') || '-'}
-                        </span>
                       </div>
-                    </div>
-                  </div>
+                    )}
 
-                  {/* Financial & Credit Terms */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
-                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiDollarSign className="text-emerald-500 text-xs shrink-0" />
-                      <span>Credit & Terms</span>
-                    </p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Approved Credit Limit</span>
-                        <span className="font-bold text-xs text-slate-900 dark:text-white font-mono">
-                          ₹{(selectedRequest.creditLimit ?? 0).toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Credit Days Window</span>
-                        <span className="font-bold text-xs text-slate-700 dark:text-slate-200 font-mono">
-                          {selectedRequest.creditDays ?? 30} Days
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Cash Discount</span>
-                        <span className="font-bold text-xs text-emerald-600 dark:text-emerald-400 font-mono">
-                          {selectedRequest.cashDiscount ?? 0}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 3: Statutory Tax & Document Proofs (PAN, TAN, GSTIN, MSME) */}
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiFileText className="text-amber-500 text-xs shrink-0" />
-                      <span>Statutory KYC & Tax Proofs</span>
-                    </p>
-                    <span className="text-[10px] text-slate-400 font-mono">Click documents to preview</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                    {/* PAN Card Proof */}
-                    <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] uppercase font-bold text-slate-400">PAN Card</span>
-                        {selectedRequest.panCardUrl ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
-                            Uploaded
-                          </span>
-                        ) : (
-                          <span className="text-[9px] text-slate-400">Not Uploaded</span>
-                        )}
-                      </div>
-                      <div className="font-mono text-xs font-bold text-slate-800 dark:text-white">
-                        {selectedRequest.panNumber || 'Not Provided'}
-                      </div>
-                      {selectedRequest.panCardUrl && (
-                        <div className="pt-1 flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDocPreviewModal({
-                                isOpen: true,
-                                title: `PAN Card (${selectedRequest.panNumber || selectedRequest.firmName})`,
-                                url: selectedRequest.panCardUrl
-                              })
-                            }
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 text-[11px] font-bold transition-all cursor-pointer"
-                          >
-                            <FiEye size={12} />
-                            <span>Preview</span>
-                          </button>
-                          <a
-                            href={selectedRequest.panCardUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-slate-400 hover:text-slate-600 p-1"
-                            title="Open direct image"
-                          >
-                            <FiExternalLink size={12} />
-                          </a>
+                  {/* Parent Company Profile */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {selectedRequest.companyId?.logo ? (
+                        <img
+                          src={selectedRequest.companyId.logo}
+                          alt="Company Logo"
+                          className="w-10 h-10 rounded-xl object-contain bg-white dark:bg-slate-800 p-1 border border-slate-200 dark:border-white/10"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
+                          <FiBriefcase size={18} />
                         </div>
                       )}
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Parent Company</span>
+                        <p className="text-sm font-bold text-slate-800 dark:text-white">
+                          {selectedRequest.companyId?.name || selectedRequest.companyId?.code || 'Company'}
+                        </p>
+                      </div>
                     </div>
-
-                    {/* TAN Certificate Proof */}
-                    <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] uppercase font-bold text-slate-400">TAN Certificate</span>
-                        {selectedRequest.tanCertificateUrl ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
-                            Uploaded
-                          </span>
-                        ) : (
-                          <span className="text-[9px] text-slate-400">Not Uploaded</span>
-                        )}
-                      </div>
-                      <div className="font-mono text-xs font-bold text-slate-800 dark:text-white">
-                        {selectedRequest.tanNumber || 'Not Provided'}
-                      </div>
-                      {selectedRequest.tanCertificateUrl && (
-                        <div className="pt-1 flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDocPreviewModal({
-                                isOpen: true,
-                                title: `TAN Certificate (${selectedRequest.tanNumber || selectedRequest.firmName})`,
-                                url: selectedRequest.tanCertificateUrl
-                              })
-                            }
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 text-[11px] font-bold transition-all cursor-pointer"
-                          >
-                            <FiEye size={12} />
-                            <span>Preview</span>
-                          </button>
-                          <a
-                            href={selectedRequest.tanCertificateUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-slate-400 hover:text-slate-600 p-1"
-                            title="Open direct image"
-                          >
-                            <FiExternalLink size={12} />
-                          </a>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* GSTIN & Certificate */}
-                    <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] uppercase font-bold text-slate-400">GSTIN</span>
-                        {selectedRequest.gstCertificateUrl ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
-                            Proof Attached
-                          </span>
-                        ) : (
-                          <span className="text-[9px] text-slate-400">Self Declared</span>
-                        )}
-                      </div>
-                      <div className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                        {selectedRequest.gstin || 'Not Provided'}
-                      </div>
-                      {selectedRequest.gstCertificateUrl && (
-                        <div className="pt-1 flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDocPreviewModal({
-                                isOpen: true,
-                                title: `GST Certificate (${selectedRequest.gstin || selectedRequest.firmName})`,
-                                url: selectedRequest.gstCertificateUrl
-                              })
-                            }
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 text-[11px] font-bold transition-all cursor-pointer"
-                          >
-                            <FiEye size={12} />
-                            <span>Preview</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Additional Certificates if uploaded */}
-                  {(selectedRequest.msmeNumber || selectedRequest.msmeCertificateUrl || selectedRequest.incorporationCertificateUrl || selectedRequest.otherLicensesUrl) && (
-                    <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap gap-2 text-[11px]">
-                      {selectedRequest.msmeNumber && (
-                        <span className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 font-mono">
-                          MSME: <strong>{selectedRequest.msmeNumber}</strong>
-                        </span>
-                      )}
-                      {selectedRequest.msmeCertificateUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setDocPreviewModal({ isOpen: true, title: 'MSME Certificate', url: selectedRequest.msmeCertificateUrl })}
-                          className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-500/20 flex items-center gap-1 cursor-pointer"
-                        >
-                          <FiEye size={11} /> MSME Certificate
-                        </button>
-                      )}
-                      {selectedRequest.incorporationCertificateUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setDocPreviewModal({ isOpen: true, title: 'Incorporation Certificate', url: selectedRequest.incorporationCertificateUrl })}
-                          className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-500/20 flex items-center gap-1 cursor-pointer"
-                        >
-                          <FiEye size={11} /> Incorporation Doc
-                        </button>
-                      )}
-                      {selectedRequest.otherLicensesUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setDocPreviewModal({ isOpen: true, title: 'Trade / Business License', url: selectedRequest.otherLicensesUrl })}
-                          className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-500/20 flex items-center gap-1 cursor-pointer"
-                        >
-                          <FiEye size={11} /> Other Licenses
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Section 4: Banking & Signatory Stamp */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* Banking Details */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
-                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiCreditCard className="text-purple-500 text-xs shrink-0" />
-                      <span>Banking Credentials</span>
-                    </p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Bank Name</span>
-                        <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">
-                          {selectedRequest.bankName || 'Not Provided'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Account Number</span>
-                        <span className="font-mono font-semibold text-xs text-slate-700 dark:text-slate-300">
-                          {selectedRequest.accountNumber || '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">IFSC Code</span>
-                        <span className="font-mono font-semibold text-xs text-slate-700 dark:text-slate-300">
-                          {selectedRequest.ifscCode || '-'}
-                        </span>
-                      </div>
-                      {selectedRequest.cancelledChequeUrl && (
-                        <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between">
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Cancelled Cheque</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDocPreviewModal({
-                                isOpen: true,
-                                title: `Cancelled Cheque Proof (${selectedRequest.bankName || selectedRequest.firmName})`,
-                                url: selectedRequest.cancelledChequeUrl
-                              })
-                            }
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[11px] font-bold hover:bg-purple-100 transition-all cursor-pointer"
-                          >
-                            <FiEye size={12} />
-                            <span>View Cheque</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Declaration & Signatory Stamp */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
-                    <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                      <FiShield className="text-emerald-500 text-xs shrink-0" />
-                      <span>Signatory & Authorization</span>
-                    </p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Signatory</span>
-                        <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">
-                          {selectedRequest.authorizedSignatoryName || selectedRequest.contactPerson || '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Designation</span>
-                        <span className="text-xs text-slate-600 dark:text-slate-300">
-                          {selectedRequest.signatoryDesignation || selectedRequest.designation || '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Declaration</span>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${selectedRequest.declarationAgreed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 text-slate-600'}`}>
-                          <FiCheck size={10} />
-                          {selectedRequest.declarationAgreed ? 'Agreed & Signed' : 'Pending'}
-                        </span>
-                      </div>
-                      {selectedRequest.companySealOrSignatureUrl && (
-                        <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between">
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Stamp / Signature Proof</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDocPreviewModal({
-                                isOpen: true,
-                                title: `Official Stamp / Signature (${selectedRequest.firmName})`,
-                                url: selectedRequest.companySealOrSignatureUrl
-                              })
-                            }
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold hover:bg-emerald-100 transition-all cursor-pointer"
-                          >
-                            <FiEye size={12} />
-                            <span>View Stamp Proof</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Audit & Submitter Metadata */}
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400">Submitted By</span>
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-0.5">
-                      {selectedRequest.submittedBy?.email || selectedRequest.submittedBy?.phone || 'Sales Executive'}
-                    </p>
-                    {selectedRequest.submittedBy?.role && (
-                      <span className="inline-block mt-1 text-[9px] font-extrabold uppercase px-1.5 py-0.2 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded">
-                        {selectedRequest.submittedBy.role}
+                    {selectedRequest.companyId?.code && (
+                      <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-200/80 dark:bg-white/10 px-2.5 py-1 rounded-lg">
+                        {selectedRequest.companyId.code}
                       </span>
                     )}
-                    <p className="text-slate-400 text-[10px] mt-1">
-                      Submitted on: {selectedRequest.createdAt ? formatDateTimeDDMMYYYY(selectedRequest.createdAt) : '-'}
-                    </p>
                   </div>
 
-                  {selectedRequest.reviewedBy && (
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400">Reviewed By</span>
-                      <p className="font-semibold text-slate-700 dark:text-slate-200 mt-0.5">
-                        {selectedRequest.reviewedBy.email || 'Admin'}
+                  {/* Grid 1: Business Profile & Contact Rep */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {/* Business Entity Profile */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                      <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <FiBriefcase className="text-blue-500 text-xs shrink-0" />
+                        <span>Business & Establishment</span>
                       </p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Business Type</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 bg-slate-200/60 dark:bg-white/10 px-2 py-0.5 rounded text-[11px]">
+                            {selectedRequest.businessType || 'Proprietorship'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Established Date</span>
+                          <span className="font-semibold text-xs text-slate-700 dark:text-slate-200 font-mono">
+                            {selectedRequest.dateOfEstablishment ? formatDateDDMMYYYY(selectedRequest.dateOfEstablishment) : '-'}
+                          </span>
+                        </div>
+                        {selectedRequest.website && (
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Website</span>
+                            <a
+                              href={selectedRequest.website.startsWith('http') ? selectedRequest.website : `https://${selectedRequest.website}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 truncate max-w-[170px]"
+                            >
+                              <FiGlobe size={11} />
+                              <span className="truncate">{selectedRequest.website}</span>
+                            </a>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Cash Discount</span>
+                          <span className="font-semibold text-xs text-emerald-600 dark:text-emerald-400 font-mono">
+                            {selectedRequest.cashDiscount !== undefined && selectedRequest.cashDiscount !== null ? `${selectedRequest.cashDiscount}%` : '0%'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contact Representative */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                      <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <FiUser className="text-indigo-500 text-xs shrink-0" />
+                        <span>Contact Representative</span>
+                      </p>
+                      <div className="space-y-2">
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Name & Designation</span>
+                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                            {selectedRequest.contactPerson || '-'}
+                            {selectedRequest.designation && (
+                              <span className="text-slate-400 text-[10px] font-normal block">
+                                {selectedRequest.designation}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Primary Phone</span>
+                          <div className="flex items-center gap-1 text-xs text-slate-700 dark:text-slate-200 font-semibold font-mono">
+                            <span>{selectedRequest.phone || '-'}</span>
+                            {selectedRequest.phone && <CopyButton text={selectedRequest.phone} size={11} />}
+                          </div>
+                        </div>
+                        {selectedRequest.alternatePhone && (
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Alternate Phone</span>
+                            <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300 font-mono font-medium">
+                              <span>{selectedRequest.alternatePhone}</span>
+                              <CopyButton text={selectedRequest.alternatePhone} size={11} />
+                            </div>
+                          </div>
+                        )}
+                        {selectedRequest.email && (
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Email Address</span>
+                            <div className="mt-0.5">
+                              <GmailLink email={selectedRequest.email} label={selectedRequest.email} className="text-xs font-medium" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Grid 2: Premises & Financial Terms */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {/* Premises & Operating Address */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                      <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <FiMapPin className="text-rose-500 text-xs shrink-0" />
+                        <span>Premises & Address</span>
+                      </p>
+                      <div className="space-y-2">
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Registered Address</span>
+                          <p className="text-xs font-medium text-slate-700 dark:text-slate-200 leading-relaxed">
+                            {selectedRequest.address || '-'}
+                          </p>
+                        </div>
+                        {selectedRequest.branchAddress && (
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">Branch Address</span>
+                            <p className="text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
+                              {selectedRequest.branchAddress}
+                            </p>
+                          </div>
+                        )}
+                        <div className="pt-1.5 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">City, State, PIN</span>
+                          <span className="text-xs font-medium text-slate-700 dark:text-slate-300 text-right">
+                            {[selectedRequest.city, selectedRequest.state, selectedRequest.pincode].filter(Boolean).join(', ') || '-'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Financial & Credit Terms */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                      <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <FiDollarSign className="text-emerald-500 text-xs shrink-0" />
+                        <span>Credit & Terms</span>
+                      </p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Approved Credit Limit</span>
+                          <span className="font-bold text-xs text-slate-900 dark:text-white font-mono">
+                            ₹{(selectedRequest.creditLimit ?? 0).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Credit Days Window</span>
+                          <span className="font-bold text-xs text-slate-700 dark:text-slate-200 font-mono">
+                            {selectedRequest.creditDays ?? 30} Days
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Cash Discount</span>
+                          <span className="font-bold text-xs text-emerald-600 dark:text-emerald-400 font-mono">
+                            {selectedRequest.cashDiscount ?? 0}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Statutory Tax & Document Proofs (PAN, TAN, GSTIN, MSME) */}
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <FiFileText className="text-amber-500 text-xs shrink-0" />
+                        <span>Statutory KYC & Tax Proofs</span>
+                      </p>
+                      <span className="text-[10px] text-slate-400 font-mono">Click documents to preview</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {/* PAN Card Proof */}
+                      <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">PAN Card</span>
+                          {selectedRequest.panCardUrl ? (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                              Uploaded
+                            </span>
+                          ) : (
+                            <span className="text-[9px] text-slate-400">Not Uploaded</span>
+                          )}
+                        </div>
+                        <div className="font-mono text-xs font-bold text-slate-800 dark:text-white">
+                          {selectedRequest.panNumber || 'Not Provided'}
+                        </div>
+                        {selectedRequest.panCardUrl && (
+                          <div className="pt-1 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDocPreviewModal({
+                                  isOpen: true,
+                                  title: `PAN Card (${selectedRequest.panNumber || selectedRequest.firmName})`,
+                                  url: selectedRequest.panCardUrl
+                                })
+                              }
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 text-[11px] font-bold transition-all cursor-pointer"
+                            >
+                              <FiEye size={12} />
+                              <span>Preview</span>
+                            </button>
+                            <a
+                              href={selectedRequest.panCardUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-slate-400 hover:text-slate-600 p-1"
+                              title="Open direct image"
+                            >
+                              <FiExternalLink size={12} />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* TAN Certificate Proof */}
+                      <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">TAN Certificate</span>
+                          {selectedRequest.tanCertificateUrl ? (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                              Uploaded
+                            </span>
+                          ) : (
+                            <span className="text-[9px] text-slate-400">Not Uploaded</span>
+                          )}
+                        </div>
+                        <div className="font-mono text-xs font-bold text-slate-800 dark:text-white">
+                          {selectedRequest.tanNumber || 'Not Provided'}
+                        </div>
+                        {selectedRequest.tanCertificateUrl && (
+                          <div className="pt-1 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDocPreviewModal({
+                                  isOpen: true,
+                                  title: `TAN Certificate (${selectedRequest.tanNumber || selectedRequest.firmName})`,
+                                  url: selectedRequest.tanCertificateUrl
+                                })
+                              }
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 text-[11px] font-bold transition-all cursor-pointer"
+                            >
+                              <FiEye size={12} />
+                              <span>Preview</span>
+                            </button>
+                            <a
+                              href={selectedRequest.tanCertificateUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-slate-400 hover:text-slate-600 p-1"
+                              title="Open direct image"
+                            >
+                              <FiExternalLink size={12} />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* GSTIN & Certificate */}
+                      <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">GSTIN</span>
+                          {selectedRequest.gstCertificateUrl ? (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                              Proof Attached
+                            </span>
+                          ) : (
+                            <span className="text-[9px] text-slate-400">Self Declared</span>
+                          )}
+                        </div>
+                        <div className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                          {selectedRequest.gstin || 'Not Provided'}
+                        </div>
+                        {selectedRequest.gstCertificateUrl && (
+                          <div className="pt-1 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDocPreviewModal({
+                                  isOpen: true,
+                                  title: `GST Certificate (${selectedRequest.gstin || selectedRequest.firmName})`,
+                                  url: selectedRequest.gstCertificateUrl
+                                })
+                              }
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 text-[11px] font-bold transition-all cursor-pointer"
+                            >
+                              <FiEye size={12} />
+                              <span>Preview</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Additional Certificates if uploaded */}
+                    {(selectedRequest.msmeNumber || selectedRequest.msmeCertificateUrl || selectedRequest.incorporationCertificateUrl || selectedRequest.otherLicensesUrl) && (
+                      <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap gap-2 text-[11px]">
+                        {selectedRequest.msmeNumber && (
+                          <span className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 font-mono">
+                            MSME: <strong>{selectedRequest.msmeNumber}</strong>
+                          </span>
+                        )}
+                        {selectedRequest.msmeCertificateUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setDocPreviewModal({ isOpen: true, title: 'MSME Certificate', url: selectedRequest.msmeCertificateUrl })}
+                            className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-500/20 flex items-center gap-1 cursor-pointer"
+                          >
+                            <FiEye size={11} /> MSME Certificate
+                          </button>
+                        )}
+                        {selectedRequest.incorporationCertificateUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setDocPreviewModal({ isOpen: true, title: 'Incorporation Certificate', url: selectedRequest.incorporationCertificateUrl })}
+                            className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-500/20 flex items-center gap-1 cursor-pointer"
+                          >
+                            <FiEye size={11} /> Incorporation Doc
+                          </button>
+                        )}
+                        {selectedRequest.otherLicensesUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setDocPreviewModal({ isOpen: true, title: 'Trade / Business License', url: selectedRequest.otherLicensesUrl })}
+                            className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-500/20 flex items-center gap-1 cursor-pointer"
+                          >
+                            <FiEye size={11} /> Other Licenses
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Section 4: Banking & Signatory Stamp */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {/* Banking Details */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                      <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <FiCreditCard className="text-purple-500 text-xs shrink-0" />
+                        <span>Banking Credentials</span>
+                      </p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Bank Name</span>
+                          <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">
+                            {selectedRequest.bankName || 'Not Provided'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Account Number</span>
+                          <span className="font-mono font-semibold text-xs text-slate-700 dark:text-slate-300">
+                            {selectedRequest.accountNumber || '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">IFSC Code</span>
+                          <span className="font-mono font-semibold text-xs text-slate-700 dark:text-slate-300">
+                            {selectedRequest.ifscCode || '-'}
+                          </span>
+                        </div>
+                        {selectedRequest.cancelledChequeUrl && (
+                          <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between">
+                            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Cancelled Cheque</span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDocPreviewModal({
+                                  isOpen: true,
+                                  title: `Cancelled Cheque Proof (${selectedRequest.bankName || selectedRequest.firmName})`,
+                                  url: selectedRequest.cancelledChequeUrl
+                                })
+                              }
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[11px] font-bold hover:bg-purple-100 transition-all cursor-pointer"
+                            >
+                              <FiEye size={12} />
+                              <span>View Cheque</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Declaration & Signatory Stamp */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-2.5">
+                      <p className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <FiShield className="text-emerald-500 text-xs shrink-0" />
+                        <span>Signatory & Authorization</span>
+                      </p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Signatory</span>
+                          <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">
+                            {selectedRequest.authorizedSignatoryName || selectedRequest.contactPerson || '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Designation</span>
+                          <span className="text-xs text-slate-600 dark:text-slate-300">
+                            {selectedRequest.signatoryDesignation || selectedRequest.designation || '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Declaration</span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${selectedRequest.declarationAgreed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 text-slate-600'}`}>
+                            <FiCheck size={10} />
+                            {selectedRequest.declarationAgreed ? 'Agreed & Signed' : 'Pending'}
+                          </span>
+                        </div>
+                        {selectedRequest.companySealOrSignatureUrl && (
+                          <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between">
+                            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Stamp / Signature Proof</span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDocPreviewModal({
+                                  isOpen: true,
+                                  title: `Official Stamp / Signature (${selectedRequest.firmName})`,
+                                  url: selectedRequest.companySealOrSignatureUrl
+                                })
+                              }
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold hover:bg-emerald-100 transition-all cursor-pointer"
+                            >
+                              <FiEye size={12} />
+                              <span>View Stamp Proof</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Audit & Submitter Metadata */}
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Submitted By</span>
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-0.5">
+                        {selectedRequest.submittedBy?.email || selectedRequest.submittedBy?.phone || 'Sales Executive'}
+                      </p>
+                      {selectedRequest.submittedBy?.role && (
+                        <span className="inline-block mt-1 text-[9px] font-extrabold uppercase px-1.5 py-0.2 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded">
+                          {selectedRequest.submittedBy.role}
+                        </span>
+                      )}
                       <p className="text-slate-400 text-[10px] mt-1">
-                        Reviewed on: {selectedRequest.updatedAt ? formatDateTimeDDMMYYYY(selectedRequest.updatedAt) : '-'}
+                        Submitted on: {selectedRequest.createdAt ? formatDateTimeDDMMYYYY(selectedRequest.createdAt) : '-'}
                       </p>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              {/* 3. Sticky Action Footer */}
+                    {selectedRequest.reviewedBy && (
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Reviewed By</span>
+                        <p className="font-semibold text-slate-700 dark:text-slate-200 mt-0.5">
+                          {selectedRequest.reviewedBy.email || 'Admin'}
+                        </p>
+                        <p className="text-slate-400 text-[10px] mt-1">
+                          Reviewed on: {selectedRequest.updatedAt ? formatDateTimeDDMMYYYY(selectedRequest.updatedAt) : '-'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Sticky Action Footer */}
                 <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-slate-50/90 dark:bg-slate-950/80 backdrop-blur-md">
                   <div className="text-[11px] text-slate-400 font-mono">
                     ID: {selectedRequest._id}
@@ -2239,19 +2232,17 @@ const FirmOnboarding = () => {
             <div className="relative w-full max-w-lg bg-white/40 dark:bg-slate-950/25 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto animate-in zoom-in-95">
               {/* Header */}
               <div
-                className={`p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 ${
-                  reviewModalState.action === 'APPROVED'
+                className={`p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 ${reviewModalState.action === 'APPROVED'
                     ? 'bg-gradient-to-r from-emerald-600/60 via-teal-600/50 to-cyan-600/50'
                     : 'bg-gradient-to-r from-rose-600/60 via-red-600/50 to-rose-700/50'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`p-2.5 rounded-2xl text-white shadow-md ${
-                      reviewModalState.action === 'APPROVED'
+                    className={`p-2.5 rounded-2xl text-white shadow-md ${reviewModalState.action === 'APPROVED'
                         ? 'bg-emerald-600 shadow-emerald-500/20'
                         : 'bg-rose-600 shadow-rose-500/20'
-                    }`}
+                      }`}
                   >
                     {reviewModalState.action === 'APPROVED' ? (
                       <FiCheckCircle size={20} />
@@ -2265,11 +2256,10 @@ const FirmOnboarding = () => {
                         ? 'Approve Onboarding Request'
                         : 'Reject Onboarding Request'}
                     </h3>
-                    <p className={`text-[11px] mt-0.5 font-mono ${
-                      reviewModalState.action === 'APPROVED'
+                    <p className={`text-[11px] mt-0.5 font-mono ${reviewModalState.action === 'APPROVED'
                         ? 'text-emerald-100 dark:text-emerald-200'
                         : 'text-rose-100 dark:text-rose-200'
-                    }`}>
+                      }`}>
                       PATCH /firms/{reviewModalState.item._id}/review
                     </p>
                   </div>
@@ -2377,7 +2367,7 @@ const FirmOnboarding = () => {
               </div>
 
               {/* Footer */}
-              <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-end gap-3 shrink-0 bg-slate-50/80 dark:bg-white/[0.02]">
+              <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-end gap-3 shrink-0 bg-slate-50/80 dark:bg-white/2">
                 <button
                   type="button"
                   disabled={reviewModalState.submitting}
@@ -2390,11 +2380,10 @@ const FirmOnboarding = () => {
                   type="button"
                   disabled={reviewModalState.submitting}
                   onClick={handleSubmitReview}
-                  className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 ${
-                    reviewModalState.action === 'APPROVED'
+                  className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 ${reviewModalState.action === 'APPROVED'
                       ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
                       : 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/20'
-                  }`}
+                    }`}
                 >
                   {reviewModalState.submitting ? (
                     <>

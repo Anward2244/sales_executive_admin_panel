@@ -192,8 +192,8 @@ const PurchaseOrders = () => {
   const effectiveTargetPoNum = navTargetPoNum
     ? String(navTargetPoNum).trim()
     : navTargetId && !isMongoId(navTargetId)
-    ? String(navTargetId).trim()
-    : null;
+      ? String(navTargetId).trim()
+      : null;
 
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
 
@@ -1084,13 +1084,12 @@ const PurchaseOrders = () => {
       'Items Count': Array.isArray(o.items) ? o.items.length : 0,
       'Items Details': Array.isArray(o.items)
         ? o.items
-            .map(
-              (it) =>
-                `${it.productNameSnapshot || it.productId?.name || 'Product'}${
-                  it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
-                } [${it.skuSnapshot || it.sku || '-'}] x ${it.quantity} @ Rs.${it.unitPrice || 0}`
-            )
-            .join('; ')
+          .map(
+            (it) =>
+              `${it.productNameSnapshot || it.productId?.name || 'Product'}${it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
+              } [${it.skuSnapshot || it.sku || '-'}] x ${it.quantity} @ Rs.${it.unitPrice || 0}`
+          )
+          .join('; ')
         : '-',
       'Subtotal (INR)': Number(o.subtotal || o.totalAmount || o.orderTotal || 0),
       'Total Amount (INR)': Number(o.totalAmount || o.orderTotal || 0),
@@ -1261,11 +1260,10 @@ const PurchaseOrders = () => {
                 setIsBulkMode((prev) => !prev);
                 if (isBulkMode) setSelectedOrderIds(new Set());
               }}
-              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                isBulkMode
+              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${isBulkMode
                   ? 'bg-white dark:bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400'
                   : 'bg-white/80 dark:bg-slate-900/60 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-blue-500/40 shadow-xs'
-              }`}
+                }`}
             >
               <FiLayers className="text-sm" />
               <span>{isBulkMode ? 'Exit Bulk Mode' : 'Bulk Operations'}</span>
@@ -1374,8 +1372,8 @@ const PurchaseOrders = () => {
                       const contactPerson = order.firmId?.contactPerson;
                       const repName = order.salesExecutiveId
                         ? `${order.salesExecutiveId.firstName || ''} ${order.salesExecutiveId.lastName || ''}`.trim() ||
-                          order.salesExecutiveId.name ||
-                          'Sales Rep'
+                        order.salesExecutiveId.name ||
+                        'Sales Rep'
                         : 'N/A';
                       const repEmpCode = order.salesExecutiveId?.employeeCode;
                       const repEmail = order.salesExecutiveId?.email;
@@ -1392,9 +1390,8 @@ const PurchaseOrders = () => {
                       return (
                         <tr
                           key={order._id || idx}
-                          className={`hover:bg-slate-100/60 dark:hover:bg-white/[0.03] transition-colors ${
-                            selectedOrderIds.has(order._id) ? 'bg-blue-500/[0.06] dark:bg-blue-500/10' : ''
-                          }`}
+                          className={`hover:bg-slate-100/60 dark:hover:bg-white/[0.03] transition-colors ${selectedOrderIds.has(order._id) ? 'bg-blue-500/[0.06] dark:bg-blue-500/10' : ''
+                            }`}
                         >
                           {isBulkMode && (
                             <td className={`${densityStyles.td} pl-5 text-center`}>
@@ -1558,13 +1555,12 @@ const PurchaseOrders = () => {
                                 title={
                                   Array.isArray(order.items)
                                     ? order.items
-                                        .map(
-                                          (it) =>
-                                            `${it.productNameSnapshot || it.productId?.name || 'Product'}${
-                                              it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
-                                            } [${it.skuSnapshot || it.sku || '-'}] × ${it.quantity}`
-                                        )
-                                        .join('\n')
+                                      .map(
+                                        (it) =>
+                                          `${it.productNameSnapshot || it.productId?.name || 'Product'}${it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
+                                          } [${it.skuSnapshot || it.sku || '-'}] × ${it.quantity}`
+                                      )
+                                      .join('\n')
                                     : ''
                                 }
                               >
@@ -1644,67 +1640,67 @@ const PurchaseOrders = () => {
                           {/* Action Buttons */}
                           {isColVisible('actions') && (
                             <td className={`${densityStyles.td} text-center`}>
-                            <div className="flex items-center justify-center gap-1.5">
-                              {/* Details (GET /purchase-orders/{id}) */}
-                              <button
-                                type="button"
-                                onClick={() => handleViewOrderDetails(order)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                                title="View Complete Order Details & Audit History"
-                              >
-                                <FiEye size={12} />
-                                <span>Details</span>
-                              </button>
-
-                              {/* Admin Status Transitions */}
-                              {isAdmin && isPending && (
-                                <>
-                                  {/* Approve (PATCH /purchase-orders/{id}/approve) */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleApproveOrder(order)}
-                                    disabled={actionLoadingId === order._id}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 border border-emerald-200/60 dark:border-emerald-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                                    title="Approve Purchase Order (PATCH /approve)"
-                                  >
-                                    {actionLoadingId === order._id ? (
-                                      <FiLoader className="text-xs animate-spin" />
-                                    ) : (
-                                      <FiCheck size={12} />
-                                    )}
-                                    <span>Approve</span>
-                                  </button>
-
-                                  {/* Reject (PATCH /purchase-orders/{id}/reject) */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenRejectModal(order)}
-                                    disabled={actionLoadingId === order._id}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200/60 dark:border-rose-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                                    title="Reject Purchase Order with Reason (PATCH /reject)"
-                                  >
-                                    <FiX size={12} />
-                                    <span>Reject</span>
-                                  </button>
-                                </>
-                              )}
-
-                              {isAdmin && isApproved && (
-                                /* Dispatch (PATCH /purchase-orders/{id}/dispatch) */
+                              <div className="flex items-center justify-center gap-1.5">
+                                {/* Details (GET /purchase-orders/{id}) */}
                                 <button
                                   type="button"
-                                  onClick={() => handleOpenDispatchModal(order)}
-                                  disabled={actionLoadingId === order._id}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/20 border border-cyan-200/60 dark:border-cyan-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                                  title="Dispatch Purchase Order (PATCH /dispatch)"
+                                  onClick={() => handleViewOrderDetails(order)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                                  title="View Complete Order Details & Audit History"
                                 >
-                                  <FiTruck size={12} />
-                                  <span>Dispatch</span>
+                                  <FiEye size={12} />
+                                  <span>Details</span>
                                 </button>
-                              )}
-                            </div>
-                          </td>
-                        )}
+
+                                {/* Admin Status Transitions */}
+                                {isAdmin && isPending && (
+                                  <>
+                                    {/* Approve (PATCH /purchase-orders/{id}/approve) */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApproveOrder(order)}
+                                      disabled={actionLoadingId === order._id}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 border border-emerald-200/60 dark:border-emerald-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                                      title="Approve Purchase Order (PATCH /approve)"
+                                    >
+                                      {actionLoadingId === order._id ? (
+                                        <FiLoader className="text-xs animate-spin" />
+                                      ) : (
+                                        <FiCheck size={12} />
+                                      )}
+                                      <span>Approve</span>
+                                    </button>
+
+                                    {/* Reject (PATCH /purchase-orders/{id}/reject) */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenRejectModal(order)}
+                                      disabled={actionLoadingId === order._id}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200/60 dark:border-rose-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                                      title="Reject Purchase Order with Reason (PATCH /reject)"
+                                    >
+                                      <FiX size={12} />
+                                      <span>Reject</span>
+                                    </button>
+                                  </>
+                                )}
+
+                                {isAdmin && isApproved && (
+                                  /* Dispatch (PATCH /purchase-orders/{id}/dispatch) */
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenDispatchModal(order)}
+                                    disabled={actionLoadingId === order._id}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/20 border border-cyan-200/60 dark:border-cyan-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                                    title="Dispatch Purchase Order (PATCH /dispatch)"
+                                  >
+                                    <FiTruck size={12} />
+                                    <span>Dispatch</span>
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       );
                     })
@@ -1741,7 +1737,7 @@ const PurchaseOrders = () => {
 
             {/* Pagination Controls */}
             {filteredOrders.length > 0 && (
-              <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50 dark:bg-white/[0.02]">
+              <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50 dark:bg-white/2">
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                   Showing <span className="font-bold text-slate-800 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
                   <span className="font-bold text-slate-800 dark:text-white">
@@ -1764,11 +1760,10 @@ const PurchaseOrders = () => {
                         key={num}
                         type="button"
                         onClick={() => setCurrentPage(num)}
-                        className={`w-7 h-7 flex items-center justify-center rounded-xl text-xs font-bold cursor-pointer ${
-                          currentPage === num
+                        className={`w-7 h-7 flex items-center justify-center rounded-xl text-xs font-bold cursor-pointer ${currentPage === num
                             ? 'bg-blue-600 text-white shadow-md'
                             : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/10'
-                        }`}
+                          }`}
                       >
                         {num}
                       </button>
@@ -1797,18 +1792,16 @@ const PurchaseOrders = () => {
           <div className="fixed inset-0 z-[10000] overflow-hidden">
             {/* Backdrop Blur Overlay */}
             <div
-              className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
-                isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
-              }`}
+              className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
+                }`}
               onClick={handleCloseDetailsDrawer}
             />
 
             {/* Slide-Over Drawer Container (Pinned to Right) */}
             <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
               <div
-                className={`w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto transition-transform duration-300 ease-in-out z-10 ${
-                  isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
-                }`}
+                className={`w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto transition-transform duration-300 ease-in-out z-10 ${isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+                  }`}
               >
                 {/* 1. Sticky Drawer Header */}
                 <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0">
@@ -1875,455 +1868,455 @@ const PurchaseOrders = () => {
                 <div className="flex-1 overflow-y-auto p-4 sm:p-7 custom-scrollbar space-y-4 sm:space-y-5">
                   {/* Order Overview Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs">
-                {/* Trading Company */}
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Trading Company</span>
-                  <div className="flex items-center gap-2">
-                    {selectedOrder.companyId?.logo ? (
-                      <img
-                        src={selectedOrder.companyId.logo}
-                        alt={selectedOrder.companyId?.name || 'Company'}
-                        className="w-8 h-8 rounded-lg object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-white/10 shrink-0"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
-                        <FiBriefcase className="text-sm" />
-                      </div>
-                    )}
+                    {/* Trading Company */}
                     <div>
-                      <span className="font-bold text-slate-900 dark:text-white text-sm block">
-                        {selectedOrder.companyId?.name || 'Company Entity'}
-                      </span>
-                      {selectedOrder.companyId?.code && (
-                        <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 font-bold">
-                          Code: {selectedOrder.companyId.code}
-                        </span>
-                      )}
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Trading Company</span>
+                      <div className="flex items-center gap-2">
+                        {selectedOrder.companyId?.logo ? (
+                          <img
+                            src={selectedOrder.companyId.logo}
+                            alt={selectedOrder.companyId?.name || 'Company'}
+                            className="w-8 h-8 rounded-lg object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-white/10 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
+                            <FiBriefcase className="text-sm" />
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-bold text-slate-900 dark:text-white text-sm block">
+                            {selectedOrder.companyId?.name || 'Company Entity'}
+                          </span>
+                          {selectedOrder.companyId?.code && (
+                            <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 font-bold">
+                              Code: {selectedOrder.companyId.code}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Purchasing Firm */}
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Purchasing Firm</span>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-slate-900 dark:text-white text-sm">
-                        {selectedOrder.firmId?.firmName || 'Retailer Firm'}
-                      </span>
-                      {selectedOrder.firmId?.firmCode && (
-                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-slate-300">
-                          {selectedOrder.firmId.firmCode}
-                        </span>
-                      )}
+                    {/* Purchasing Firm */}
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Purchasing Firm</span>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-900 dark:text-white text-sm">
+                            {selectedOrder.firmId?.firmName || 'Retailer Firm'}
+                          </span>
+                          {selectedOrder.firmId?.firmCode && (
+                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-slate-300">
+                              {selectedOrder.firmId.firmCode}
+                            </span>
+                          )}
+                        </div>
+                        {selectedOrder.firmId?.contactPerson && (
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 flex items-center gap-1.5">
+                            <FiUser className="text-[10px] text-slate-400" />
+                            <span>{selectedOrder.firmId.contactPerson}</span>
+                            {selectedOrder.firmId.phone && (
+                              <a href={`tel:${selectedOrder.firmId.phone}`} className="font-mono text-blue-600 dark:text-blue-400 hover:underline">
+                                ({selectedOrder.firmId.phone})
+                              </a>
+                            )}
+                          </p>
+                        )}
+                        {(selectedOrder.firmId?.address || selectedOrder.firmId?.city) && (
+                          <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                            <FiMapPin className="text-[10px] text-rose-500 shrink-0" />
+                            <span>
+                              {[selectedOrder.firmId.address, selectedOrder.firmId.city, selectedOrder.firmId.state].filter(Boolean).join(', ')}
+                            </span>
+                          </p>
+                        )}
+                        {selectedOrder.firmId?.gstin && (
+                          <div className="flex items-center gap-1 mt-1 text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
+                            <span>GSTIN: {selectedOrder.firmId.gstin}</span>
+                            <CopyButton text={selectedOrder.firmId.gstin} />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    {selectedOrder.firmId?.contactPerson && (
-                      <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 flex items-center gap-1.5">
-                        <FiUser className="text-[10px] text-slate-400" />
-                        <span>{selectedOrder.firmId.contactPerson}</span>
-                        {selectedOrder.firmId.phone && (
-                          <a href={`tel:${selectedOrder.firmId.phone}`} className="font-mono text-blue-600 dark:text-blue-400 hover:underline">
-                            ({selectedOrder.firmId.phone})
+
+                    {/* Sales Executive */}
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Sales Executive</span>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-slate-900 dark:text-white text-xs">
+                            {selectedOrder.salesExecutiveId
+                              ? `${selectedOrder.salesExecutiveId.firstName || ''} ${selectedOrder.salesExecutiveId.lastName || ''}`.trim() ||
+                              selectedOrder.salesExecutiveId.name
+                              : 'Self / System Generated'}
+                          </span>
+                          {selectedOrder.salesExecutiveId?.employeeCode && (
+                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                              {selectedOrder.salesExecutiveId.employeeCode}
+                            </span>
+                          )}
+                        </div>
+                        {selectedOrder.salesExecutiveId?.email && (
+                          <a href={`mailto:${selectedOrder.salesExecutiveId.email}`} className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline block mt-0.5">
+                            {selectedOrder.salesExecutiveId.email}
                           </a>
                         )}
-                      </p>
-                    )}
-                    {(selectedOrder.firmId?.address || selectedOrder.firmId?.city) && (
-                      <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
-                        <FiMapPin className="text-[10px] text-rose-500 shrink-0" />
-                        <span>
-                          {[selectedOrder.firmId.address, selectedOrder.firmId.city, selectedOrder.firmId.state].filter(Boolean).join(', ')}
-                        </span>
-                      </p>
-                    )}
-                    {selectedOrder.firmId?.gstin && (
-                      <div className="flex items-center gap-1 mt-1 text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
-                        <span>GSTIN: {selectedOrder.firmId.gstin}</span>
-                        <CopyButton text={selectedOrder.firmId.gstin} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Sales Executive */}
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Sales Executive</span>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-slate-900 dark:text-white text-xs">
-                        {selectedOrder.salesExecutiveId
-                          ? `${selectedOrder.salesExecutiveId.firstName || ''} ${selectedOrder.salesExecutiveId.lastName || ''}`.trim() ||
-                            selectedOrder.salesExecutiveId.name
-                          : 'Self / System Generated'}
-                      </span>
-                      {selectedOrder.salesExecutiveId?.employeeCode && (
-                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                          {selectedOrder.salesExecutiveId.employeeCode}
-                        </span>
-                      )}
-                    </div>
-                    {selectedOrder.salesExecutiveId?.email && (
-                      <a href={`mailto:${selectedOrder.salesExecutiveId.email}`} className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline block mt-0.5">
-                        {selectedOrder.salesExecutiveId.email}
-                      </a>
-                    )}
-                    {selectedOrder.salesExecutiveId?.phone && (
-                      <a href={`tel:${selectedOrder.salesExecutiveId.phone}`} className="text-[10px] font-mono text-slate-500 dark:text-slate-400 block">
-                        {selectedOrder.salesExecutiveId.phone}
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                {/* Current Status & Approval Audit */}
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Current Lifecycle Status</span>
-                  <div>
-                    {(() => {
-                      const badge = getStatusBadge(selectedOrder.status);
-                      const BadgeIcon = badge.icon;
-                      return (
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${badge.className}`}
-                        >
-                          <BadgeIcon className="text-[11px]" />
-                          <span>{badge.label}</span>
-                        </span>
-                      );
-                    })()}
-                    {selectedOrder.approvedBy && (
-                      <div className="mt-1.5 text-[11px] text-slate-600 dark:text-slate-300">
-                        <span className="text-slate-400">Approved By: </span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">
-                          {selectedOrder.approvedBy.firstName || ''} {selectedOrder.approvedBy.lastName || ''}
-                        </span>
-                        {selectedOrder.approvedAt && (
-                          <span className="block text-[10px] font-mono text-slate-400">
-                            {formatDateTimeDDMMYYYY(selectedOrder.approvedAt)}
-                          </span>
+                        {selectedOrder.salesExecutiveId?.phone && (
+                          <a href={`tel:${selectedOrder.salesExecutiveId.phone}`} className="text-[10px] font-mono text-slate-500 dark:text-slate-400 block">
+                            {selectedOrder.salesExecutiveId.phone}
+                          </a>
                         )}
                       </div>
+                    </div>
+
+                    {/* Current Status & Approval Audit */}
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Current Lifecycle Status</span>
+                      <div>
+                        {(() => {
+                          const badge = getStatusBadge(selectedOrder.status);
+                          const BadgeIcon = badge.icon;
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${badge.className}`}
+                            >
+                              <BadgeIcon className="text-[11px]" />
+                              <span>{badge.label}</span>
+                            </span>
+                          );
+                        })()}
+                        {selectedOrder.approvedBy && (
+                          <div className="mt-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+                            <span className="text-slate-400">Approved By: </span>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              {selectedOrder.approvedBy.firstName || ''} {selectedOrder.approvedBy.lastName || ''}
+                            </span>
+                            {selectedOrder.approvedAt && (
+                              <span className="block text-[10px] font-mono text-slate-400">
+                                {formatDateTimeDDMMYYYY(selectedOrder.approvedAt)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Brand & State / Region */}
+                    {(selectedOrder.brand || selectedOrder.state) && (
+                      <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Brand</span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 font-bold text-xs border border-amber-500/20">
+                            <FiTag className="text-[11px]" />
+                            {selectedOrder.brand || '-'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Order Region / State</span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold text-xs border border-emerald-500/20">
+                            <FiMapPin className="text-[11px]" />
+                            {selectedOrder.state || '-'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notification Email Status Card */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs mb-5">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <FiMail className="text-blue-500" /> Delivery Email Dispatch
+                      </span>
+                      {(() => {
+                        const eb = getEmailStatusBadge(selectedOrder.emailStatus);
+                        const EbIcon = eb.icon;
+                        return (
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${eb.className}`}>
+                            <EbIcon className="text-[10px]" />
+                            <span>{eb.label}</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-slate-400 text-[10px] uppercase font-bold block">Sent Timestamp</span>
+                        <span className="font-mono text-slate-800 dark:text-slate-200">
+                          {selectedOrder.emailStatus?.lastSentAt
+                            ? formatDateTimeDDMMYYYY(selectedOrder.emailStatus.lastSentAt)
+                            : 'Not Dispatched Yet'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] uppercase font-bold block">Message ID</span>
+                        <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate block max-w-full" title={selectedOrder.emailStatus?.messageId}>
+                          {selectedOrder.emailStatus?.messageId || '-'}
+                        </span>
+                      </div>
+                    </div>
+                    {Array.isArray(selectedOrder.emailStatus?.recipients) && selectedOrder.emailStatus.recipients.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
+                        <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1.5">
+                          Recipients ({selectedOrder.emailStatus.recipients.length})
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedOrder.emailStatus.recipients.map((rec, rIdx) => (
+                            <span
+                              key={rIdx}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-700 dark:text-slate-300"
+                            >
+                              <FiMail className="text-slate-400 text-[10px]" />
+                              <span>{rec}</span>
+                              <CopyButton text={rec} />
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Order Notes / Rejection Reason */}
+                  {selectedOrder.notes && (
+                    <div className="mb-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs">
+                      <span className="font-bold text-amber-700 dark:text-amber-300 block mb-0.5">Order Notes:</span>
+                      <p className="text-slate-700 dark:text-slate-200 italic">"{selectedOrder.notes}"</p>
+                    </div>
+                  )}
+
+                  {selectedOrder.rejectionReason && (
+                    <div className="mb-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs">
+                      <span className="font-bold text-rose-700 dark:text-rose-300 block mb-0.5 flex items-center gap-1.5">
+                        <FiXCircle /> Rejection Reason:
+                      </span>
+                      <p className="text-slate-700 dark:text-slate-200 italic">"{selectedOrder.rejectionReason}"</p>
+                    </div>
+                  )}
+
+                  {/* Line Items Snapshot */}
+                  <div className="space-y-2 mb-5">
+                    <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <FiFileText /> Item Snapshots ({Array.isArray(selectedOrder.items) ? selectedOrder.items.length : 0})
+                    </h4>
+                    <div className="border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead className="bg-slate-100 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-[10px] font-bold uppercase text-slate-500">
+                          <tr>
+                            <th className="p-2.5">Product & SKU</th>
+                            <th className="p-2.5 text-center">Qty</th>
+                            <th className="p-2.5 text-right">Unit Price</th>
+                            <th className="p-2.5 text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 dark:divide-white/5">
+                          {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
+                            selectedOrder.items.map((item, i) => (
+                              <tr key={item.productId || item.variantId || i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
+                                <td className="p-2.5">
+                                  <div className="flex flex-col gap-0.5">
+                                    <div className="flex items-center flex-wrap gap-1.5">
+                                      <span className="font-bold text-slate-900 dark:text-white">
+                                        {item.productNameSnapshot || item.productId?.name || 'Product Item'}
+                                      </span>
+                                      {item.variantNameSnapshot && (
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-semibold font-sans">
+                                          <FiLayers className="text-[9px]" />
+                                          {item.variantNameSnapshot}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 font-mono text-[10px] text-blue-600 dark:text-blue-400">
+                                      <span>{item.skuSnapshot || item.productId?.sku || '-'}</span>
+                                      {item.variantId && (
+                                        <span className="text-slate-400 text-[9px]">
+                                          • Var: {typeof item.variantId === 'string' ? item.variantId.slice(-6) : item.variantId?._id?.slice(-6) || '-'}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="p-2.5 text-center font-mono font-bold">{item.quantity}</td>
+                                <td className="p-2.5 text-right font-mono">
+                                  ₹{(item.unitPrice || 0).toLocaleString('en-IN')}
+                                </td>
+                                <td className="p-2.5 text-right font-mono font-bold text-slate-900 dark:text-white">
+                                  ₹{(item.totalPrice != null ? item.totalPrice : ((item.quantity || 0) * (item.unitPrice || 0))).toLocaleString('en-IN')}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="4" className="p-4 text-center text-slate-400">
+                                No snapshot items found.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Total Order Amount */}
+                  <div className="p-4 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 mb-5 space-y-1.5">
+                    {selectedOrder.subtotal != null && selectedOrder.subtotal !== (selectedOrder.totalAmount || selectedOrder.totalValue) && (
+                      <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
+                        <span className="font-semibold uppercase text-[10px]">Subtotal</span>
+                        <span className="font-mono font-bold">₹{Number(selectedOrder.subtotal).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center pt-1 border-t border-slate-200/60 dark:border-white/5">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">
+                        Total Order Amount
+                      </span>
+                      <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+                        ₹{(selectedOrder.totalAmount || selectedOrder.totalValue || selectedOrder.subtotal || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Status History & Complete Audit Log */}
+                  <div className="mb-5 p-4 rounded-2xl bg-slate-50/70 dark:bg-white/2 border border-slate-200/80 dark:border-white/10 space-y-3">
+                    <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <FiActivity className="text-blue-500" /> Complete Status History & Audit Log
+                    </h4>
+
+                    {Array.isArray(selectedOrder.statusHistory) && selectedOrder.statusHistory.length > 0 ? (
+                      <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-white/10">
+                        {selectedOrder.statusHistory.map((historyItem, hIdx) => {
+                          const st = historyItem.newStatus || historyItem.status || 'PENDING';
+                          const badge = getStatusBadge(st);
+                          const BadgeIcon = badge.icon;
+                          const changer = historyItem.changedBy;
+                          const changerName = changer
+                            ? typeof changer === 'object'
+                              ? `${changer.firstName || ''} ${changer.lastName || ''}`.trim() || changer.name || changer.email
+                              : changer
+                            : 'System';
+                          const changerRole = typeof changer === 'object' ? changer.role : null;
+                          const changerEmail = typeof changer === 'object' ? changer.email : null;
+
+                          return (
+                            <div key={hIdx} className="relative">
+                              <span
+                                className={`absolute -left-6 top-0.5 w-4 h-4 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 ${badge.dot}`}
+                              />
+                              <div className="text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.2 rounded-full font-bold uppercase text-[9px] border ${badge.className}`}
+                                  >
+                                    <BadgeIcon className="text-[10px]" />
+                                    {st}
+                                  </span>
+                                  <span className="text-[11px] text-slate-400 font-mono">
+                                    {formatDateTimeDDMMYYYY(historyItem.createdAt || historyItem.timestamp || historyItem.date)}
+                                  </span>
+                                </div>
+                                {changer && (
+                                  <p className="text-slate-600 dark:text-slate-300 mt-1">
+                                    Action by:{' '}
+                                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                      {changerName}
+                                    </span>
+                                    {changerRole && (
+                                      <span className="ml-1 text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-400">
+                                        {changerRole}
+                                      </span>
+                                    )}
+                                    {changerEmail && changerEmail !== changerName && (
+                                      <span className="text-[10px] text-slate-400 ml-1">
+                                        ({changerEmail})
+                                      </span>
+                                    )}
+                                  </p>
+                                )}
+                                {historyItem.reason && (
+                                  <p className="text-slate-700 dark:text-slate-300 mt-0.5">
+                                    <span className="font-semibold text-slate-500">Reason: </span>
+                                    <span className="italic font-medium">"{historyItem.reason}"</span>
+                                  </p>
+                                )}
+                                {historyItem.notes && (
+                                  <p className="text-slate-500 dark:text-slate-400 mt-0.5 italic">
+                                    Note: "{historyItem.notes}"
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-400 space-y-1.5 py-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <span>Order initiated: {formatDateTimeDDMMYYYY(selectedOrder.createdAt)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          <span>Current Lifecycle Stage: <strong>{selectedOrder.status || 'PENDING'}</strong></span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* Brand & State / Region */}
-                {(selectedOrder.brand || selectedOrder.state) && (
-                  <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
-                    <div>
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Brand</span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 font-bold text-xs border border-amber-500/20">
-                        <FiTag className="text-[11px]" />
-                        {selectedOrder.brand || '-'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Order Region / State</span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold text-xs border border-emerald-500/20">
-                        <FiMapPin className="text-[11px]" />
-                        {selectedOrder.state || '-'}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
+                {/* 3. Sticky Action Footer */}
+                <div className="shrink-0 p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/90 dark:bg-slate-950/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCloseDetailsDrawer}
+                    className="px-4 py-2.5 rounded-xl bg-slate-200/80 hover:bg-slate-300 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer transition-colors"
+                  >
+                    Close Drawer
+                  </button>
 
-              {/* Notification Email Status Card */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs mb-5">
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <FiMail className="text-blue-500" /> Delivery Email Dispatch
-                  </span>
-                  {(() => {
-                    const eb = getEmailStatusBadge(selectedOrder.emailStatus);
-                    const EbIcon = eb.icon;
-                    return (
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${eb.className}`}>
-                        <EbIcon className="text-[10px]" />
-                        <span>{eb.label}</span>
-                      </span>
-                    );
-                  })()}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-bold block">Sent Timestamp</span>
-                    <span className="font-mono text-slate-800 dark:text-slate-200">
-                      {selectedOrder.emailStatus?.lastSentAt
-                        ? formatDateTimeDDMMYYYY(selectedOrder.emailStatus.lastSentAt)
-                        : 'Not Dispatched Yet'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-bold block">Message ID</span>
-                    <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate block max-w-full" title={selectedOrder.emailStatus?.messageId}>
-                      {selectedOrder.emailStatus?.messageId || '-'}
-                    </span>
-                  </div>
-                </div>
-                {Array.isArray(selectedOrder.emailStatus?.recipients) && selectedOrder.emailStatus.recipients.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
-                    <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1.5">
-                      Recipients ({selectedOrder.emailStatus.recipients.length})
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedOrder.emailStatus.recipients.map((rec, rIdx) => (
-                        <span
-                          key={rIdx}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-[11px] font-mono text-slate-700 dark:text-slate-300"
-                        >
-                          <FiMail className="text-slate-400 text-[10px]" />
-                          <span>{rec}</span>
-                          <CopyButton text={rec} />
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Order Notes / Rejection Reason */}
-              {selectedOrder.notes && (
-                <div className="mb-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs">
-                  <span className="font-bold text-amber-700 dark:text-amber-300 block mb-0.5">Order Notes:</span>
-                  <p className="text-slate-700 dark:text-slate-200 italic">"{selectedOrder.notes}"</p>
-                </div>
-              )}
-
-              {selectedOrder.rejectionReason && (
-                <div className="mb-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs">
-                  <span className="font-bold text-rose-700 dark:text-rose-300 block mb-0.5 flex items-center gap-1.5">
-                    <FiXCircle /> Rejection Reason:
-                  </span>
-                  <p className="text-slate-700 dark:text-slate-200 italic">"{selectedOrder.rejectionReason}"</p>
-                </div>
-              )}
-
-              {/* Line Items Snapshot */}
-              <div className="space-y-2 mb-5">
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <FiFileText /> Item Snapshots ({Array.isArray(selectedOrder.items) ? selectedOrder.items.length : 0})
-                </h4>
-                <div className="border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead className="bg-slate-100 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-[10px] font-bold uppercase text-slate-500">
-                      <tr>
-                        <th className="p-2.5">Product & SKU</th>
-                        <th className="p-2.5 text-center">Qty</th>
-                        <th className="p-2.5 text-right">Unit Price</th>
-                        <th className="p-2.5 text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-white/5">
-                      {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
-                        selectedOrder.items.map((item, i) => (
-                          <tr key={item.productId || item.variantId || i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
-                            <td className="p-2.5">
-                              <div className="flex flex-col gap-0.5">
-                                <div className="flex items-center flex-wrap gap-1.5">
-                                  <span className="font-bold text-slate-900 dark:text-white">
-                                    {item.productNameSnapshot || item.productId?.name || 'Product Item'}
-                                  </span>
-                                  {item.variantNameSnapshot && (
-                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-semibold font-sans">
-                                      <FiLayers className="text-[9px]" />
-                                      {item.variantNameSnapshot}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 font-mono text-[10px] text-blue-600 dark:text-blue-400">
-                                  <span>{item.skuSnapshot || item.productId?.sku || '-'}</span>
-                                  {item.variantId && (
-                                    <span className="text-slate-400 text-[9px]">
-                                      • Var: {typeof item.variantId === 'string' ? item.variantId.slice(-6) : item.variantId?._id?.slice(-6) || '-'}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-2.5 text-center font-mono font-bold">{item.quantity}</td>
-                            <td className="p-2.5 text-right font-mono">
-                              ₹{(item.unitPrice || 0).toLocaleString('en-IN')}
-                            </td>
-                            <td className="p-2.5 text-right font-mono font-bold text-slate-900 dark:text-white">
-                              ₹{(item.totalPrice != null ? item.totalPrice : ((item.quantity || 0) * (item.unitPrice || 0))).toLocaleString('en-IN')}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="4" className="p-4 text-center text-slate-400">
-                            No snapshot items found.
-                          </td>
-                        </tr>
+                  {/* Workflow Buttons right in details */}
+                  {isAdmin && (
+                    <div className="flex items-center gap-2">
+                      {selectedOrder.status === 'PENDING' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const ord = selectedOrder;
+                              handleOpenRejectModal(ord);
+                            }}
+                            className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center gap-1.5 border border-rose-500/20 cursor-pointer"
+                          >
+                            <FiX />
+                            <span>Reject PO</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApproveOrder(selectedOrder)}
+                            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer"
+                          >
+                            <FiCheck />
+                            <span>Approve PO</span>
+                          </button>
+                        </>
                       )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
 
-              {/* Total Order Amount */}
-              <div className="p-4 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 mb-5 space-y-1.5">
-                {selectedOrder.subtotal != null && selectedOrder.subtotal !== (selectedOrder.totalAmount || selectedOrder.totalValue) && (
-                  <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
-                    <span className="font-semibold uppercase text-[10px]">Subtotal</span>
-                    <span className="font-mono font-bold">₹{Number(selectedOrder.subtotal).toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center pt-1 border-t border-slate-200/60 dark:border-white/5">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">
-                    Total Order Amount
-                  </span>
-                  <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
-                    ₹{(selectedOrder.totalAmount || selectedOrder.totalValue || selectedOrder.subtotal || 0).toLocaleString('en-IN')}
-                  </span>
-                </div>
-              </div>
-
-              {/* Status History & Complete Audit Log */}
-              <div className="mb-5 p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10 space-y-3">
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <FiActivity className="text-blue-500" /> Complete Status History & Audit Log
-                </h4>
-
-                {Array.isArray(selectedOrder.statusHistory) && selectedOrder.statusHistory.length > 0 ? (
-                  <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-white/10">
-                    {selectedOrder.statusHistory.map((historyItem, hIdx) => {
-                      const st = historyItem.newStatus || historyItem.status || 'PENDING';
-                      const badge = getStatusBadge(st);
-                      const BadgeIcon = badge.icon;
-                      const changer = historyItem.changedBy;
-                      const changerName = changer
-                        ? typeof changer === 'object'
-                          ? `${changer.firstName || ''} ${changer.lastName || ''}`.trim() || changer.name || changer.email
-                          : changer
-                        : 'System';
-                      const changerRole = typeof changer === 'object' ? changer.role : null;
-                      const changerEmail = typeof changer === 'object' ? changer.email : null;
-
-                      return (
-                        <div key={hIdx} className="relative">
-                          <span
-                            className={`absolute -left-6 top-0.5 w-4 h-4 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 ${badge.dot}`}
-                          />
-                          <div className="text-xs">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`inline-flex items-center gap-1 px-2 py-0.2 rounded-full font-bold uppercase text-[9px] border ${badge.className}`}
-                              >
-                                <BadgeIcon className="text-[10px]" />
-                                {st}
-                              </span>
-                              <span className="text-[11px] text-slate-400 font-mono">
-                                {formatDateTimeDDMMYYYY(historyItem.createdAt || historyItem.timestamp || historyItem.date)}
-                              </span>
-                            </div>
-                            {changer && (
-                              <p className="text-slate-600 dark:text-slate-300 mt-1">
-                                Action by:{' '}
-                                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                  {changerName}
-                                </span>
-                                {changerRole && (
-                                  <span className="ml-1 text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-400">
-                                    {changerRole}
-                                  </span>
-                                )}
-                                {changerEmail && changerEmail !== changerName && (
-                                  <span className="text-[10px] text-slate-400 ml-1">
-                                    ({changerEmail})
-                                  </span>
-                                )}
-                              </p>
-                            )}
-                            {historyItem.reason && (
-                              <p className="text-slate-700 dark:text-slate-300 mt-0.5">
-                                <span className="font-semibold text-slate-500">Reason: </span>
-                                <span className="italic font-medium">"{historyItem.reason}"</span>
-                              </p>
-                            )}
-                            {historyItem.notes && (
-                              <p className="text-slate-500 dark:text-slate-400 mt-0.5 italic">
-                                Note: "{historyItem.notes}"
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-xs text-slate-400 space-y-1.5 py-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span>Order initiated: {formatDateTimeDDMMYYYY(selectedOrder.createdAt)}</span>
+                      {selectedOrder.status === 'APPROVED' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const ord = selectedOrder;
+                            handleOpenDispatchModal(ord);
+                          }}
+                          className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-600/20 cursor-pointer"
+                        >
+                          <FiTruck />
+                          <span>Dispatch Order</span>
+                        </button>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500" />
-                      <span>Current Lifecycle Stage: <strong>{selectedOrder.status || 'PENDING'}</strong></span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 3. Sticky Action Footer */}
-            <div className="shrink-0 p-4 sm:p-5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/90 dark:bg-slate-950/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={handleCloseDetailsDrawer}
-                className="px-4 py-2.5 rounded-xl bg-slate-200/80 hover:bg-slate-300 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer transition-colors"
-              >
-                Close Drawer
-              </button>
-
-              {/* Workflow Buttons right in details */}
-              {isAdmin && (
-                <div className="flex items-center gap-2">
-                  {selectedOrder.status === 'PENDING' && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const ord = selectedOrder;
-                          handleOpenRejectModal(ord);
-                        }}
-                        className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center gap-1.5 border border-rose-500/20 cursor-pointer"
-                      >
-                        <FiX />
-                        <span>Reject PO</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleApproveOrder(selectedOrder)}
-                        className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer"
-                      >
-                        <FiCheck />
-                        <span>Approve PO</span>
-                      </button>
-                    </>
-                  )}
-
-                  {selectedOrder.status === 'APPROVED' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const ord = selectedOrder;
-                        handleOpenDispatchModal(ord);
-                      }}
-                      className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-600/20 cursor-pointer"
-                    >
-                      <FiTruck />
-                      <span>Dispatch Order</span>
-                    </button>
                   )}
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-        </div>
-      </div>,
-      document.body
+          </div>,
+          document.body
         )}
 
       {/* =========================================================================
@@ -2382,251 +2375,251 @@ const PurchaseOrders = () => {
                   </div>
                 )}
 
-              <form onSubmit={handleCreateOrderSubmit} className="space-y-4">
-                {/* Company & Firm selection */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                            Trading Company <span className="text-rose-500">*</span>
-                          </label>
-                          {createForm.companyId && (
-                            <span className="text-[10px] font-mono text-slate-400 truncate max-w-[120px]">
-                              ID: {createForm.companyId}
-                            </span>
-                          )}
-                        </div>
-                        <CustomDropdown
-                          value={createForm.companyId}
-                          onChange={(val) => setCreateForm((prev) => ({ ...prev, companyId: val }))}
-                          disabled={createSubmitting || loadingEntities}
-                          defaultLabel="Select Trading Company"
-                          options={[
-                            { value: '', label: 'Select Trading Company' },
-                            ...companiesList.map((c) => ({
-                              value: c._id,
-                              label: `${c.name} ${c.code ? `(${c.code})` : ''}`
-                            }))
-                          ]}
-                          statusColor="!px-3.5 !py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Or paste custom companyId..."
-                          value={createForm.companyId}
-                          onChange={(e) => setCreateForm((prev) => ({ ...prev, companyId: e.target.value }))}
-                          disabled={createSubmitting}
-                          className="w-full mt-1.5 px-3 py-1.5 bg-slate-100/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
-                        />
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                            Purchasing Firm <span className="text-rose-500">*</span>
-                          </label>
-                          {createForm.firmId && (
-                            <span className="text-[10px] font-mono text-slate-400 truncate max-w-[120px]">
-                              ID: {createForm.firmId}
-                            </span>
-                          )}
-                        </div>
-                        <CustomDropdown
-                          value={createForm.firmId}
-                          onChange={(val) => setCreateForm((prev) => ({ ...prev, firmId: val }))}
-                          disabled={createSubmitting || loadingEntities}
-                          defaultLabel="Select Purchasing Firm"
-                          options={[
-                            { value: '', label: 'Select Purchasing Firm' },
-                            ...firmsList.map((f) => ({
-                              value: f._id,
-                              label: `${f.firmName} ${f.city ? `(${f.city})` : ''}`
-                            }))
-                          ]}
-                          statusColor="!px-3.5 !py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Or paste custom firmId..."
-                          value={createForm.firmId}
-                          onChange={(e) => setCreateForm((prev) => ({ ...prev, firmId: e.target.value }))}
-                          disabled={createSubmitting}
-                          className="w-full mt-1.5 px-3 py-1.5 bg-slate-100/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Line Items Section */}
-                    <div className="space-y-3 pt-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                          Line Items ({createForm.items.length}) <span className="text-rose-500">*</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={handleAddItemRow}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                        >
-                          <FiPlus size={13} />
-                          <span>Add Product</span>
-                        </button>
-                      </div>
-
-                      <div className="space-y-2.5">
-                        {createForm.items.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="p-3 bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl flex flex-col sm:flex-row items-center gap-3"
-                          >
-                            {/* Product Selector / Custom ProductId Input */}
-                            <div className="flex-1 w-full space-y-1">
-                              <CustomDropdown
-                                value={item.productId}
-                                onChange={(val) => handleItemChange(idx, 'productId', val)}
-                                disabled={createSubmitting}
-                                defaultLabel="Select Catalog Product"
-                                options={[
-                                  { value: '', label: 'Select Catalog Product' },
-                                  ...productsList.map((p) => ({
-                                    value: p._id,
-                                    label: `${p.name} ${p.sku ? `[${p.sku}]` : ''} - ₹${p.defaultPrice || p.price || 0}`
-                                  }))
-                                ]}
-                                statusColor="!px-3 !py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
-                              />
-
-                              {/* Variant Dropdown if chosen product has variants */}
-                              {(() => {
-                                const prod = productsList.find((p) => p._id === item.productId);
-                                if (prod?.variants?.length > 0) {
-                                  return (
-                                    <div className="pt-0.5">
-                                      <CustomDropdown
-                                        value={item.variantId || ''}
-                                        onChange={(val) => handleItemChange(idx, 'variantId', val)}
-                                        disabled={createSubmitting}
-                                        defaultLabel="Select Variant"
-                                        options={[
-                                          { value: '', label: 'No Specific Variant (Base Product)' },
-                                          ...prod.variants.map((v) => ({
-                                            value: v._id,
-                                            label: `${v.name} ${v.sku ? `[${v.sku}]` : ''} - ₹${v.price ?? prod.price ?? 0}`
-                                          }))
-                                        ]}
-                                        statusColor="!px-2.5 !py-1.5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-500/20 rounded-lg text-xs text-indigo-900 dark:text-indigo-200"
-                                      />
-                                    </div>
-                                  );
-                                }
-                                return null;
-                              })()}
-
-                              <input
-                                type="text"
-                                placeholder="Or enter productId..."
-                                value={item.productId}
-                                onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}
-                                disabled={createSubmitting}
-                                className="w-full px-2.5 py-1 bg-white/60 dark:bg-slate-900/60 border border-slate-200/60 dark:border-white/5 rounded-lg text-[11px] font-mono text-slate-700 dark:text-slate-300"
-                              />
-                            </div>
-
-                            {/* Quantity */}
-                            <div className="w-full sm:w-24">
-                              <label className="text-[10px] text-slate-400 font-bold block mb-0.5 sm:hidden">Qty</label>
-                              <input
-                                type="number"
-                                min="1"
-                                value={item.quantity}
-                                onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                                disabled={createSubmitting}
-                                placeholder="Qty"
-                                className="w-full px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-center font-mono font-bold text-slate-900 dark:text-white"
-                              />
-                            </div>
-
-                            {/* Unit Price */}
-                            <div className="w-full sm:w-28">
-                              <label className="text-[10px] text-slate-400 font-bold block mb-0.5 sm:hidden">Unit ₹</label>
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={item.unitPrice}
-                                onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
-                                disabled={createSubmitting}
-                                placeholder="Unit ₹"
-                                className="w-full px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-right font-mono text-slate-900 dark:text-white"
-                              />
-                            </div>
-
-                            {/* Subtotal */}
-                            <div className="w-full sm:w-28 text-right font-mono font-bold text-xs text-slate-900 dark:text-white">
-                              ₹{((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString('en-IN')}
-                            </div>
-
-                            {/* Remove Row */}
-                            {createForm.items.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItemRow(idx)}
-                                disabled={createSubmitting}
-                                className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-colors cursor-pointer"
-                                title="Remove product"
-                              >
-                                <FiTrash2 size={14} />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Notes */}
+                <form onSubmit={handleCreateOrderSubmit} className="space-y-4">
+                  {/* Company & Firm selection */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                        Order Remarks / Delivery Notes
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={createForm.notes}
-                        onChange={(e) => setCreateForm((prev) => ({ ...prev, notes: e.target.value }))}
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                          Trading Company <span className="text-rose-500">*</span>
+                        </label>
+                        {createForm.companyId && (
+                          <span className="text-[10px] font-mono text-slate-400 truncate max-w-[120px]">
+                            ID: {createForm.companyId}
+                          </span>
+                        )}
+                      </div>
+                      <CustomDropdown
+                        value={createForm.companyId}
+                        onChange={(val) => setCreateForm((prev) => ({ ...prev, companyId: val }))}
+                        disabled={createSubmitting || loadingEntities}
+                        defaultLabel="Select Trading Company"
+                        options={[
+                          { value: '', label: 'Select Trading Company' },
+                          ...companiesList.map((c) => ({
+                            value: c._id,
+                            label: `${c.name} ${c.code ? `(${c.code})` : ''}`
+                          }))
+                        ]}
+                        statusColor="!px-3.5 !py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Or paste custom companyId..."
+                        value={createForm.companyId}
+                        onChange={(e) => setCreateForm((prev) => ({ ...prev, companyId: e.target.value }))}
                         disabled={createSubmitting}
-                        placeholder="e.g. Urgent festival delivery requested..."
-                        className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none"
+                        className="w-full mt-1.5 px-3 py-1.5 bg-slate-100/50 dark:bg-white/2 border border-slate-200/60 dark:border-white/5 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
                       />
                     </div>
 
-                    {/* Total Calculation */}
-                    <div className="flex justify-between items-center p-3.5 rounded-2xl bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20">
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        Estimated Order Booking:
-                      </span>
-                      <span className="text-base font-black font-mono text-blue-600 dark:text-blue-400">
-                        ₹{estimatedCreateTotal.toLocaleString('en-IN')}
-                      </span>
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                          Purchasing Firm <span className="text-rose-500">*</span>
+                        </label>
+                        {createForm.firmId && (
+                          <span className="text-[10px] font-mono text-slate-400 truncate max-w-[120px]">
+                            ID: {createForm.firmId}
+                          </span>
+                        )}
+                      </div>
+                      <CustomDropdown
+                        value={createForm.firmId}
+                        onChange={(val) => setCreateForm((prev) => ({ ...prev, firmId: val }))}
+                        disabled={createSubmitting || loadingEntities}
+                        defaultLabel="Select Purchasing Firm"
+                        options={[
+                          { value: '', label: 'Select Purchasing Firm' },
+                          ...firmsList.map((f) => ({
+                            value: f._id,
+                            label: `${f.firmName} ${f.city ? `(${f.city})` : ''}`
+                          }))
+                        ]}
+                        statusColor="!px-3.5 !py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Or paste custom firmId..."
+                        value={createForm.firmId}
+                        onChange={(e) => setCreateForm((prev) => ({ ...prev, firmId: e.target.value }))}
+                        disabled={createSubmitting}
+                        className="w-full mt-1.5 px-3 py-1.5 bg-slate-100/50 dark:bg-white/2 border border-slate-200/60 dark:border-white/5 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Line Items Section */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                        Line Items ({createForm.items.length}) <span className="text-rose-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAddItemRow}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                      >
+                        <FiPlus size={13} />
+                        <span>Add Product</span>
+                      </button>
                     </div>
 
-                {/* Buttons */}
-                <div className="flex gap-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setIsCreateModalOpen(false)}
-                    disabled={createSubmitting}
-                    className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={createSubmitting}
-                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {createSubmitting && <FiLoader className="animate-spin text-xs" />}
-                    <span>{createSubmitting ? 'Creating...' : 'Submit Purchase Order'}</span>
-                  </button>
-                </div>
-              </form>
+                    <div className="space-y-2.5">
+                      {createForm.items.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="p-3 bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl flex flex-col sm:flex-row items-center gap-3"
+                        >
+                          {/* Product Selector / Custom ProductId Input */}
+                          <div className="flex-1 w-full space-y-1">
+                            <CustomDropdown
+                              value={item.productId}
+                              onChange={(val) => handleItemChange(idx, 'productId', val)}
+                              disabled={createSubmitting}
+                              defaultLabel="Select Catalog Product"
+                              options={[
+                                { value: '', label: 'Select Catalog Product' },
+                                ...productsList.map((p) => ({
+                                  value: p._id,
+                                  label: `${p.name} ${p.sku ? `[${p.sku}]` : ''} - ₹${p.defaultPrice || p.price || 0}`
+                                }))
+                              ]}
+                              statusColor="!px-3 !py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
+                            />
+
+                            {/* Variant Dropdown if chosen product has variants */}
+                            {(() => {
+                              const prod = productsList.find((p) => p._id === item.productId);
+                              if (prod?.variants?.length > 0) {
+                                return (
+                                  <div className="pt-0.5">
+                                    <CustomDropdown
+                                      value={item.variantId || ''}
+                                      onChange={(val) => handleItemChange(idx, 'variantId', val)}
+                                      disabled={createSubmitting}
+                                      defaultLabel="Select Variant"
+                                      options={[
+                                        { value: '', label: 'No Specific Variant (Base Product)' },
+                                        ...prod.variants.map((v) => ({
+                                          value: v._id,
+                                          label: `${v.name} ${v.sku ? `[${v.sku}]` : ''} - ₹${v.price ?? prod.price ?? 0}`
+                                        }))
+                                      ]}
+                                      statusColor="!px-2.5 !py-1.5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-500/20 rounded-lg text-xs text-indigo-900 dark:text-indigo-200"
+                                    />
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+
+                            <input
+                              type="text"
+                              placeholder="Or enter productId..."
+                              value={item.productId}
+                              onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}
+                              disabled={createSubmitting}
+                              className="w-full px-2.5 py-1 bg-white/60 dark:bg-slate-900/60 border border-slate-200/60 dark:border-white/5 rounded-lg text-[11px] font-mono text-slate-700 dark:text-slate-300"
+                            />
+                          </div>
+
+                          {/* Quantity */}
+                          <div className="w-full sm:w-24">
+                            <label className="text-[10px] text-slate-400 font-bold block mb-0.5 sm:hidden">Qty</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                              disabled={createSubmitting}
+                              placeholder="Qty"
+                              className="w-full px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-center font-mono font-bold text-slate-900 dark:text-white"
+                            />
+                          </div>
+
+                          {/* Unit Price */}
+                          <div className="w-full sm:w-28">
+                            <label className="text-[10px] text-slate-400 font-bold block mb-0.5 sm:hidden">Unit ₹</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.unitPrice}
+                              onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
+                              disabled={createSubmitting}
+                              placeholder="Unit ₹"
+                              className="w-full px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-right font-mono text-slate-900 dark:text-white"
+                            />
+                          </div>
+
+                          {/* Subtotal */}
+                          <div className="w-full sm:w-28 text-right font-mono font-bold text-xs text-slate-900 dark:text-white">
+                            ₹{((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString('en-IN')}
+                          </div>
+
+                          {/* Remove Row */}
+                          {createForm.items.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItemRow(idx)}
+                              disabled={createSubmitting}
+                              className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-colors cursor-pointer"
+                              title="Remove product"
+                            >
+                              <FiTrash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Order Remarks / Delivery Notes
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={createForm.notes}
+                      onChange={(e) => setCreateForm((prev) => ({ ...prev, notes: e.target.value }))}
+                      disabled={createSubmitting}
+                      placeholder="e.g. Urgent festival delivery requested..."
+                      className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none"
+                    />
+                  </div>
+
+                  {/* Total Calculation */}
+                  <div className="flex justify-between items-center p-3.5 rounded-2xl bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Estimated Order Booking:
+                    </span>
+                    <span className="text-base font-black font-mono text-blue-600 dark:text-blue-400">
+                      ₹{estimatedCreateTotal.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="flex gap-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateModalOpen(false)}
+                      disabled={createSubmitting}
+                      className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={createSubmitting}
+                      className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {createSubmitting && <FiLoader className="animate-spin text-xs" />}
+                      <span>{createSubmitting ? 'Creating...' : 'Submit Purchase Order'}</span>
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>,

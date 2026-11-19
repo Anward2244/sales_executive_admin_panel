@@ -437,7 +437,7 @@ const IndiaBrandRoutingMap = ({
               </div>
             </div>
 
-            <div className="h-6 w-[1px] bg-slate-200 dark:bg-white/10 hidden sm:block mx-1" />
+            <div className="h-6 w-px bg-slate-200 dark:bg-white/10 hidden sm:block mx-1" />
 
             {/* Searchable Brand Selector Dropdown */}
             <div className="w-full sm:w-60">
@@ -500,7 +500,7 @@ const IndiaBrandRoutingMap = ({
             {/* Scrollable Container with VISIBLE styled scrollbar */}
             <div
               ref={brandPillScrollRef}
-              className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 flex-1 select-none"
+              className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar flex-1 select-none"
               style={{ scrollBehavior: 'smooth' }}
             >
               {availableBrandsWithMeta.map((b) => {
@@ -517,20 +517,18 @@ const IndiaBrandRoutingMap = ({
                       setHighlightedRuleIdx(null);
                       setSelectedStateLoc(null);
                     }}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
-                      isSelected
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${isSelected
                         ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                         : 'bg-white/80 dark:bg-slate-800/80 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-blue-500/40 hover:bg-blue-50/50 dark:hover:bg-slate-700/50'
-                    }`}
+                      }`}
                   >
                     {isAll ? <FiGlobe className="text-xs" /> : <FiZap className="text-xs" />}
                     <span>{isAll ? 'ALL (Fallback)' : b.brand}</span>
                     <span
-                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
-                        isSelected
+                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${isSelected
                           ? 'bg-white/20 text-white'
                           : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400'
-                      }`}
+                        }`}
                     >
                       {b.ruleCount}
                     </span>
@@ -571,11 +569,9 @@ const IndiaBrandRoutingMap = ({
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
             <span>
               <strong>Targeted Territory Policy:</strong> Brand <strong>{selectedBrand}</strong> has direct routing configured in <strong>{coverageStats.directCount}</strong> state{coverageStats.directCount === 1 ? '' : 's'}.
-              {!includeFallback && (
-                <span className="text-slate-500 dark:text-slate-400 ml-1">
-                  (Other {36 - coverageStats.directCount} states will inherit the global 'ALL' fallback rule at runtime).
-                </span>
-              )}
+              <span className="text-slate-500 dark:text-slate-400 ml-1">
+                (Other {36 - coverageStats.directCount} states will inherit the global 'ALL' fallback rule at runtime).
+              </span>
             </span>
           </div>
           <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-blue-500/20 font-bold shrink-0">
@@ -633,7 +629,7 @@ const IndiaBrandRoutingMap = ({
 
           {/* SVG Map Container */}
           <div
-            className="relative w-full aspect-[612/696] max-h-[580px] mx-auto flex items-center justify-center select-none"
+            className="relative w-full aspect-612/696 max-h-145 mx-auto flex items-center justify-center select-none"
             onMouseMove={handleMouseMove}
             onMouseLeave={() => setHoveredStateLoc(null)}
           >
@@ -748,7 +744,7 @@ const IndiaBrandRoutingMap = ({
 
               return (
                 <div
-                  className="absolute z-50 pointer-events-none p-3 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-2xl min-w-[210px] max-w-xs transition-opacity duration-75 select-none"
+                  className="absolute z-50 pointer-events-none p-3 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-2xl min-w-52.5 max-w-xs transition-opacity duration-75 select-none"
                   style={{
                     left: `${posX}px`,
                     top: `${posY}px`,
@@ -770,19 +766,18 @@ const IndiaBrandRoutingMap = ({
                       </span>
                     </div>
                     <span
-                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${
-                        activeHoveredInfo.isDirect
+                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${activeHoveredInfo.isDirect
                           ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                           : activeHoveredInfo.isWildcard
-                          ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
-                          : 'bg-slate-100 dark:bg-white/10 text-slate-500'
-                      }`}
+                            ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                            : 'bg-slate-100 dark:bg-white/10 text-slate-500'
+                        }`}
                     >
                       {activeHoveredInfo.isDirect
                         ? 'Direct Rule'
                         : activeHoveredInfo.isWildcard
-                        ? 'Pan-India (*)'
-                        : 'Unassigned'}
+                          ? 'Pan-India (*)'
+                          : 'Unassigned'}
                     </span>
                   </div>
 
@@ -858,11 +853,10 @@ const IndiaBrandRoutingMap = ({
                     onClick={() => {
                       setFilterCompanyKey((prev) => (prev === cKey ? 'ALL' : cKey));
                     }}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                      isSpotlit
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${isSpotlit
                         ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                         : 'bg-white/80 dark:bg-slate-800/80 border-slate-200/80 dark:border-white/10 hover:border-slate-300 text-slate-700 dark:text-slate-200'
-                    }`}
+                      }`}
                   >
                     <span
                       className="w-2.5 h-2.5 rounded-full shrink-0"
@@ -877,7 +871,7 @@ const IndiaBrandRoutingMap = ({
               })}
 
               {/* Unassigned States indicator */}
-              {coverageStats.unassignedCount > 0 && !includeFallback && (
+              {coverageStats.unassignedCount > 0 && (
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-slate-500">
                   <span className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
                   <span>Unassigned ({coverageStats.unassignedCount} states)</span>
@@ -928,25 +922,24 @@ const IndiaBrandRoutingMap = ({
                 </span>
 
                 {activeInspectedInfo?.isCovered ? (
-                  <div className="p-3.5 rounded-2xl bg-white/90 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 shadow-2xs space-y-2.5">
+                  <div className="p-3.5 rounded-2xl bg-white/90 dark:bg-white/3 border border-slate-200/80 dark:border-white/10 shadow-2xs space-y-2.5">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-black text-slate-900 dark:text-white">
                         {activeInspectedInfo.companyName}
                       </span>
                       <span
-                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
-                          activeInspectedInfo.isDirect
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${activeInspectedInfo.isDirect
                             ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
                             : activeInspectedInfo.isWildcard
-                            ? 'bg-purple-500/10 text-purple-600 border border-purple-500/20'
-                            : 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
-                        }`}
+                              ? 'bg-purple-500/10 text-purple-600 border border-purple-500/20'
+                              : 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
+                          }`}
                       >
                         {activeInspectedInfo.isDirect
                           ? 'Direct State Rule'
                           : activeInspectedInfo.isWildcard
-                          ? 'Pan-India (*)'
-                          : 'Global Fallback'}
+                            ? 'Pan-India (*)'
+                            : 'Global Fallback'}
                       </span>
                     </div>
 
@@ -997,7 +990,7 @@ const IndiaBrandRoutingMap = ({
                     {inspectedStateBrands.map((entry, i) => (
                       <div
                         key={i}
-                        className="p-2 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-2 text-xs"
+                        className="p-2 rounded-xl bg-slate-50 dark:bg-white/2 border border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-2 text-xs"
                       >
                         <div className="min-w-0">
                           <div className="font-bold text-slate-800 dark:text-slate-200 truncate">
@@ -1008,11 +1001,10 @@ const IndiaBrandRoutingMap = ({
                           </div>
                         </div>
                         <span
-                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                            entry.isWildcard
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${entry.isWildcard
                               ? 'bg-purple-500/10 text-purple-600 border border-purple-500/20'
                               : 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                          }`}
+                            }`}
                         >
                           {entry.isWildcard ? '*' : 'Direct'}
                         </span>
@@ -1045,9 +1037,8 @@ const IndiaBrandRoutingMap = ({
               <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-white/10">
                 <div className="flex items-center gap-2.5">
                   <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
-                      getBrandColor(selectedBrand).bg
-                    }`}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${getBrandColor(selectedBrand).bg
+                      }`}
                   >
                     {selectedBrand === 'ALL' ? '★' : selectedBrand.slice(0, 2).toUpperCase()}
                   </div>
@@ -1101,11 +1092,10 @@ const IndiaBrandRoutingMap = ({
                           key={rule._id || idx}
                           onMouseEnter={() => setHighlightedRuleIdx(idx)}
                           onMouseLeave={() => setHighlightedRuleIdx(null)}
-                          className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                            isHighlighted
+                          className={`p-3 rounded-2xl border transition-all cursor-pointer ${isHighlighted
                               ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-500/50 shadow-xs'
-                              : 'bg-white/80 dark:bg-white/[0.02] border-slate-200/70 dark:border-white/5 hover:border-slate-300'
-                          }`}
+                              : 'bg-white/80 dark:bg-white/2 border-slate-200/70 dark:border-white/5 hover:border-slate-300'
+                            }`}
                         >
                           <div className="flex items-center justify-between gap-2 mb-1.5">
                             <div className="flex items-center gap-1.5">
@@ -1128,11 +1118,10 @@ const IndiaBrandRoutingMap = ({
                                 P{rule.priority !== undefined ? rule.priority : 10}
                               </span>
                               <span
-                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                  isWildcard
+                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isWildcard
                                     ? 'bg-purple-500/10 text-purple-600'
                                     : 'bg-emerald-500/10 text-emerald-600'
-                                }`}
+                                  }`}
                               >
                                 {isWildcard ? 'Pan-India (*)' : `${rule.states?.length || 0} States`}
                               </span>
@@ -1168,7 +1157,7 @@ const IndiaBrandRoutingMap = ({
                     })}
                   </div>
                 ) : (
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 text-center space-y-1">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/2 border border-slate-200/60 dark:border-white/5 text-center space-y-1">
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       No routing rules configured for {selectedBrand}.
                     </p>
@@ -1185,13 +1174,13 @@ const IndiaBrandRoutingMap = ({
                   Coverage Summary:
                 </span>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+                  <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
                     <span className="text-[10px] text-slate-400 block font-bold">DIRECT OVERRIDES</span>
                     <span className="text-base font-black text-slate-900 dark:text-white">
                       {coverageStats.directCount} States
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+                  <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
                     <span className="text-[10px] text-slate-400 block font-bold">WILDCARD STATUS</span>
                     <span className="text-base font-black text-purple-600 dark:text-purple-400">
                       {selectedBrandHasWildcard ? 'Active (*)' : 'None'}
@@ -1247,7 +1236,7 @@ const IndiaBrandRoutingMap = ({
                     return (
                       <div
                         key={fRule._id || fIdx}
-                        className="p-3 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-1.5 text-xs"
+                        className="p-3 rounded-2xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5 space-y-1.5 text-xs"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">

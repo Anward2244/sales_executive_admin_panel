@@ -1427,7 +1427,7 @@ const Dashboard = () => {
               }`}
           >
             {/* Ambient Background Glow */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${card.glow} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
+            <div className={`absolute inset-0 bg-linear-to-br ${card.glow} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
 
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-3">
@@ -1508,11 +1508,10 @@ const Dashboard = () => {
                       key={rng.id}
                       type="button"
                       onClick={() => handleTrendRangeChange(rng.id)}
-                      className={`h-6 px-2.5 rounded-lg transition-all uppercase text-[11px] font-bold cursor-pointer flex items-center justify-center ${
-                        trendRange === rng.id
-                          ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                          : 'text-slate-700 hover:text-slate-900 dark:hover:text-white'
-                      }`}
+                      className={`h-6 px-2.5 rounded-lg transition-all uppercase text-[11px] font-bold cursor-pointer flex items-center justify-center ${trendRange === rng.id
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-700 hover:text-slate-900 dark:hover:text-white'
+                        }`}
                     >
                       {rng.label}
                     </button>
@@ -1534,11 +1533,10 @@ const Dashboard = () => {
                     <span
                       onClick={trendOffset !== 0 ? handleResetTrendPeriod : undefined}
                       title={trendOffset !== 0 ? 'Click to jump to current period' : undefined}
-                      className={`text-[11px] font-bold whitespace-nowrap transition-colors ${
-                        trendOffset !== 0
-                          ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer'
-                          : 'text-slate-700 dark:text-slate-200'
-                      }`}
+                      className={`text-[11px] font-bold whitespace-nowrap transition-colors ${trendOffset !== 0
+                        ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer'
+                        : 'text-slate-700 dark:text-slate-200'
+                        }`}
                     >
                       {trendPeriodInfo.badge || trendPeriodInfo.label}
                     </span>
@@ -1549,11 +1547,10 @@ const Dashboard = () => {
                     onClick={handleNextTrendPeriod}
                     disabled={!canGoNextTrend}
                     title={canGoNextTrend ? 'Next period' : 'At current period'}
-                    className={`w-6 h-6 rounded-lg transition-all flex items-center justify-center ${
-                      canGoNextTrend
-                        ? 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer active:scale-95'
-                        : 'text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-40'
-                    }`}
+                    className={`w-6 h-6 rounded-lg transition-all flex items-center justify-center ${canGoNextTrend
+                      ? 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer active:scale-95'
+                      : 'text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-40'
+                      }`}
                   >
                     <FiChevronRight size={14} />
                   </button>
@@ -1606,11 +1603,10 @@ const Dashboard = () => {
                 onClick={handleNextTrendPeriod}
                 disabled={!canGoNextTrend}
                 title={canGoNextTrend ? 'Next period' : 'At current period'}
-                className={`absolute right-1 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-white/10 shadow-lg flex items-center justify-center transition-all ${
-                  canGoNextTrend
-                    ? 'text-slate-700 dark:text-slate-200 opacity-0 group-hover/chart:opacity-90 hover:!opacity-100 hover:scale-110 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer'
-                    : 'opacity-0 pointer-events-none'
-                }`}
+                className={`absolute right-1 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-white/10 shadow-lg flex items-center justify-center transition-all ${canGoNextTrend
+                  ? 'text-slate-700 dark:text-slate-200 opacity-0 group-hover/chart:opacity-90 hover:!opacity-100 hover:scale-110 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer'
+                  : 'opacity-0 pointer-events-none'
+                  }`}
               >
                 <FiChevronRight size={18} />
               </button>
@@ -1630,25 +1626,25 @@ const Dashboard = () => {
 
           {/* Comprehensive 4-Metric Quick Stat Highlights Footer */}
           <div className="pt-4 mt-2 border-t border-slate-200/80 dark:border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center sm:text-left">
-            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
               <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">Period Revenue</span>
               <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">
                 ₹{trendSummary.totalRev.toLocaleString('en-IN')}
               </span>
             </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
               <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">Total Orders</span>
               <span className="text-sm sm:text-base font-black text-blue-600 dark:text-blue-400 font-mono">
                 {trendSummary.totalOrd} Orders
               </span>
             </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
               <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">Avg Order Value</span>
               <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono">
                 ₹{trendSummary.avgOrderValue.toLocaleString('en-IN')}
               </span>
             </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+            <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
               <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">Peak Day Revenue</span>
               <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono">
                 ₹{trendSummary.peakRev.toLocaleString('en-IN')}
@@ -1748,7 +1744,7 @@ const Dashboard = () => {
               return (
                 <div
                   key={st.key}
-                  className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all"
+                  className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all"
                 >
                   <div className="flex items-center justify-between text-xs mb-1.5">
                     <div className="flex items-center gap-2">
@@ -1890,12 +1886,12 @@ const Dashboard = () => {
                     <div className="flex items-center gap-3 min-w-0">
                       <div
                         className={`w-9 h-9 rounded-xl font-black text-xs flex items-center justify-center shrink-0 ${idx === 0
-                            ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-md shadow-amber-500/30 border border-amber-300 text-sm'
-                            : idx === 1
-                              ? 'bg-gradient-to-br from-slate-200 to-slate-400 text-slate-900 shadow-sm border border-slate-300 text-sm'
-                              : idx === 2
-                                ? 'bg-gradient-to-br from-amber-700 to-amber-900 text-amber-100 shadow-sm border border-amber-600 text-sm'
-                                : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/10 font-bold'
+                          ? 'bg-linear-to-br from-amber-400 to-amber-600 text-white shadow-md shadow-amber-500/30 border border-amber-300 text-sm'
+                          : idx === 1
+                            ? 'bg-linear-to-br from-slate-200 to-slate-400 text-slate-900 shadow-sm border border-slate-300 text-sm'
+                            : idx === 2
+                              ? 'bg-linear-to-br from-amber-700 to-amber-900 text-amber-100 shadow-sm border border-amber-600 text-sm'
+                              : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/10 font-bold'
                           }`}
                       >
                         {idx === 0 ? '1' : idx === 1 ? '2' : idx === 2 ? '3' : `#${idx + 1}`}
@@ -1967,7 +1963,7 @@ const Dashboard = () => {
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-              <tr className="bg-white/60 dark:bg-white/[0.02] border-b border-slate-200/80 dark:border-white/10 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <tr className="bg-white/60 dark:bg-white/2 border-b border-slate-200/80 dark:border-white/10 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                 <th className="px-4 py-3.5 text-center w-14">S.No</th>
                 <th className="px-5 py-3.5">PO Number</th>
                 <th className="px-5 py-3.5">Company</th>
@@ -2095,13 +2091,12 @@ const Dashboard = () => {
                           title={
                             Array.isArray(order.items)
                               ? order.items
-                                  .map(
-                                    (it) =>
-                                      `${it.productNameSnapshot || 'Product'}${
-                                        it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
-                                      } [${it.skuSnapshot || '-'}] × ${it.quantity}`
-                                  )
-                                  .join('\n')
+                                .map(
+                                  (it) =>
+                                    `${it.productNameSnapshot || 'Product'}${it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
+                                    } [${it.skuSnapshot || '-'}] × ${it.quantity}`
+                                )
+                                .join('\n')
                               : ''
                           }
                         >
@@ -2266,7 +2261,7 @@ const Dashboard = () => {
 
         {/* Treemap Stat Highlights Footer */}
         <div className="pt-4 mt-3 border-t border-slate-200/80 dark:border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center sm:text-left">
-          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
             <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Total Volume</span>
             <span className="text-sm sm:text-base font-extrabold text-blue-600 dark:text-blue-400 font-mono">
               {treemapMetric === 'revenue'
@@ -2274,19 +2269,19 @@ const Dashboard = () => {
                 : `${treemapSummary.totalOrd} Orders`}
             </span>
           </div>
-          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
             <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Market Leader</span>
             <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate block" title={treemapSummary.topEntity.name}>
               {treemapSummary.topEntity.name}
             </span>
           </div>
-          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
             <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Active B2B Nodes</span>
             <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
               {treemapSummary.entityCount} Purchasing Entities
             </span>
           </div>
-          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
             <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Avg Value / Firm</span>
             <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
               ₹{treemapSummary.entityCount > 0 ? Math.round(treemapSummary.totalRev / treemapSummary.entityCount).toLocaleString('en-IN') : 0}

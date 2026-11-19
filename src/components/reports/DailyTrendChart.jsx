@@ -80,7 +80,6 @@ function InnerTrendLineChart({
   data,
   metric, // 'revenue' | 'orders'
   totalRevenue,
-  totalOrders,
   peakRevenue,
   isDark,
 }) {
@@ -528,7 +527,7 @@ export default function DailyTrendChart({
   const hasData = trendData.length > 0 && (calculatedTotalRevenue > 0 || calculatedTotalOrders > 0);
 
   return (
-    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col justify-between">
+    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-3 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col justify-between">
       <div>
         {/* Header & Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -593,18 +592,20 @@ export default function DailyTrendChart({
             {/* Visx Line/Area Chart Container */}
             <div className="w-full h-[240px] min-h-[240px] my-1">
               <ParentSize>
-                {({ width, height }) => (
-                  <InnerTrendLineChart
-                    width={width}
-                    height={height}
-                    data={trendData}
-                    metric={metric}
-                    totalRevenue={calculatedTotalRevenue}
-                    totalOrders={calculatedTotalOrders}
-                    peakRevenue={maxRevenue}
-                    isDark={isDark}
-                  />
-                )}
+                {({ width, height }) => {
+                  if (width <= 0 || height <= 0) return null;
+                  return (
+                    <InnerTrendLineChart
+                      width={width}
+                      height={height}
+                      data={trendData}
+                      metric={metric}
+                      totalRevenue={calculatedTotalRevenue}
+                      peakRevenue={maxRevenue}
+                      isDark={isDark}
+                    />
+                  );
+                }}
               </ParentSize>
             </div>
 

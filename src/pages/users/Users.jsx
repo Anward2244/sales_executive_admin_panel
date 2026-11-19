@@ -1447,7 +1447,7 @@ const UsersList = () => {
 
             {/* Pagination Controls */}
             {!loading && !error && sortedUsers.length > 0 && (
-              <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50 dark:bg-white/[0.02] backdrop-blur-md">
+              <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50 dark:bg-white/2 backdrop-blur-md">
                 <div className="flex items-center gap-3">
                   <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 text-center sm:text-left">
                     Showing <span className="font-bold text-slate-800 dark:text-white">{indexOfFirstUser + 1}</span> to <span className="font-bold text-slate-800 dark:text-white">{Math.min(indexOfLastUser, sortedUsers.length)}</span> of <span className="font-bold text-slate-800 dark:text-white">{sortedUsers.length}</span> users

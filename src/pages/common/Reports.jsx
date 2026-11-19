@@ -29,6 +29,8 @@ import {
   FiSend,
   FiChevronLeft,
   FiChevronRight,
+  FiChevronDown,
+  FiCheck,
   FiList
 } from 'react-icons/fi';
 import PageHeader from '@/components/ui/PageHeader';
@@ -37,6 +39,7 @@ import CopyButton from '@/components/ui/CopyButton';
 import OrderStatusBreakdownChart from '@/components/reports/OrderStatusBreakdownChart';
 import DailyTrendChart from '@/components/reports/DailyTrendChart';
 import ProductPerformanceChart from '@/components/reports/ProductPerformanceChart';
+import IndiaOrdersHeatmap from '@/components/reports/IndiaOrdersHeatmap';
 import CustomDatePicker from '@/components/ui/CustomDatePicker';
 import { useTheme } from '@/context/ThemeContext';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
@@ -175,6 +178,7 @@ const Reports = () => {
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [productViewMode, setProductViewMode] = useState('chart'); // 'chart' | 'table'
+  const [productMenuOpen, setProductMenuOpen] = useState(false);
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [catalogCategories, setCatalogCategories] = useState([]);
   const [catalogBrandMatrix, setCatalogBrandMatrix] = useState([]);
@@ -942,13 +946,12 @@ const Reports = () => {
       const itemsCount = (o.items || []).reduce((acc, i) => acc + (i.quantity || 0), 0);
       const itemsDetails = Array.isArray(o.items)
         ? o.items
-            .map(
-              (it) =>
-                `${it.productNameSnapshot || 'Product'}${
-                  it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
-                } [${it.skuSnapshot || '-'}] x ${it.quantity} @ Rs.${it.unitPrice || 0}`
-            )
-            .join('; ')
+          .map(
+            (it) =>
+              `${it.productNameSnapshot || 'Product'}${it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
+              } [${it.skuSnapshot || '-'}] x ${it.quantity} @ Rs.${it.unitPrice || 0}`
+          )
+          .join('; ')
         : '';
       const salesRep = `${o.salesExecutiveId?.firstName || ''} ${o.salesExecutiveId?.lastName || ''}`.trim();
       const emailStatus = o.emailStatus?.status || (o.emailStatus?.isSent ? 'SENT' : 'PENDING');
@@ -1138,11 +1141,10 @@ const Reports = () => {
                   key={item.id}
                   type="button"
                   onClick={() => handleRangeChange(item.id)}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    selectedRange === item.id
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${selectedRange === item.id
                       ? 'bg-blue-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
+                    }`}
                 >
                   {item.label}
                 </button>
@@ -1164,11 +1166,10 @@ const Reports = () => {
                   <span
                     onClick={reportsOffset !== 0 ? handleResetReportsPeriod : undefined}
                     title={reportsOffset !== 0 ? 'Click to jump to current period' : undefined}
-                    className={`text-[11px] font-bold whitespace-nowrap transition-colors ${
-                      reportsOffset !== 0
+                    className={`text-[11px] font-bold whitespace-nowrap transition-colors ${reportsOffset !== 0
                         ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer'
                         : 'text-slate-700 dark:text-slate-200'
-                    }`}
+                      }`}
                   >
                     {reportsPeriodInfo.badge || reportsPeriodInfo.label}
                   </span>
@@ -1179,11 +1180,10 @@ const Reports = () => {
                   onClick={handleNextReportsPeriod}
                   disabled={!canGoNextReports}
                   title={canGoNextReports ? 'Next period' : 'At current period'}
-                  className={`w-6 h-6 rounded-lg transition-all flex items-center justify-center ${
-                    canGoNextReports
+                  className={`w-6 h-6 rounded-lg transition-all flex items-center justify-center ${canGoNextReports
                       ? 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer active:scale-95'
                       : 'text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-40'
-                  }`}
+                    }`}
                 >
                   <FiChevronRight size={14} />
                 </button>
@@ -1349,9 +1349,11 @@ const Reports = () => {
         />
       </div>
 
-      {/* Product Performance Section */}
-      <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
-        <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Product Performance & State Orders Heatmap Side-by-Side Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
+        {/* Product Performance Section */}
+        <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden flex flex-col">
+        <div className="p-3 border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 kpi-icon-purple rounded-2xl">
               <FiBox className="text-xl" />
@@ -1366,55 +1368,108 @@ const Reports = () => {
                 )}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Units ordered, revenue generated, and contribution ranking per SKU
+                Units ordered, revenue generated, and contribution ranking
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {/* Interactive Dual-Mode: "Table ⇄ Chart" View Toggle */}
-            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-inner">
-              <button
-                type="button"
-                onClick={() => setProductViewMode('chart')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  productViewMode === 'chart'
-                    ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
-                title="View interactive graphical charts"
-              >
-                <FiBarChart2 className="text-xs" />
-                <span>Chart</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setProductViewMode('table')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  productViewMode === 'table'
-                    ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                }`}
-                title="View detailed paginated data table"
-              >
-                <FiList className="text-xs" />
-                <span>Table</span>
-              </button>
-            </div>
-
+          {/* View Mode & Actions Dropdown */}
+          <div className="relative">
             <button
               type="button"
-              onClick={handleExportProductsCSV}
-              disabled={productPerformance.length === 0}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl transition-all cursor-pointer self-start sm:self-auto disabled:opacity-50"
+              onClick={() => setProductMenuOpen((prev) => !prev)}
+              className="flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer shadow-xs active:scale-95"
             >
-              <FiDownload className="text-sm" />
-              <span>Export CSV</span>
+              {productViewMode === 'chart' ? (
+                <>
+                  <FiBarChart2 className="text-purple-600 dark:text-purple-400 text-xs" />
+                  <span>Chart</span>
+                </>
+              ) : (
+                <>
+                  <FiList className="text-purple-600 dark:text-purple-400 text-xs" />
+                  <span>Table</span>
+                </>
+              )}
+              <FiChevronDown
+                className={`text-xs text-slate-400 transition-transform duration-200 ${
+                  productMenuOpen ? 'rotate-180' : ''
+                }`}
+              />
             </button>
+
+            {productMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={() => setProductMenuOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-52 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-xl border border-slate-200 dark:border-white/10 py-1.5 z-40 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    View Mode
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProductViewMode('chart');
+                      setProductMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3.5 py-2 text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                      productViewMode === 'chart'
+                        ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FiBarChart2 className="text-xs text-purple-500" />
+                      <span>Chart View</span>
+                    </div>
+                    {productViewMode === 'chart' && <FiCheck className="text-xs text-purple-600 dark:text-purple-400" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProductViewMode('table');
+                      setProductMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3.5 py-2 text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                      productViewMode === 'table'
+                        ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FiList className="text-xs text-purple-500" />
+                      <span>Table View</span>
+                    </div>
+                    {productViewMode === 'table' && <FiCheck className="text-xs text-purple-600 dark:text-purple-400" />}
+                  </button>
+
+                  <div className="h-px bg-slate-200/70 dark:bg-white/10 my-1" />
+
+                  <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Actions
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleExportProductsCSV();
+                      setProductMenuOpen(false);
+                    }}
+                    disabled={productPerformance.length === 0}
+                    className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <FiDownload className="text-xs text-blue-500" />
+                    <span>Export CSV (.csv)</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {loading ? (
-          <div className="p-6 space-y-3">
+          <div className="p-3 space-y-3">
             <Skeleton className="h-12 w-full rounded-xl" />
             <Skeleton className="h-12 w-full rounded-xl" />
             <Skeleton className="h-12 w-full rounded-xl" />
@@ -1433,237 +1488,244 @@ const Reports = () => {
             loading={loading}
           />
         ) : (
-          <>
+          <div className="flex-1 flex flex-col justify-between overflow-hidden">
             <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left text-sm whitespace-nowrap min-w-[1100px]">
-              <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5 select-none">
-                <tr>
-                  <th className="py-3.5 px-4 w-14 text-center">S.No</th>
-                  <th className="py-3.5 px-4 min-w-[240px]">Product Details</th>
-                  <th className="py-3.5 px-4 text-center">Orders</th>
-                  <th className="py-3.5 px-4 text-center">Units Sold</th>
-                  <th className="py-3.5 px-4 text-right">Avg Unit Price</th>
-                  <th className="py-3.5 px-4 text-right">Total Revenue</th>
-                  <th className="py-3.5 px-4 text-center">Volume Share</th>
-                  <th className="py-3.5 px-4 text-right w-44">Revenue Share</th>
-                  <th className="py-3.5 px-4 text-center">Sales Velocity</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
-                {paginatedProductPerformance.map((product, index) => {
-                  const rev = Number(product.totalRevenue) || 0;
-                  const totalRev = Number(summary.totalRevenue) || 1;
-                  const sharePct = Math.min(100, ((rev / totalRev) * 100).toFixed(1));
-                  const volPct = totalUnitsSold ? Math.min(100, (((product.totalQuantity || 0) / totalUnitsSold) * 100).toFixed(1)) : '0.0';
-                  const avgPrice = product.totalQuantity ? Math.round(rev / product.totalQuantity) : 0;
-                  const globalRank = indexOfFirstProduct + index + 1;
+              <table className="w-full text-left text-sm whitespace-nowrap min-w-[1100px]">
+                <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5 select-none">
+                  <tr>
+                    <th className="py-3.5 px-4 w-14 text-center">S.No</th>
+                    <th className="py-3.5 px-4 min-w-[240px]">Product Details</th>
+                    <th className="py-3.5 px-4 text-center">Orders</th>
+                    <th className="py-3.5 px-4 text-center">Units Sold</th>
+                    <th className="py-3.5 px-4 text-right">Avg Unit Price</th>
+                    <th className="py-3.5 px-4 text-right">Total Revenue</th>
+                    <th className="py-3.5 px-4 text-center">Volume Share</th>
+                    <th className="py-3.5 px-4 text-right w-44">Revenue Share</th>
+                    <th className="py-3.5 px-4 text-center">Sales Velocity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
+                  {paginatedProductPerformance.map((product, index) => {
+                    const rev = Number(product.totalRevenue) || 0;
+                    const totalRev = Number(summary.totalRevenue) || 1;
+                    const sharePct = Math.min(100, ((rev / totalRev) * 100).toFixed(1));
+                    const volPct = totalUnitsSold ? Math.min(100, (((product.totalQuantity || 0) / totalUnitsSold) * 100).toFixed(1)) : '0.0';
+                    const avgPrice = product.totalQuantity ? Math.round(rev / product.totalQuantity) : 0;
+                    const globalRank = indexOfFirstProduct + index + 1;
 
-                  // Velocity status categorization
-                  const isTopSeller = globalRank <= 3 || Number(sharePct) >= 20;
-                  const isHighDemand = !isTopSeller && (Number(sharePct) >= 5 || (product.totalQuantity || 0) >= 10);
-                  const isSteady = !isTopSeller && !isHighDemand && (product.totalQuantity || 0) >= 3;
+                    // Velocity status categorization
+                    const isTopSeller = globalRank <= 3 || Number(sharePct) >= 20;
+                    const isHighDemand = !isTopSeller && (Number(sharePct) >= 5 || (product.totalQuantity || 0) >= 10);
+                    const isSteady = !isTopSeller && !isHighDemand && (product.totalQuantity || 0) >= 3;
 
-                  return (
-                    <tr
-                      key={product._id || index}
-                      className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors"
-                    >
-                      {/* Rank */}
-                      <td className="py-4 px-4 text-center">
-                        <span
-                          className={`inline-flex items-center justify-center w-7 h-7 rounded-xl text-xs font-black ${
-                            globalRank === 1
-                              ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-xs'
-                              : globalRank === 2
-                              ? 'bg-slate-400/20 text-slate-700 dark:text-slate-300 border border-slate-400/30'
-                              : globalRank === 3
-                              ? 'bg-amber-700/20 text-amber-700 dark:text-amber-500 border border-amber-700/30'
-                              : 'text-slate-400 font-bold bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5'
-                          }`}
-                        >
-                          #{globalRank}
-                        </span>
-                      </td>
+                    return (
+                      <tr
+                        key={product._id || index}
+                        className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors"
+                      >
+                        {/* Rank */}
+                        <td className="py-4 px-4 text-center">
+                          <span
+                            className={`inline-flex items-center justify-center w-7 h-7 rounded-xl text-xs font-black ${globalRank === 1
+                                ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-xs'
+                                : globalRank === 2
+                                  ? 'bg-slate-400/20 text-slate-700 dark:text-slate-300 border border-slate-400/30'
+                                  : globalRank === 3
+                                    ? 'bg-amber-700/20 text-amber-700 dark:text-amber-500 border border-amber-700/30'
+                                    : 'text-slate-400 font-bold bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5'
+                              }`}
+                          >
+                            #{globalRank}
+                          </span>
+                        </td>
 
-                      {/* Product Name & SKU */}
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 font-bold">
-                            <FiBox className="text-base" />
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900 dark:text-white text-xs">
-                              {product.productName}
+                        {/* Product Name & SKU */}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 font-bold">
+                              <FiBox className="text-base" />
                             </div>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md font-semibold">
-                                {product.sku}
-                              </span>
-                              <CopyButton text={product.sku} size={10} />
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white text-xs">
+                                {product.productName}
+                              </div>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md font-semibold">
+                                  {product.sku}
+                                </span>
+                                <CopyButton text={product.sku} size={10} />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Orders Count */}
-                      <td className="py-4 px-4 text-center">
-                        <span className="inline-flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl text-xs border border-slate-200/60 dark:border-white/5">
-                          <FiShoppingBag className="text-blue-500 text-xs" />
-                          <span>{product.ordersCount || 1} PO{product.ordersCount === 1 ? '' : 's'}</span>
-                        </span>
-                      </td>
+                        {/* Orders Count */}
+                        <td className="py-4 px-4 text-center">
+                          <span className="inline-flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl text-xs border border-slate-200/60 dark:border-white/5">
+                            <FiShoppingBag className="text-blue-500 text-xs" />
+                            <span>{product.ordersCount || 1} PO{product.ordersCount === 1 ? '' : 's'}</span>
+                          </span>
+                        </td>
 
-                      {/* Units Sold */}
-                      <td className="py-4 px-4 text-center">
-                        <span className="inline-flex items-center gap-1.5 font-extrabold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl text-xs border border-slate-200/60 dark:border-white/5">
-                          <FiBox className="text-purple-500 text-xs" />
-                          <span>{(product.totalQuantity || 0).toLocaleString('en-IN')}</span>
-                        </span>
-                      </td>
+                        {/* Units Sold */}
+                        <td className="py-4 px-4 text-center">
+                          <span className="inline-flex items-center gap-1.5 font-extrabold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl text-xs border border-slate-200/60 dark:border-white/5">
+                            <FiBox className="text-purple-500 text-xs" />
+                            <span>{(product.totalQuantity || 0).toLocaleString('en-IN')}</span>
+                          </span>
+                        </td>
 
-                      {/* Avg Unit Price */}
-                      <td className="py-4 px-4 text-center">
-                        <div className="font-bold text-slate-900 dark:text-white font-mono text-xs">
-                          {formatCurrency(avgPrice)}
-                        </div>
-                        <div className="text-[10px] text-slate-400">per unit</div>
-                      </td>
-
-                      {/* Total Revenue */}
-                      <td className="py-4 px-4 text-center">
-                        <div className="font-extrabold text-slate-900 dark:text-white font-mono text-xs">
-                          {formatCurrency(rev)}
-                        </div>
-                      </td>
-
-                      {/* Volume Share % */}
-                      <td className="py-4 px-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-16 bg-slate-100 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-blue-500 rounded-full"
-                              style={{ width: `${volPct}%` }}
-                            />
+                        {/* Avg Unit Price */}
+                        <td className="py-4 px-4 text-center">
+                          <div className="font-bold text-slate-900 dark:text-white font-mono text-xs">
+                            {formatCurrency(avgPrice)}
                           </div>
-                          <span className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-400 w-10 text-right">
-                            {volPct}%
-                          </span>
-                        </div>
-                      </td>
+                          <div className="text-[10px] text-slate-400">per unit</div>
+                        </td>
 
-                      {/* Revenue Share % */}
-                      <td className="py-4 px-4">
-                        <div className="flex items-center justify-end gap-2.5">
-                          <div className="w-20 bg-slate-100 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-purple-500 rounded-full transition-all duration-500"
-                              style={{ width: `${sharePct}%` }}
-                            />
+                        {/* Total Revenue */}
+                        <td className="py-4 px-4 text-center">
+                          <div className="font-extrabold text-slate-900 dark:text-white font-mono text-xs">
+                            {formatCurrency(rev)}
                           </div>
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 w-10 text-right font-mono">
-                            {sharePct}%
-                          </span>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Velocity / Status Badge */}
-                      <td className="py-4 px-4 text-center">
-                        {isTopSeller ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
-                            <FiTrendingUp className="text-[10px]" />
-                            <span>Top Seller</span>
-                          </span>
-                        ) : isHighDemand ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 whitespace-nowrap">
-                            <FiCheckCircle className="text-[10px]" />
-                            <span>High Demand</span>
-                          </span>
-                        ) : isSteady ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 whitespace-nowrap">
-                            <FiBox className="text-[10px]" />
-                            <span>Steady</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20 whitespace-nowrap">
-                            <FiClock className="text-[10px]" />
-                            <span>Low Volume</span>
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        {/* Volume Share % */}
+                        <td className="py-4 px-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="w-16 bg-slate-100 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-500 rounded-full"
+                                style={{ width: `${volPct}%` }}
+                              />
+                            </div>
+                            <span className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-400 w-10 text-right">
+                              {volPct}%
+                            </span>
+                          </div>
+                        </td>
 
-          {/* Product Performance Attached Pagination Bar */}
-          {productPerformance.length > 0 && (
-            <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-white/[0.02] text-xs text-slate-500 dark:text-slate-400">
-              <div className="flex items-center gap-3">
-                <span>
-                  Showing <strong className="text-slate-800 dark:text-slate-200">{indexOfFirstProduct + 1}</strong> to{' '}
-                  <strong className="text-slate-800 dark:text-slate-200">
-                    {Math.min(indexOfLastProduct, productPerformance.length)}
-                  </strong>{' '}
-                  of <strong className="text-slate-800 dark:text-slate-200">{productPerformance.length}</strong> products
-                </span>
-              </div>
+                        {/* Revenue Share % */}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center justify-end gap-2.5">
+                            <div className="w-20 bg-slate-100 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                                style={{ width: `${sharePct}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 w-10 text-right font-mono">
+                              {sharePct}%
+                            </span>
+                          </div>
+                        </td>
 
-              {totalProductPages > 1 && (
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setProductPage((p) => Math.max(1, p - 1))}
-                    disabled={productPage === 1}
-                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs flex items-center gap-1"
-                  >
-                    <FiChevronLeft size={13} />
-                    <span>Prev</span>
-                  </button>
-
-                  {Array.from({ length: totalProductPages }, (_, i) => i + 1).map((pg) => {
-                    if (
-                      pg === 1 ||
-                      pg === totalProductPages ||
-                      (pg >= productPage - 1 && pg <= productPage + 1)
-                    ) {
-                      return (
-                        <button
-                          key={pg}
-                          type="button"
-                          onClick={() => setProductPage(pg)}
-                          className={`w-7 h-7 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            productPage === pg
-                              ? 'bg-purple-600 text-white shadow-xs'
-                              : 'border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
-                          }`}
-                        >
-                          {pg}
-                        </button>
-                      );
-                    }
-                    if (pg === productPage - 2 || pg === productPage + 2) {
-                      return <span key={pg} className="px-1 text-slate-400">...</span>;
-                    }
-                    return null;
+                        {/* Velocity / Status Badge */}
+                        <td className="py-4 px-4 text-center">
+                          {isTopSeller ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
+                              <FiTrendingUp className="text-[10px]" />
+                              <span>Top Seller</span>
+                            </span>
+                          ) : isHighDemand ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 whitespace-nowrap">
+                              <FiCheckCircle className="text-[10px]" />
+                              <span>High Demand</span>
+                            </span>
+                          ) : isSteady ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 whitespace-nowrap">
+                              <FiBox className="text-[10px]" />
+                              <span>Steady</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20 whitespace-nowrap">
+                              <FiClock className="text-[10px]" />
+                              <span>Low Volume</span>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
                   })}
-
-                  <button
-                    type="button"
-                    onClick={() => setProductPage((p) => Math.min(totalProductPages, p + 1))}
-                    disabled={productPage === totalProductPages}
-                    className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs flex items-center gap-1"
-                  >
-                    <span>Next</span>
-                    <FiChevronRight size={13} />
-                  </button>
-                </div>
-              )}
+                </tbody>
+              </table>
             </div>
-          )}
-        </>
-      )}
+
+            {/* Product Performance Attached Pagination Bar */}
+            {productPerformance.length > 0 && (
+              <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-white/2 text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-3">
+                  <span>
+                    Showing <strong className="text-slate-800 dark:text-slate-200">{indexOfFirstProduct + 1}</strong> to{' '}
+                    <strong className="text-slate-800 dark:text-slate-200">
+                      {Math.min(indexOfLastProduct, productPerformance.length)}
+                    </strong>{' '}
+                    of <strong className="text-slate-800 dark:text-slate-200">{productPerformance.length}</strong> products
+                  </span>
+                </div>
+
+                {totalProductPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setProductPage((p) => Math.max(1, p - 1))}
+                      disabled={productPage === 1}
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                    >
+                      <FiChevronLeft size={13} />
+                      <span>Prev</span>
+                    </button>
+
+                    {Array.from({ length: totalProductPages }, (_, i) => i + 1).map((pg) => {
+                      if (
+                        pg === 1 ||
+                        pg === totalProductPages ||
+                        (pg >= productPage - 1 && pg <= productPage + 1)
+                      ) {
+                        return (
+                          <button
+                            key={pg}
+                            type="button"
+                            onClick={() => setProductPage(pg)}
+                            className={`w-7 h-7 rounded-xl text-xs font-bold transition-all cursor-pointer ${productPage === pg
+                                ? 'bg-purple-600 text-white shadow-xs'
+                                : 'border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
+                              }`}
+                          >
+                            {pg}
+                          </button>
+                        );
+                      }
+                      if (pg === productPage - 2 || pg === productPage + 2) {
+                        return <span key={pg} className="px-1 text-slate-400">...</span>;
+                      }
+                      return null;
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={() => setProductPage((p) => Math.min(totalProductPages, p + 1))}
+                      disabled={productPage === totalProductPages}
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                    >
+                      <span>Next</span>
+                      <FiChevronRight size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* State Orders Heatmap Section */}
+      <IndiaOrdersHeatmap
+        orders={rangeFilteredOrders}
+        totalOrders={summary.totalOrders}
+        isDark={isDark}
+        loading={loading}
+      />
     </div>
 
       {/* Orders Ledger Section */}
@@ -1711,11 +1773,10 @@ const Reports = () => {
                   key={status}
                   type="button"
                   onClick={() => setStatusFilter(status)}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                    statusFilter === status
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${statusFilter === status
                       ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                  }`}
+                    }`}
                 >
                   {status}
                 </button>
@@ -1744,292 +1805,289 @@ const Reports = () => {
         ) : (
           <>
             <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left text-sm whitespace-nowrap min-w-[1100px]">
-              <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-extrabold text-slate-700 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5">
-                <tr>
-                  <th className="py-3.5 px-4 text-center w-14">S.No</th>
-                  <th className="py-3.5 px-4">PO Number</th>
-                  <th className="py-3.5 px-4">Trading Company</th>
-                  <th className="py-3.5 px-4">Purchasing Firm</th>
-                  <th className="py-3.5 px-4">Brand</th>
-                  <th className="py-3.5 px-4">State</th>
-                  <th className="py-3.5 px-4">Sales Executive</th>
-                  <th className="py-3.5 px-4 text-center">Items</th>
-                  <th className="py-3.5 px-4 text-center">Status</th>
-                  <th className="py-3.5 px-4 text-center">Email</th>
-                  <th className="py-3.5 px-4 text-right">Total Amount</th>
-                  <th className="py-3.5 px-4">Date Created</th>
-                  <th className="py-3.5 px-4 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
-                {paginatedOrders.map((order, index) => {
-                  const badge = getStatusBadge(order.status);
-                  const StatusIcon = badge.icon;
-                  const emailBadge = getEmailStatusBadge(order.emailStatus);
-                  const EmailBadgeIcon = emailBadge.icon;
-                  const emailRecipientsCount = Array.isArray(order.emailStatus?.recipients)
-                    ? order.emailStatus.recipients.length
-                    : 0;
-                  const totalUnits = (order.items || []).reduce((acc, i) => acc + (i.quantity || 0), 0);
-                  const execName = `${order.salesExecutiveId?.firstName || ''} ${
-                    order.salesExecutiveId?.lastName || ''
-                  }`.trim() || 'Unassigned';
+              <table className="w-full text-left text-sm whitespace-nowrap min-w-[1100px]">
+                <thead className="bg-slate-50/70 dark:bg-slate-800/50 text-[11px] font-extrabold text-slate-700 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/60 dark:border-white/5">
+                  <tr>
+                    <th className="py-3.5 px-4 text-center w-14">S.No</th>
+                    <th className="py-3.5 px-4">PO Number</th>
+                    <th className="py-3.5 px-4">Trading Company</th>
+                    <th className="py-3.5 px-4">Purchasing Firm</th>
+                    <th className="py-3.5 px-4">Brand</th>
+                    <th className="py-3.5 px-4">State</th>
+                    <th className="py-3.5 px-4">Sales Executive</th>
+                    <th className="py-3.5 px-4 text-center">Items</th>
+                    <th className="py-3.5 px-4 text-center">Status</th>
+                    <th className="py-3.5 px-4 text-center">Email</th>
+                    <th className="py-3.5 px-4 text-right">Total Amount</th>
+                    <th className="py-3.5 px-4">Date Created</th>
+                    <th className="py-3.5 px-4 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200/60 dark:divide-white/5">
+                  {paginatedOrders.map((order, index) => {
+                    const badge = getStatusBadge(order.status);
+                    const StatusIcon = badge.icon;
+                    const emailBadge = getEmailStatusBadge(order.emailStatus);
+                    const EmailBadgeIcon = emailBadge.icon;
+                    const emailRecipientsCount = Array.isArray(order.emailStatus?.recipients)
+                      ? order.emailStatus.recipients.length
+                      : 0;
+                    const totalUnits = (order.items || []).reduce((acc, i) => acc + (i.quantity || 0), 0);
+                    const execName = `${order.salesExecutiveId?.firstName || ''} ${order.salesExecutiveId?.lastName || ''
+                      }`.trim() || 'Unassigned';
 
-                  return (
-                    <tr
-                      key={order._id}
-                      className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors"
-                    >
-                      {/* S.No */}
-                      <td className="py-4 px-4 text-center font-mono font-medium text-slate-500 dark:text-slate-400 text-xs">
-                        {indexOfFirstOrder + index + 1}
-                      </td>
+                    return (
+                      <tr
+                        key={order._id}
+                        className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors"
+                      >
+                        {/* S.No */}
+                        <td className="py-4 px-4 text-center font-mono font-medium text-slate-500 dark:text-slate-400 text-xs">
+                          {indexOfFirstOrder + index + 1}
+                        </td>
 
-                      {/* PO Number */}
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900 dark:text-white text-xs">
-                          <span>{order.poNumber || 'N/A'}</span>
-                          {order.poNumber && <CopyButton text={order.poNumber} />}
-                        </div>
-                      </td>
-
-                      {/* Trading Company */}
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-900 dark:text-white text-xs">
-                            {order.companyId?.name || 'Unknown Company'}
-                          </span>
-                          {order.companyId?.code && (
-                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 shrink-0">
-                              {order.companyId.code}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Purchasing Firm */}
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-900 dark:text-white text-xs">
-                            {order.firmId?.firmName || 'N/A'}
-                          </span>
-                          {order.firmId?.firmCode && (
-                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 shrink-0">
-                              {order.firmId.firmCode}
-                            </span>
-                          )}
-                        </div>
-                        {order.firmId?.city && (
-                          <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                            <FiMapPin className="text-[10px]" />
-                            <span>{order.firmId.city}</span>
+                        {/* PO Number */}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900 dark:text-white text-xs">
+                            <span>{order.poNumber || 'N/A'}</span>
+                            {order.poNumber && <CopyButton text={order.poNumber} />}
                           </div>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* Brand */}
-                      <td className="py-4 px-4">
-                        {order.brand ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                            <FiTag className="text-[10px]" />
-                            {order.brand}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-xs">-</span>
-                        )}
-                      </td>
-
-                      {/* State */}
-                      <td className="py-4 px-4">
-                        {order.state ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-                            <FiMapPin className="text-[10px]" />
-                            {order.state}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-xs">-</span>
-                        )}
-                      </td>
-
-                      {/* Sales Executive */}
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
-                            {execName}
-                          </span>
-                          {order.salesExecutiveId?.employeeCode && (
-                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 shrink-0">
-                              {order.salesExecutiveId.employeeCode}
+                        {/* Trading Company */}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-slate-900 dark:text-white text-xs">
+                              {order.companyId?.name || 'Unknown Company'}
                             </span>
-                          )}
-                        </div>
-                        {order.salesExecutiveId?.email && (
-                          <div className="text-[11px] text-slate-400 mt-0.5">
-                            {order.salesExecutiveId.email}
+                            {order.companyId?.code && (
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 shrink-0">
+                                {order.companyId.code}
+                              </span>
+                            )}
                           </div>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* Items */}
-                      <td className="py-4 px-4 text-center">
-                        <span
-                          className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 shrink-0 cursor-help"
-                          title={
-                            Array.isArray(order.items)
-                              ? order.items
+                        {/* Purchasing Firm */}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-slate-900 dark:text-white text-xs">
+                              {order.firmId?.firmName || 'N/A'}
+                            </span>
+                            {order.firmId?.firmCode && (
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 shrink-0">
+                                {order.firmId.firmCode}
+                              </span>
+                            )}
+                          </div>
+                          {order.firmId?.city && (
+                            <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                              <FiMapPin className="text-[10px]" />
+                              <span>{order.firmId.city}</span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Brand */}
+                        <td className="py-4 px-4">
+                          {order.brand ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                              <FiTag className="text-[10px]" />
+                              {order.brand}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs">-</span>
+                          )}
+                        </td>
+
+                        {/* State */}
+                        <td className="py-4 px-4">
+                          {order.state ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                              <FiMapPin className="text-[10px]" />
+                              {order.state}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs">-</span>
+                          )}
+                        </td>
+
+                        {/* Sales Executive */}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                              {execName}
+                            </span>
+                            {order.salesExecutiveId?.employeeCode && (
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                                {order.salesExecutiveId.employeeCode}
+                              </span>
+                            )}
+                          </div>
+                          {order.salesExecutiveId?.email && (
+                            <div className="text-[11px] text-slate-400 mt-0.5">
+                              {order.salesExecutiveId.email}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Items */}
+                        <td className="py-4 px-4 text-center">
+                          <span
+                            className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 shrink-0 cursor-help"
+                            title={
+                              Array.isArray(order.items)
+                                ? order.items
                                   .map(
                                     (it) =>
-                                      `${it.productNameSnapshot || 'Product'}${
-                                        it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
+                                      `${it.productNameSnapshot || 'Product'}${it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''
                                       } [${it.skuSnapshot || '-'}] × ${it.quantity}`
                                   )
                                   .join('\n')
-                              : ''
-                          }
-                        >
-                          <FiBox className="text-blue-500 text-xs" />
-                          <span>
-                            {(order.items || []).length} SKU{((order.items || []).length !== 1 ? 's' : '')} ({totalUnits} pcs)
-                          </span>
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-4 px-4 text-center">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border shrink-0 ${badge.bg}`}
-                        >
-                          <StatusIcon className="text-xs" />
-                          <span>{badge.label}</span>
-                        </span>
-                      </td>
-
-                      {/* Email Status */}
-                      <td className="py-4 px-4 text-center">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold border shrink-0 ${emailBadge.className}`}
-                          title={
-                            order.emailStatus?.isSent
-                              ? `Email Sent (${emailRecipientsCount} recipients)`
-                              : `Email: ${emailBadge.label}`
-                          }
-                        >
-                          <EmailBadgeIcon className="text-xs" />
-                          <span>{emailBadge.label}</span>
-                          {emailRecipientsCount > 0 && (
-                            <span className="font-mono text-[10px] opacity-80">
-                              ({emailRecipientsCount})
+                                : ''
+                            }
+                          >
+                            <FiBox className="text-blue-500 text-xs" />
+                            <span>
+                              {(order.items || []).length} SKU{((order.items || []).length !== 1 ? 's' : '')} ({totalUnits} pcs)
                             </span>
-                          )}
-                        </span>
-                      </td>
+                          </span>
+                        </td>
 
-                      {/* Total Amount */}
-                      <td className="py-4 px-4 text-right font-mono">
-                        <div className="font-extrabold text-slate-900 dark:text-white text-sm">
-                          {formatCurrency(order.totalAmount || order.subtotal || 0)}
-                        </div>
-                        {order.subtotal !== undefined &&
-                          order.totalAmount !== undefined &&
-                          Number(order.subtotal) !== Number(order.totalAmount) && (
-                            <div className="text-[10px] text-slate-400">
-                              Subtotal: {formatCurrency(order.subtotal)}
-                            </div>
-                          )}
-                      </td>
+                        {/* Status */}
+                        <td className="py-4 px-4 text-center">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border shrink-0 ${badge.bg}`}
+                          >
+                            <StatusIcon className="text-xs" />
+                            <span>{badge.label}</span>
+                          </span>
+                        </td>
 
-                      {/* Date Created */}
-                      <td className="py-4 px-4 text-xs text-slate-500 dark:text-slate-400">
-                        <div className="flex items-center gap-1.5">
-                          <FiCalendar className="text-[11px] text-slate-400" />
-                          <span>{formatDate(order.createdAt)}</span>
-                        </div>
-                      </td>
+                        {/* Email Status */}
+                        <td className="py-4 px-4 text-center">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold border shrink-0 ${emailBadge.className}`}
+                            title={
+                              order.emailStatus?.isSent
+                                ? `Email Sent (${emailRecipientsCount} recipients)`
+                                : `Email: ${emailBadge.label}`
+                            }
+                          >
+                            <EmailBadgeIcon className="text-xs" />
+                            <span>{emailBadge.label}</span>
+                            {emailRecipientsCount > 0 && (
+                              <span className="font-mono text-[10px] opacity-80">
+                                ({emailRecipientsCount})
+                              </span>
+                            )}
+                          </span>
+                        </td>
 
-                      {/* Action */}
-                      <td className="py-4 px-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedOrder(order)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition-all cursor-pointer active:scale-95"
-                        >
-                          <FiEye className="text-xs" />
-                          <span>View</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        {/* Total Amount */}
+                        <td className="py-4 px-4 text-right font-mono">
+                          <div className="font-extrabold text-slate-900 dark:text-white text-sm">
+                            {formatCurrency(order.totalAmount || order.subtotal || 0)}
+                          </div>
+                          {order.subtotal !== undefined &&
+                            order.totalAmount !== undefined &&
+                            Number(order.subtotal) !== Number(order.totalAmount) && (
+                              <div className="text-[10px] text-slate-400">
+                                Subtotal: {formatCurrency(order.subtotal)}
+                              </div>
+                            )}
+                        </td>
 
-          {/* Orders Audit Ledger Attached Pagination Bar */}
-          {filteredOrders.length > 0 && (
-            <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-white/[0.02] text-xs text-slate-500 dark:text-slate-400">
-              <div className="flex items-center gap-3">
-                <span>
-                  Showing <strong className="text-slate-800 dark:text-slate-200">{indexOfFirstOrder + 1}</strong> to{' '}
-                  <strong className="text-slate-800 dark:text-slate-200">
-                    {Math.min(indexOfLastOrder, filteredOrders.length)}
-                  </strong>{' '}
-                  of <strong className="text-slate-800 dark:text-slate-200">{filteredOrders.length}</strong> orders
-                </span>
-              </div>
+                        {/* Date Created */}
+                        <td className="py-4 px-4 text-xs text-slate-500 dark:text-slate-400">
+                          <div className="flex items-center gap-1.5">
+                            <FiCalendar className="text-[11px] text-slate-400" />
+                            <span>{formatDate(order.createdAt)}</span>
+                          </div>
+                        </td>
 
-              {totalOrdersPages > 1 && (
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setOrdersPage((p) => Math.max(1, p - 1))}
-                    disabled={ordersPage === 1}
-                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs flex items-center gap-1"
-                  >
-                    <FiChevronLeft size={13} />
-                    <span>Prev</span>
-                  </button>
-
-                  {Array.from({ length: totalOrdersPages }, (_, i) => i + 1).map((pg) => {
-                    if (
-                      pg === 1 ||
-                      pg === totalOrdersPages ||
-                      (pg >= ordersPage - 1 && pg <= ordersPage + 1)
-                    ) {
-                      return (
-                        <button
-                          key={pg}
-                          type="button"
-                          onClick={() => setOrdersPage(pg)}
-                          className={`w-7 h-7 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            ordersPage === pg
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
-                          }`}
-                        >
-                          {pg}
-                        </button>
-                      );
-                    }
-                    if (pg === ordersPage - 2 || pg === ordersPage + 2) {
-                      return <span key={pg} className="px-1 text-slate-400">...</span>;
-                    }
-                    return null;
+                        {/* Action */}
+                        <td className="py-4 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOrder(order)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition-all cursor-pointer active:scale-95"
+                          >
+                            <FiEye className="text-xs" />
+                            <span>View</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
                   })}
-
-                  <button
-                    type="button"
-                    onClick={() => setOrdersPage((p) => Math.min(totalOrdersPages, p + 1))}
-                    disabled={ordersPage === totalOrdersPages}
-                    className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs flex items-center gap-1"
-                  >
-                    <span>Next</span>
-                    <FiChevronRight size={13} />
-                  </button>
-                </div>
-              )}
+                </tbody>
+              </table>
             </div>
-          )}
+
+            {/* Orders Audit Ledger Attached Pagination Bar */}
+            {filteredOrders.length > 0 && (
+              <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-white/2 text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-3">
+                  <span>
+                    Showing <strong className="text-slate-800 dark:text-slate-200">{indexOfFirstOrder + 1}</strong> to{' '}
+                    <strong className="text-slate-800 dark:text-slate-200">
+                      {Math.min(indexOfLastOrder, filteredOrders.length)}
+                    </strong>{' '}
+                    of <strong className="text-slate-800 dark:text-slate-200">{filteredOrders.length}</strong> orders
+                  </span>
+                </div>
+
+                {totalOrdersPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setOrdersPage((p) => Math.max(1, p - 1))}
+                      disabled={ordersPage === 1}
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                    >
+                      <FiChevronLeft size={13} />
+                      <span>Prev</span>
+                    </button>
+
+                    {Array.from({ length: totalOrdersPages }, (_, i) => i + 1).map((pg) => {
+                      if (
+                        pg === 1 ||
+                        pg === totalOrdersPages ||
+                        (pg >= ordersPage - 1 && pg <= ordersPage + 1)
+                      ) {
+                        return (
+                          <button
+                            key={pg}
+                            type="button"
+                            onClick={() => setOrdersPage(pg)}
+                            className={`w-7 h-7 rounded-xl text-xs font-bold transition-all cursor-pointer ${ordersPage === pg
+                                ? 'bg-blue-600 text-white shadow-xs'
+                                : 'border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
+                              }`}
+                          >
+                            {pg}
+                          </button>
+                        );
+                      }
+                      if (pg === ordersPage - 2 || pg === ordersPage + 2) {
+                        return <span key={pg} className="px-1 text-slate-400">...</span>;
+                      }
+                      return null;
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={() => setOrdersPage((p) => Math.min(totalOrdersPages, p + 1))}
+                      disabled={ordersPage === totalOrdersPages}
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                    >
+                      <span>Next</span>
+                      <FiChevronRight size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -2039,16 +2097,14 @@ const Reports = () => {
         <div className="fixed inset-0 z-[10000] overflow-hidden">
           {/* Backdrop */}
           <div
-            className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
-              isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
-            }`}
+            className={`fixed inset-0 dark:bg-slate-950/60 backdrop-blur-md transition-opacity duration-300 ease-in-out ${isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
+              }`}
             onClick={handleCloseDrawer}
           />
 
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
-            <div className={`w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto transition-transform duration-300 ease-in-out z-10 ${
-              isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
-            }`}>
+            <div className={`w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full pointer-events-auto transition-transform duration-300 ease-in-out z-10 ${isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+              }`}>
               {/* Sticky Header with Stepper */}
               <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0">
                 <div className="flex items-center justify-between gap-2.5">
@@ -2163,9 +2219,8 @@ const Reports = () => {
                     </span>
                     <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                       <span className="font-bold text-slate-900 dark:text-white text-sm">
-                        {`${selectedOrder.salesExecutiveId?.firstName || ''} ${
-                          selectedOrder.salesExecutiveId?.lastName || ''
-                        }`.trim() || 'N/A'}
+                        {`${selectedOrder.salesExecutiveId?.firstName || ''} ${selectedOrder.salesExecutiveId?.lastName || ''
+                          }`.trim() || 'N/A'}
                       </span>
                       {selectedOrder.salesExecutiveId?.employeeCode && (
                         <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">

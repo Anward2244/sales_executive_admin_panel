@@ -928,7 +928,7 @@ const BrandRoutings = () => {
   return (
     <div className="space-y-6 pb-12 relative">
       {/* Top-Left Ambient Glowing Blob */}
-      <div className="absolute -top-16 -left-16 w-80 h-80 sm:w-96 sm:h-96 bg-gradient-to-br from-blue-500/25 via-indigo-500/20 to-sky-400/15 rounded-full blur-[90px] pointer-events-none -z-10" />
+      <div className="absolute -top-16 -left-16 w-80 h-80 sm:w-96 sm:h-96 bg-linear-to-br from-blue-500/25 via-indigo-500/20 to-sky-400/15 rounded-full blur-[90px] pointer-events-none -z-10" />
 
       {/* ================= PAGE HEADER ================= */}
       <PageHeader
@@ -1073,8 +1073,8 @@ const BrandRoutings = () => {
           type="button"
           onClick={() => setSearchBrand((prev) => (prev.toUpperCase() === 'ALL' ? '' : 'ALL'))}
           className={`p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-0.5 flex items-center justify-between group ${searchBrand.toUpperCase() === 'ALL'
-              ? 'bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/40 ring-2 ring-emerald-500/20'
-              : 'bg-white/70 dark:bg-slate-900 border-slate-200/80 dark:border-white/10 hover:border-emerald-500/30'
+            ? 'bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/40 ring-2 ring-emerald-500/20'
+            : 'bg-white/70 dark:bg-slate-900 border-slate-200/80 dark:border-white/10 hover:border-emerald-500/30'
             }`}
           title="Click to isolate the 'ALL' Global Default fallback policy"
         >
@@ -1176,8 +1176,8 @@ const BrandRoutings = () => {
               type="button"
               onClick={() => setViewMode('grouped')}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${viewMode === 'grouped'
-                  ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               title="Grouped Cards by Brand"
             >
@@ -1188,8 +1188,8 @@ const BrandRoutings = () => {
               type="button"
               onClick={() => setViewMode('table')}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${viewMode === 'table'
-                  ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               title="Flat Rules Data Table"
             >
@@ -1200,8 +1200,8 @@ const BrandRoutings = () => {
               type="button"
               onClick={() => setViewMode('map')}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${viewMode === 'map'
-                  ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               title="Interactive India State Map"
             >
@@ -1274,8 +1274,8 @@ const BrandRoutings = () => {
               <div
                 key={brandGroup.brand}
                 className={`rounded-2xl border transition-all duration-200 overflow-hidden shadow-xs ${isAllBrand
-                    ? 'bg-white/80 dark:bg-slate-900 border border-blue-500/40 dark:border-blue-500/30 shadow-xs'
-                    : 'bg-white/60 dark:bg-slate-900 border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
+                  ? 'bg-white/80 dark:bg-slate-900 border border-blue-500/40 dark:border-blue-500/30 shadow-xs'
+                  : 'bg-white/60 dark:bg-slate-900 border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
                   }`}
               >
                 {/* Visual Distinction Banner for ALL Global Fallback Card */}
@@ -1302,8 +1302,8 @@ const BrandRoutings = () => {
                     {/* Color-Coded Brand Avatar */}
                     <div
                       className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-xs ${isAllBrand
-                          ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/25 ring-2 ring-blue-500/20'
-                          : brandColor.bg
+                        ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/25 ring-2 ring-blue-500/20'
+                        : brandColor.bg
                         }`}
                     >
                       {isAllBrand ? '★' : brandGroup.brand.slice(0, 2).toUpperCase()}
@@ -1554,8 +1554,8 @@ const BrandRoutings = () => {
                         <div className="flex items-center gap-2.5">
                           <div
                             className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-[10px] shrink-0 shadow-xs ${rule.brand === 'ALL'
-                                ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/20'
-                                : brandColor.bg
+                              ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/20'
+                              : brandColor.bg
                               }`}
                           >
                             {rule.brand === 'ALL' ? '★' : rule.brand.slice(0, 2).toUpperCase()}
@@ -1799,7 +1799,7 @@ const BrandRoutings = () => {
 
                 {/* Resolution Result Presentation */}
                 {resolvingApi ? (
-                  <div className="p-8 text-center rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2">
+                  <div className="p-8 text-center rounded-2xl bg-slate-50/50 dark:bg-white/2 border border-slate-200 dark:border-white/10 space-y-2">
                     <FiRefreshCw className="animate-spin text-xl text-blue-500 mx-auto" />
                     <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                       Querying routing engine for <span className="text-blue-600 dark:text-blue-400 font-bold">{simBrand || 'brand'}</span>...
@@ -1912,8 +1912,8 @@ const BrandRoutings = () => {
                                 )}
                                 <span
                                   className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isCompActive
-                                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
                                     }`}
                                 >
                                   {isCompActive ? '✓ Active Entity' : 'Inactive'}
@@ -1930,7 +1930,7 @@ const BrandRoutings = () => {
                         </div>
 
                         {/* Rule Applied Card */}
-                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2.5">
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/2 border border-slate-200 dark:border-white/10 space-y-2.5">
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                               <FiShield className="text-purple-500" />
@@ -2003,7 +2003,7 @@ const BrandRoutings = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-6 text-center rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 text-slate-400 text-xs">
+                  <div className="p-6 text-center rounded-2xl bg-slate-50 dark:bg-white/2 border border-dashed border-slate-200 dark:border-white/10 text-slate-400 text-xs">
                     Enter a brand name above to evaluate the real-time routing resolution.
                   </div>
                 )}
@@ -2076,7 +2076,7 @@ const BrandRoutings = () => {
                 )}
 
                 {/* Brand and Policy */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50 dark:bg-white/2 border border-slate-200/80 dark:border-white/10">
                   <div className="sm:col-span-2">
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -2376,7 +2376,7 @@ const BrandRoutings = () => {
                               className="w-full px-3 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-lg text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                             />
 
-                            <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
+                            <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-white/2">
                               {displayedStates.map((state) => {
                                 const isSelected = mapping.states.includes(state);
                                 return (
@@ -2385,8 +2385,8 @@ const BrandRoutings = () => {
                                     type="button"
                                     onClick={() => handleToggleStateInMapping(mIdx, state)}
                                     className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${isSelected
-                                        ? 'bg-blue-600 text-white border-blue-600 font-bold'
-                                        : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
+                                      ? 'bg-blue-600 text-white border-blue-600 font-bold'
+                                      : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10'
                                       }`}
                                   >
                                     {isSelected ? '✓ ' : '+ '}{state}
@@ -2483,7 +2483,7 @@ const BrandRoutings = () => {
                   {bulkBrands.map((bItem, bIdx) => (
                     <div
                       key={bIdx}
-                      className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2.5"
+                      className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/2 border border-slate-200 dark:border-white/10 space-y-2.5"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-extrabold text-purple-600 dark:text-purple-400">

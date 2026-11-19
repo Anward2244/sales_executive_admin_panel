@@ -825,7 +825,7 @@ const Companies = () => {
 
             {/* Pagination Controls */}
             {!loading && !error && sortedCompanies.length > 0 && (
-              <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50 dark:bg-white/[0.02] backdrop-blur-md">
+              <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50 dark:bg-white/2 backdrop-blur-md">
                 <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 text-center sm:text-left">
                   Showing <span className="font-bold text-slate-800 dark:text-white">{indexOfFirstItem + 1}</span> to <span className="font-bold text-slate-800 dark:text-white">{Math.min(indexOfLastItem, sortedCompanies.length)}</span> of <span className="font-bold text-slate-800 dark:text-white">{sortedCompanies.length}</span> companies
                 </span>
@@ -844,11 +844,10 @@ const Companies = () => {
                         key={pageNum}
                         type="button"
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`w-8 h-8 flex items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          currentPage === pageNum
+                        className={`w-8 h-8 flex items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${currentPage === pageNum
                             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
                             : 'bg-white dark:bg-slate-950/20 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/10'
-                        }`}
+                          }`}
                       >
                         {pageNum}
                       </button>
@@ -918,132 +917,132 @@ const Companies = () => {
 
               {/* Form */}
               <form onSubmit={handleCreateCompany} className="space-y-4">
-              {/* Company Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                  Company Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  required
-                  disabled={submitting}
-                  placeholder="e.g. Whatnot Sales Private Limited"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400"
-                />
-              </div>
-
-              {/* Company Code */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                  Company Code <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <FiTag className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+                {/* Company Name */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Company Name <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     type="text"
-                    name="code"
+                    name="name"
                     required
                     disabled={submitting}
-                    placeholder="e.g. WHATNOT"
-                    value={formData.code}
+                    placeholder="e.g. Whatnot Sales Private Limited"
+                    value={formData.name}
                     onChange={handleInputChange}
-                    className="w-full pl-10 pr-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400"
+                    className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">Unique uppercase code identifier.</p>
-              </div>
 
-              {/* Logo URL + Live Preview */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                  Logo URL
-                </label>
-                <div className="flex gap-2.5 items-center">
-                  <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
-                    {formData.logo ? (
-                      <img
-                        src={formData.logo}
-                        alt="Logo preview"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <FiImage className="text-slate-400 text-lg" />
-                    )}
+                {/* Company Code */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Company Code <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <FiTag className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+                    <input
+                      type="text"
+                      name="code"
+                      required
+                      disabled={submitting}
+                      placeholder="e.g. WHATNOT"
+                      value={formData.code}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">Unique uppercase code identifier.</p>
+                </div>
+
+                {/* Logo URL + Live Preview */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Logo URL
+                  </label>
+                  <div className="flex gap-2.5 items-center">
+                    <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                      {formData.logo ? (
+                        <img
+                          src={formData.logo}
+                          alt="Logo preview"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <FiImage className="text-slate-400 text-lg" />
+                      )}
+                    </div>
+                    <input
+                      type="url"
+                      name="logo"
+                      disabled={submitting}
+                      placeholder="https://example.com/whatnot-logo.png"
+                      value={formData.logo}
+                      onChange={handleInputChange}
+                      className="flex-1 px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    disabled={submitting}
+                    placeholder="e.g. Consumer electronics and accessories"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 resize-none"
+                  />
+                </div>
+
+                {/* Active Toggle */}
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-white/2 border border-slate-200/80 dark:border-white/10">
+                  <div>
+                    <label htmlFor="createCompanyIsActive" className="text-xs font-bold text-slate-900 dark:text-white cursor-pointer block">
+                      Active Status
+                    </label>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Enable this company for catalogs and inventory listings immediately.
+                    </p>
                   </div>
                   <input
-                    type="url"
-                    name="logo"
-                    disabled={submitting}
-                    placeholder="https://example.com/whatnot-logo.png"
-                    value={formData.logo}
+                    type="checkbox"
+                    id="createCompanyIsActive"
+                    name="isActive"
+                    checked={formData.isActive}
                     onChange={handleInputChange}
-                    className="flex-1 px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 font-mono text-xs"
+                    className="w-5 h-5 rounded-md text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
                   />
                 </div>
-              </div>
 
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                  Description
-                </label>
-                <textarea
-                  name="description"
-                  rows={3}
-                  disabled={submitting}
-                  placeholder="e.g. Consumer electronics and accessories"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  className="w-full px-3.5 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-900 dark:text-white placeholder-slate-400 resize-none"
-                />
-              </div>
-
-              {/* Active Toggle */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
-                <div>
-                  <label htmlFor="createCompanyIsActive" className="text-xs font-bold text-slate-900 dark:text-white cursor-pointer block">
-                    Active Status
-                  </label>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Enable this company for catalogs and inventory listings immediately.
-                  </p>
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={handleCloseModal}
+                    className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-blue-600/25"
+                  >
+                    {submitting && <FiLoader className="animate-spin text-xs" />}
+                    <span>{submitting ? 'Creating...' : 'Create Company'}</span>
+                  </button>
                 </div>
-                <input
-                  type="checkbox"
-                  id="createCompanyIsActive"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={handleInputChange}
-                  className="w-5 h-5 rounded-md text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-3 border-t border-slate-200/80 dark:border-white/10">
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={handleCloseModal}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-blue-600/25"
-                >
-                  {submitting && <FiLoader className="animate-spin text-xs" />}
-                  <span>{submitting ? 'Creating...' : 'Create Company'}</span>
-                </button>
-              </div>
-            </form>
+              </form>
             </div>
           </div>
         </div>,
@@ -1055,17 +1054,15 @@ const Companies = () => {
         <div className="fixed inset-0 z-[10000] overflow-hidden">
           {/* Backdrop */}
           <div
-            className={`fixed inset-0 dark:bg-slate-950/50 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
-              isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
-            }`}
+            className={`fixed inset-0 dark:bg-slate-950/50 backdrop-blur-md transition-opacity duration-300 ease-in-out ${isDrawerClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-300'
+              }`}
             onClick={handleCloseDrawer}
           />
 
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10 pointer-events-none">
-            <div className={`w-screen max-w-full sm:max-w-xl bg-white/30 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col transform pointer-events-auto transition-transform duration-300 ease-in-out ${
-              isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
-            }`}>
-              
+            <div className={`w-screen max-w-full sm:max-w-xl bg-white/30 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col transform pointer-events-auto transition-transform duration-300 ease-in-out ${isDrawerClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+              }`}>
+
               {/* Drawer Top Header */}
               <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0 space-y-2.5">
                 <div className="flex items-center justify-between gap-2.5">
@@ -1080,16 +1077,14 @@ const Companies = () => {
                         </h2>
                         {selectedCompany && (
                           <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              selectedCompany.isActive !== false
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${selectedCompany.isActive !== false
                                 ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-400/30'
                                 : 'bg-white/15 text-slate-200 border border-white/20'
-                            }`}
+                              }`}
                           >
                             <span
-                              className={`w-1 h-1 rounded-full ${
-                                selectedCompany.isActive !== false ? 'bg-emerald-400 animate-pulse' : 'bg-slate-300'
-                              }`}
+                              className={`w-1 h-1 rounded-full ${selectedCompany.isActive !== false ? 'bg-emerald-400 animate-pulse' : 'bg-slate-300'
+                                }`}
                             />
                             {selectedCompany.isActive !== false ? 'Active' : 'Inactive'}
                           </span>
@@ -1138,11 +1133,10 @@ const Companies = () => {
                         setDrawerMode('details');
                         setEditError(null);
                       }}
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-                        drawerMode === 'details'
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${drawerMode === 'details'
                           ? 'bg-white text-blue-700 shadow-xs'
                           : 'text-white/80 hover:text-white hover:bg-white/10'
-                      }`}
+                        }`}
                     >
                       <FiEye className="text-[11px]" />
                       <span>Overview & Details</span>
@@ -1162,11 +1156,10 @@ const Companies = () => {
                           });
                         }
                       }}
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-                        drawerMode === 'edit'
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${drawerMode === 'edit'
                           ? 'bg-white text-blue-700 shadow-xs'
                           : 'text-white/80 hover:text-white hover:bg-white/10'
-                      }`}
+                        }`}
                     >
                       <FiEdit2 className="text-[11px]" />
                       <span>Edit Company</span>
@@ -1265,7 +1258,7 @@ const Companies = () => {
 
                     {/* Metadata Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-white/2 border border-slate-200/80 dark:border-white/10">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                           <FiTag className="text-blue-500 text-xs" />
                           <span>Code Identifier</span>
@@ -1275,7 +1268,7 @@ const Companies = () => {
                         </p>
                       </div>
 
-                      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-white/2 border border-slate-200/80 dark:border-white/10">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                           <FiCheckCircle className="text-emerald-500 text-xs" />
                           <span>Operational Status</span>
@@ -1285,7 +1278,7 @@ const Companies = () => {
                         </p>
                       </div>
 
-                      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-white/2 border border-slate-200/80 dark:border-white/10">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                           <FiCalendar className="text-blue-500 text-xs" />
                           <span>Created Date</span>
@@ -1300,7 +1293,7 @@ const Companies = () => {
                         )}
                       </div>
 
-                      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                      <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-white/2 border border-slate-200/80 dark:border-white/10">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                           <FiClock className="text-indigo-500 text-xs" />
                           <span>Last Updated</span>
@@ -1317,7 +1310,7 @@ const Companies = () => {
                     </div>
 
                     {/* Description Box */}
-                    <div className="p-3.5 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                    <div className="p-3.5 rounded-xl bg-slate-50/70 dark:bg-white/2 border border-slate-200/80 dark:border-white/10">
                       <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                         Description & Notes
                       </h4>
@@ -1328,7 +1321,7 @@ const Companies = () => {
 
                     {/* Logo Source Preview if URL provided */}
                     {selectedCompany.logo && (
-                      <div className="p-3.5 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                      <div className="p-3.5 rounded-xl bg-slate-50/70 dark:bg-white/2 border border-slate-200/80 dark:border-white/10">
                         <div className="flex items-center justify-between mb-1.5">
                           <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             Logo Asset Source
@@ -1446,7 +1439,7 @@ const Companies = () => {
                     </div>
 
                     {/* Active Toggle */}
-                    <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10">
+                    <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-white/2 border border-slate-200/80 dark:border-white/10">
                       <div>
                         <label htmlFor="editCompanyIsActiveDrawer" className="text-xs font-bold text-slate-900 dark:text-white cursor-pointer block">
                           Active Status

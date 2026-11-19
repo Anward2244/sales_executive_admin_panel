@@ -138,8 +138,7 @@ const Settings = () => {
     const saved = saveNotificationSettings(updated);
     setNotificationConfig(saved);
     triggerFeedback(
-      `${key === 'browserAlertsEnabled' ? 'Desktop alerts' : key === 'soundEnabled' ? 'Sound alerts' : 'Toast alerts'} ${
-        updated[key] ? 'enabled' : 'disabled'
+      `${key === 'browserAlertsEnabled' ? 'Desktop alerts' : key === 'soundEnabled' ? 'Sound alerts' : 'Toast alerts'} ${updated[key] ? 'enabled' : 'disabled'
       }`
     );
   };
@@ -365,11 +364,10 @@ const Settings = () => {
       {feedback && (
         <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
           <div
-            className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border backdrop-blur-xl ${
-              feedback.type === 'error'
-                ? 'bg-rose-500/95 text-white border-rose-400/30 shadow-rose-500/20'
-                : 'bg-emerald-600/95 text-white border-emerald-400/30 shadow-emerald-500/20'
-            }`}
+            className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border backdrop-blur-xl ${feedback.type === 'error'
+              ? 'bg-rose-500/95 text-white border-rose-400/30 shadow-rose-500/20'
+              : 'bg-emerald-600/95 text-white border-emerald-400/30 shadow-emerald-500/20'
+              }`}
           >
             {feedback.type === 'error' ? (
               <FiAlertCircle className="text-lg shrink-0" />
@@ -386,11 +384,10 @@ const Settings = () => {
         <button
           type="button"
           onClick={() => setActiveTab('appearance')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'appearance'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-              : 'bg-white/60 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/70 dark:border-transparent'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === 'appearance'
+            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+            : 'bg-white/60 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/70 dark:border-transparent'
+            }`}
         >
           {isDark ? <FiMoon className="text-sm" /> : <FiSun className="text-sm" />}
           Theme & Appearance
@@ -399,11 +396,10 @@ const Settings = () => {
         <button
           type="button"
           onClick={() => setActiveTab('notifications')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'notifications'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-              : 'bg-white/60 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/70 dark:border-transparent'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === 'notifications'
+            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+            : 'bg-white/60 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/70 dark:border-transparent'
+            }`}
         >
           <FiBell className="text-sm" />
           Notifications & Alerts
@@ -412,11 +408,10 @@ const Settings = () => {
         <button
           type="button"
           onClick={() => setActiveTab('display')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'display'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-              : 'bg-white/60 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/70 dark:border-transparent'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === 'display'
+            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+            : 'bg-white/60 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/70 dark:border-transparent'
+            }`}
         >
           <FiLayout className="text-sm" />
           Display & Layout
@@ -425,11 +420,10 @@ const Settings = () => {
         <button
           type="button"
           onClick={() => setActiveTab('system')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'system'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-              : 'bg-white/60 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/70 dark:border-transparent'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === 'system'
+            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+            : 'bg-white/60 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/70 dark:border-transparent'
+            }`}
         >
           <FiMonitor className="text-sm" />
           System & Storage
@@ -443,27 +437,24 @@ const Settings = () => {
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Main Interactive Theme Toggle Banner */}
           <div
-            className={`p-6 sm:p-7 rounded-3xl border transition-all relative overflow-hidden backdrop-blur-xl ${
-              isDark
-                ? 'bg-slate-900/60 border-white/10 shadow-2xl shadow-black/40'
-                : 'bg-white/80 border-slate-200/80 shadow-xl shadow-slate-900/5'
-            }`}
+            className={`p-6 sm:p-7 rounded-3xl border transition-all relative overflow-hidden backdrop-blur-xl ${isDark
+              ? 'bg-slate-900/60 border-white/10 shadow-2xl shadow-black/40'
+              : 'bg-white/80 border-slate-200/80 shadow-xl shadow-slate-900/5'
+              }`}
           >
             {/* Ambient Background Decorative Glow */}
             <div
-              className={`absolute -right-16 -top-16 w-64 h-64 rounded-full pointer-events-none filter blur-3xl opacity-30 ${
-                isDark ? 'bg-blue-600' : 'bg-amber-400'
-              }`}
+              className={`absolute -right-16 -top-16 w-64 h-64 rounded-full pointer-events-none filter blur-3xl opacity-30 ${isDark ? 'bg-blue-600' : 'bg-amber-400'
+                }`}
             />
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
               <div className="flex items-center gap-4">
                 <div
-                  className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 transition-transform duration-300 shadow-md ${
-                    isDark
-                      ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-blue-500/10'
-                      : 'bg-amber-500/15 text-amber-500 border border-amber-400/40 shadow-amber-500/10'
-                  }`}
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 transition-transform duration-300 shadow-md ${isDark
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-blue-500/10'
+                    : 'bg-amber-500/15 text-amber-500 border border-amber-400/40 shadow-amber-500/10'
+                    }`}
                 >
                   {isDark ? <FiMoon /> : <FiSun />}
                 </div>
@@ -473,11 +464,10 @@ const Settings = () => {
                       Theme Mode: {isDark ? 'Dark Theme' : 'Light Theme (Preferred)'}
                     </h2>
                     <span
-                      className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full border ${
-                        !isDark
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                          : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                      }`}
+                      className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full border ${!isDark
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                        : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                        }`}
                     >
                       {!isDark ? 'Active Default' : 'Active'}
                     </span>
@@ -492,9 +482,8 @@ const Settings = () => {
               {/* Master Theme Toggle Switch */}
               <div className="flex items-center gap-3 self-end sm:self-center">
                 <span
-                  className={`text-xs font-bold transition-colors ${
-                    !isDark ? 'text-amber-600 dark:text-amber-400 font-extrabold' : 'text-slate-400'
-                  }`}
+                  className={`text-xs font-bold transition-colors ${!isDark ? 'text-amber-600 dark:text-amber-400 font-extrabold' : 'text-slate-400'
+                    }`}
                 >
                   Light
                 </span>
@@ -506,27 +495,24 @@ const Settings = () => {
                     toggleTheme();
                     triggerFeedback(`Switched to ${isDark ? 'Light' : 'Dark'} theme`);
                   }}
-                  className={`relative inline-flex h-8 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none shadow-inner ${
-                    isDark ? 'bg-blue-600' : 'bg-slate-300'
-                  }`}
+                  className={`relative inline-flex h-8 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none shadow-inner ${isDark ? 'bg-blue-600' : 'bg-slate-300'
+                    }`}
                   role="switch"
                   aria-checked={isDark}
                   title={`Click to switch to ${isDark ? 'Light' : 'Dark'} Mode`}
                 >
                   <span className="sr-only">Toggle Theme</span>
                   <span
-                    className={`pointer-events-none inline-flex h-7 w-7 transform items-center justify-center rounded-full bg-white text-xs shadow-md ring-0 transition duration-300 ease-in-out ${
-                      isDark ? 'translate-x-8 text-blue-600' : 'translate-x-0 text-amber-500'
-                    }`}
+                    className={`pointer-events-none inline-flex h-7 w-7 transform items-center justify-center rounded-full bg-white text-xs shadow-md ring-0 transition duration-300 ease-in-out ${isDark ? 'translate-x-8 text-blue-600' : 'translate-x-0 text-amber-500'
+                      }`}
                   >
                     {isDark ? <FiMoon /> : <FiSun />}
                   </span>
                 </button>
 
                 <span
-                  className={`text-xs font-bold transition-colors ${
-                    isDark ? 'text-blue-400 font-extrabold' : 'text-slate-500'
-                  }`}
+                  className={`text-xs font-bold transition-colors ${isDark ? 'text-blue-400 font-extrabold' : 'text-slate-500'
+                    }`}
                 >
                   Dark
                 </span>
@@ -552,11 +538,10 @@ const Settings = () => {
                   setTheme('light');
                   triggerFeedback('Light Theme selected');
                 }}
-                className={`p-5 rounded-3xl border-2 transition-all duration-300 cursor-pointer relative overflow-hidden group ${
-                  !isDark
-                    ? 'border-blue-600 bg-white shadow-xl shadow-blue-500/10 ring-4 ring-blue-500/10'
-                    : 'border-slate-200/50 dark:border-white/10 bg-white/40 dark:bg-slate-900/30 hover:border-blue-400/50'
-                }`}
+                className={`p-5 rounded-3xl border-2 transition-all duration-300 cursor-pointer relative overflow-hidden group ${!isDark
+                  ? 'border-blue-600 bg-white shadow-xl shadow-blue-500/10 ring-4 ring-blue-500/10'
+                  : 'border-slate-200/50 dark:border-white/10 bg-white/40 dark:bg-slate-900/30 hover:border-blue-400/50'
+                  }`}
               >
                 {!isDark && (
                   <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider shadow-md shadow-blue-600/30">
@@ -565,7 +550,7 @@ const Settings = () => {
                 )}
 
                 {/* Mock UI Preview (Light) */}
-                <div className="w-full h-32 rounded-2xl bg-gradient-to-br from-white via-sky-50 to-blue-100 border border-slate-200 p-3 flex flex-col justify-between overflow-hidden shadow-inner mb-4">
+                <div className="w-full h-32 rounded-2xl bg-linear-to-br from-white via-sky-50 to-blue-100 border border-slate-200 p-3 flex flex-col justify-between overflow-hidden shadow-inner mb-4">
                   <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
@@ -609,11 +594,10 @@ const Settings = () => {
                     </p>
                   </div>
                   <div
-                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                      !isDark
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-slate-300 dark:border-slate-600'
-                    }`}
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${!isDark
+                      ? 'border-blue-600 bg-blue-600 text-white'
+                      : 'border-slate-300 dark:border-slate-600'
+                      }`}
                   >
                     {!isDark && <FiCheck className="text-xs stroke-[3]" />}
                   </div>
@@ -626,11 +610,10 @@ const Settings = () => {
                   setTheme('dark');
                   triggerFeedback('Dark Theme selected');
                 }}
-                className={`p-5 rounded-3xl border-2 transition-all duration-300 cursor-pointer relative overflow-hidden group ${
-                  isDark
-                    ? 'border-blue-500 bg-slate-900 shadow-xl shadow-blue-500/10 ring-4 ring-blue-500/10'
-                    : 'border-slate-200/50 dark:border-white/10 bg-white/80 dark:bg-slate-900/30 hover:border-blue-400/50'
-                }`}
+                className={`p-5 rounded-3xl border-2 transition-all duration-300 cursor-pointer relative overflow-hidden group ${isDark
+                  ? 'border-blue-500 bg-slate-900 shadow-xl shadow-blue-500/10 ring-4 ring-blue-500/10'
+                  : 'border-slate-200/50 dark:border-white/10 bg-white/80 dark:bg-slate-900/30 hover:border-blue-400/50'
+                  }`}
               >
                 {isDark && (
                   <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider shadow-md shadow-blue-600/30">
@@ -639,7 +622,7 @@ const Settings = () => {
                 )}
 
                 {/* Mock UI Preview (Dark) */}
-                <div className="w-full h-32 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 border border-white/10 p-3 flex flex-col justify-between overflow-hidden shadow-inner mb-4">
+                <div className="w-full h-32 rounded-2xl bg-linear-to-br from-slate-950 via-slate-900 to-blue-950 border border-white/10 p-3 flex flex-col justify-between overflow-hidden shadow-inner mb-4">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
@@ -678,11 +661,10 @@ const Settings = () => {
                     </p>
                   </div>
                   <div
-                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                      isDark
-                        ? 'border-blue-500 bg-blue-600 text-white'
-                        : 'border-slate-300 dark:border-slate-600'
-                    }`}
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${isDark
+                      ? 'border-blue-500 bg-blue-600 text-white'
+                      : 'border-slate-300 dark:border-slate-600'
+                      }`}
                   >
                     {isDark && <FiCheck className="text-xs stroke-[3]" />}
                   </div>
@@ -693,11 +675,10 @@ const Settings = () => {
 
           {/* Additional Visual Polish Preferences */}
           <div
-            className={`p-6 rounded-3xl border backdrop-blur-xl ${
-              isDark
-                ? 'bg-slate-900/50 border-white/10'
-                : 'bg-white/40 border-slate-200/80 shadow-xl shadow-slate-500/30'
-            }`}
+            className={`p-6 rounded-3xl border backdrop-blur-xl ${isDark
+              ? 'bg-slate-900/50 border-white/10'
+              : 'bg-white/40 border-slate-200/80 shadow-xl shadow-slate-500/30'
+              }`}
           >
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
               <FiZap className="text-amber-500" /> Visual & Motion Accents
@@ -717,16 +698,14 @@ const Settings = () => {
                 <button
                   type="button"
                   onClick={() => updateDisplayPref('ambientGlow', !displayPrefs.ambientGlow)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    displayPrefs.ambientGlow ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${displayPrefs.ambientGlow ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
                   role="switch"
                   aria-checked={displayPrefs.ambientGlow}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                      displayPrefs.ambientGlow ? 'translate-x-5' : 'translate-x-0'
-                    }`}
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${displayPrefs.ambientGlow ? 'translate-x-5' : 'translate-x-0'
+                      }`}
                   />
                 </button>
               </div>
@@ -744,16 +723,14 @@ const Settings = () => {
                 <button
                   type="button"
                   onClick={() => updateDisplayPref('autoScrollToTop', !displayPrefs.autoScrollToTop)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    displayPrefs.autoScrollToTop ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${displayPrefs.autoScrollToTop ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
                   role="switch"
                   aria-checked={displayPrefs.autoScrollToTop}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                      displayPrefs.autoScrollToTop ? 'translate-x-5' : 'translate-x-0'
-                    }`}
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${displayPrefs.autoScrollToTop ? 'translate-x-5' : 'translate-x-0'
+                      }`}
                   />
                 </button>
               </div>
@@ -769,33 +746,30 @@ const Settings = () => {
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* 1. Hero Permission Status & Quick Action Card */}
           <div
-            className={`p-6 sm:p-7 rounded-3xl border transition-all relative overflow-hidden backdrop-blur-xl ${
-              isDark
-                ? 'bg-slate-900/60 border-white/10 shadow-2xl'
-                : 'bg-white/80 border-slate-200/80 shadow-xl shadow-slate-900/5'
-            }`}
+            className={`p-6 sm:p-7 rounded-3xl border transition-all relative overflow-hidden backdrop-blur-xl ${isDark
+              ? 'bg-slate-900/60 border-white/10 shadow-2xl'
+              : 'bg-white/80 border-slate-200/80 shadow-xl shadow-slate-900/5'
+              }`}
           >
             {/* Ambient Background Glow */}
             <div
-              className={`absolute -right-16 -top-16 w-64 h-64 rounded-full pointer-events-none filter blur-3xl opacity-20 ${
-                browserPermission === 'granted'
-                  ? 'bg-emerald-500'
-                  : browserPermission === 'denied'
+              className={`absolute -right-16 -top-16 w-64 h-64 rounded-full pointer-events-none filter blur-3xl opacity-20 ${browserPermission === 'granted'
+                ? 'bg-emerald-500'
+                : browserPermission === 'denied'
                   ? 'bg-rose-500'
                   : 'bg-amber-500'
-              }`}
+                }`}
             />
 
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
               <div className="flex items-start sm:items-center gap-4">
                 <div
-                  className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 border shadow-md transition-transform duration-300 ${
-                    browserPermission === 'granted'
-                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                      : browserPermission === 'denied'
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 border shadow-md transition-transform duration-300 ${browserPermission === 'granted'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                    : browserPermission === 'denied'
                       ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
                       : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                  }`}
+                    }`}
                 >
                   {browserPermission === 'granted' ? (
                     <FiBell className="animate-pulse" />
@@ -812,29 +786,27 @@ const Settings = () => {
                       Browser Desktop Push Notifications
                     </h2>
                     <span
-                      className={`text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border inline-flex items-center gap-1.5 ${
-                        browserPermission === 'granted'
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                          : browserPermission === 'denied'
+                      className={`text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border inline-flex items-center gap-1.5 ${browserPermission === 'granted'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        : browserPermission === 'denied'
                           ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
                           : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                      }`}
+                        }`}
                     >
                       <span
-                        className={`w-2 h-2 rounded-full ${
-                          browserPermission === 'granted'
-                            ? 'bg-emerald-500 animate-ping'
-                            : browserPermission === 'denied'
+                        className={`w-2 h-2 rounded-full ${browserPermission === 'granted'
+                          ? 'bg-emerald-500 animate-ping'
+                          : browserPermission === 'denied'
                             ? 'bg-rose-500'
                             : 'bg-amber-500 animate-pulse'
-                        }`}
+                          }`}
                       />
                       <span>
                         {browserPermission === 'granted'
                           ? 'Permission Granted (Active)'
                           : browserPermission === 'denied'
-                          ? 'Permission Blocked / Denied'
-                          : 'Permission Required'}
+                            ? 'Permission Blocked / Denied'
+                            : 'Permission Required'}
                       </span>
                     </span>
                   </div>
@@ -843,8 +815,8 @@ const Settings = () => {
                     {browserPermission === 'granted'
                       ? 'Your browser is authorized to display OS-level push notifications. You will receive immediate alerts for incoming purchase orders and dispatch approvals even when working in other tabs.'
                       : browserPermission === 'denied'
-                      ? 'Notifications are currently blocked by your browser settings. Desktop push banners will not appear until unblocked in your browser address bar. Check our troubleshooting guide below.'
-                      : 'Enable desktop push notifications so sales managers and admins receive real-time alerts when new procurement orders are placed by sales executives.'}
+                        ? 'Notifications are currently blocked by your browser settings. Desktop push banners will not appear until unblocked in your browser address bar. Check our troubleshooting guide below.'
+                        : 'Enable desktop push notifications so sales managers and admins receive real-time alerts when new procurement orders are placed by sales executives.'}
                   </p>
 
                   {!isSecureOrigin() && (
@@ -908,11 +880,10 @@ const Settings = () => {
 
           {/* 3. Master Alert Channels */}
           <div
-            className={`p-6 rounded-3xl border backdrop-blur-xl ${
-              isDark
-                ? 'bg-slate-900/50 border-white/10'
-                : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/50'
-            }`}
+            className={`p-6 rounded-3xl border backdrop-blur-xl ${isDark
+              ? 'bg-slate-900/50 border-white/10'
+              : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/50'
+              }`}
           >
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
               <FiSliders className="text-blue-500" /> Master Notification Channels
@@ -937,16 +908,14 @@ const Settings = () => {
                 <button
                   type="button"
                   onClick={() => handleNotificationToggle('browserAlertsEnabled')}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    notificationConfig.browserAlertsEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${notificationConfig.browserAlertsEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
                   role="switch"
                   aria-checked={notificationConfig.browserAlertsEnabled}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                      notificationConfig.browserAlertsEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${notificationConfig.browserAlertsEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
                   />
                 </button>
               </div>
@@ -973,16 +942,14 @@ const Settings = () => {
                 <button
                   type="button"
                   onClick={() => handleNotificationToggle('soundEnabled')}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    notificationConfig.soundEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${notificationConfig.soundEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
                   role="switch"
                   aria-checked={notificationConfig.soundEnabled}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                      notificationConfig.soundEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${notificationConfig.soundEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
                   />
                 </button>
               </div>
@@ -1000,16 +967,14 @@ const Settings = () => {
                 <button
                   type="button"
                   onClick={() => handleNotificationToggle('toastAlertsEnabled')}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    notificationConfig.toastAlertsEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${notificationConfig.toastAlertsEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
                   role="switch"
                   aria-checked={notificationConfig.toastAlertsEnabled}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                      notificationConfig.toastAlertsEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${notificationConfig.toastAlertsEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
                   />
                 </button>
               </div>
@@ -1023,11 +988,10 @@ const Settings = () => {
                     </p>
                     {notificationConfig.quietHoursEnabled && (
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isQuietHoursActive()
-                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                            : 'bg-slate-100 dark:bg-white/5 text-slate-500'
-                        }`}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isQuietHoursActive()
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                          : 'bg-slate-100 dark:bg-white/5 text-slate-500'
+                          }`}
                       >
                         {isQuietHoursActive() ? 'Currently Active' : 'Scheduled'}
                       </span>
@@ -1040,16 +1004,14 @@ const Settings = () => {
                 <button
                   type="button"
                   onClick={handleQuietHoursToggle}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    notificationConfig.quietHoursEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${notificationConfig.quietHoursEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
                   role="switch"
                   aria-checked={notificationConfig.quietHoursEnabled}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                      notificationConfig.quietHoursEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${notificationConfig.quietHoursEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
                   />
                 </button>
               </div>
@@ -1060,11 +1022,10 @@ const Settings = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Audio Tone & Volume Customization */}
             <div
-              className={`p-6 rounded-3xl border backdrop-blur-xl flex flex-col justify-between ${
-                isDark
-                  ? 'bg-slate-900/50 border-white/10'
-                  : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
-              }`}
+              className={`p-6 rounded-3xl border backdrop-blur-xl flex flex-col justify-between ${isDark
+                ? 'bg-slate-900/50 border-white/10'
+                : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
+                }`}
             >
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
@@ -1087,19 +1048,17 @@ const Settings = () => {
                       <div
                         key={t.key}
                         onClick={() => handleSoundTypeChange(t.key)}
-                        className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
-                          isSelected
-                            ? 'border-blue-500 bg-white dark:bg-blue-950/80'
-                            : 'border-slate-200/80 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15 bg-white/40 dark:bg-blue-400/5'
-                        }`}
+                        className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${isSelected
+                          ? 'border-blue-500 bg-white dark:bg-blue-950/80'
+                          : 'border-slate-200/80 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15 bg-white/40 dark:bg-blue-400/5'
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                              isSelected
-                                ? 'border-blue-600 bg-blue-600 text-white'
-                                : 'border-slate-300 dark:border-slate-600'
-                            }`}
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected
+                              ? 'border-blue-600 bg-blue-600 text-white'
+                              : 'border-slate-300 dark:border-slate-600'
+                              }`}
                           >
                             {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                           </div>
@@ -1141,11 +1100,10 @@ const Settings = () => {
                       key={v.val}
                       type="button"
                       onClick={() => handleSoundVolumeChange(v.val)}
-                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                        notificationConfig.soundVolume === v.val
-                          ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
-                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                      }`}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${notificationConfig.soundVolume === v.val
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                        }`}
                     >
                       {v.label}
                     </button>
@@ -1156,11 +1114,10 @@ const Settings = () => {
 
             {/* In-App Toast & Quiet Hours Settings */}
             <div
-              className={`p-6 rounded-3xl border backdrop-blur-xl flex flex-col justify-between ${
-                isDark
-                  ? 'bg-slate-900/50 border-white/10'
-                  : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
-              }`}
+              className={`p-6 rounded-3xl border backdrop-blur-xl flex flex-col justify-between ${isDark
+                ? 'bg-slate-900/50 border-white/10'
+                : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
+                }`}
             >
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
@@ -1187,11 +1144,10 @@ const Settings = () => {
                         key={dur.ms}
                         type="button"
                         onClick={() => handleToastDurationChange(dur.ms)}
-                        className={`p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                          notificationConfig.toastDuration === dur.ms
-                            ? 'border-blue-600 bg-white dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 shadow-xs'
-                            : 'border-slate-200/80 dark:border-white/5 text-slate-600 dark:text-slate-400 hover:border-slate-300 bg-white/40 dark:bg-blue-400/5'
-                        }`}
+                        className={`p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${notificationConfig.toastDuration === dur.ms
+                          ? 'border-blue-600 bg-white dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 shadow-xs'
+                          : 'border-slate-200/80 dark:border-white/5 text-slate-600 dark:text-slate-400 hover:border-slate-300 bg-white/40 dark:bg-blue-400/5'
+                          }`}
                       >
                         {dur.label}
                       </button>
@@ -1239,11 +1195,10 @@ const Settings = () => {
                       key={pos}
                       type="button"
                       onClick={() => handleToastPositionChange(pos)}
-                      className={`px-2.5 py-1 rounded-lg capitalize transition-all cursor-pointer ${
-                        (notificationConfig.toastPosition || 'top-right') === pos
-                          ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
-                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                      }`}
+                      className={`px-2.5 py-1 rounded-lg capitalize transition-all cursor-pointer ${(notificationConfig.toastPosition || 'top-right') === pos
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                        }`}
                     >
                       {pos.replace('-', ' ')}
                     </button>
@@ -1255,11 +1210,10 @@ const Settings = () => {
 
           {/* 5. Notification Categories & Polling Intervals */}
           <div
-            className={`p-6 rounded-3xl border backdrop-blur-xl ${
-              isDark
-                ? 'bg-slate-900/50 border-white/10'
-                : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
-            }`}
+            className={`p-6 rounded-3xl border backdrop-blur-xl ${isDark
+              ? 'bg-slate-900/50 border-white/10'
+              : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
+              }`}
           >
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -1289,13 +1243,12 @@ const Settings = () => {
                 return (
                   <div
                     key={cat.key}
-                    className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
-                      isEnabled
-                        ? isDark
-                          ? 'bg-white/[0.02] border-white/10 shadow-xs'
-                          : 'bg-slate-50/80 border-slate-200/80 shadow-xs'
-                        : 'opacity-55 bg-transparent border-dashed border-slate-300 dark:border-white/5'
-                    }`}
+                    className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${isEnabled
+                      ? isDark
+                        ? 'bg-white/[0.02] border-white/10 shadow-xs'
+                        : 'bg-slate-50/80 border-slate-200/80 shadow-xs'
+                      : 'opacity-55 bg-transparent border-dashed border-slate-300 dark:border-white/5'
+                      }`}
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
@@ -1310,16 +1263,14 @@ const Settings = () => {
                         <button
                           type="button"
                           onClick={() => handleCategoryToggle(cat.key)}
-                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            isEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
-                          }`}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                            }`}
                           role="switch"
                           aria-checked={isEnabled}
                         >
                           <span
-                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                              isEnabled ? 'translate-x-4' : 'translate-x-0'
-                            }`}
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${isEnabled ? 'translate-x-4' : 'translate-x-0'
+                              }`}
                           />
                         </button>
                       </div>
@@ -1356,11 +1307,10 @@ const Settings = () => {
           {/* 6. Step-by-Step Browser Notification Setup & Troubleshooting Guide (Not Secure Browsers) */}
           <div
             id="browser-notification-guide"
-            className={`rounded-3xl border backdrop-blur-xl transition-all overflow-hidden ${
-              isDark
-                ? 'bg-slate-900/60 border-white/10'
-                : 'bg-white/60 border-slate-200/80 shadow-lg shadow-slate-500/20'
-            }`}
+            className={`rounded-3xl border backdrop-blur-xl transition-all overflow-hidden ${isDark
+              ? 'bg-slate-900/60 border-white/10'
+              : 'bg-white/60 border-slate-200/80 shadow-lg shadow-slate-500/20'
+              }`}
           >
             {/* Guide Header Banner */}
             <div
@@ -1369,11 +1319,10 @@ const Settings = () => {
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl border shadow-xs transition-colors ${
-                    !isSecureOrigin()
-                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-                  }`}
+                  className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl border shadow-xs transition-colors ${!isSecureOrigin()
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                    : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                    }`}
                 >
                   {!isSecureOrigin() ? <FiUnlock /> : <FiCompass />}
                 </div>
@@ -1383,11 +1332,10 @@ const Settings = () => {
                       Browser Setup & Troubleshooting Guide
                     </h3>
                     <span
-                      className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${
-                        !isSecureOrigin()
-                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-                      }`}
+                      className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${!isSecureOrigin()
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                        : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                        }`}
                     >
                       {!isSecureOrigin() ? 'Action Required: Not Secure Browser' : 'HTTP & Not Secure Setup'}
                     </span>
@@ -1413,11 +1361,10 @@ const Settings = () => {
               <div className="p-6 space-y-6 animate-in fade-in duration-200">
                 {/* 1. Context Explanation & Whitelist Helper Banner */}
                 <div
-                  className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-                    !isSecureOrigin()
-                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
-                      : 'bg-blue-500/10 border-blue-500/20 text-slate-800 dark:text-slate-200'
-                  }`}
+                  className={`p-4 sm:p-5 rounded-2xl border transition-all ${!isSecureOrigin()
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
+                    : 'bg-blue-500/10 border-blue-500/20 text-slate-800 dark:text-slate-200'
+                    }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0 text-base mt-0.5">
@@ -1429,11 +1376,10 @@ const Settings = () => {
                           Why Modern Browsers Block Notifications on "Not Secure" (HTTP) Origins
                         </h4>
                         <span
-                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
-                            isSecureOrigin()
-                              ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                              : 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
-                          }`}
+                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${isSecureOrigin()
+                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
+                            }`}
                         >
                           {isSecureOrigin() ? 'Secure Context Active' : 'Not Secure Connection'}
                         </span>
@@ -1500,11 +1446,10 @@ const Settings = () => {
                         key={tab.key}
                         type="button"
                         onClick={() => setGuideBrowserTab(tab.key)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                          isActive
-                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                            : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300'
-                        }`}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${isActive
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300'
+                          }`}
                       >
                         <TabIcon className="text-xs" />
                         <span>{tab.label}</span>
@@ -1514,7 +1459,7 @@ const Settings = () => {
                 </div>
 
                 {/* 3. Tab Instructions Content */}
-                <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5">
+                <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/80 dark:border-white/5">
                   {/* TAB: CHROME / BRAVE */}
                   {guideBrowserTab === 'chrome' && (
                     <div className="space-y-6">
@@ -1974,11 +1919,10 @@ const Settings = () => {
                     <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
                       <span className="text-[10px] text-slate-400 block font-medium">Security Context:</span>
                       <span
-                        className={`text-xs font-bold flex items-center gap-1 mt-0.5 ${
-                          isSecureOrigin()
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-amber-600 dark:text-amber-400'
-                        }`}
+                        className={`text-xs font-bold flex items-center gap-1 mt-0.5 ${isSecureOrigin()
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-amber-600 dark:text-amber-400'
+                          }`}
                       >
                         {isSecureOrigin() ? (
                           <FiCheckCircle className="text-xs" />
@@ -1992,13 +1936,12 @@ const Settings = () => {
                     <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
                       <span className="text-[10px] text-slate-400 block font-medium">Permission State:</span>
                       <span
-                        className={`text-xs font-bold capitalize flex items-center gap-1 mt-0.5 ${
-                          browserPermission === 'granted'
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : browserPermission === 'denied'
+                        className={`text-xs font-bold capitalize flex items-center gap-1 mt-0.5 ${browserPermission === 'granted'
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : browserPermission === 'denied'
                             ? 'text-rose-600 dark:text-rose-400'
                             : 'text-amber-600 dark:text-amber-400'
-                        }`}
+                          }`}
                       >
                         {browserPermission === 'granted' ? (
                           <FiCheckCircle className="text-xs" />
@@ -2074,11 +2017,10 @@ const Settings = () => {
       {activeTab === 'display' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           <div
-            className={`p-6 rounded-3xl border backdrop-blur-xl ${
-              isDark
-                ? 'bg-slate-900/50 border-white/10'
-                : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
-            }`}
+            className={`p-6 rounded-3xl border backdrop-blur-xl ${isDark
+              ? 'bg-slate-900/50 border-white/10'
+              : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
+              }`}
           >
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
               <FiLayout className="text-blue-500" /> Data Density & Tables
@@ -2093,11 +2035,10 @@ const Settings = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl">
                   <div
                     onClick={() => updateDisplayPref('density', 'comfortable')}
-                    className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
-                      displayPrefs.density === 'comfortable'
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                        : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
-                    }`}
+                    className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${displayPrefs.density === 'comfortable'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
+                      }`}
                   >
                     <div>
                       <p className={`text-xs font-bold text-slate-900 dark:text-white ${displayPrefs.density === 'comfortable' ? 'text-white' : ''}`}>Comfortable</p>
@@ -2112,11 +2053,10 @@ const Settings = () => {
 
                   <div
                     onClick={() => updateDisplayPref('density', 'compact')}
-                    className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
-                      displayPrefs.density === 'compact'
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                        : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
-                    }`}
+                    className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${displayPrefs.density === 'compact'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
+                      }`}
                   >
                     <div>
                       <p className={`text-xs font-bold text-slate-900 dark:text-white ${displayPrefs.density === 'compact' ? 'text-white' : ''}`}>Compact</p>
@@ -2131,11 +2071,10 @@ const Settings = () => {
 
                   <div
                     onClick={() => updateDisplayPref('density', 'dense')}
-                    className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
-                      displayPrefs.density === 'dense'
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                        : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
-                    }`}
+                    className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${displayPrefs.density === 'dense'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
+                      }`}
                   >
                     <div>
                       <p className={`text-xs font-bold text-slate-900 dark:text-white ${displayPrefs.density === 'dense' ? 'text-white' : ''}`}>Dense</p>
@@ -2159,22 +2098,20 @@ const Settings = () => {
                   <button
                     type="button"
                     onClick={() => updateDisplayPref('timeFormat', '12h')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      displayPrefs.timeFormat === '12h'
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                        : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${displayPrefs.timeFormat === '12h'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
+                      }`}
                   >
                     12-Hour (e.g. 02:30 PM)
                   </button>
                   <button
                     type="button"
                     onClick={() => updateDisplayPref('timeFormat', '24h')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      displayPrefs.timeFormat === '24h'
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                        : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${displayPrefs.timeFormat === '24h'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10'
+                      }`}
                   >
                     24-Hour (e.g. 14:30)
                   </button>
@@ -2204,11 +2141,10 @@ const Settings = () => {
                             updateDisplayPref('rowsPerPage', count);
                             triggerFeedback(`Default pagination set to ${count} rows per page`);
                           }}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 ring-2 ring-blue-500/30'
-                              : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
-                          }`}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${isSelected
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 ring-2 ring-blue-500/30'
+                            : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
+                            }`}
                         >
                           {count} rows
                         </button>
@@ -2229,11 +2165,10 @@ const Settings = () => {
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Panel Telemetry Overview */}
           <div
-            className={`p-6 rounded-3xl border backdrop-blur-xl ${
-              isDark
-                ? 'bg-slate-900/50 border-white/10'
-                : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
-            }`}
+            className={`p-6 rounded-3xl border backdrop-blur-xl ${isDark
+              ? 'bg-slate-900/50 border-white/10'
+              : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
+              }`}
           >
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
               <FiActivity className="text-blue-500" /> Admin Environment Telemetry
@@ -2292,9 +2227,8 @@ const Settings = () => {
 
           {/* Reset Preferences Card */}
           <div
-            className={`p-6 rounded-3xl border border-rose-500/20 backdrop-blur-xl shadow-xl ${
-              isDark ? 'bg-rose-950/10' : 'bg-rose-50/40'
-            }`}
+            className={`p-6 rounded-3xl border border-rose-500/20 backdrop-blur-xl shadow-xl ${isDark ? 'bg-rose-950/10' : 'bg-rose-50/40'
+              }`}
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>

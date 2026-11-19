@@ -79,10 +79,10 @@ export const KPISkeleton = ({ cards = 4, className = '' }) => {
     cards === 5
       ? 'lg:grid-cols-5'
       : cards === 3
-      ? 'lg:grid-cols-3'
-      : cards === 6
-      ? 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
-      : 'lg:grid-cols-4';
+        ? 'lg:grid-cols-3'
+        : cards === 6
+          ? 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
+          : 'lg:grid-cols-4';
 
   return (
     <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridCols} gap-4 ${className}`}>
@@ -136,7 +136,7 @@ export const ChartCardSkeleton = ({ height = 320 }) => {
     <div className="w-full space-y-4 animate-pulse">
       <div
         style={{ height }}
-        className="w-full rounded-2xl bg-slate-100/50 dark:bg-white/[0.02] border border-dashed border-slate-200/80 dark:border-white/10 flex flex-col justify-end p-6 gap-3"
+        className="w-full rounded-2xl bg-slate-100/50 dark:bg-white/2 border border-dashed border-slate-200/80 dark:border-white/10 flex flex-col justify-end p-6 gap-3"
       >
         <div className="flex items-end justify-between gap-2 h-full pb-2">
           {Array.from({ length: 12 }).map((_, i) => (
@@ -181,7 +181,7 @@ export const TreemapSkeleton = ({ height = 520 }) => {
   return (
     <div
       style={{ height }}
-      className="w-full rounded-2xl bg-slate-100/40 dark:bg-white/[0.02] border border-dashed border-slate-200/80 dark:border-white/10 p-8 flex items-center animate-pulse overflow-hidden relative"
+      className="w-full rounded-2xl bg-slate-100/40 dark:bg-white/2 border border-dashed border-slate-200/80 dark:border-white/10 p-8 flex items-center animate-pulse overflow-hidden relative"
     >
       <div className="flex items-center gap-12 w-full">
         {/* Root */}

@@ -243,8 +243,8 @@ const Profile = () => {
       const items = Array.isArray(res.data?.data)
         ? res.data.data
         : Array.isArray(res.data)
-        ? res.data
-        : [];
+          ? res.data
+          : [];
       setActivities(items);
     } catch (err) {
       console.warn('Could not fetch activity timeline:', err);
@@ -434,7 +434,7 @@ const Profile = () => {
       console.error('Error changing password:', err);
       toast.error(
         err.response?.data?.message ||
-          'Failed to update password. Please check your current password.'
+        'Failed to update password. Please check your current password.'
       );
     } finally {
       setPasswordLoading(false);
@@ -841,11 +841,10 @@ const Profile = () => {
                       disabled={!isEditing}
                       required
                       placeholder="e.g. System"
-                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
-                        !isEditing
-                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
-                      }`}
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${!isEditing
+                        ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/2 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                        : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                        }`}
                     />
                   </div>
                 </div>
@@ -865,11 +864,10 @@ const Profile = () => {
                       disabled={!isEditing}
                       required
                       placeholder="e.g. Admin"
-                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
-                        !isEditing
-                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
-                      }`}
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${!isEditing
+                        ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/2 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                        : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                        }`}
                     />
                   </div>
                 </div>
@@ -891,11 +889,10 @@ const Profile = () => {
                       disabled={!isEditing}
                       required
                       placeholder="admin@whatnot.in"
-                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
-                        !isEditing
-                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
-                      }`}
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${!isEditing
+                        ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/2 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                        : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                        }`}
                     />
                   </div>
                 </div>
@@ -914,11 +911,10 @@ const Profile = () => {
                       onChange={handleInputChange}
                       disabled={!isEditing}
                       placeholder="+91 98765 43210"
-                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
-                        !isEditing
-                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
-                      }`}
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${!isEditing
+                        ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/2 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                        : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                        }`}
                     />
                   </div>
                 </div>
@@ -939,11 +935,10 @@ const Profile = () => {
                       onChange={handleInputChange}
                       disabled={!isEditing}
                       placeholder="e.g. Board of Directors"
-                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
-                        !isEditing
-                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
-                      }`}
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${!isEditing
+                        ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/2 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                        : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                        }`}
                     />
                   </div>
                 </div>
@@ -962,11 +957,10 @@ const Profile = () => {
                       onChange={handleInputChange}
                       disabled={!isEditing}
                       placeholder="e.g. All Territories (National)"
-                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
-                        !isEditing
-                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
-                      }`}
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${!isEditing
+                        ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/2 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                        : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                        }`}
                     />
                   </div>
                 </div>
@@ -987,11 +981,10 @@ const Profile = () => {
                       onChange={handleInputChange}
                       disabled={!isEditing}
                       placeholder="+91 98112 23344"
-                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
-                        !isEditing
-                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
-                      }`}
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${!isEditing
+                        ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/2 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                        : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                        }`}
                     />
                   </div>
                 </div>
@@ -1010,11 +1003,10 @@ const Profile = () => {
                       onChange={handleInputChange}
                       disabled={!isEditing}
                       placeholder="https://... or upload above"
-                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${
-                        !isEditing
-                          ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                          : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
-                      }`}
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all ${!isEditing
+                        ? 'border-slate-200/60 dark:border-white/5 bg-slate-50/70 dark:bg-white/2 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                        : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/20 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                        }`}
                     />
                   </div>
                 </div>
@@ -1104,7 +1096,7 @@ const Profile = () => {
             </div>
 
             {/* Quick Security Prompt */}
-            <div className="rounded-3xl bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20 border border-blue-200/70 dark:border-blue-500/20 p-6 space-y-3">
+            <div className="rounded-3xl bg-linear-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20 border border-blue-200/70 dark:border-blue-500/20 p-6 space-y-3">
               <div className="flex items-center gap-2.5 text-blue-700 dark:text-blue-400 font-bold text-sm">
                 <FiLock className="w-4 h-4" />
                 <span>Security Reminder</span>
@@ -1138,33 +1130,30 @@ const Profile = () => {
               <button
                 type="button"
                 onClick={() => setActivityTypeFilter('ALL')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activityTypeFilter === 'ALL'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activityTypeFilter === 'ALL'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
               >
                 All Activities ({activities.length})
               </button>
               <button
                 type="button"
                 onClick={() => setActivityTypeFilter('PURCHASE_ORDER_REVIEW')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activityTypeFilter === 'PURCHASE_ORDER_REVIEW'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activityTypeFilter === 'PURCHASE_ORDER_REVIEW'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
               >
                 Purchase Orders
               </button>
               <button
                 type="button"
                 onClick={() => setActivityTypeFilter('FIRM_REVIEW')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activityTypeFilter === 'FIRM_REVIEW'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activityTypeFilter === 'FIRM_REVIEW'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
               >
                 Firm Reviews
               </button>
@@ -1224,11 +1213,10 @@ const Profile = () => {
                     >
                       <div className="flex items-start sm:items-center gap-3.5">
                         <div
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0 ${
-                            isPO
-                              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                          }`}
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0 ${isPO
+                            ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            }`}
                         >
                           {isPO ? <FiShoppingBag /> : <FiBriefcase />}
                         </div>
@@ -1518,7 +1506,7 @@ const Profile = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   {passwordForm.newPassword &&
-                  passwordForm.newPassword === passwordForm.confirmPassword ? (
+                    passwordForm.newPassword === passwordForm.confirmPassword ? (
                     <FiCheck className="text-emerald-500 font-bold" />
                   ) : (
                     <FiAlertCircle className="text-slate-400" />
@@ -1526,7 +1514,7 @@ const Profile = () => {
                   <span
                     className={
                       passwordForm.newPassword &&
-                      passwordForm.newPassword === passwordForm.confirmPassword
+                        passwordForm.newPassword === passwordForm.confirmPassword
                         ? 'text-emerald-600 dark:text-emerald-400 font-medium'
                         : 'text-slate-500'
                     }

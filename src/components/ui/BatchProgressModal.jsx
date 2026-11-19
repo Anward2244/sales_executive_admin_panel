@@ -93,21 +93,19 @@ const BatchProgressModal = ({
     >
       <div className="bg-white/40 dark:bg-slate-950/25 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className={`p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 ${
-          isFinishedResolved
+        <div className={`p-5 sm:p-6 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 ${isFinishedResolved
             ? status === 'error' || (effectiveFailureCount > 0 && effectiveSuccessCount === 0)
               ? 'bg-gradient-to-r from-rose-600/60 via-red-600/50 to-rose-700/50'
               : 'bg-gradient-to-r from-emerald-600/60 via-teal-600/50 to-cyan-600/50'
             : 'bg-gradient-to-r from-blue-600/60 via-indigo-600/50 to-purple-600/50'
-        }`}>
+          }`}>
           <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-2xl text-white shadow-md ${
-              isFinishedResolved
+            <div className={`p-2.5 rounded-2xl text-white shadow-md ${isFinishedResolved
                 ? status === 'error' || (effectiveFailureCount > 0 && effectiveSuccessCount === 0)
                   ? 'bg-rose-600 shadow-rose-500/20'
                   : 'bg-emerald-600 shadow-emerald-500/20'
                 : 'bg-blue-600 shadow-blue-500/20'
-            }`}>
+              }`}>
               {isFinishedResolved ? (
                 status === 'error' || (effectiveFailureCount > 0 && effectiveSuccessCount === 0) ? (
                   <FiXCircle size={20} />
@@ -122,13 +120,12 @@ const BatchProgressModal = ({
               <h3 className="font-bold text-base sm:text-lg text-white">
                 {displayTitle}
               </h3>
-              <p className={`text-[11px] mt-0.5 ${
-                isFinishedResolved
+              <p className={`text-[11px] mt-0.5 ${isFinishedResolved
                   ? status === 'error' || (effectiveFailureCount > 0 && effectiveSuccessCount === 0)
                     ? 'text-rose-100 dark:text-rose-200'
                     : 'text-emerald-100 dark:text-emerald-200'
                   : 'text-blue-100 dark:text-blue-200'
-              }`}>
+                }`}>
                 {isFinishedResolved
                   ? (status === 'error' ? 'Batch operation stopped or encountered errors.' : 'Batch operation completed.')
                   : `Processing ${current} of ${total} items (${pct}%)...`}
@@ -147,7 +144,7 @@ const BatchProgressModal = ({
         </div>
 
         {/* Progress Bar & Counters */}
-        <div className="p-4 bg-slate-50/70 dark:bg-white/[0.02] border-b border-slate-200/80 dark:border-white/10 space-y-2.5">
+        <div className="p-4 bg-slate-50/70 dark:bg-white/2 border-b border-slate-200/80 dark:border-white/10 space-y-2.5">
           <div className="flex items-center justify-between text-xs font-mono font-bold">
             <span className="text-slate-700 dark:text-slate-300">
               {pct}% {isFinishedResolved ? 'DONE' : 'COMPLETED'}
@@ -166,11 +163,10 @@ const BatchProgressModal = ({
 
           <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
             <div
-              className={`h-full transition-all duration-200 ${
-                status === 'error'
+              className={`h-full transition-all duration-200 ${status === 'error'
                   ? 'bg-rose-500'
                   : 'bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400'
-              }`}
+                }`}
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -187,13 +183,12 @@ const BatchProgressModal = ({
             parsedLogs.map((l, index) => (
               <div
                 key={index}
-                className={`flex items-start gap-2 leading-relaxed ${
-                  l.type === 'success'
+                className={`flex items-start gap-2 leading-relaxed ${l.type === 'success'
                     ? 'text-emerald-400'
                     : l.type === 'error'
-                    ? 'text-rose-400'
-                    : 'text-slate-400'
-                }`}
+                      ? 'text-rose-400'
+                      : 'text-slate-400'
+                  }`}
               >
                 <span className="text-slate-600 shrink-0">[{l.time}]</span>
                 <span className="break-all">{l.text}</span>
@@ -203,7 +198,7 @@ const BatchProgressModal = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/70 dark:bg-white/[0.02]">
+        <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/70 dark:bg-white/2">
           <button
             type="button"
             onClick={downloadLogs}
