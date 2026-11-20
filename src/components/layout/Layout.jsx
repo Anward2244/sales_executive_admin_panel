@@ -715,7 +715,7 @@ const Layout = () => {
       }`}>
 
       {/* Top-Left Ambient Glowing Blob */}
-      <div className="fixed -top-24 -left-24 w-[420px] h-[420px] sm:w-[560px] sm:h-[560px] bg-linear-to-br from-blue-600/40 via-indigo-600/30 to-sky-400/25 rounded-full blur-[110px] pointer-events-none z-0 transform-gpu opacity-85 dark:opacity-70 dark:mix-blend-screen" />
+      <div className="fixed -top-24 -left-24 w-[420px] h-[420px] sm:w-[560px] sm:h-[560px] bg-linear-to-br from-blue-600/40 via-blue-500/30 to-sky-400/25 rounded-full blur-[110px] pointer-events-none z-0 transform-gpu opacity-85 dark:opacity-70 dark:mix-blend-screen" />
 
       {/* Global Ambient Glows */}
       {displayPrefs.ambientGlow && (
@@ -734,7 +734,13 @@ const Layout = () => {
       )}
 
       {/* Toast Notification Stack Container */}
-      <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-3 w-80 max-w-[90%] pointer-events-none">
+      <div className={`fixed z-[9999] flex flex-col gap-3 w-80 max-w-[90%] pointer-events-none ${
+        (getNotificationSettings().toastPosition || 'top-right') === 'bottom-right'
+          ? 'bottom-6 right-6'
+          : (getNotificationSettings().toastPosition || 'top-right') === 'top-center'
+            ? 'top-20 left-1/2 -translate-x-1/2'
+            : 'top-20 right-6'
+      }`}>
         {toasts.map((t) => (
           <div
             key={t.id}
@@ -1179,7 +1185,7 @@ const Layout = () => {
         </div>
 
         <nav className="flex-1 px-4 py-3 overflow-y-auto no-scrollbar space-y-2">
-          <p className={`px-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 opacity-100 mb-4 max-h-8 mt-2 ${isDark ? 'text-slate-500' : 'text-slate-400'
+          <p className={`px-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 opacity-100 mb-4 max-h-8 mt-2 ${isDark ? 'text-slate-200' : 'text-slate-600'
             }`}>
             {isExpanded ? 'MAIN MENU' : 'MENU'}
           </p>
@@ -1213,8 +1219,8 @@ const Layout = () => {
                             ? 'text-slate-300 border border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/10 hover:translate-x-0.5 hover:shadow-md hover:shadow-black/30'
                             : 'text-slate-600 border border-transparent hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200/80 hover:translate-x-0.5 hover:shadow-md hover:shadow-slate-900/10'
                           : isDark
-                            ? 'bg-white/[0.02] border border-white/5 text-slate-300 shadow-sm shadow-black/20 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03] hover:shadow-md hover:shadow-black/30'
-                            : 'bg-slate-100/60 border border-slate-200/80 text-slate-600 shadow-sm hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03] hover:shadow-md hover:shadow-slate-900/10'
+                            ? 'text-slate-300 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03] hover:shadow-md hover:shadow-black/30'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03] hover:shadow-md hover:shadow-slate-900/10'
                       }
                     `}
                   >
@@ -1335,8 +1341,8 @@ const Layout = () => {
                         ? 'text-slate-300 border border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/10 hover:translate-x-0.5 hover:shadow-md hover:shadow-black/30'
                         : 'text-slate-600 border border-transparent hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200/80 hover:translate-x-0.5 hover:shadow-md hover:shadow-slate-900/10'
                       : isDark
-                        ? 'bg-white/[0.02] border border-white/5 text-slate-300 shadow-sm shadow-black/20 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03] hover:shadow-md hover:shadow-black/30'
-                        : 'bg-slate-100/60 border border-slate-200/80 text-slate-600 shadow-sm hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03] hover:shadow-md hover:shadow-slate-900/10'
+                        ? 'text-slate-300 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03] hover:shadow-md hover:shadow-black/30'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03] hover:shadow-md hover:shadow-slate-900/10'
                   }
                 `}
               >
@@ -1382,7 +1388,7 @@ const Layout = () => {
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent relative pt-16 lg:pt-0 lg:pl-20 transition-all duration-300">
 
         {/* Ambient Top-Left Glowing Blob for Content Layout */}
-        <div className="absolute -top-24 -left-24 w-96 h-96 sm:w-[500px] sm:h-[500px] bg-linear-to-br from-blue-500/25 via-indigo-500/20 to-sky-400/15 rounded-full blur-[100px] pointer-events-none z-0 transform-gpu opacity-80 dark:opacity-60" />
+        <div className="absolute -top-24 -left-24 w-96 h-96 sm:w-[500px] sm:h-[500px] bg-linear-to-br from-blue-500/25 via-blue-400/20 to-sky-400/15 rounded-full blur-[100px] pointer-events-none z-0 transform-gpu opacity-80 dark:opacity-60" />
 
         {/* GLOBAL HEADER (Desktop Top Bar) */}
         <header className={`hidden lg:flex h-16 border-b items-center justify-between px-8 sticky top-0 z-40 transition-colors ${isDark

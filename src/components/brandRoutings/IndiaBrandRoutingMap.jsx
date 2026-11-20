@@ -583,7 +583,7 @@ const IndiaBrandRoutingMap = ({
       {/* ================= MAIN MAP WORKSPACE & INSPECTOR ================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Left Column: Interactive Vector SVG Map Card */}
-        <div className="lg:col-span-8 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 p-5 shadow-xs relative overflow-hidden">
+        <div className="lg:col-span-8 bg-white/70 dark:bg-slate-900/80 rounded-3xl border border-slate-200/80 dark:border-white/10 p-5 shadow-xs relative overflow-hidden">
           {/* Map Header Toolbar */}
           <div className="flex items-center justify-between gap-3 mb-3 pb-3 border-b border-slate-200/60 dark:border-white/5 flex-wrap">
             <div className="flex items-center gap-2">
@@ -744,7 +744,7 @@ const IndiaBrandRoutingMap = ({
 
               return (
                 <div
-                  className="absolute z-50 pointer-events-none p-3 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-2xl min-w-52.5 max-w-xs transition-opacity duration-75 select-none"
+                  className="absolute z-50 pointer-events-none p-3 rounded-2xl bg-white/40 dark:bg-slate-900/50 backdrop-blur-lg border border-slate-200/80 dark:border-white/10 shadow-2xl min-w-52.5 max-w-xs transition-opacity duration-75 select-none"
                   style={{
                     left: `${posX}px`,
                     top: `${posY}px`,

@@ -1,18 +1,14 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Group } from '@visx/group';
-import { Bar } from '@visx/shape';
-import { scaleLinear, scaleBand } from '@visx/scale';
-import { LinearGradient } from '@visx/gradient';
+import { Pie } from '@visx/shape';
 import { ParentSize } from '@visx/responsive';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
+import { animated, useSpring } from '@react-spring/web';
 import {
   FiDollarSign,
   FiBox,
   FiShoppingBag,
-  FiTrendingUp,
-  FiAward,
-  FiBarChart2,
 } from 'react-icons/fi';
 import Skeleton from '@/components/ui/Skeleton';
 
@@ -36,17 +32,27 @@ const formatCompact = (num, isCurrency = false) => {
   return `${prefix}${val.toLocaleString('en-IN')}`;
 };
 
+// Distinct Palette for Donut slices
+const DONUT_COLORS = [
+  '#9333ea', // Purple-600
+  '#3b82f6', // Blue-500
+  '#06b6d4', // Cyan-500
+  '#f59e0b', // Amber-500
+  '#ec4899', // Pink-500
+  '#94a3b8', // Slate-400 for "Others"
+];
+
 // Tooltip Theme Styler
 const getProductTooltipStyle = (isDark) => ({
   ...defaultStyles,
-  backgroundColor: isDark ? 'rgba(15, 23, 42, 0.6)' : 'rgba(255, 255, 255, 0.6)',
+  backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.95)',
   color: isDark ? '#ffffff' : '#0f172a',
   border: isDark
     ? '1px solid rgba(255, 255, 255, 0.15)'
     : '1px solid rgba(226, 232, 240, 0.9)',
   borderRadius: '16px',
   boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-  backdropFilter: 'blur(8px)',
+  backdropFilter: 'blur(10px)',
   padding: '12px 14px',
   fontSize: '12px',
   pointerEvents: 'none',
@@ -116,18 +122,96 @@ const ProductTooltipContent = ({ tooltipData }) => {
   );
 };
 
+// Animated Pie Arc Item with Spring Physics
+function AnimatedArcItem({
+  arc,
+  path,
+  fill,
+  isHovered,
+  isDark,
+  onMouseEnter,
+  onMouseMove,
+  onMouseLeave,
+}) {
+  const spring = useSpring({
+    from: { opacity: 0, scale: 0.8 },
+    to: { opacity: 1, scale: isHovered ? 1.03 : 1 },
+    config: { tension: 170, friction: 14 },
+  });
+
+  return (
+    <animated.path
+      d={path(arc) || ''}
+      fill={fill}
+      opacity={spring.opacity}
+      transform={spring.scale.to((s) => `scale(${s})`)}
+      transformOrigin="center center"
+      stroke={isHovered ? (isDark ? '#ffffff' : '#0f172a') : 'transparent'}
+      strokeWidth={isHovered ? 2.5 : 0}
+      className="transition-colors duration-150 cursor-pointer"
+      onMouseEnter={onMouseEnter}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
+    />
+  );
+}
+
+// Animated Segment for the Stacked Catalog Bar
+function AnimatedStackedSegment({ slice }) {
+  const spring = useSpring({
+    from: { width: '0%' },
+    to: { width: `${slice.sharePct}%` },
+    config: { tension: 130, friction: 16 },
+  });
+
+  return (
+    <animated.div
+      style={{
+        ...spring,
+        backgroundColor: slice.color,
+      }}
+      className="h-full first:rounded-l-full last:rounded-r-full"
+      title={`${slice.label}: ${slice.sharePct}%`}
+    />
+  );
+}
+
+// Animated Progress Bar for Top Products
+function AnimatedProductProgress({ share, isFirst, idx }) {
+  const spring = useSpring({
+    from: { width: '0%' },
+    to: { width: `${Math.min(100, Math.max(8, Number(share)))}%` },
+    config: { tension: 130, friction: 15 },
+  });
+
+  return (
+    <div className="h-1 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+      <animated.div
+        className={`h-full rounded-full ${
+          isFirst
+            ? 'bg-purple-600 dark:bg-purple-400'
+            : idx === 1
+              ? 'bg-indigo-500'
+              : idx === 2
+                ? 'bg-blue-500'
+                : 'bg-sky-400'
+        }`}
+        style={spring}
+      />
+    </div>
+  );
+}
+
 // ==========================================
-// 1. SUBCOMPONENT: LEADERBOARD BAR CHART
+// 1. SUBCOMPONENT: DONUT SHARE CONCENTRATION
 // ==========================================
-function LeaderboardBarChart({
+function DonutConcentrationChart({
   width,
   height,
-  sortedProducts,
+  donutData,
   activeMetric,
-  totalRevenue,
-  totalUnitsSold,
-  totalOrders,
   isDark,
+  top3Contribution,
 }) {
   const {
     tooltipOpen,
@@ -144,191 +228,103 @@ function LeaderboardBarChart({
     zIndex: 9999,
   });
 
-  const [hoveredKey, setHoveredKey] = useState(null);
+  const [hoveredIdx, setHoveredIdx] = useState(null);
 
-  const textPrimary = isDark ? '#f8fafc' : '#0f172a';
-  const textSecondary = isDark ? '#94a3b8' : '#64748b';
-  const trackBg = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(241, 245, 249, 0.9)';
+  const radius = Math.min(width, height) / 2 - 8;
+  const innerRadius = radius * 0.62;
 
-  const isMobile = width < 520;
-  const isSmallMobile = width < 380;
-  const margin = {
-    top: 8,
-    right: isMobile ? 80 : 100,
-    bottom: 8,
-    left: isSmallMobile ? 110 : isMobile ? 135 : 175,
+  const handleSliceHover = (arc, i, e) => {
+    setHoveredIdx(i);
+    const point = localPoint(e);
+    if (point) {
+      showTooltip({
+        tooltipData: {
+          productName: arc.data.label,
+          sku: arc.data.sku,
+          totalRevenue: activeMetric === 'revenue' ? arc.data.value : undefined,
+          totalQuantity: activeMetric === 'quantity' ? arc.data.value : undefined,
+          ordersCount: activeMetric === 'orders' ? arc.data.value : undefined,
+          sharePercent: arc.data.sharePct,
+          rank: i + 1,
+        },
+        tooltipLeft: point.x,
+        tooltipTop: point.y,
+      });
+    }
   };
 
-  const xMax = Math.max(10, width - margin.left - margin.right);
-  const yMax = Math.max(10, height - margin.top - margin.bottom);
-
-  const maxVal = Math.max(
-    ...sortedProducts.map((p) => {
-      if (activeMetric === 'quantity') return Number(p.totalQuantity || 0);
-      if (activeMetric === 'orders') return Number(p.ordersCount || 0);
-      return Number(p.totalRevenue || 0);
-    }),
-    1
-  );
-
-  // Extend scale domain to 1.25x so end-of-bar text labels never overflow past the right margin
-  const xScale = scaleLinear({
-    domain: [0, maxVal * 1.25],
-    range: [0, xMax],
-  });
-
-  const getProductKey = useCallback(
-    (product, idx) => (product._id ? `${product._id}-${idx}` : `${product.sku || product.productName || 'p'}-${idx}`),
-    []
-  );
-
-  const yScale = scaleBand({
-    domain: sortedProducts.map((p, idx) => getProductKey(p, idx)),
-    range: [0, yMax],
-    padding: 0.28,
-  });
+  const textPrimary = isDark ? '#ffffff' : '#0f172a';
+  const textMuted = isDark ? '#94a3b8' : '#64748b';
 
   return (
-    <div ref={containerRef} className="relative w-full h-full select-none">
+    <div ref={containerRef} className="relative w-full h-full flex items-center justify-center select-none">
       <svg width={width} height={height} className="overflow-visible">
-        <defs>
-          <LinearGradient
-            id="prod-grad-revenue"
-            from="#a855f7"
-            to="#7c3aed"
-          />
-          <LinearGradient
-            id="prod-grad-quantity"
-            from="#38bdf8"
-            to="#2563eb"
-          />
-          <LinearGradient
-            id="prod-grad-orders"
-            from="#fbbf24"
-            to="#d97706"
-          />
-        </defs>
-
-        <Group left={margin.left} top={margin.top}>
-          {sortedProducts.map((product, idx) => {
-            const key = getProductKey(product, idx);
-            const barY = yScale(key);
-            const barHeight = yScale.bandwidth();
-
-            const val = activeMetric === 'quantity'
-              ? Number(product.totalQuantity || 0)
-              : activeMetric === 'orders'
-                ? Number(product.ordersCount || 0)
-                : Number(product.totalRevenue || 0);
-
-            const barWidth = Math.max(4, xScale(val));
-            const isHovered = hoveredKey === key;
-
-            const gradientId =
-              activeMetric === 'quantity'
-                ? 'prod-grad-quantity'
-                : activeMetric === 'orders'
-                  ? 'prod-grad-orders'
-                  : 'prod-grad-revenue';
-
-            const formattedVal =
-              activeMetric === 'revenue'
-                ? formatCompact(val, true)
-                : `${val.toLocaleString('en-IN')}`;
-
-            const sharePercent = activeMetric === 'quantity'
-              ? (totalUnitsSold ? ((val / Number(totalUnitsSold)) * 100).toFixed(1) : '0')
-              : activeMetric === 'orders'
-                ? (totalOrders ? ((val / Number(totalOrders)) * 100).toFixed(1) : '0')
-                : (totalRevenue ? ((val / Number(totalRevenue)) * 100).toFixed(1) : '0');
-
-            const handleHover = (e) => {
-              setHoveredKey(key);
-              const point = localPoint(e);
-              if (point) {
-                showTooltip({
-                  tooltipData: { ...product, rank: idx + 1, sharePercent },
-                  tooltipLeft: point.x,
-                  tooltipTop: point.y,
-                });
-              }
-            };
-
-            const prodName = product.productName || product.sku || 'Product';
-            const maxChars = isSmallMobile ? 11 : isMobile ? 15 : 21;
-            const displayName = prodName.length > maxChars ? `${prodName.slice(0, maxChars - 2)}...` : prodName;
-
-            return (
-              <Group key={key}>
-                {/* Product Title Label on the Left */}
-                <text
-                  x={-12}
-                  y={(barY || 0) + barHeight / 2}
-                  textAnchor="end"
-                  alignmentBaseline="middle"
-                  fontSize={isMobile ? 10 : 11}
-                  fontWeight={idx < 3 ? '800' : '600'}
-                  fill={isHovered ? (isDark ? '#ffffff' : '#0f172a') : textPrimary}
-                  className="cursor-pointer select-none"
-                >
-                  {/* Rank Medal Indicator */}
-                  {idx === 0 ? '🥇 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : `#${idx + 1} `}
-                  {displayName}
-                </text>
-
-                {/* Background Track */}
-                <Bar
-                  x={0}
-                  y={barY}
-                  width={xMax}
-                  height={barHeight}
-                  fill={trackBg}
-                  rx={6}
-                  ry={6}
-                  className="pointer-events-none"
-                />
-
-                {/* Filled Gradient Bar */}
-                <Bar
-                  x={0}
-                  y={barY}
-                  width={barWidth}
-                  height={barHeight}
-                  fill={`url(#${gradientId})`}
-                  opacity={isHovered ? 1 : 0.9}
-                  rx={6}
-                  ry={6}
-                  className="cursor-pointer transition-all duration-200"
-                  onMouseEnter={handleHover}
-                  onMouseMove={handleHover}
+        <Group top={height / 2} left={width / 2}>
+          <Pie
+            data={donutData}
+            pieValue={(d) => Number(d.value) || 0}
+            outerRadius={radius}
+            innerRadius={innerRadius}
+            padAngle={0.03}
+            cornerRadius={4}
+          >
+            {(pie) =>
+              pie.arcs.map((arc, i) => (
+                <AnimatedArcItem
+                  key={`donut-slice-${i}`}
+                  arc={arc}
+                  path={pie.path}
+                  fill={arc.data.color}
+                  isHovered={hoveredIdx === i}
+                  isDark={isDark}
+                  onMouseEnter={(e) => handleSliceHover(arc, i, e)}
+                  onMouseMove={(e) => handleSliceHover(arc, i, e)}
                   onMouseLeave={() => {
-                    setHoveredKey(null);
+                    setHoveredIdx(null);
                     hideTooltip();
                   }}
                 />
+              ))
+            }
+          </Pie>
 
-                {/* End-of-Bar Value Label */}
-                <text
-                  x={barWidth + 8}
-                  y={(barY || 0) + barHeight / 2}
-                  alignmentBaseline="middle"
-                  fontSize={isMobile ? 10 : 11}
-                  fontWeight="800"
-                  fill={isDark ? '#e2e8f0' : '#1e293b'}
-                  className="font-mono select-none pointer-events-none"
-                >
-                  {formattedVal}
-                  <tspan fontSize={isMobile ? 8.5 : 9.5} fill={textSecondary} dx={4}>
-                    ({sharePercent}%)
-                  </tspan>
-                </text>
-              </Group>
-            );
-          })}
+          {/* Center Callout inside Donut hole */}
+          <text
+            x={0}
+            y={-10}
+            textAnchor="middle"
+            fontSize={9}
+            fontWeight="700"
+            fill={textMuted}
+            className="uppercase tracking-wider select-none pointer-events-none"
+          >
+            Top 3 Share
+          </text>
+          <text
+            x={0}
+            y={10}
+            textAnchor="middle"
+            fontSize={16}
+            fontWeight="900"
+            fill={textPrimary}
+            className="font-mono select-none pointer-events-none"
+          >
+            {top3Contribution}%
+          </text>
+          <text
+            x={0}
+            y={24}
+            textAnchor="middle"
+            fontSize={8}
+            fontWeight="600"
+            fill={textMuted}
+            className="select-none pointer-events-none"
+          >
+            {activeMetric === 'revenue' ? 'of Revenue' : activeMetric === 'quantity' ? 'of Volume' : 'of Orders'}
+          </text>
         </Group>
       </svg>
 
-      {/* Portal-based Floating Tooltip with exact cursor positioning */}
       {tooltipOpen && tooltipData && (
         <TooltipInPortal
           top={tooltipTop}
@@ -355,8 +351,8 @@ const ProductPerformanceChart = ({
 }) => {
   // Metric Mode: 'revenue' | 'quantity' | 'orders'
   const [activeMetric, setActiveMetric] = useState('revenue');
-  // Top Limit: 5 | 8 | 10
-  const [topLimit, setTopLimit] = useState(8);
+  // Selected product row for interactive highlight
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   // Compute effective total orders fallback
   const effectiveTotalOrders = useMemo(() => {
@@ -373,52 +369,74 @@ const ProductPerformanceChart = ({
     return Number(p.totalRevenue || 0);
   }, []);
 
-  // Sorted and limited dataset based on activeMetric
+  // Sorted product list based on activeMetric
   const sortedProducts = useMemo(() => {
     if (!Array.isArray(productPerformance) || productPerformance.length === 0) return [];
     const list = [...productPerformance];
     list.sort((a, b) => getMetricVal(b, activeMetric) - getMetricVal(a, activeMetric));
-    return list.slice(0, topLimit);
-  }, [productPerformance, activeMetric, topLimit, getMetricVal]);
+    return list;
+  }, [productPerformance, activeMetric, getMetricVal]);
 
-  // Insights Metrics
-  const insights = useMemo(() => {
-    if (!productPerformance.length) {
-      return { topRevenueProduct: null, topVolumeProduct: null, highestPriceProduct: null };
-    }
-    const byRevenue = [...productPerformance].sort((a, b) => (Number(b.totalRevenue) || 0) - (Number(a.totalRevenue) || 0))[0];
-    const byVolume = [...productPerformance].sort((a, b) => (Number(b.totalQuantity) || 0) - (Number(a.totalQuantity) || 0))[0];
-    const byPrice = [...productPerformance]
-      .filter((p) => p.totalQuantity > 0)
-      .sort((a, b) => {
-        const pA = (Number(a.totalRevenue) || 0) / (Number(a.totalQuantity) || 1);
-        const pB = (Number(b.totalRevenue) || 0) / (Number(b.totalQuantity) || 1);
-        return pB - pA;
-      })[0];
+  // Top product (matching Peak State in Heatmap)
+  const topProduct = useMemo(() => {
+    if (!sortedProducts.length) return null;
+    return sortedProducts[0];
+  }, [sortedProducts]);
 
-    return {
-      topRevenueProduct: byRevenue,
-      topVolumeProduct: byVolume,
-      highestPriceProduct: byPrice,
-    };
-  }, [productPerformance]);
+  // Overall total for activeMetric
+  const overallMetricTotal = useMemo(() => {
+    if (activeMetric === 'quantity') return Number(totalUnitsSold) || 1;
+    if (activeMetric === 'orders') return Number(effectiveTotalOrders) || 1;
+    return Number(totalRevenue) || 1;
+  }, [activeMetric, totalRevenue, totalUnitsSold, effectiveTotalOrders]);
 
-  // Dynamic Top 3 Contribution calculation matching the active metric
+  // Top Product Share %
+  const topProductShare = useMemo(() => {
+    if (!topProduct) return '0.0';
+    const val = getMetricVal(topProduct, activeMetric);
+    return overallMetricTotal > 0 ? ((val / overallMetricTotal) * 100).toFixed(1) : '0.0';
+  }, [topProduct, activeMetric, overallMetricTotal, getMetricVal]);
+
+  // Top 3 Contribution calculation matching activeMetric
   const top3Contribution = useMemo(() => {
-    if (!productPerformance.length) return '0.0';
-    const sorted = [...productPerformance].sort(
-      (a, b) => getMetricVal(b, activeMetric) - getMetricVal(a, activeMetric)
-    );
-    const top3 = sorted.slice(0, 3);
+    if (!sortedProducts.length) return '0.0';
+    const top3 = sortedProducts.slice(0, 3);
     const sum = top3.reduce((acc, p) => acc + getMetricVal(p, activeMetric), 0);
-    const total =
-      activeMetric === 'quantity'
-        ? Number(totalUnitsSold) || 1
-        : activeMetric === 'orders'
-          ? Number(effectiveTotalOrders) || 1
-          : Number(totalRevenue) || 1;
-    return Math.min(100, (sum / total) * 100).toFixed(1);
-  }, [productPerformance, activeMetric, totalRevenue, totalUnitsSold, effectiveTotalOrders, getMetricVal]);
+    return Math.min(100, (sum / overallMetricTotal) * 100).toFixed(1);
+  }, [sortedProducts, activeMetric, overallMetricTotal, getMetricVal]);
+
+  // Donut slices dataset: Top 5 + Others
+  const donutData = useMemo(() => {
+    if (!sortedProducts.length) return [];
+    const top5 = sortedProducts.slice(0, 5);
+    const top5Total = top5.reduce((sum, p) => sum + getMetricVal(p, activeMetric), 0);
+    const remaining = Math.max(0, overallMetricTotal - top5Total);
+
+    const slices = top5.map((p, idx) => {
+      const val = getMetricVal(p, activeMetric);
+      return {
+        label: p.productName || p.sku || `Product #${idx + 1}`,
+        sku: p.sku || '',
+        value: val,
+        sharePct: overallMetricTotal > 0 ? ((val / overallMetricTotal) * 100).toFixed(1) : '0.0',
+        color: DONUT_COLORS[idx % DONUT_COLORS.length],
+        product: p,
+      };
+    });
+
+    if (remaining > 0 && sortedProducts.length > 5) {
+      slices.push({
+        label: 'Other Products',
+        sku: 'OTHER',
+        value: remaining,
+        sharePct: overallMetricTotal > 0 ? ((remaining / overallMetricTotal) * 100).toFixed(1) : '0.0',
+        color: DONUT_COLORS[5],
+        product: null,
+      });
+    }
+
+    return slices;
+  }, [sortedProducts, activeMetric, overallMetricTotal, getMetricVal]);
 
   if (loading) {
     return (
@@ -427,13 +445,11 @@ const ProductPerformanceChart = ({
           <Skeleton className="h-8 w-44 rounded-xl" />
           <Skeleton className="h-8 w-32 rounded-xl" />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
-          <div className="lg:col-span-2 space-y-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton key={i} className="h-10 w-full rounded-xl" />
-            ))}
-          </div>
-          <Skeleton className="h-64 w-full rounded-2xl" />
+        <div className="space-y-3 pt-2">
+          <Skeleton className="h-44 w-full rounded-2xl" />
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-10 w-full rounded-xl" />
         </div>
       </div>
     );
@@ -448,23 +464,52 @@ const ProductPerformanceChart = ({
   }
 
   return (
-    <div className="p-3 flex-1 flex flex-col space-y-5">
-
-      {/* ================= CONTROLS & SUB-HEADER ================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200/60 dark:border-white/5">
-        {/* Metric Selector Pills */}
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
-            Metric:
-          </span>
-          <div className="inline-flex items-center p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-xs">
+    <div className="p-3 flex-1 flex flex-col justify-start">
+      {/* ================= TOP SECTION: CONTROLS, HIGHLIGHT PILL & CANVAS ================= */}
+      <div>
+        {/* Highest Demand Product Highlight Pill (matching Peak State Pill in Heatmap) */}
+        {topProduct ? (
+          <div className="mb-2 p-2.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 min-w-0 pr-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-600 dark:bg-purple-400 animate-pulse shrink-0" />
+              <span className="text-xs text-slate-700 dark:text-slate-300 truncate">
+                Top Performer:{' '}
+                <strong className="text-purple-600 dark:text-purple-400 font-bold">
+                  {topProduct.productName || topProduct.sku}
+                </strong>
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="font-mono font-bold text-slate-900 dark:text-white text-xs">
+                {activeMetric === 'revenue'
+                  ? formatCompact(topProduct.totalRevenue, true)
+                  : activeMetric === 'quantity'
+                    ? `${(topProduct.totalQuantity || 0).toLocaleString('en-IN')} units`
+                    : `${topProduct.ordersCount || 0} POs`}
+              </span>
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-lg bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold">
+                {topProductShare}%
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-2 p-2.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-xs text-slate-400 text-center">
+            No product distribution recorded in this timeframe
+          </div>
+        )}
+        
+        {/* Metric Selector Bar */}
+        <div className="flex items-center justify-between gap-2 mb-2">
+          {/* Metric Selector Pills */}
+          <div className="inline-flex items-center p-0.5 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-xs">
             <button
               type="button"
               onClick={() => setActiveMetric('revenue')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeMetric === 'revenue'
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeMetric === 'revenue'
                   ? 'bg-purple-600 text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+              }`}
             >
               <FiDollarSign className="text-xs" />
               <span>Revenue</span>
@@ -473,10 +518,11 @@ const ProductPerformanceChart = ({
             <button
               type="button"
               onClick={() => setActiveMetric('quantity')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeMetric === 'quantity'
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeMetric === 'quantity'
                   ? 'bg-blue-600 text-white shadow-blue-500/20'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+              }`}
             >
               <FiBox className="text-xs" />
               <span>Units</span>
@@ -485,136 +531,172 @@ const ProductPerformanceChart = ({
             <button
               type="button"
               onClick={() => setActiveMetric('orders')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeMetric === 'orders'
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeMetric === 'orders'
                   ? 'bg-amber-600 text-white shadow-amber-500/20'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+              }`}
             >
               <FiShoppingBag className="text-xs" />
               <span>Orders</span>
             </button>
           </div>
-        </div>
 
-        {/* Top N Range Filter */}
-        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
-            Show:
-          </span>
-          <div className="inline-flex items-center p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-xs">
-            {[5, 8, 10].map((limit) => (
-              <button
-                key={limit}
-                type="button"
-                onClick={() => setTopLimit(limit)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${topLimit === limit
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-              >
-                Top {limit}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ================= MAIN CHART PANEL ================= */}
-      <div className="bg-slate-50/50 dark:bg-white/2 border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 sm:p-5 relative flex-1 flex flex-col justify-between">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
-              <FiBarChart2 className="text-purple-500" />
-              <span>Top {sortedProducts.length} Product Leaderboard</span>
-            </h4>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Ranked by {activeMetric === 'revenue' ? 'revenue generated (₹)' : activeMetric === 'quantity' ? 'units sold' : 'PO orders count'}
-            </p>
-          </div>
-          <span className="text-[11px] font-mono text-slate-400 bg-white dark:bg-white/5 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-white/5">
-            Hover for detail
+          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 font-semibold px-2">
+            Share Concentration
           </span>
         </div>
 
-        {/* Responsive SVG Chart with portal-based tooltip */}
-        <div className="flex-1 min-h-[340px]" style={{ minHeight: Math.max(340, sortedProducts.length * 46) }}>
+        {/* Visual Chart Canvas - Compact and balanced Donut visualization */}
+        <div className="relative w-full bg-purple-200/10 dark:bg-purple-950/20 rounded-2xl h-[195px] sm:h-[210px] mx-auto flex items-center justify-center select-none overflow-hidden my-1.5">
           <ParentSize>
             {({ width, height }) => {
               if (width <= 0 || height <= 0) return null;
               return (
-                <LeaderboardBarChart
+                <DonutConcentrationChart
                   width={width}
                   height={height}
-                  sortedProducts={sortedProducts}
+                  donutData={donutData}
                   activeMetric={activeMetric}
-                  totalRevenue={totalRevenue}
-                  totalUnitsSold={totalUnitsSold}
-                  totalOrders={effectiveTotalOrders}
                   isDark={isDark}
+                  top3Contribution={top3Contribution}
                 />
               );
             }}
           </ParentSize>
         </div>
-      </div>
 
-      {/* ================= EXECUTIVE INSIGHT HIGHLIGHT STRIP ================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* Top Revenue Leader */}
-        <div className="p-3 rounded-2xl bg-purple-500/5 dark:bg-purple-500/10 border border-purple-500/20 flex items-center gap-2.5">
-          <div className="w-9 h-9 kpi-icon-purple rounded-xl flex items-center justify-center shrink-0">
-            <FiAward className="text-base" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 block truncate">
-              Revenue Leader
-            </span>
-            <div className="font-bold text-xs text-slate-900 dark:text-white truncate" title={insights.topRevenueProduct?.productName}>
-              {insights.topRevenueProduct?.productName || 'N/A'}
+        {/* Donut Legend Color Pills - Symmetrically aligned in a 2/3-column grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 mb-2">
+          {donutData.map((slice, idx) => (
+            <div
+              key={idx}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100/70 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-xs select-none hover:border-slate-300 dark:hover:border-white/10 transition-colors shadow-2xs"
+            >
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
+                style={{ backgroundColor: slice.color }}
+              />
+              <span className="font-semibold text-slate-700 dark:text-slate-300 truncate text-[11px] min-w-0 flex-1" title={slice.label}>
+                {slice.label}
+              </span>
+              <span className="font-mono font-bold text-slate-900 dark:text-white text-[11px] shrink-0">
+                {slice.sharePct}%
+              </span>
             </div>
-            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 font-mono">
-              {formatCurrency(insights.topRevenueProduct?.totalRevenue || 0)}
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Top Volume Leader */}
-        <div className="p-3 rounded-2xl bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 flex items-center gap-2.5">
-          <div className="w-9 h-9 kpi-icon-blue rounded-xl flex items-center justify-center shrink-0">
-            <FiBox className="text-base" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block truncate">
-              Volume Leader
+        {/* Catalog Share Distribution Legend (matching Heatmap Spectrum Legend) */}
+        <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/5">
+          <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold mb-1">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              <span>
+                Top 3 Share:{' '}
+                <strong className="text-purple-600 dark:text-purple-400 font-bold">
+                  {top3Contribution}%
+                </strong>
+              </span>
             </span>
-            <div className="font-bold text-xs text-slate-900 dark:text-white truncate" title={insights.topVolumeProduct?.productName}>
-              {insights.topVolumeProduct?.productName || 'N/A'}
-            </div>
-            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 font-mono">
-              {(insights.topVolumeProduct?.totalQuantity || 0).toLocaleString('en-IN')} units
-            </div>
+            <span className="text-slate-500 dark:text-slate-400 font-medium">
+              {productPerformance.length} Total SKUs
+            </span>
           </div>
-        </div>
 
-        {/* Dynamic Metric Contribution */}
-        <div className="p-3 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2.5">
-          <div className="w-9 h-9 kpi-icon-emerald rounded-xl flex items-center justify-center shrink-0">
-            <FiTrendingUp className="text-base" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block truncate">
-              Top 3 Share
-            </span>
-            <div className="font-bold text-xs text-slate-900 dark:text-white truncate">
-              {top3Contribution}% of {activeMetric === 'revenue' ? 'Revenue' : activeMetric === 'orders' ? 'Orders' : 'Volume'}
-            </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-              Top 3 bestsellers
-            </div>
+          {/* Multi-segment stacked bar with spring-animated width */}
+          <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-white/5 flex overflow-hidden">
+            {donutData.map((slice, idx) => (
+              <AnimatedStackedSegment key={idx} slice={slice} />
+            ))}
           </div>
         </div>
       </div>
 
+      {/* ================= BOTTOM SECTION: TOP 5 PRODUCTS RANKING LIST ================= */}
+      <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-white/5 space-y-2">
+        <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+          <span>Top Performing Products</span>
+          <span>
+            {activeMetric === 'revenue'
+              ? 'Revenue / Share'
+              : activeMetric === 'quantity'
+                ? 'Units / Share'
+                : 'Orders / Share'}
+          </span>
+        </div>
+
+        {sortedProducts.length > 0 ? (
+          sortedProducts.slice(0, 5).map((prod, idx) => {
+            const val = getMetricVal(prod, activeMetric);
+            const share = overallMetricTotal > 0 ? ((val / overallMetricTotal) * 100).toFixed(1) : '0.0';
+            const isFirst = idx === 0;
+            const formattedVal =
+              activeMetric === 'revenue'
+                ? formatCompact(val, true)
+                : `${val.toLocaleString('en-IN')} ${activeMetric === 'quantity' ? 'units' : 'POs'}`;
+
+            const isSelected =
+              selectedProduct?._id === prod._id ||
+              (prod.sku && selectedProduct?.sku === prod.sku);
+
+            return (
+              <div
+                key={prod._id || prod.sku || idx}
+                onClick={() =>
+                  setSelectedProduct((prev) =>
+                    prev?._id === prod._id || (prod.sku && prev?.sku === prod.sku) ? null : prod
+                  )
+                }
+                className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
+                  isSelected
+                    ? 'bg-purple-50/80 dark:bg-purple-950/40 border-purple-500/40 shadow-xs'
+                    : 'bg-white/80 dark:bg-white/3 border-slate-200/70 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10'
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <span
+                      className={`w-5 h-5 rounded-lg flex items-center justify-center font-bold text-[10px] shrink-0 ${
+                        isFirst
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : idx === 1
+                            ? 'bg-indigo-500 text-white'
+                            : idx === 2
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      #{idx + 1}
+                    </span>
+                    <span
+                      className="font-semibold text-slate-800 dark:text-slate-200 truncate"
+                      title={prod.productName || prod.sku}
+                    >
+                      {prod.productName || prod.sku}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-xs shrink-0">
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      {formattedVal}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                      {share}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Relative Volume Progress Bar with Spring Animation */}
+                <AnimatedProductProgress share={share} isFirst={isFirst} idx={idx} />
+              </div>
+            );
+          })
+        ) : (
+          <div className="py-4 text-center text-xs text-slate-400">
+            No product performance records available.
+          </div>
+        )}
+      </div>
     </div>
   );
 };

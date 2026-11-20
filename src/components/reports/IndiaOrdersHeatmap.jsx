@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { animated, useSpring } from '@react-spring/web';
 import IndiaMap from '@svg-maps/india';
 import {
   FiMapPin,
@@ -77,6 +78,30 @@ const matchLocation = (rawState, locations) => {
 
   return matched || null;
 };
+
+// Animated Progress Bar for Top Ordering States using React Spring
+function AnimatedStateProgress({ share, isFirst, idx }) {
+  const spring = useSpring({
+    from: { width: '0%' },
+    to: { width: `${Math.min(100, Math.max(8, Number(share)))}%` },
+    config: { tension: 130, friction: 15 },
+  });
+
+  return (
+    <div className="h-1 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+      <animated.div
+        className={`h-full rounded-full ${
+          isFirst
+            ? 'bg-indigo-600 dark:bg-indigo-400'
+            : idx === 1
+              ? 'bg-blue-500'
+              : 'bg-sky-400'
+        }`}
+        style={spring}
+      />
+    </div>
+  );
+}
 
 // Heatmap Color Styler based on ratio to highest order state
 const getHeatColor = (count, maxCount, isDark) => {
@@ -215,6 +240,12 @@ const IndiaOrdersHeatmap = ({
   const effectiveTotal = totalOrders || totalMappedOrders || 1;
   const topState = rankedStates[0] || null;
 
+  // Spring physics for smooth map zooming
+  const zoomSpring = useSpring({
+    transform: `scale(${zoomLevel})`,
+    config: { tension: 180, friction: 18 },
+  });
+
   if (loading) {
     return (
       <div className="bg-white/40 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden flex flex-col justify-between h-full p-3">
@@ -238,7 +269,7 @@ const IndiaOrdersHeatmap = ({
   }
 
   return (
-    <div className="bg-white/40 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden flex flex-col justify-between h-full">
+    <div className="bg-white/60 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden flex flex-col justify-between h-full">
       {/* Card Header & Controls */}
       <div className="p-3 border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -291,12 +322,12 @@ const IndiaOrdersHeatmap = ({
         </div>
       </div>
 
-      <div className="p-3 flex-1 flex flex-col justify-between">
+      <div className="p-3 flex-1 flex flex-col justify-start">
         {/* Top Section: Highlight Pill & Canvas */}
         <div>
           {/* Highest Demand State Highlight Pill */}
           {topState ? (
-            <div className="mb-4 p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between text-xs">
+            <div className="mb-3 p-2.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 min-w-0 pr-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 dark:bg-indigo-400 animate-pulse shrink-0" />
                 <span className="text-xs text-slate-700 dark:text-slate-300 truncate">
@@ -316,7 +347,7 @@ const IndiaOrdersHeatmap = ({
               </div>
             </div>
           ) : (
-            <div className="mb-4 p-3 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-xs text-slate-400 text-center">
+            <div className="mb-3 p-2.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-xs text-slate-400 text-center">
               No regional state order distribution recorded in this timeframe
             </div>
           )}
@@ -326,13 +357,13 @@ const IndiaOrdersHeatmap = ({
             ref={containerRef}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => setHoveredLoc(null)}
-            className="relative w-full bg-blue-200/10 rounded-2xl aspect-612/696 max-h-[340px] sm:max-h-[380px] mx-auto flex items-center justify-center select-none overflow-hidden my-2"
+            className="relative w-full bg-blue-200/20 rounded-2xl aspect-612/696 max-h-[290px] sm:max-h-[310px] mx-auto flex items-center justify-center select-none overflow-hidden my-1.5"
           >
-            <svg
+            <animated.svg
               viewBox={IndiaMap.viewBox}
-              className="w-full h-full overflow-visible transition-transform duration-200 ease-out"
+              className="w-full h-full overflow-visible"
               style={{
-                transform: `scale(${zoomLevel})`,
+                ...zoomSpring,
                 transformOrigin: 'center center',
               }}
             >
@@ -393,7 +424,7 @@ const IndiaOrdersHeatmap = ({
                   />
                 );
               })}
-            </svg>
+            </animated.svg>
 
             {/* Smooth Hover Tooltip Following Cursor */}
             {hoveredLoc && (
@@ -443,8 +474,8 @@ const IndiaOrdersHeatmap = ({
           </div>
 
           {/* Heatmap Spectrum Gradient Legend */}
-          <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-white/5">
-            <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold mb-1.5">
+          <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/5">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold mb-1">
               <span>0 Orders</span>
               <span className="text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1">
                 <FiAward className="text-xs" />
@@ -456,7 +487,7 @@ const IndiaOrdersHeatmap = ({
         </div>
 
         {/* Top 5 Ordering States Ranking List */}
-        <div className="mt-4 pt-4 border-t border-slate-200/60 dark:border-white/5 space-y-2">
+        <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-white/5 space-y-2">
           <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             <span>Top Ordering States</span>
             <span>Orders / Share</span>
@@ -506,19 +537,8 @@ const IndiaOrdersHeatmap = ({
                     </div>
                   </div>
 
-                  {/* Relative Volume Progress Bar */}
-                  <div className="h-1 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        isFirst
-                          ? 'bg-indigo-600 dark:bg-indigo-400'
-                          : idx === 1
-                            ? 'bg-blue-500'
-                            : 'bg-sky-400'
-                      }`}
-                      style={{ width: `${Math.min(100, Math.max(8, Number(share)))}%` }}
-                    />
-                  </div>
+                  {/* Relative Volume Progress Bar with Spring Animation */}
+                  <AnimatedStateProgress share={share} isFirst={isFirst} idx={idx} />
                 </div>
               );
             })

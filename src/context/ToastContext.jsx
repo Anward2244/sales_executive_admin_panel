@@ -246,7 +246,7 @@ export const ToastProvider = ({ children }) => {
         createPortal(
           <aside
             aria-live="polite"
-            className="fixed top-5 right-5 z-[9999] flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full pointer-events-none p-2 sm:p-0"
+            className="fixed top-20 right-6 z-[9999] flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full pointer-events-none p-2 sm:p-0"
           >
             {toasts.map((item) => (
               <ToastItem key={item.id} toast={item} onDismiss={dismiss} />

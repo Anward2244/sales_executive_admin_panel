@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { animated, useSpring } from '@react-spring/web';
 import { Group } from '@visx/group';
 import { Bar } from '@visx/shape';
 import { scaleBand, scaleLinear } from '@visx/scale';
@@ -119,6 +120,51 @@ const getStatusMeta = (statusKey) => {
   const key = String(statusKey || '').toUpperCase();
   return STATUS_CONFIG[key] || { ...DEFAULT_STATUS_CONFIG, label: statusKey || 'Other' };
 };
+
+// Animated Bar Item with Spring Physics
+function AnimatedBarItem({
+  barX,
+  barY,
+  barWidth,
+  barHeight,
+  fill,
+  opacity,
+  rx = 6,
+  ry = 6,
+  stroke,
+  strokeWidth,
+  className,
+  onClick,
+  onMouseEnter,
+  onMouseMove,
+  onMouseLeave,
+}) {
+  const spring = useSpring({
+    from: { height: 0, y: barY + barHeight },
+    to: { height: barHeight, y: barY },
+    config: { tension: 170, friction: 16 },
+  });
+
+  return (
+    <animated.rect
+      x={barX}
+      y={spring.y}
+      width={barWidth}
+      height={spring.height}
+      fill={fill}
+      opacity={opacity}
+      rx={rx}
+      ry={ry}
+      stroke={stroke}
+      strokeWidth={strokeWidth}
+      className={className}
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
+    />
+  );
+}
 
 // Inner SVG Chart Renderer
 function InnerBarChart({
@@ -271,12 +317,12 @@ function InnerBarChart({
                   className="pointer-events-none transition-colors duration-150"
                 />
 
-                {/* The Animated Rounded Bar */}
-                <Bar
-                  x={barX}
-                  y={barY}
-                  width={barWidth}
-                  height={barHeight}
+                {/* The Animated Rounded Bar with Spring Physics */}
+                <AnimatedBarItem
+                  barX={barX}
+                  barY={barY}
+                  barWidth={barWidth}
+                  barHeight={barHeight}
                   fill={isHovered ? meta.hoverColor : `url(#${meta.gradientId})`}
                   opacity={opacity}
                   rx={6}

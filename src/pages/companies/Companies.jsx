@@ -515,7 +515,7 @@ const Companies = () => {
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Floating Success Toast */}
       {successToast && (
-        <div className="fixed top-6 right-6 z-[10001] animate-in fade-in slide-in-from-top-3 duration-200">
+        <div className="fixed top-20 right-6 z-[10001] animate-in fade-in slide-in-from-top-3 duration-200">
           <div className="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border backdrop-blur-xl bg-emerald-600/95 text-white border-emerald-400/30 shadow-emerald-500/20">
             <FiCheckCircle className="text-lg shrink-0" />
             <span className="text-xs sm:text-sm font-semibold tracking-wide">{successToast}</span>

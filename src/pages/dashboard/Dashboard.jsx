@@ -29,7 +29,6 @@ import {
   FiActivity,
   FiFilter,
   FiGrid,
-  FiShare2,
   FiMail,
   FiSend,
   FiChevronLeft,
@@ -39,9 +38,8 @@ import {
 } from 'react-icons/fi';
 import VisxTrendChart from '@/components/dashboard/VisxTrendChart';
 import VisxPipelineDonut from '@/components/dashboard/VisxPipelineDonut';
-import VisxTreemapChart from '@/components/dashboard/VisxTreemapChart';
 import CustomDatePicker from '@/components/ui/CustomDatePicker';
-import { SkeletonPulse, TableRowSkeleton, ChartCardSkeleton, DonutChartSkeleton, TreemapSkeleton } from '@/components/ui/Skeleton';
+import { SkeletonPulse, TableRowSkeleton, ChartCardSkeleton, DonutChartSkeleton } from '@/components/ui/Skeleton';
 import { useTheme } from '@/context/ThemeContext';
 import {
   getDashboardMetricsApi,
@@ -313,9 +311,6 @@ const Dashboard = () => {
 
     return { label: 'Current Window', badge: 'Current' };
   }, [trendRange, trendOffset, trendStartDate, trendEndDate]);
-
-  // Tree controls - Revenue vs PO Volume
-  const [treemapMetric, setTreemapMetric] = useState('revenue'); // 'revenue' | 'orders'
 
   const toggleSeries = (key) => {
     setVisibleSeries((prev) => {
@@ -660,216 +655,7 @@ const Dashboard = () => {
     return { totalRev, totalOrd, peakRev, avgRev, avgOrderValue };
   }, [processedTrendData]);
 
-  // Construct hierarchical B2B Tree data for existing companies:
-  // Root -> Companies -> Linked Firms -> POs -> Products
-  const treemapData = useMemo(() => {
-    // Pool of all orders
-    const sourceOrders = Array.isArray(allPurchaseOrders) && allPurchaseOrders.length > 0
-      ? allPurchaseOrders
-      : recentOrders;
 
-    // Use only actually existing companies from API/database
-    // Filter out inactive companies (if any marked isActive: false) and deduplicate
-    const seenNames = new Set();
-    const seenIds = new Set();
-    const targetCompanies = [];
-
-    const candidateCompanies = Array.isArray(allCompanies) && allCompanies.length > 0
-      ? allCompanies
-      : [];
-
-    candidateCompanies.forEach((c) => {
-      if (!c || !c.name || c.isActive === false) return;
-      const normName = c.name.trim().toLowerCase();
-      const strId = c._id ? String(c._id) : null;
-      if (seenNames.has(normName) || (strId && seenIds.has(strId))) return;
-      seenNames.add(normName);
-      if (strId) seenIds.add(strId);
-      targetCompanies.push(c);
-    });
-
-    // Fallback: derive dynamically from actual orders/firms if companies list not loaded yet
-    if (targetCompanies.length === 0 && sourceOrders.length > 0) {
-      sourceOrders.forEach((o) => {
-        const c = typeof o.companyId === 'object' ? o.companyId : null;
-        if (c && c.name && c.isActive !== false) {
-          const normName = c.name.trim().toLowerCase();
-          const strId = c._id ? String(c._id) : null;
-          if (!seenNames.has(normName) && (!strId || !seenIds.has(strId))) {
-            seenNames.add(normName);
-            if (strId) seenIds.add(strId);
-            targetCompanies.push(c);
-          }
-        }
-      });
-    }
-
-    const companyChildren = targetCompanies.map((company) => {
-      const compId = company._id;
-      const compName = company.name;
-      const compCode = company.code || '';
-      const compIsActive = company.isActive !== undefined ? company.isActive : true;
-
-      // 1. Find all firms linked to this company
-      const matchedFirms = (Array.isArray(allFirms) ? allFirms : []).filter((f) => {
-        const fCompId = typeof f.companyId === 'object' ? f.companyId?._id : f.companyId;
-        const fCompName = typeof f.companyId === 'object' ? f.companyId?.name : '';
-        return (compId && String(fCompId) === String(compId)) ||
-          (fCompName && compName && fCompName.trim().toLowerCase() === compName.trim().toLowerCase());
-      });
-
-      // 2. Find all orders linked to this company
-      const matchedCompanyOrders = sourceOrders.filter((o) => {
-        const oCompId = typeof o.companyId === 'object' ? o.companyId?._id : o.companyId;
-        const oCompName = typeof o.companyId === 'object' ? o.companyId?.name : (typeof o.companyId === 'string' ? o.companyId : '');
-        return (compId && String(oCompId) === String(compId)) ||
-          (oCompName && compName && oCompName.trim().toLowerCase() === compName.trim().toLowerCase());
-      });
-
-      // Group orders by firm
-      const firmMap = {};
-
-      // Seed with registered firms from allFirms
-      matchedFirms.forEach((f) => {
-        const fName = f.firmName || f.name || 'Branch';
-        firmMap[fName] = {
-          _id: f._id,
-          name: fName,
-          city: f.city || '',
-          companyName: compName,
-          nodeType: 'firm',
-          pos: []
-        };
-      });
-
-      // Seed with firms found in orders
-      matchedCompanyOrders.forEach((o) => {
-        const fName = o.firmId?.firmName || (typeof o.firmId === 'string' ? o.firmId : null);
-        if (!fName) return;
-
-        if (!firmMap[fName]) {
-          firmMap[fName] = {
-            _id: o.firmId?._id || o.firmId,
-            name: fName,
-            city: o.firmId?.city || '',
-            companyName: compName,
-            nodeType: 'firm',
-            pos: []
-          };
-        }
-
-        // Build PO node from order
-        const poNum = o.poNumber || o.orderNumber || (`PO-${o._id ? o._id.slice(-6) : '000001'}`);
-        const poAmt = Number(o.totalAmount || o.totalValue || o.subtotal || 0);
-
-        // Build product children ONLY from actual line items
-        const productChildren = [];
-        if (Array.isArray(o.items) && o.items.length > 0) {
-          o.items.forEach((item, idx) => {
-            const pName = item.productNameSnapshot || item.productId?.name || item.name;
-            if (!pName) return;
-            const qty = Number(item.quantity || 1);
-            const uPrice = Number(item.unitPrice || 0);
-            const lineTotal = Number(item.totalPrice || (qty * uPrice) || 0);
-
-            productChildren.push({
-              name: pName,
-              sku: item.skuSnapshot || item.productId?.sku || '',
-              category: item.category || '',
-              quantity: qty,
-              unitPrice: uPrice,
-              revenue: lineTotal > 0 ? lineTotal : poAmt,
-              poNumber: poNum,
-              poStatus: o.status || 'PENDING',
-              firmName: fName,
-              companyName: compName,
-              nodeType: 'product'
-            });
-          });
-        }
-
-        firmMap[fName].pos.push({
-          name: poNum,
-          poNumber: poNum,
-          status: o.status || 'PENDING',
-          date: o.createdAt,
-          totalAmount: poAmt,
-          revenue: poAmt,
-          firmName: fName,
-          companyName: compName,
-          nodeType: 'po',
-          children: productChildren.length > 0 ? productChildren : null
-        });
-      });
-
-      // Format firm children ONLY if actual firms exist in database/orders
-      // If company has no firms in DB, firmChildren is null (no fake data)
-      const firmChildren = Object.keys(firmMap).length > 0
-        ? Object.values(firmMap).map((firm) => {
-          const poChildren = firm.pos.length > 0 ? firm.pos : null;
-          const firmRevenue = poChildren ? poChildren.reduce((s, p) => s + (p.revenue || 0), 0) : 0;
-          const firmOrders = poChildren ? poChildren.length : 0;
-
-          return {
-            ...firm,
-            revenue: firmRevenue,
-            orders: firmOrders,
-            children: poChildren
-          };
-        })
-        : null;
-
-      const companyRevenue = firmChildren ? firmChildren.reduce((s, f) => s + (f.revenue || 0), 0) : 0;
-      const companyOrders = firmChildren ? firmChildren.reduce((s, f) => s + (f.orders || 0), 0) : 0;
-
-      return {
-        _id: compId,
-        name: compName,
-        code: compCode,
-        isActive: compIsActive,
-        nodeType: 'company',
-        revenue: companyRevenue,
-        orders: companyOrders,
-        firmCount: firmChildren ? firmChildren.length : 0,
-        children: firmChildren
-      };
-    });
-
-    return {
-      name: 'Whatnot Sales B2B Network',
-      nodeType: 'root',
-      children: companyChildren
-    };
-  }, [allCompanies, allFirms, allPurchaseOrders, recentOrders]);
-
-  // Derived treemap statistics
-  const treemapSummary = useMemo(() => {
-    let totalRev = 0;
-    let totalOrd = 0;
-    let entityCount = 0;
-    let topEntity = { name: '—', value: 0 };
-
-    if (treemapData?.children) {
-      treemapData.children.forEach((comp) => {
-        let compTotal = 0;
-        if (comp.children) {
-          comp.children.forEach((f) => {
-            const rev = Number(f.revenue || 0);
-            const ord = Number(f.orders || 0);
-            totalRev += rev;
-            totalOrd += ord;
-            entityCount += 1;
-            compTotal += treemapMetric === 'revenue' ? rev : ord;
-          });
-        }
-        if (compTotal > topEntity.value) {
-          topEntity = { name: comp.name, value: compTotal };
-        }
-      });
-    }
-
-    return { totalRev, totalOrd, entityCount, topEntity };
-  }, [treemapData, treemapMetric]);
 
 
   // Helper to generate sparklines with real historical accumulation or adaptive trajectory
@@ -1448,9 +1234,9 @@ const Dashboard = () => {
                 <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate" title={card.title}>
                   {card.title}
                 </p>
-                <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
+                <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
                   {loading ? <SkeletonPulse className="h-7 w-28 my-1 inline-block" /> : card.value}
-                </p>
+                </div>
                 <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
                   {card.subtitle}
                 </p>
@@ -2174,121 +1960,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 5. B2B Enterprise Hierarchy Tree (Hidden on small screens) */}
-      <div className="hidden lg:flex bg-white/40 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex-col justify-between">
-        <div className="absolute -top-12 -right-12 w-64 h-64 bg-cyan-500/10 dark:bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
-        <div>
-          {/* Header with Title and Metric Switcher */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl kpi-icon-cyan flex items-center justify-center text-lg border border-cyan-500/20 shadow-xs">
-                <FiShare2 className="rotate-90" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                    B2B Enterprise Hierarchy Tree
-                  </h2>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
-                    {treemapData?.children?.length ? `${treemapData.children.length} Companies` : 'Hierarchy'}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Full procurement network: Trading Companies → Linked Purchasing Firms → Purchase Orders → Ordered Products
-                </p>
-              </div>
-            </div>
-
-            {/* Metric Switcher: Revenue vs Orders */}
-            {/* <div className="inline-flex p-1 rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs font-semibold gap-1 self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setTreemapMetric('revenue')}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  treemapMetric === 'revenue'
-                    ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <span>Revenue (₹)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setTreemapMetric('orders')}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  treemapMetric === 'orders'
-                    ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <span>PO Volume</span>
-              </button>
-            </div> */}
-          </div>
-
-          {/* Hierarchy Tree Visualization Canvas */}
-          <div className="pt-4 min-h-[460px]">
-            {loading ? (
-              <TreemapSkeleton height={460} />
-            ) : (
-              <VisxTreemapChart
-                data={treemapData}
-                metric={treemapMetric}
-                height={460}
-                isDark={isDark}
-                onNodeClick={(node) => {
-                  if (node?.nodeType === 'po' || node?.poNumber) {
-                    const poNum = node.poNumber || node.name;
-                    const found =
-                      (Array.isArray(allPurchaseOrders) ? allPurchaseOrders : []).find(
-                        (o) => o.poNumber === poNum || o._id === node._id
-                      ) ||
-                      (Array.isArray(recentOrders) ? recentOrders : []).find(
-                        (o) => o.poNumber === poNum || o._id === node._id
-                      );
-                    if (found) {
-                      setSelectedOrder(found);
-                      return;
-                    }
-                  }
-                  navigate('/purchase-orders');
-                }}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Treemap Stat Highlights Footer */}
-        <div className="pt-4 mt-3 border-t border-slate-200/80 dark:border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center sm:text-left">
-          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
-            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Total Volume</span>
-            <span className="text-sm sm:text-base font-extrabold text-blue-600 dark:text-blue-400 font-mono">
-              {treemapMetric === 'revenue'
-                ? `₹${treemapSummary.totalRev.toLocaleString('en-IN')}`
-                : `${treemapSummary.totalOrd} Orders`}
-            </span>
-          </div>
-          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
-            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Market Leader</span>
-            <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate block" title={treemapSummary.topEntity.name}>
-              {treemapSummary.topEntity.name}
-            </span>
-          </div>
-          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
-            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Active B2B Nodes</span>
-            <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
-              {treemapSummary.entityCount} Purchasing Entities
-            </span>
-          </div>
-          <div className="px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5">
-            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">Avg Value / Firm</span>
-            <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-              ₹{treemapSummary.entityCount > 0 ? Math.round(treemapSummary.totalRev / treemapSummary.entityCount).toLocaleString('en-IN') : 0}
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* 6. Order Snapshot Details Slide-Over Drawer */}
       {selectedOrder && createPortal(

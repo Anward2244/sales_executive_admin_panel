@@ -714,7 +714,7 @@ const FirmOnboarding = () => {
     <div className="space-y-5 pb-12 w-full">
       {/* Toast */}
       {successToast && (
-        <div className="fixed top-5 right-5 z-[9999] flex items-center gap-3 px-4 py-3 bg-emerald-600 text-white rounded-xl shadow-2xl animate-in slide-in-from-top-4 fade-in">
+        <div className="fixed top-20 right-6 z-[9999] flex items-center gap-3 px-4 py-3 bg-emerald-600 text-white rounded-xl shadow-2xl animate-in slide-in-from-top-4 fade-in">
           <FiCheckCircle className="text-xl shrink-0" />
           <p className="text-sm font-semibold">{successToast}</p>
           <button

@@ -362,12 +362,21 @@ const Settings = () => {
 
       {/* Floating Status / Feedback Toast */}
       {feedback && (
-        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+        <div
+          className={`fixed z-50 animate-in fade-in slide-in-from-top-3 duration-200 pointer-events-auto ${
+            notificationConfig.toastPosition === 'bottom-right'
+              ? 'bottom-6 right-6'
+              : notificationConfig.toastPosition === 'top-center'
+                ? 'top-20 left-1/2 -translate-x-1/2'
+                : 'top-20 right-6'
+          }`}
+        >
           <div
-            className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border backdrop-blur-xl ${feedback.type === 'error'
-              ? 'bg-rose-500/95 text-white border-rose-400/30 shadow-rose-500/20'
-              : 'bg-emerald-600/95 text-white border-emerald-400/30 shadow-emerald-500/20'
-              }`}
+            className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border backdrop-blur-xl ${
+              feedback.type === 'error'
+                ? 'bg-rose-500/95 text-white border-rose-400/30 shadow-rose-500/20'
+                : 'bg-emerald-600/95 text-white border-emerald-400/30 shadow-emerald-500/20'
+            }`}
           >
             {feedback.type === 'error' ? (
               <FiAlertCircle className="text-lg shrink-0" />
@@ -375,6 +384,13 @@ const Settings = () => {
               <FiCheckCircle className="text-lg shrink-0" />
             )}
             <span className="text-xs sm:text-sm font-semibold tracking-wide">{feedback.msg}</span>
+            <button
+              type="button"
+              onClick={() => setFeedback(null)}
+              className="p-1 hover:bg-white/20 rounded-lg transition-colors cursor-pointer text-white/80 hover:text-white -mr-1"
+            >
+              <FiX className="text-sm" />
+            </button>
           </div>
         </div>
       )}

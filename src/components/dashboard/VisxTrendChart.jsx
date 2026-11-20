@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
+import { animated, useSpring } from '@react-spring/web';
 import { Group } from '@visx/group';
 import { AreaClosed, LinePath, Bar } from '@visx/shape';
 import { curveMonotoneX } from '@visx/curve';
@@ -44,6 +45,29 @@ const formatRevenueAxis = (val) => {
   return `₹${Math.round(val)}`;
 };
 
+// Animated Vertical Bar for Trend Orders with Spring Physics
+function AnimatedTrendBar({ barX, barY, barWidth, barHeight, isHovered }) {
+  const spring = useSpring({
+    from: { height: 0, y: barY + barHeight },
+    to: { height: barHeight, y: barY },
+    config: { tension: 170, friction: 16 },
+  });
+
+  return (
+    <animated.rect
+      x={barX}
+      y={spring.y}
+      width={barWidth}
+      height={spring.height}
+      rx={Math.min(4, barWidth / 3)}
+      fill={isHovered ? 'url(#mix-order-bar-hover)' : 'url(#mix-order-bar-gradient)'}
+      stroke={isHovered ? '#60a5fa' : 'transparent'}
+      strokeWidth={isHovered ? 1.5 : 0}
+      className="transition-colors duration-150"
+    />
+  );
+}
+
 const InnerTrendChart = ({
   width,
   height,
@@ -63,6 +87,13 @@ const InnerTrendChart = ({
 
   const innerWidth = Math.max(0, width - margin.left - margin.right);
   const innerHeight = Math.max(0, height - margin.top - margin.bottom);
+
+  // React Spring for smooth entrance of revenue layer
+  const revenueSpring = useSpring({
+    from: { opacity: 0, transform: 'scale(0.99)' },
+    to: { opacity: 1, transform: 'scale(1)' },
+    config: { tension: 160, friction: 18 },
+  });
 
   // Tooltip setup
   const {
@@ -234,24 +265,20 @@ const InnerTrendChart = ({
                       pointerEvents="none"
                     />
                   )}
-                  <rect
-                    x={barX}
-                    y={barY}
-                    width={barWidth}
-                    height={barHeight}
-                    rx={Math.min(4, barWidth / 3)}
-                    fill={isHovered ? 'url(#mix-order-bar-hover)' : 'url(#mix-order-bar-gradient)'}
-                    stroke={isHovered ? '#60a5fa' : 'transparent'}
-                    strokeWidth={isHovered ? 1.5 : 0}
-                    className="transition-all duration-150"
+                  <AnimatedTrendBar
+                    barX={barX}
+                    barY={barY}
+                    barWidth={barWidth}
+                    barHeight={barHeight}
+                    isHovered={isHovered}
                   />
                 </g>
               );
             })}
 
-          {/* LAYER 2: Revenue (Area Closed + Spline Line) */}
+          {/* LAYER 2: Revenue (Area Closed + Spline Line with Spring Animation) */}
           {showRevenue && data.length > 1 && (
-            <>
+            <animated.g style={revenueSpring}>
               <AreaClosed
                 data={data}
                 x={(d) => dateScale(getDate(d)) ?? 0}
@@ -271,7 +298,7 @@ const InnerTrendChart = ({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-            </>
+            </animated.g>
           )}
 
           {/* Revenue Marker Dots (when fewer points or highlighted) */}

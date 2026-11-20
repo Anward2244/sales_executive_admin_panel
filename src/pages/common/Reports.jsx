@@ -1352,7 +1352,7 @@ const Reports = () => {
       {/* Product Performance & State Orders Heatmap Side-by-Side Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
         {/* Product Performance Section */}
-        <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden flex flex-col">
+        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden flex flex-col justify-between h-full">
         <div className="p-3 border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 kpi-icon-purple rounded-2xl">

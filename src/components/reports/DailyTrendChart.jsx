@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { animated, useSpring } from '@react-spring/web';
 import { Group } from '@visx/group';
 import { AreaClosed, LinePath, Bar, Line } from '@visx/shape';
 import { curveMonotoneX } from '@visx/curve';
@@ -233,6 +234,21 @@ function InnerTrendLineChart({
   const axisStroke = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)';
   const axisTextFill = isDark ? '#94a3b8' : '#64748b';
 
+  // React Spring physics animation when metric or data updates
+  const chartSpring = useSpring({
+    from: { opacity: 0, transform: 'scale(0.99)' },
+    to: { opacity: 1, transform: 'scale(1)' },
+    config: { tension: 160, friction: 18 },
+  });
+
+  // Spring for smooth gliding hover dot
+  const hoverSpring = useSpring({
+    cx: tooltipOpen && tooltipData ? timeScale(getDate(tooltipData)) : 0,
+    cy: tooltipOpen && tooltipData ? yScale(getYValue(tooltipData)) : 0,
+    opacity: tooltipOpen ? 1 : 0,
+    config: { tension: 280, friction: 22 },
+  });
+
   return (
     <div ref={containerRef} className="relative w-full h-full select-none">
       <svg width={width} height={height} className="overflow-visible">
@@ -266,63 +282,66 @@ function InnerTrendLineChart({
             numTicks={5}
           />
 
-          {/* Shaded Area Under Curve */}
-          <AreaClosed
-            data={data}
-            x={(d) => timeScale(getDate(d)) ?? 0}
-            y={(d) => yScale(getYValue(d)) ?? 0}
-            yScale={yScale}
-            strokeWidth={0}
-            curve={curveMonotoneX}
-            fill={`url(#${areaGradId})`}
-          />
+          {/* Spring-animated Curve Area, Line and Points */}
+          <animated.g style={chartSpring}>
+            {/* Shaded Area Under Curve */}
+            <AreaClosed
+              data={data}
+              x={(d) => timeScale(getDate(d)) ?? 0}
+              y={(d) => yScale(getYValue(d)) ?? 0}
+              yScale={yScale}
+              strokeWidth={0}
+              curve={curveMonotoneX}
+              fill={`url(#${areaGradId})`}
+            />
 
-          {/* Smooth Trend Line */}
-          <LinePath
-            data={data}
-            x={(d) => timeScale(getDate(d)) ?? 0}
-            y={(d) => yScale(getYValue(d)) ?? 0}
-            curve={curveMonotoneX}
-            stroke={strokeColor}
-            strokeWidth={2.5}
-            strokeLinecap="round"
-          />
+            {/* Smooth Trend Line */}
+            <LinePath
+              data={data}
+              x={(d) => timeScale(getDate(d)) ?? 0}
+              y={(d) => yScale(getYValue(d)) ?? 0}
+              curve={curveMonotoneX}
+              stroke={strokeColor}
+              strokeWidth={2.5}
+              strokeLinecap="round"
+            />
 
-          {/* Data Points (Dots on chart) */}
-          {data.length <= 31 &&
-            data.map((d, i) => {
-              const cx = timeScale(getDate(d));
-              const cy = yScale(getYValue(d));
-              const isHovered = tooltipOpen && tooltipData && (tooltipData.date === d.date || tooltipData._id === d._id);
-              const isPeak = isRevenue && Number(d.totalAmount) === peakRevenue && peakRevenue > 0;
+            {/* Data Points (Dots on chart) */}
+            {data.length <= 31 &&
+              data.map((d, i) => {
+                const cx = timeScale(getDate(d));
+                const cy = yScale(getYValue(d));
+                const isHovered = tooltipOpen && tooltipData && (tooltipData.date === d.date || tooltipData._id === d._id);
+                const isPeak = isRevenue && Number(d.totalAmount) === peakRevenue && peakRevenue > 0;
 
-              return (
-                <g key={`point-${d._id || i}`}>
-                  {isPeak && !isHovered && (
+                return (
+                  <g key={`point-${d._id || i}`}>
+                    {isPeak && !isHovered && (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={6}
+                        fill="none"
+                        stroke="#f59e0b"
+                        strokeWidth={2}
+                        className="animate-pulse"
+                      />
+                    )}
                     <circle
                       cx={cx}
                       cy={cy}
-                      r={6}
-                      fill="none"
-                      stroke="#f59e0b"
-                      strokeWidth={2}
-                      className="animate-pulse"
+                      r={isHovered ? 6 : isPeak ? 4.5 : 3}
+                      fill={isHovered ? '#ffffff' : isPeak ? '#f59e0b' : strokeColor}
+                      stroke={strokeColor}
+                      strokeWidth={isHovered ? 2.5 : 1.5}
+                      className="transition-all duration-150"
                     />
-                  )}
-                  <circle
-                    cx={cx}
-                    cy={cy}
-                    r={isHovered ? 6 : isPeak ? 4.5 : 3}
-                    fill={isHovered ? '#ffffff' : isPeak ? '#f59e0b' : strokeColor}
-                    stroke={strokeColor}
-                    strokeWidth={isHovered ? 2.5 : 1.5}
-                    className="transition-all duration-150"
-                  />
-                </g>
-              );
-            })}
+                  </g>
+                );
+              })}
+          </animated.g>
 
-          {/* Hover guideline and active dot */}
+          {/* Hover guideline and spring-gliding active dot */}
           {tooltipOpen && tooltipData && (
             <g pointerEvents="none">
               <Line
@@ -332,9 +351,10 @@ function InnerTrendLineChart({
                 strokeWidth={1.5}
                 strokeDasharray="4 4"
               />
-              <circle
-                cx={timeScale(getDate(tooltipData))}
-                cy={yScale(getYValue(tooltipData))}
+              <animated.circle
+                cx={hoverSpring.cx}
+                cy={hoverSpring.cy}
+                opacity={hoverSpring.opacity}
                 r={7}
                 fill={strokeColor}
                 stroke="#ffffff"

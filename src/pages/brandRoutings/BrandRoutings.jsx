@@ -928,7 +928,7 @@ const BrandRoutings = () => {
   return (
     <div className="space-y-6 pb-12 relative">
       {/* Top-Left Ambient Glowing Blob */}
-      <div className="absolute -top-16 -left-16 w-80 h-80 sm:w-96 sm:h-96 bg-linear-to-br from-blue-500/25 via-indigo-500/20 to-sky-400/15 rounded-full blur-[90px] pointer-events-none -z-10" />
+      <div className="absolute -top-16 -left-16 w-80 h-80 sm:w-96 sm:h-96 bg-linear-to-br from-blue-500/25 via-blue-400/20 to-sky-400/15 rounded-full blur-[90px] pointer-events-none -z-10" />
 
       {/* ================= PAGE HEADER ================= */}
       <PageHeader
