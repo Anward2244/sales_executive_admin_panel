@@ -1234,7 +1234,7 @@ const Dashboard = () => {
                 <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate" title={card.title}>
                   {card.title}
                 </p>
-                <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
+                <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono" title={card.value}>
                   {loading ? <SkeletonPulse className="h-7 w-28 my-1 inline-block" /> : card.value}
                 </div>
                 <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">

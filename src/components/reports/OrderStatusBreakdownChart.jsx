@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { animated, useSpring } from '@react-spring/web';
 import { Group } from '@visx/group';
 import { Bar } from '@visx/shape';
 import { scaleBand, scaleLinear } from '@visx/scale';
@@ -121,8 +120,8 @@ const getStatusMeta = (statusKey) => {
   return STATUS_CONFIG[key] || { ...DEFAULT_STATUS_CONFIG, label: statusKey || 'Other' };
 };
 
-// Animated Bar Item with Spring Physics
-function AnimatedBarItem({
+// Bar Item
+function BarItem({
   barX,
   barY,
   barWidth,
@@ -139,18 +138,12 @@ function AnimatedBarItem({
   onMouseMove,
   onMouseLeave,
 }) {
-  const spring = useSpring({
-    from: { height: 0, y: barY + barHeight },
-    to: { height: barHeight, y: barY },
-    config: { tension: 170, friction: 16 },
-  });
-
   return (
-    <animated.rect
+    <rect
       x={barX}
-      y={spring.y}
+      y={barY}
       width={barWidth}
-      height={spring.height}
+      height={barHeight}
       fill={fill}
       opacity={opacity}
       rx={rx}
@@ -317,8 +310,8 @@ function InnerBarChart({
                   className="pointer-events-none transition-colors duration-150"
                 />
 
-                {/* The Animated Rounded Bar with Spring Physics */}
-                <AnimatedBarItem
+                {/* The Rounded Bar */}
+                <BarItem
                   barX={barX}
                   barY={barY}
                   barWidth={barWidth}

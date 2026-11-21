@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { animated, useSpring } from '@react-spring/web';
 import { Group } from '@visx/group';
 import { AreaClosed, LinePath, Bar, Line } from '@visx/shape';
 import { curveMonotoneX } from '@visx/curve';
@@ -234,20 +233,6 @@ function InnerTrendLineChart({
   const axisStroke = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)';
   const axisTextFill = isDark ? '#94a3b8' : '#64748b';
 
-  // React Spring physics animation when metric or data updates
-  const chartSpring = useSpring({
-    from: { opacity: 0, transform: 'scale(0.99)' },
-    to: { opacity: 1, transform: 'scale(1)' },
-    config: { tension: 160, friction: 18 },
-  });
-
-  // Spring for smooth gliding hover dot
-  const hoverSpring = useSpring({
-    cx: tooltipOpen && tooltipData ? timeScale(getDate(tooltipData)) : 0,
-    cy: tooltipOpen && tooltipData ? yScale(getYValue(tooltipData)) : 0,
-    opacity: tooltipOpen ? 1 : 0,
-    config: { tension: 280, friction: 22 },
-  });
 
   return (
     <div ref={containerRef} className="relative w-full h-full select-none">
@@ -282,8 +267,8 @@ function InnerTrendLineChart({
             numTicks={5}
           />
 
-          {/* Spring-animated Curve Area, Line and Points */}
-          <animated.g style={chartSpring}>
+          {/* Curve Area, Line and Points */}
+          <g>
             {/* Shaded Area Under Curve */}
             <AreaClosed
               data={data}
@@ -311,7 +296,16 @@ function InnerTrendLineChart({
               data.map((d, i) => {
                 const cx = timeScale(getDate(d));
                 const cy = yScale(getYValue(d));
-                const isHovered = tooltipOpen && tooltipData && (tooltipData.date === d.date || tooltipData._id === d._id);
+                const isHovered = Boolean(
+                  tooltipOpen &&
+                  tooltipData &&
+                  (tooltipData === d ||
+                    (tooltipData.date && d.date && tooltipData.date === d.date) ||
+                    (tooltipData._id && d._id && tooltipData._id === d._id) ||
+                    (Boolean(tooltipData.date || tooltipData._id) &&
+                      Boolean(d.date || d._id) &&
+                      getDate(tooltipData).getTime() === getDate(d).getTime()))
+                );
                 const isPeak = isRevenue && Number(d.totalAmount) === peakRevenue && peakRevenue > 0;
 
                 return (
@@ -339,9 +333,9 @@ function InnerTrendLineChart({
                   </g>
                 );
               })}
-          </animated.g>
+          </g>
 
-          {/* Hover guideline and spring-gliding active dot */}
+          {/* Hover guideline and active dot */}
           {tooltipOpen && tooltipData && (
             <g pointerEvents="none">
               <Line
@@ -351,10 +345,9 @@ function InnerTrendLineChart({
                 strokeWidth={1.5}
                 strokeDasharray="4 4"
               />
-              <animated.circle
-                cx={hoverSpring.cx}
-                cy={hoverSpring.cy}
-                opacity={hoverSpring.opacity}
+              <circle
+                cx={timeScale(getDate(tooltipData))}
+                cy={yScale(getYValue(tooltipData))}
                 r={7}
                 fill={strokeColor}
                 stroke="#ffffff"

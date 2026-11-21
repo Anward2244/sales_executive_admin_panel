@@ -1,5 +1,4 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { animated, useSpring } from '@react-spring/web';
 import { useTheme } from '@/context/ThemeContext';
 import { Group } from '@visx/group';
 import { Tree, hierarchy } from '@visx/hierarchy';
@@ -1367,11 +1366,6 @@ const InnerHierarchyChart = ({
     return applyTidyVerticalLayout(rootNode);
   }, [rootNode]);
 
-  // React Spring for smooth zoom animation (called unconditionally before any early returns)
-  const zoomSpring = useSpring({
-    transform: `scale(${zoomLevel})`,
-    config: { tension: 180, friction: 18 },
-  });
 
   if (!rootNode || width < 100) {
     return (
@@ -1581,7 +1575,7 @@ const InnerHierarchyChart = ({
               : 'linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)'
           }}
         >
-          <animated.g style={zoomSpring}>
+          <g style={{ transform: `scale(${zoomLevel})` }}>
             <NodeLinkTreeView
               width={baseSvgWidth}
               height={baseSvgHeight}
@@ -1601,7 +1595,7 @@ const InnerHierarchyChart = ({
               connectorStyle={connectorStyle}
               containerRef={chartContainerRef}
             />
-          </animated.g>
+          </g>
         </svg>
       </div>
 

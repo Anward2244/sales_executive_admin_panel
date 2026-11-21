@@ -9,12 +9,7 @@ import { ParentSize } from '@visx/responsive';
 import { curveMonotoneX } from '@visx/curve';
 import { useTooltip, useTooltipInPortal, defaultStyles as tooltipStyles } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
-import { animated, useTransition, useSpring, to } from '@react-spring/web';
 import { DiAndroid, DiApple } from 'react-icons/di';
-
-const AnimatedPath = animated.path;
-const AnimatedG = animated.g;
-const AnimatedRect = animated.rect;
 
 const getIsDark = () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 const getGridStroke = () => getIsDark() ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.06)";
@@ -57,20 +52,13 @@ const formatCompactNumber = (num, prefix = '') => {
 };
 
 // ----------------------------------------------------
-// React Spring Animated Helpers (Physics Engine)
+// Chart Shape Helpers
 // ----------------------------------------------------
 function AnimatedPoly({ d, fill, onMouseMove, onMouseLeave, className }) {
-  const spring = useSpring({
-    from: { opacity: 0 },
-    to: { opacity: 1 },
-    config: { tension: 120, friction: 14 }
-  });
-
   return (
-    <AnimatedPath
+    <path
       d={d}
       fill={fill}
-      opacity={spring.opacity}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
       className={className}
@@ -79,38 +67,24 @@ function AnimatedPoly({ d, fill, onMouseMove, onMouseLeave, className }) {
 }
 
 function AnimatedLine({ d, stroke, strokeWidth, className }) {
-  const spring = useSpring({
-    from: { opacity: 0 },
-    to: { opacity: 1 },
-    config: { tension: 120, friction: 14 }
-  });
-
   return (
-    <AnimatedPath
+    <path
       d={d}
       fill="none"
       stroke={stroke}
       strokeWidth={strokeWidth}
-      opacity={spring.opacity}
       className={className}
     />
   );
 }
 
 function AnimatedArcItem({ path, fill, onMouseMove, onMouseLeave, onClick, className, stroke, strokeWidth }) {
-  const spring = useSpring({
-    from: { opacity: 0, scale: 0.8 },
-    to: { opacity: 1, scale: 1 },
-    config: { tension: 150, friction: 12 }
-  });
-
   return (
-    <AnimatedPath
+    <path
       d={path}
       fill={fill}
       stroke={stroke}
       strokeWidth={strokeWidth}
-      opacity={spring.opacity}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
       onClick={onClick}
@@ -120,17 +94,11 @@ function AnimatedArcItem({ path, fill, onMouseMove, onMouseLeave, onClick, class
 }
 
 function AnimatedHorizontalBarItem({ x = 0, y, width, height, fill, rx = 6, ry = 6, onMouseMove, onMouseLeave, className }) {
-  const spring = useSpring({
-    from: { width: 0, x: 0 },
-    to: { width, x },
-    config: { tension: 130, friction: 15 }
-  });
-
   return (
-    <AnimatedRect
-      x={spring.x}
+    <rect
+      x={x}
       y={y}
-      width={spring.width}
+      width={width}
       height={height}
       fill={fill}
       rx={rx}
@@ -151,45 +119,15 @@ function AnimatedPie({
   onMouseMoveDatum,
   onMouseLeaveDatum
 }) {
-  const transitions = useTransition(arcs, {
-    from: ({ endAngle }) => ({
-      startAngle: endAngle > Math.PI ? 2 * Math.PI : 0,
-      endAngle: endAngle > Math.PI ? 2 * Math.PI : 0,
-      opacity: 0,
-    }),
-    enter: ({ startAngle, endAngle }) => ({
-      startAngle,
-      endAngle,
-      opacity: 1,
-    }),
-    update: ({ startAngle, endAngle }) => ({
-      startAngle,
-      endAngle,
-      opacity: 1,
-    }),
-    leave: ({ endAngle }) => ({
-      startAngle: endAngle > Math.PI ? 2 * Math.PI : 0,
-      endAngle: endAngle > Math.PI ? 2 * Math.PI : 0,
-      opacity: 0,
-    }),
-    keys: getKey,
-    config: { tension: 120, friction: 14 }
-  });
-
-  return transitions((props, arc, { key }) => {
+  return arcs.map((arc) => {
+    const key = getKey(arc);
     const [centroidX, centroidY] = path.centroid(arc);
     const hasSpaceForLabel = arc.endAngle - arc.startAngle >= 0.35;
 
     return (
       <g key={key}>
-        <AnimatedPath
-          d={to([props.startAngle, props.endAngle], (startAngle, endAngle) =>
-            path({
-              ...arc,
-              startAngle,
-              endAngle,
-            })
-          )}
+        <path
+          d={path(arc)}
           fill={getColor(arc)}
           onClick={(e) => onClickDatum(arc, e)}
           onMouseMove={(e) => onMouseMoveDatum(arc, e)}
@@ -197,7 +135,7 @@ function AnimatedPie({
           className="cursor-pointer transition-opacity duration-150 hover:opacity-90"
         />
         {hasSpaceForLabel && (
-          <AnimatedG style={{ opacity: props.opacity }}>
+          <g>
             <text
               fill="#ffffff"
               x={centroidX}
@@ -211,7 +149,7 @@ function AnimatedPie({
             >
               {getKey(arc)}
             </text>
-          </AnimatedG>
+          </g>
         )}
       </g>
     );
@@ -219,18 +157,12 @@ function AnimatedPie({
 }
 
 function AnimatedVerticalBarItem({ x, y, width, height, yMax, fill, rx, ry, onMouseMove, onMouseLeave, className, opacity }) {
-  const spring = useSpring({
-    from: { y: yMax, height: 0 },
-    to: { y, height },
-    config: { tension: 130, friction: 15 }
-  });
-
   return (
-    <AnimatedRect
+    <rect
       x={x}
-      y={spring.y}
+      y={y}
       width={width}
-      height={spring.height}
+      height={height}
       fill={fill}
       opacity={opacity}
       rx={rx}
@@ -927,11 +859,6 @@ function InnerAreaChart({ labels, data, breakdowns = [], color, valuePrefix, val
     scroll: true
   });
 
-  const springProps = useSpring({
-    from: { opacity: 0, transform: 'translateY(12px)' },
-    to: { opacity: 1, transform: 'translateY(0px)' },
-    config: { tension: 120, friction: 14 }
-  });
 
   const isMobile = width < 480;
   const margin = isMobile 
@@ -1014,7 +941,7 @@ function InnerAreaChart({ labels, data, breakdowns = [], color, valuePrefix, val
         <LinearGradient id={gradId} from={color} to={color} fromOpacity={0.45} toOpacity={0.02} />
         <Group left={margin.left} top={margin.top}>
           <GridRows scale={yScale} width={xMax} stroke={getGridStroke()} strokeDasharray="3 3" pointerEvents="none" />
-          <AnimatedG style={springProps}>
+          <g>
             <AreaClosed
               data={chartData}
               x={getX}
@@ -1031,7 +958,7 @@ function InnerAreaChart({ labels, data, breakdowns = [], color, valuePrefix, val
               stroke={color}
               strokeWidth={2.5}
             />
-          </AnimatedG>
+          </g>
 
           {/* Transparent Overlay for Full Canvas Mouse Hover Tracking */}
           <rect

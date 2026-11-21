@@ -1209,18 +1209,14 @@ const Layout = () => {
                     onClick={() => toggleSubMenu(menu.name)}
                     title={!isExpanded ? menu.name : undefined}
                     className={`
-                      w-full h-12 flex items-center justify-between px-3.5 transition-all duration-200 group rounded-xl relative cursor-pointer
+                      w-full h-12 flex items-center justify-between px-3.5 border border-transparent transition-all duration-200 group rounded-xl relative cursor-pointer
                       ${isChildActive
                         ? isDark
-                          ? 'bg-gradient-to-r from-blue-600/25 to-blue-500/15 text-white font-semibold border border-blue-500/40 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-500/25'
-                          : 'bg-gradient-to-r from-blue-600/15 to-indigo-600/10 text-blue-700 font-bold border border-blue-400/30 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-500/25'
-                        : isExpanded
-                          ? isDark
-                            ? 'text-slate-300 border border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/10 hover:translate-x-0.5 hover:shadow-md hover:shadow-black/30'
-                            : 'text-slate-600 border border-transparent hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200/80 hover:translate-x-0.5 hover:shadow-md hover:shadow-slate-900/10'
-                          : isDark
-                            ? 'text-slate-300 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03] hover:shadow-md hover:shadow-black/30'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03] hover:shadow-md hover:shadow-slate-900/10'
+                          ? 'bg-gradient-to-r from-blue-600/25 to-blue-500/15 text-white font-semibold border-blue-500/40 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-500/25'
+                          : 'bg-gradient-to-r from-blue-600/15 to-indigo-600/10 text-blue-700 font-bold border-blue-400/30 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-500/25'
+                        : isDark
+                          ? `text-slate-300 hover:bg-white/[0.02] hover:text-white hover:border-white/10 hover:shadow-md hover:shadow-black/30 ${isExpanded ? 'hover:translate-x-0.5' : 'hover:scale-[1.03]'}`
+                          : `text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200/80 hover:shadow-md hover:shadow-slate-900/10 ${isExpanded ? 'hover:translate-x-0.5' : 'hover:scale-[1.03]'}`
                       }
                     `}
                   >
@@ -1278,14 +1274,14 @@ const Layout = () => {
                                 to={sub.path}
                                 onClick={() => setIsMobileMenuOpen(false)}
                                 className={`
-                                flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200
+                                flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[13px] font-semibold border border-transparent transition-all duration-200
                                 ${isSubActive
                                     ? isDark
-                                      ? 'bg-blue-600/25 text-white font-bold border border-blue-500/40 shadow-sm shadow-blue-500/10 hover:shadow-md hover:shadow-blue-500/20'
-                                      : 'bg-blue-600/15 text-blue-700 font-bold border border-blue-400/40 shadow-sm shadow-blue-500/5 hover:shadow-md hover:shadow-blue-500/15'
+                                      ? 'bg-blue-600/25 text-white font-bold border-blue-500/40 shadow-sm shadow-blue-500/10 hover:shadow-md hover:shadow-blue-500/20'
+                                      : 'bg-blue-600/15 text-blue-700 font-bold border-blue-400/40 shadow-sm shadow-blue-500/5 hover:shadow-md hover:shadow-blue-500/15'
                                     : isDark
-                                      ? 'text-slate-400 hover:bg-white/[0.03] border border-transparent hover:border-white/15 hover:text-slate-100 hover:translate-x-1 hover:shadow-sm hover:shadow-black/30'
-                                      : 'text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 hover:text-slate-900 hover:translate-x-1 hover:shadow-sm hover:shadow-slate-900/10'
+                                      ? 'text-slate-400 hover:bg-white/[0.03] hover:border-white/15 hover:text-slate-100 hover:translate-x-1 hover:shadow-sm hover:shadow-black/30'
+                                      : 'text-slate-600 hover:bg-slate-100 hover:border-slate-200 hover:text-slate-900 hover:translate-x-1 hover:shadow-sm hover:shadow-slate-900/10'
                                   }
                               `}
                               >
@@ -1331,18 +1327,14 @@ const Layout = () => {
                 }}
                 title={!isExpanded ? menu.name : undefined}
                 className={`
-                  w-full h-12 flex items-center justify-between px-3.5 transition-all duration-200 group rounded-xl relative cursor-pointer
+                  w-full h-12 flex items-center justify-between px-3.5 border border-transparent transition-all duration-200 group rounded-xl relative cursor-pointer
                   ${isActive
                     ? isDark
-                      ? 'bg-gradient-to-r from-blue-600/25 to-blue-500/15 text-white font-semibold border border-blue-500/40 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-500/25'
-                      : 'bg-gradient-to-r from-blue-600/15 to-indigo-600/10 text-blue-700 font-bold border border-blue-400/40 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-500/25'
-                    : isExpanded
-                      ? isDark
-                        ? 'text-slate-300 border border-transparent hover:bg-white/[0.02] hover:text-white hover:border-white/10 hover:translate-x-0.5 hover:shadow-md hover:shadow-black/30'
-                        : 'text-slate-600 border border-transparent hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200/80 hover:translate-x-0.5 hover:shadow-md hover:shadow-slate-900/10'
-                      : isDark
-                        ? 'text-slate-300 hover:bg-white/[0.02] hover:text-white hover:border-white/15 hover:scale-[1.03] hover:shadow-md hover:shadow-black/30'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 hover:scale-[1.03] hover:shadow-md hover:shadow-slate-900/10'
+                      ? 'bg-gradient-to-r from-blue-600/25 to-blue-500/15 text-white font-semibold border-blue-500/40 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-500/25'
+                      : 'bg-gradient-to-r from-blue-600/15 to-indigo-600/10 text-blue-700 font-bold border-blue-400/40 shadow-sm shadow-blue-500/15 hover:shadow-md hover:shadow-blue-500/25'
+                    : isDark
+                      ? `text-slate-300 hover:bg-white/[0.02] hover:text-white hover:border-white/10 hover:shadow-md hover:shadow-black/30 ${isExpanded ? 'hover:translate-x-0.5' : 'hover:scale-[1.03]'}`
+                      : `text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200/80 hover:shadow-md hover:shadow-slate-900/10 ${isExpanded ? 'hover:translate-x-0.5' : 'hover:scale-[1.03]'}`
                   }
                 `}
               >

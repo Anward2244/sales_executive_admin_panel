@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { animated, useSpring } from '@react-spring/web';
 import IndiaMap from '@svg-maps/india';
 import {
   FiMapPin,
@@ -79,17 +78,11 @@ const matchLocation = (rawState, locations) => {
   return matched || null;
 };
 
-// Animated Progress Bar for Top Ordering States using React Spring
-function AnimatedStateProgress({ share, isFirst, idx }) {
-  const spring = useSpring({
-    from: { width: '0%' },
-    to: { width: `${Math.min(100, Math.max(8, Number(share)))}%` },
-    config: { tension: 130, friction: 15 },
-  });
-
+// Progress Bar for Top Ordering States
+function StateProgress({ share, isFirst, idx }) {
   return (
     <div className="h-1 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-      <animated.div
+      <div
         className={`h-full rounded-full ${
           isFirst
             ? 'bg-indigo-600 dark:bg-indigo-400'
@@ -97,7 +90,7 @@ function AnimatedStateProgress({ share, isFirst, idx }) {
               ? 'bg-blue-500'
               : 'bg-sky-400'
         }`}
-        style={spring}
+        style={{ width: `${Math.min(100, Math.max(8, Number(share)))}%` }}
       />
     </div>
   );
@@ -226,25 +219,35 @@ const IndiaOrdersHeatmap = ({
     };
   }, [orders]);
 
-  // Handle cursor movement inside container for smooth tooltip
+  // Handle cursor movement inside container for smooth tooltip placement offset from cursor
   const handleMouseMove = (e) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
-    const boundedX = Math.min(Math.max(10, rawX - 90), Math.max(10, rect.width - 200));
-    const boundedY = Math.max(10, rawY - 85);
+
+    const tooltipWidth = 200;
+    const tooltipHeight = 130;
+
+    // Horizontally: center on cursor but keep safely within bounds
+    const boundedX = Math.min(
+      Math.max(10, rawX - tooltipWidth / 2),
+      Math.max(10, rect.width - tooltipWidth - 10)
+    );
+
+    // Vertically: prefer placing above cursor with a 16px gap so it NEVER sits under the cursor
+    // If near the top edge, place below with a 24px gap
+    let boundedY = rawY - tooltipHeight - 16;
+    if (boundedY < 10) {
+      boundedY = Math.min(rect.height - tooltipHeight - 10, rawY + 24);
+    }
+
     setTooltipPos({ x: boundedX, y: boundedY });
   };
 
   const effectiveTotal = totalOrders || totalMappedOrders || 1;
   const topState = rankedStates[0] || null;
 
-  // Spring physics for smooth map zooming
-  const zoomSpring = useSpring({
-    transform: `scale(${zoomLevel})`,
-    config: { tension: 180, friction: 18 },
-  });
 
   if (loading) {
     return (
@@ -357,13 +360,13 @@ const IndiaOrdersHeatmap = ({
             ref={containerRef}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => setHoveredLoc(null)}
-            className="relative w-full bg-blue-200/20 rounded-2xl aspect-612/696 max-h-[290px] sm:max-h-[310px] mx-auto flex items-center justify-center select-none overflow-hidden my-1.5"
+            className="relative w-full bg-blue-200/20 rounded-2xl aspect-612/696 max-h-[290px] sm:max-h-[340px] mx-auto flex items-center justify-center select-none overflow-hidden my-1.5"
           >
-            <animated.svg
+            <svg
               viewBox={IndiaMap.viewBox}
               className="w-full h-full overflow-visible"
               style={{
-                ...zoomSpring,
+                transform: `scale(${zoomLevel})`,
                 transformOrigin: 'center center',
               }}
             >
@@ -424,7 +427,7 @@ const IndiaOrdersHeatmap = ({
                   />
                 );
               })}
-            </animated.svg>
+            </svg>
 
             {/* Smooth Hover Tooltip Following Cursor */}
             {hoveredLoc && (
@@ -433,27 +436,28 @@ const IndiaOrdersHeatmap = ({
                 style={{
                   left: `${tooltipPos.x}px`,
                   top: `${tooltipPos.y}px`,
+                  pointerEvents: 'none',
                 }}
               >
-                <div className="flex items-center justify-between gap-2 mb-1.5 border-b border-slate-100 dark:border-white/10 pb-1.5">
-                  <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                <div style={{ pointerEvents: 'none' }} className="flex items-center justify-between gap-2 mb-1.5 border-b border-slate-100 dark:border-white/10 pb-1.5">
+                  <span style={{ pointerEvents: 'none' }} className="font-bold text-xs text-slate-900 dark:text-white truncate">
                     {hoveredLoc.name}
                   </span>
-                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded uppercase font-bold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
+                  <span style={{ pointerEvents: 'none' }} className="text-[9px] font-mono px-1.5 py-0.5 rounded uppercase font-bold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
                     {hoveredLoc.id?.toUpperCase()}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-left">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-medium">Orders</span>
-                    <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
+                <div style={{ pointerEvents: 'none' }} className="grid grid-cols-2 gap-2 text-left">
+                  <div style={{ pointerEvents: 'none' }}>
+                    <span style={{ pointerEvents: 'none' }} className="text-[10px] text-slate-400 block font-medium">Orders</span>
+                    <span style={{ pointerEvents: 'none' }} className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
                       {hoveredLoc.orderCount || 0} PO{hoveredLoc.orderCount === 1 ? '' : 's'}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-medium">Share</span>
-                    <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-200">
+                  <div style={{ pointerEvents: 'none' }}>
+                    <span style={{ pointerEvents: 'none' }} className="text-[10px] text-slate-400 block font-medium">Share</span>
+                    <span style={{ pointerEvents: 'none' }} className="text-xs font-mono font-bold text-slate-700 dark:text-slate-200">
                       {effectiveTotal > 0
                         ? `${(((hoveredLoc.orderCount || 0) / effectiveTotal) * 100).toFixed(1)}%`
                         : '0%'}
@@ -462,9 +466,9 @@ const IndiaOrdersHeatmap = ({
                 </div>
 
                 {hoveredLoc.revenue > 0 && (
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px]">
-                    <span className="text-slate-400">Revenue:</span>
-                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  <div style={{ pointerEvents: 'none' }} className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px]">
+                    <span style={{ pointerEvents: 'none' }} className="text-slate-400">Revenue:</span>
+                    <span style={{ pointerEvents: 'none' }} className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                       {formatCurrency(hoveredLoc.revenue)}
                     </span>
                   </div>
@@ -537,8 +541,8 @@ const IndiaOrdersHeatmap = ({
                     </div>
                   </div>
 
-                  {/* Relative Volume Progress Bar with Spring Animation */}
-                  <AnimatedStateProgress share={share} isFirst={isFirst} idx={idx} />
+                  {/* Relative Volume Progress Bar */}
+                  <StateProgress share={share} isFirst={isFirst} idx={idx} />
                 </div>
               );
             })

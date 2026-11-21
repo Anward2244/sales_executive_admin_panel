@@ -1,5 +1,4 @@
 import React, { useMemo, useCallback } from 'react';
-import { animated, useSpring } from '@react-spring/web';
 import { Group } from '@visx/group';
 import { AreaClosed, LinePath, Bar } from '@visx/shape';
 import { curveMonotoneX } from '@visx/curve';
@@ -45,20 +44,14 @@ const formatRevenueAxis = (val) => {
   return `₹${Math.round(val)}`;
 };
 
-// Animated Vertical Bar for Trend Orders with Spring Physics
-function AnimatedTrendBar({ barX, barY, barWidth, barHeight, isHovered }) {
-  const spring = useSpring({
-    from: { height: 0, y: barY + barHeight },
-    to: { height: barHeight, y: barY },
-    config: { tension: 170, friction: 16 },
-  });
-
+// Vertical Bar for Trend Orders
+function TrendBar({ barX, barY, barWidth, barHeight, isHovered }) {
   return (
-    <animated.rect
+    <rect
       x={barX}
-      y={spring.y}
+      y={barY}
       width={barWidth}
-      height={spring.height}
+      height={barHeight}
       rx={Math.min(4, barWidth / 3)}
       fill={isHovered ? 'url(#mix-order-bar-hover)' : 'url(#mix-order-bar-gradient)'}
       stroke={isHovered ? '#60a5fa' : 'transparent'}
@@ -88,12 +81,6 @@ const InnerTrendChart = ({
   const innerWidth = Math.max(0, width - margin.left - margin.right);
   const innerHeight = Math.max(0, height - margin.top - margin.bottom);
 
-  // React Spring for smooth entrance of revenue layer
-  const revenueSpring = useSpring({
-    from: { opacity: 0, transform: 'scale(0.99)' },
-    to: { opacity: 1, transform: 'scale(1)' },
-    config: { tension: 160, friction: 18 },
-  });
 
   // Tooltip setup
   const {
@@ -265,7 +252,7 @@ const InnerTrendChart = ({
                       pointerEvents="none"
                     />
                   )}
-                  <AnimatedTrendBar
+                  <TrendBar
                     barX={barX}
                     barY={barY}
                     barWidth={barWidth}
@@ -276,9 +263,9 @@ const InnerTrendChart = ({
               );
             })}
 
-          {/* LAYER 2: Revenue (Area Closed + Spline Line with Spring Animation) */}
+          {/* LAYER 2: Revenue (Area Closed + Spline Line) */}
           {showRevenue && data.length > 1 && (
-            <animated.g style={revenueSpring}>
+            <g>
               <AreaClosed
                 data={data}
                 x={(d) => dateScale(getDate(d)) ?? 0}
@@ -298,7 +285,7 @@ const InnerTrendChart = ({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-            </animated.g>
+            </g>
           )}
 
           {/* Revenue Marker Dots (when fewer points or highlighted) */}
