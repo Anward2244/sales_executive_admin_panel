@@ -891,22 +891,48 @@ const Dashboard = () => {
     };
   }, [allPurchaseOrders, recentOrders]);
 
+  // Compact Indian Currency Formatter (avoids UI truncation while preserving tooltip accuracy)
+  const formatCompactINR = (amount) => {
+    const num = Number(amount) || 0;
+    if (Math.abs(num) >= 10000000) {
+      return `₹${(num / 10000000).toFixed(2)} Cr`;
+    }
+    if (Math.abs(num) >= 100000) {
+      return `₹${(num / 100000).toFixed(2)} L`;
+    }
+    if (Math.abs(num) >= 10000) {
+      return `₹${(num / 1000).toFixed(1)} K`;
+    }
+    return `₹${num.toLocaleString('en-IN')}`;
+  };
+
   // Real-time Active Users Pill
   const usersDelta = useMemo(() => {
     const list = Array.isArray(allUsers) && allUsers.length > 0 ? allUsers : [];
     const totalCount = list.length || totalUsers;
     if (totalCount === 0) {
-      return { delta: '0 ACTIVE', deltaType: 'neutral', tooltip: 'No users registered' };
+      return { delta: '0 USERS', deltaType: 'neutral', tooltip: 'No users registered' };
     }
+    const salesCount = list.filter((u) => {
+      const r = (u.rawRole || u.role || '').toUpperCase();
+      return r.includes('SALES') || r.includes('EXECUTIVE');
+    }).length;
     const activeCount = list.length > 0
       ? list.filter((u) => u.isActive !== false).length
       : totalUsers;
-    const pct = Math.round((activeCount / totalCount) * 100);
+
+    if (salesCount > 0) {
+      return {
+        delta: `${salesCount} REPS`,
+        deltaType: 'neutral',
+        tooltip: `${salesCount} field sales executives, ${activeCount} total users active`
+      };
+    }
 
     return {
-      delta: `${pct}% ACTIVE`,
-      deltaType: pct === 100 ? 'up' : pct >= 75 ? 'neutral' : 'down',
-      tooltip: `${activeCount} of ${totalCount} users active (${pct}%)`
+      delta: `${activeCount} ACTIVE`,
+      deltaType: 'up',
+      tooltip: `${activeCount} of ${totalCount} users active`
     };
   }, [allUsers, totalUsers]);
 
@@ -915,17 +941,16 @@ const Dashboard = () => {
     const list = Array.isArray(allCompanies) && allCompanies.length > 0 ? allCompanies : [];
     const totalCount = list.length || totalCompanies;
     if (totalCount === 0) {
-      return { delta: '0 ACTIVE', deltaType: 'neutral', tooltip: 'No partner companies registered' };
+      return { delta: '0 ORGS', deltaType: 'neutral', tooltip: 'No partner companies registered' };
     }
     const activeCount = list.length > 0
       ? list.filter((c) => c.isActive !== false).length
       : totalCompanies;
-    const pct = Math.round((activeCount / totalCount) * 100);
 
     return {
-      delta: `${pct}% ACTIVE`,
-      deltaType: pct === 100 ? 'up' : pct >= 75 ? 'neutral' : 'down',
-      tooltip: `${activeCount} of ${totalCount} partner companies active (${pct}%)`
+      delta: `${activeCount} ORGS`,
+      deltaType: 'up',
+      tooltip: `${activeCount} partner trading organizations registered`
     };
   }, [allCompanies, totalCompanies]);
 
@@ -934,7 +959,7 @@ const Dashboard = () => {
     const list = Array.isArray(allFirms) && allFirms.length > 0 ? allFirms : [];
     const totalCount = list.length || totalFirms;
     if (totalCount === 0) {
-      return { delta: '0 ACTIVE', deltaType: 'neutral', tooltip: 'No associated firms registered' };
+      return { delta: '0 BUYERS', deltaType: 'neutral', tooltip: 'No associated firms registered' };
     }
 
     const pending = list.filter((f) => (f.approvalStatus || '').toUpperCase() === 'PENDING').length;
@@ -949,12 +974,11 @@ const Dashboard = () => {
     const activeCount = list.length > 0
       ? list.filter((f) => f.isActive !== false).length
       : totalFirms;
-    const pct = Math.round((activeCount / totalCount) * 100);
 
     return {
-      delta: `${pct}% ACTIVE`,
-      deltaType: pct === 100 ? 'up' : pct >= 75 ? 'neutral' : 'down',
-      tooltip: `${activeCount} of ${totalCount} firms active and operational (${pct}%)`
+      delta: `${activeCount} VERIFIED`,
+      deltaType: 'up',
+      tooltip: `${activeCount} verified retailer & wholesale accounts`
     };
   }, [allFirms, totalFirms]);
 
@@ -963,18 +987,17 @@ const Dashboard = () => {
     const list = Array.isArray(allProducts) && allProducts.length > 0 ? allProducts : [];
     const totalCount = list.length || totalProducts;
     if (totalCount === 0) {
-      return { delta: '0 ACTIVE', deltaType: 'neutral', tooltip: 'No products in catalog' };
+      return { delta: '0 SKUS', deltaType: 'neutral', tooltip: 'No products in catalog' };
     }
 
     const activeCount = list.length > 0
       ? list.filter((p) => p.isActive !== false).length
       : totalProducts;
-    const pct = Math.round((activeCount / totalCount) * 100);
 
     return {
-      delta: `${pct}% ACTIVE`,
-      deltaType: pct === 100 ? 'up' : pct >= 75 ? 'neutral' : 'down',
-      tooltip: `${activeCount} of ${totalCount} catalog products active (${pct}%)`
+      delta: `${activeCount} SKUS`,
+      deltaType: 'up',
+      tooltip: `${activeCount} live SKUs available in catalog`
     };
   }, [allProducts, totalProducts]);
 
@@ -982,7 +1005,8 @@ const Dashboard = () => {
   const metricCards = [
     {
       title: 'Total Revenue',
-      value: `₹${totalOrderValue.toLocaleString('en-IN')}`,
+      value: formatCompactINR(totalOrderValue),
+      rawValue: `₹${totalOrderValue.toLocaleString('en-IN')}`,
       icon: BiRupee,
       kpiClass: 'kpi-icon-emerald',
       glow: 'from-emerald-500/20 via-emerald-500/5 to-transparent',
@@ -1140,7 +1164,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12">
+    <div className="space-y-8 w-full max-w-[1680px] mx-auto pb-12">
       {/* Top Header */}
       <PageHeader
         title="Dashboard Overview"
@@ -1216,14 +1240,14 @@ const Dashboard = () => {
             <div className={`absolute inset-0 bg-linear-to-br ${card.glow} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
 
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${card.kpiClass} transition-transform group-hover:scale-105 duration-300`}>
+              <div className="flex items-center justify-between gap-1.5 mb-3 min-w-0">
+                <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center text-lg ${card.kpiClass} transition-transform group-hover:scale-105 duration-300`}>
                   <card.icon />
                 </div>
                 {card.delta && (
                   <span
                     title={card.deltaTooltip || card.delta}
-                    className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider transition-colors ${card.kpiClass}`}
+                    className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider transition-colors whitespace-nowrap shrink-0 text-center ${card.kpiClass}`}
                   >
                     {card.delta}
                   </span>
@@ -1234,7 +1258,7 @@ const Dashboard = () => {
                 <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate" title={card.title}>
                   {card.title}
                 </p>
-                <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono" title={card.value}>
+                <div className="kpi-card-value text-lg sm:text-xl xl:text-lg 2xl:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono" title={card.rawValue || card.value}>
                   {loading ? <SkeletonPulse className="h-7 w-28 my-1 inline-block" /> : card.value}
                 </div>
                 <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
@@ -1440,58 +1464,56 @@ const Dashboard = () => {
         </div>
 
         {/* Chart 2: Order Lifecycle & Pipeline Breakdown (Donut) */}
-        <div className="lg:col-span-5 xl:col-span-4 bg-white/60 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col justify-between">
+        <div className="lg:col-span-5 xl:col-span-4 bg-white/60 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl p-6 relative overflow-hidden flex flex-col">
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-500/10 dark:bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
 
-          <div>
-            {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl kpi-icon-amber flex items-center justify-center text-lg border border-amber-500/20 shadow-xs">
-                  <FiPieChart />
-                </div>
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                    Order Pipeline
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Status lifecycle & fulfillment stage
-                  </p>
-                </div>
+          {/* Header */}
+          <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl kpi-icon-amber flex items-center justify-center text-lg border border-amber-500/20 shadow-xs">
+                <FiPieChart />
               </div>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full kpi-icon-amber">
-                4 Stages
-              </span>
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                  Order Pipeline
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Status lifecycle & fulfillment stage
+                </p>
+              </div>
             </div>
-
-            {/* Donut Chart Canvas */}
-            <div className="py-2 flex items-center justify-center min-h-[220px]">
-              {loading ? (
-                <DonutChartSkeleton height={220} />
-              ) : totalStatusCount === 0 ? (
-                <div className="h-[220px] flex flex-col items-center justify-center text-slate-400 text-xs">
-                  <FiPackage className="text-3xl mb-2 opacity-50" />
-                  <span>No orders in pipeline yet</span>
-                </div>
-              ) : (
-                <div className="w-full">
-                  <VisxPipelineDonut
-                    statusBreakdown={statusBreakdown}
-                    totalCount={totalStatusCount}
-                    height={230}
-                    isDark={isDark}
-                  />
-                </div>
-              )}
-            </div>
+            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full kpi-icon-amber">
+              4 Stages
+            </span>
           </div>
 
-          {/* Interactive Status Breakdown List */}
-          <div className="space-y-2 pt-3 border-t border-slate-200/80 dark:border-white/10">
+          {/* Donut Chart Canvas (flex-1 naturally centers and occupies the middle space) */}
+          <div className="flex-1 flex items-center justify-center min-h-[240px]">
+            {loading ? (
+              <DonutChartSkeleton height={230} />
+            ) : totalStatusCount === 0 ? (
+              <div className="h-[230px] flex flex-col items-center justify-center text-slate-400 text-xs">
+                <FiPackage className="text-3xl mb-2 opacity-50" />
+                <span>No orders in pipeline yet</span>
+              </div>
+            ) : (
+              <div className="w-full flex items-center justify-center">
+                <VisxPipelineDonut
+                  statusBreakdown={statusBreakdown}
+                  totalCount={totalStatusCount}
+                  height={240}
+                  isDark={isDark}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Interactive Status Breakdown Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-4 border-t border-slate-200/80 dark:border-white/10 shrink-0">
             {[
               {
                 key: 'PENDING',
-                label: 'Pending Approval',
+                label: 'Pending',
                 badgeBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
                 dotColor: 'bg-amber-500',
                 barColor: 'bg-amber-500',
@@ -1509,7 +1531,7 @@ const Dashboard = () => {
               },
               {
                 key: 'DISPATCHED',
-                label: 'Dispatched / Fulfilled',
+                label: 'Dispatched',
                 badgeBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
                 dotColor: 'bg-emerald-500',
                 barColor: 'bg-emerald-500',
@@ -1530,22 +1552,22 @@ const Dashboard = () => {
               return (
                 <div
                   key={st.key}
-                  className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all"
+                  className="p-2 sm:p-2.5 rounded-xl bg-slate-50/80 dark:bg-white/2 border border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all flex flex-col justify-between gap-1"
                 >
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${st.dotColor}`} />
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">{st.label}</span>
-                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/10 text-slate-700 dark:text-slate-300">
-                        {st.count}
-                      </span>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${st.dotColor}`} />
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 truncate text-[11px] sm:text-xs">{st.label}</span>
                     </div>
-                    <div className="text-right">
-                      <span className="font-bold text-slate-900 dark:text-white font-mono">
-                        ₹{Number(st.value).toLocaleString('en-IN')}
-                      </span>
-                      <span className="text-[10px] text-slate-400 ml-1 font-medium">({pct}%)</span>
-                    </div>
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-200/60 dark:bg-white/10 text-slate-700 dark:text-slate-300 shrink-0">
+                      {st.count}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-1 text-[11px]">
+                    <span className="font-bold text-slate-900 dark:text-white font-mono truncate text-xs" title={`₹${Number(st.value).toLocaleString('en-IN')}`}>
+                      {formatCompactINR(st.value)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium shrink-0">({pct}%)</span>
                   </div>
                   {/* Progress bar */}
                   <div className="w-full bg-slate-200/60 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
@@ -1721,7 +1743,7 @@ const Dashboard = () => {
       </div>
 
       {/* 4. Full-Width Recent Orders Stream Table */}
-      <div className="bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
+      <div className="bg-white/40 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
         <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl kpi-icon-emerald flex items-center justify-center text-lg border border-emerald-500/20">
@@ -1762,7 +1784,7 @@ const Dashboard = () => {
                 <th className="px-4 py-3.5 text-center">Status</th>
                 <th className="px-4 py-3.5 text-center">Email</th>
                 <th className="px-5 py-3.5">Date Created</th>
-                <th className="px-4 py-3.5 text-right">Actions</th>
+                <th className="sticky right-0 z-20 bg-white/40 dark:bg-slate-900/95 backdrop-blur-md px-4 py-3.5 text-right shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.06)] dark:shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.3)]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/80 dark:divide-white/5 text-xs">
@@ -1930,7 +1952,7 @@ const Dashboard = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="px-4 py-3.5 text-right">
+                      <td className="sticky right-0 z-10 dark:bg-slate-900/95 backdrop-blur-xl px-4 py-3.5 text-right shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.06)] dark:shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.3)]">
                         <button
                           type="button"
                           onClick={() => setSelectedOrder(order)}

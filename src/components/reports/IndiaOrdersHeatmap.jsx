@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import IndiaMap from '@svg-maps/india';
 import {
   FiMapPin,
@@ -159,7 +159,105 @@ const IndiaOrdersHeatmap = ({
   const [selectedLoc, setSelectedLoc] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const hasDraggedRef = useRef(false);
   const containerRef = useRef(null);
+
+  // Window event listeners for seamless drag pan and mouseup release
+  useEffect(() => {
+    const handleWindowMouseMove = (e) => {
+      if (!isDraggingRef.current) return;
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      if (Math.hypot(dx, dy) > 4) {
+        hasDraggedRef.current = true;
+      }
+      setPanOffset({
+        x: dragStartRef.current.panX + dx,
+        y: dragStartRef.current.panY + dy
+      });
+    };
+
+    const handleWindowMouseUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        setIsDragging(false);
+      }
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, []);
+
+  // Mouse wheel zoom on map container
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.15 : -0.15;
+      setZoomLevel((z) => Math.min(Math.max(Number((z + delta).toFixed(2)), 0.8), 3));
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return;
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      panX: panOffset.x,
+      panY: panOffset.y
+    };
+    setIsDragging(true);
+  };
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      isDraggingRef.current = true;
+      hasDraggedRef.current = false;
+      dragStartRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        panX: panOffset.x,
+        panY: panOffset.y
+      };
+      setIsDragging(true);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (isDraggingRef.current && e.touches.length === 1) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - dragStartRef.current.x;
+      const dy = touch.clientY - dragStartRef.current.y;
+      if (Math.hypot(dx, dy) > 4) {
+        hasDraggedRef.current = true;
+      }
+      setPanOffset({
+        x: dragStartRef.current.panX + dx,
+        y: dragStartRef.current.panY + dy
+      });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
+  };
 
   // Aggregate orders by state
   const { stateStatsMap, rankedStates, maxOrdersCount, totalMappedOrders } = useMemo(() => {
@@ -221,6 +319,7 @@ const IndiaOrdersHeatmap = ({
 
   // Handle cursor movement inside container for smooth tooltip placement offset from cursor
   const handleMouseMove = (e) => {
+    if (isDraggingRef.current) return;
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const rawX = e.clientX - rect.left;
@@ -312,12 +411,15 @@ const IndiaOrdersHeatmap = ({
           >
             <FiZoomOut size={14} />
           </button>
-          {zoomLevel !== 1 && (
+          {(zoomLevel !== 1 || panOffset.x !== 0 || panOffset.y !== 0) && (
             <button
               type="button"
-              onClick={() => setZoomLevel(1)}
+              onClick={() => {
+                setZoomLevel(1);
+                setPanOffset({ x: 0, y: 0 });
+              }}
               className="p-1.5 text-slate-500 hover:text-rose-500 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              title="Reset zoom"
+              title="Reset view (zoom & pan)"
             >
               <FiRotateCcw size={14} />
             </button>
@@ -358,16 +460,23 @@ const IndiaOrdersHeatmap = ({
           {/* SVG Heatmap Canvas */}
           <div
             ref={containerRef}
+            onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => setHoveredLoc(null)}
-            className="relative w-full bg-blue-200/20 rounded-2xl aspect-612/696 max-h-[290px] sm:max-h-[340px] mx-auto flex items-center justify-center select-none overflow-hidden my-1.5"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            className={`relative w-full bg-blue-200/20 rounded-2xl aspect-612/696 max-h-[290px] sm:max-h-[340px] mx-auto flex items-center justify-center select-none overflow-hidden my-1.5 ${
+              isDragging ? 'cursor-grabbing' : 'cursor-grab'
+            }`}
           >
             <svg
               viewBox={IndiaMap.viewBox}
-              className="w-full h-full overflow-visible"
+              className="w-full h-full overflow-visible pointer-events-auto"
               style={{
-                transform: `scale(${zoomLevel})`,
+                transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
                 transformOrigin: 'center center',
+                transition: isDragging ? 'none' : 'transform 0.15s ease-out'
               }}
             >
               <defs>
@@ -420,17 +529,18 @@ const IndiaOrdersHeatmap = ({
                           ? 'url(#hover-shadow)'
                           : undefined,
                     }}
-                    onMouseEnter={() => setHoveredLoc({ ...loc, ...stat })}
-                    onClick={() =>
-                      setSelectedLoc((prev) => (prev?.id === loc.id ? null : { ...loc, ...stat }))
-                    }
+                    onMouseEnter={() => !isDragging && setHoveredLoc({ ...loc, ...stat })}
+                    onClick={() => {
+                      if (hasDraggedRef.current) return;
+                      setSelectedLoc((prev) => (prev?.id === loc.id ? null : { ...loc, ...stat }));
+                    }}
                   />
                 );
               })}
             </svg>
 
             {/* Smooth Hover Tooltip Following Cursor */}
-            {hoveredLoc && (
+            {!isDragging && hoveredLoc && (
               <div
                 className="absolute z-50 pointer-events-none p-3 rounded-2xl bg-white/40 dark:bg-slate-900/95 backdrop-blur-lg border border-slate-200/80 dark:border-white/10 shadow-2xl min-w-48 max-w-xs transition-opacity duration-75 select-none"
                 style={{

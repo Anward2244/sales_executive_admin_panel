@@ -114,7 +114,7 @@ const Layout = () => {
     }
 
     const currentScroll = Math.max(mainTop, winTop, anyContainerTop);
-    setShowScrollTop(currentScroll > 40);
+    setShowScrollTop(currentScroll > 350);
   };
 
   useEffect(() => {
@@ -1773,20 +1773,20 @@ const Layout = () => {
           title="Scroll to top"
           style={{
             position: 'fixed',
-            bottom: '64px',
-            right: '24px',
+            bottom: '24px',
+            right: '20px',
             zIndex: 40,
             opacity: showScrollTop ? 1 : 0,
             transform: showScrollTop ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.8)',
             pointerEvents: showScrollTop ? 'auto' : 'none',
             transition: 'opacity 0.25s ease, transform 0.25s ease',
           }}
-          className={`p-3.5 rounded-2xl backdrop-blur-xl transition-all duration-300 cursor-pointer group active:scale-90 flex items-center justify-center ${isDark
+          className={`p-2.5 rounded-xl backdrop-blur-xl transition-all duration-300 cursor-pointer group active:scale-90 flex items-center justify-center shadow-lg ${isDark
               ? 'bg-linear-to-br from-slate-900/95 to-blue-950/95 border border-blue-500/40 text-blue-400 hover:text-white hover:from-blue-600 hover:to-indigo-600 hover:border-blue-400 shadow-[0_8px_25px_rgba(0,0,0,0.8),0_0_25px_rgba(37,99,235,0.4)] hover:shadow-[0_8px_35px_rgba(37,99,235,0.7)]'
               : 'bg-white/95 border border-blue-400/40 text-blue-600 hover:text-white hover:bg-blue-600 hover:border-blue-600 shadow-xl shadow-blue-500/15'
             }`}
         >
-          <FiArrowUp className="w-5 h-5 transition-transform duration-300 group-hover:-translate-y-1" />
+          <FiArrowUp className="w-4 h-4 transition-transform duration-300 group-hover:-translate-y-0.5" />
         </button>,
         document.body
       )}

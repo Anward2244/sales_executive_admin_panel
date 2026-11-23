@@ -91,6 +91,7 @@ const HeaderSearch = () => {
   const [dataFetched, setDataFetched] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const searchRef = useRef(null);
+  const inputRef = useRef(null);
   const lastFetchedRef = useRef(0);
 
   // Close suggestions automatically when route changes
@@ -149,14 +150,28 @@ const HeaderSearch = () => {
   }, [user, fetchAllData]);
 
   // Handle input focus: show suggestions if query exists, refresh stale data if needed
-  const handleFocus = () => {
+  const handleFocus = useCallback(() => {
     if (searchQuery.trim()) {
       setShowSuggestions(true);
     }
     if (!dataFetched || Date.now() - lastFetchedRef.current > 120000) {
       fetchAllData(true);
     }
-  };
+  }, [searchQuery, dataFetched, fetchAllData]);
+
+  // Global Ctrl+K / Cmd+K keyboard shortcut to focus search
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        inputRef.current?.focus();
+        fetchAllData(false);
+        setShowSuggestions(true);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [fetchAllData]);
 
   // Filter based on search query
   useEffect(() => {
@@ -380,19 +395,20 @@ const HeaderSearch = () => {
           isDark ? 'text-slate-400 group-focus-within:text-blue-500' : 'text-slate-400 group-focus-within:text-blue-600'
         }`} />
         <input 
+          ref={inputRef}
           type="text" 
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onFocus={handleFocus}
           onKeyDown={handleKeyDown}
           placeholder="Search menus, companies, firms, products, categories, users, orders..." 
-          className={`w-full pl-10 pr-10 py-2 border rounded-xl focus:outline-none focus:ring-4 transition-all text-sm shadow-xs ${
+          className={`w-full pl-10 pr-14 py-2 border rounded-xl focus:outline-none focus:ring-4 transition-all text-sm shadow-xs ${
             isDark 
               ? 'bg-transparent border-white/10 focus:border-blue-500/50 focus:bg-blue-950/10 focus:ring-blue-500/10 text-white placeholder-slate-400' 
               : 'bg-white/70 hover:bg-white/90 border-slate-200/80 focus:border-blue-500 focus:bg-white focus:ring-blue-500/15 text-slate-800 placeholder-slate-400'
           }`}
         />
-        {searchQuery && (
+        {searchQuery ? (
           <button
             type="button"
             onClick={() => { setSearchQuery(''); setShowSuggestions(false); }}
@@ -402,6 +418,10 @@ const HeaderSearch = () => {
           >
             <FiX />
           </button>
+        ) : (
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:flex items-center gap-0.5 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 text-slate-400 dark:text-slate-400 border border-slate-200 dark:border-white/10">
+            <span className="text-xs">⌘</span>K
+          </div>
         )}
 
         {/* Search Suggestions Dropdown */}

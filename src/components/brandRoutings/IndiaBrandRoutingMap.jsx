@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import IndiaMap from '@svg-maps/india';
 import {
   FiMapPin,
@@ -205,9 +205,107 @@ const IndiaBrandRoutingMap = ({
   // Highlight specific rule on map
   const [highlightedRuleIdx, setHighlightedRuleIdx] = useState(null);
 
-  // Zoom / Viewbox Controls
+  // Zoom / Viewbox Controls & Interactive Pan
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const hasDraggedRef = useRef(false);
+  const mapContainerRef = useRef(null);
+
+  // Window event listeners for seamless drag pan and mouseup release
+  useEffect(() => {
+    const handleWindowMouseMove = (e) => {
+      if (!isDraggingRef.current) return;
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      if (Math.hypot(dx, dy) > 4) {
+        hasDraggedRef.current = true;
+      }
+      setPanOffset({
+        x: dragStartRef.current.panX + dx,
+        y: dragStartRef.current.panY + dy
+      });
+    };
+
+    const handleWindowMouseUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        setIsDragging(false);
+      }
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, []);
+
+  // Mouse wheel zoom on map container
+  useEffect(() => {
+    const container = mapContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.15 : -0.15;
+      setZoomLevel((z) => Math.min(Math.max(Number((z + delta).toFixed(2)), 0.7), 3));
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return;
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      panX: panOffset.x,
+      panY: panOffset.y
+    };
+    setIsDragging(true);
+  };
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      isDraggingRef.current = true;
+      hasDraggedRef.current = false;
+      dragStartRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        panX: panOffset.x,
+        panY: panOffset.y
+      };
+      setIsDragging(true);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (isDraggingRef.current && e.touches.length === 1) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - dragStartRef.current.x;
+      const dy = touch.clientY - dragStartRef.current.y;
+      if (Math.hypot(dx, dy) > 4) {
+        hasDraggedRef.current = true;
+      }
+      setPanOffset({
+        x: dragStartRef.current.panX + dx,
+        y: dragStartRef.current.panY + dy
+      });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
+  };
 
   // Horizontal scroll ref for brand pill strip
   const brandPillScrollRef = useRef(null);
@@ -395,6 +493,7 @@ const IndiaBrandRoutingMap = ({
 
   // Mouse move handler for floating tooltip
   const handleMouseMove = (e) => {
+    if (isDraggingRef.current) return;
     const rect = e.currentTarget.getBoundingClientRect();
     setTooltipPos({
       x: e.clientX - rect.left,
@@ -613,32 +712,42 @@ const IndiaBrandRoutingMap = ({
               >
                 <FiZoomOut />
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setZoomLevel(1);
-                  setPanOffset({ x: 0, y: 0 });
-                }}
-                className="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-blue-600 text-xs transition-colors cursor-pointer shadow-xs"
-                title="Reset zoom"
-              >
-                <FiRotateCcw />
-              </button>
+              {(zoomLevel !== 1 || panOffset.x !== 0 || panOffset.y !== 0) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setZoomLevel(1);
+                    setPanOffset({ x: 0, y: 0 });
+                  }}
+                  className="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-blue-600 text-xs transition-colors cursor-pointer shadow-xs"
+                  title="Reset view (zoom & pan)"
+                >
+                  <FiRotateCcw />
+                </button>
+              )}
             </div>
           </div>
 
           {/* SVG Map Container */}
           <div
-            className="relative w-full aspect-612/696 max-h-145 mx-auto flex items-center justify-center select-none"
+            ref={mapContainerRef}
+            className={`relative w-full aspect-612/696 max-h-145 mx-auto flex items-center justify-center select-none overflow-hidden rounded-2xl ${
+              isDragging ? 'cursor-grabbing' : 'cursor-grab'
+            }`}
+            onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => setHoveredStateLoc(null)}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
             <svg
               viewBox={IndiaMap.viewBox}
-              className="w-full h-full overflow-visible transition-transform duration-200 ease-out"
+              className="w-full h-full overflow-visible pointer-events-auto"
               style={{
-                transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
-                transformOrigin: 'center center'
+                transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+                transformOrigin: 'center center',
+                transition: isDragging ? 'none' : 'transform 0.15s ease-out'
               }}
             >
               <defs>
@@ -722,8 +831,9 @@ const IndiaBrandRoutingMap = ({
                     style={{
                       filter: isSelected || isRuleHighlighted ? 'url(#active-state-glow)' : isHovered ? 'url(#state-shadow)' : undefined
                     }}
-                    onMouseEnter={() => setHoveredStateLoc(loc)}
+                    onMouseEnter={() => !isDragging && setHoveredStateLoc(loc)}
                     onClick={() => {
+                      if (hasDraggedRef.current) return;
                       setSelectedStateLoc((prev) => (prev?.id === loc.id ? null : loc));
                     }}
                   />
@@ -732,7 +842,7 @@ const IndiaBrandRoutingMap = ({
             </svg>
 
             {/* Smooth Floating Tooltip (Follows cursor, positioned cleanly above pointer so state is never covered) */}
-            {hoveredStateLoc && activeHoveredInfo && (() => {
+            {!isDragging && hoveredStateLoc && activeHoveredInfo && (() => {
               const isNearTop = tooltipPos.y < 120;
               const isNearLeft = tooltipPos.x < 130;
               const isNearRight = tooltipPos.x > (tooltipPos.containerWidth || 550) - 130;
