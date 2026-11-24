@@ -1164,7 +1164,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-8 w-full max-w-[1680px] mx-auto pb-12">
+    <div className="space-y-8 w-full pb-12">
       {/* Top Header */}
       <PageHeader
         title="Dashboard Overview"
@@ -1743,7 +1743,7 @@ const Dashboard = () => {
       </div>
 
       {/* 4. Full-Width Recent Orders Stream Table */}
-      <div className="bg-white/40 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
+      <div className="bg-white/60 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
         <div className="p-6 border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl kpi-icon-emerald flex items-center justify-center text-lg border border-emerald-500/20">
@@ -1952,7 +1952,7 @@ const Dashboard = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="sticky right-0 z-10 dark:bg-slate-900/95 backdrop-blur-xl px-4 py-3.5 text-right shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.06)] dark:shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.3)]">
+                      <td className="sticky right-0 z-10 bg-white/40 dark:bg-slate-900/95 backdrop-blur-md px-4 py-3.5 text-right shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.06)] dark:shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.3)]">
                         <button
                           type="button"
                           onClick={() => setSelectedOrder(order)}

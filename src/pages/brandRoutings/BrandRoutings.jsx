@@ -47,6 +47,7 @@ import CopyButton from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
 import { SkeletonPulse } from '@/components/ui/Skeleton';
 import { useConfirm } from '@/context/ConfirmationContext';
+import { useToast } from '@/context/ToastContext';
 
 // Regional presets for fast territory assignment
 const REGION_PRESETS = [
@@ -186,7 +187,8 @@ const BrandRoutings = () => {
   const [bulkModalError, setBulkModalError] = useState(null);
 
   // Feedback Toast
-  const [successToast, setSuccessToast] = useState(null);
+  const { toast } = useToast();
+  const setSuccessToast = useCallback((msg) => { if (msg) toast.success(msg); }, [toast]);
 
   // Fetch Matrix & Companies
   const fetchData = useCallback(async (isRefresh = false) => {
@@ -231,14 +233,6 @@ const BrandRoutings = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  // Toast Auto-dismiss
-  useEffect(() => {
-    if (successToast) {
-      const timer = setTimeout(() => setSuccessToast(null), 3500);
-      return () => clearTimeout(timer);
-    }
-  }, [successToast]);
 
   // Derived Brands List
   const allBrands = useMemo(() => {
@@ -978,23 +972,6 @@ const BrandRoutings = () => {
           </button>
         </div>
       </PageHeader>
-
-      {/* ================= SUCCESS TOAST ================= */}
-      {successToast && (
-        <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 rounded-xl text-xs font-semibold flex items-center justify-between gap-3 shadow-sm animate-in slide-in-from-top-1 duration-200">
-          <div className="flex items-center gap-2">
-            <FiCheckCircle className="text-base shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <span>{successToast}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSuccessToast(null)}
-            className="p-1 rounded-md hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 transition-colors cursor-pointer"
-          >
-            <FiX size={14} />
-          </button>
-        </div>
-      )}
 
       {/* ================= ERROR ALERT ================= */}
       {error && (

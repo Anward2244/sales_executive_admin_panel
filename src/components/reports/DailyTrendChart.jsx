@@ -540,7 +540,7 @@ export default function DailyTrendChart({
   const hasData = trendData.length > 0 && (calculatedTotalRevenue > 0 || calculatedTotalOrders > 0);
 
   return (
-    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-3 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col justify-between">
+    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-3 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col justify-between h-full">
       <div>
         {/* Header & Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -626,14 +626,14 @@ export default function DailyTrendChart({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 pt-3 border-t border-slate-200/60 dark:border-white/5">
               <div className="p-2.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5">
                 <span className="text-[10px] text-slate-400 font-medium block">Total Intake</span>
-                <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(calculatedTotalRevenue)}
+                <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400" title={formatCurrency(calculatedTotalRevenue)}>
+                  {formatCompact(calculatedTotalRevenue, true)}
                 </span>
               </div>
               <div className="p-2.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5">
                 <span className="text-[10px] text-slate-400 font-medium block">Daily Average</span>
-                <span className="text-xs font-extrabold text-slate-800 dark:text-slate-100">
-                  {formatCurrency(dailyAverageRevenue)}
+                <span className="text-xs font-extrabold text-slate-800 dark:text-slate-100" title={formatCurrency(dailyAverageRevenue)}>
+                  {formatCompact(dailyAverageRevenue, true)}
                 </span>
               </div>
               <div className="p-2.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5">

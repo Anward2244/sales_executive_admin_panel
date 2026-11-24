@@ -16,10 +16,11 @@ import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import GmailLink from '@/components/ui/GmailLink';
-import { useDisplayPreferences } from '@/utils/displayPreferences';
+import { useDisplayPreferences, getDensityStyles } from '@/utils/displayPreferences';
 import { TableRowSkeleton, TableSkeleton } from '@/components/ui/Skeleton';
 import PageHeader from '@/components/ui/PageHeader';
-import { BulkActionBar, BatchProgressModal, StatusBadge, EmptyState, OptimizedImage, SegmentedTabs } from '@/components/ui';
+import { BulkActionBar, BatchProgressModal, StatusBadge, EmptyState, OptimizedImage, SegmentedTabs, TableToolbar } from '@/components/ui';
+import { useToast } from '@/context/ToastContext';
 import {
   getFirmsApi,
   createFirmApi,
@@ -30,6 +31,22 @@ import {
 import { useConfirm } from '@/context/ConfirmationContext';
 import { formatEntityCode, formatPhone, formatGSTIN, formatPincode } from '@/utils/formatters';
 import { validateEntityCode, validatePhone, validateEmail, validateGSTIN, validatePincode } from '@/utils/validators';
+
+const FIRM_COLUMNS = [
+  { id: 'sno', label: 'S.No' },
+  { id: 'firmName', label: 'Firm Name', alwaysVisible: true },
+  { id: 'firmCode', label: 'Firm Code' },
+  { id: 'company', label: 'Parent Company' },
+  { id: 'contact', label: 'Contact' },
+  { id: 'email', label: 'Email' },
+  { id: 'phone', label: 'Phone' },
+  { id: 'location', label: 'Location' },
+  { id: 'gstin', label: 'GSTIN' },
+  { id: 'creditLimit', label: 'Credit Terms' },
+  { id: 'approvalStatus', label: 'Status & Approval' },
+  { id: 'createdAt', label: 'Created At' },
+  { id: 'actions', label: 'Actions', alwaysVisible: true }
+];
 
 
 const INITIAL_FORM_STATE = {
@@ -92,7 +109,8 @@ const Firms = () => {
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
 
   // Global Toast
-  const [successToast, setSuccessToast] = useState('');
+  const { toast } = useToast();
+  const setSuccessToast = useCallback((msg) => { if (msg) toast.success(msg); }, [toast]);
 
   // Bulk Operations State
   const [isBulkMode, setIsBulkMode] = useState(false);
@@ -128,8 +146,11 @@ const Firms = () => {
     ].filter(Boolean).length;
   }, [selectedCompany, selectedBusinessType]);
 
-  // Pagination limit
-  const { preferences: displayPrefs } = useDisplayPreferences();
+  // Pagination limit & display preferences
+  const { preferences: displayPrefs, updateTableColumnVisibility, resetTableColumnVisibility } = useDisplayPreferences();
+  const densityStyles = getDensityStyles(displayPrefs.density);
+  const firmColumnVisibility = displayPrefs.columnVisibility?.firms || {};
+  const isColVisible = (colId) => firmColumnVisibility[colId] !== false;
   const firmsPerPage = displayPrefs.rowsPerPage || 10;
 
   // Sync local input with URL search param
@@ -1152,15 +1173,7 @@ const Firms = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
-      {/* Toast Notification */}
-      {successToast && (
-        <div className="fixed bottom-6 right-6 z-[10001] flex items-center gap-2.5 px-4 py-3 bg-emerald-600 text-white text-xs font-bold rounded-2xl shadow-xl shadow-emerald-600/30 animate-in fade-in slide-in-from-bottom-5">
-          <FiCheckCircle className="text-base" />
-          <span>{successToast}</span>
-        </div>
-      )}
-
+    <div className="space-y-6 w-full pb-10">
       {/* Top Title & Header Search */}
       <PageHeader
         title="Firms List"
@@ -1395,12 +1408,23 @@ const Firms = () => {
         </div>
       ) : (
         <div className="relative z-10 bg-white/40 dark:bg-transparent border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl shadow-slate-500/30 dark:shadow-black/50 rounded-3xl overflow-hidden flex flex-col h-full isolate will-change-transform">
+          {/* Table Toolbar */}
+          <TableToolbar
+            columns={FIRM_COLUMNS}
+            visibleColumns={firmColumnVisibility}
+            onToggleColumn={(colId, val) => updateTableColumnVisibility('firms', colId, val)}
+            onResetColumns={() => resetTableColumnVisibility('firms')}
+            totalCount={filteredFirms.length}
+            selectedCount={selectedFirmIds.length}
+            className="border-b rounded-b-none border-x-0 border-t-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md"
+          />
+
           <div className="overflow-auto custom-scrollbar max-h-[70vh]">
             <table className="w-full text-left border-collapse whitespace-nowrap min-w-200">
               <thead className="sticky top-0 z-20 bg-white/60 dark:bg-slate-900/80 backdrop-blur-md shadow-xs dark:shadow-md border-b border-slate-200/80 dark:border-white/10">
                 <tr className="border-b border-slate-200/80 dark:border-white/10 text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
                   {isBulkMode && (
-                    <th className="p-3 text-center w-12">
+                    <th className={`p-3 text-center w-12 ${densityStyles.th}`}>
                       <input
                         type="checkbox"
                         checked={filteredFirms.length > 0 && selectedFirmIds.length === filteredFirms.length}
@@ -1409,168 +1433,195 @@ const Firms = () => {
                       />
                     </th>
                   )}
-                  <th className="p-3 font-bold text-center w-14">S.No</th>
+                  {isColVisible('sno') && (
+                    <th className={`p-3 font-bold text-center w-14 ${densityStyles.th}`}>S.No</th>
+                  )}
 
                   {/* Firm Name Sort */}
-                  <th
-                    onClick={() => handleSortChange('firmName')}
-                    className="p-4 font-bold text-left cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className={sortKey === 'firmName' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
-                        Firm Name
-                      </span>
-                      {sortKey === 'firmName' ? (
-                        sortOrder === 'asc' ? (
-                          <span className="text-blue-600 dark:text-blue-400">▲</span>
+                  {isColVisible('firmName') && (
+                    <th
+                      onClick={() => handleSortChange('firmName')}
+                      className={`p-4 font-bold text-left cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors ${densityStyles.th}`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className={sortKey === 'firmName' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
+                          Firm Name
+                        </span>
+                        {sortKey === 'firmName' ? (
+                          sortOrder === 'asc' ? (
+                            <span className="text-blue-600 dark:text-blue-400">▲</span>
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400">▼</span>
+                          )
                         ) : (
-                          <span className="text-blue-600 dark:text-blue-400">▼</span>
-                        )
-                      ) : (
-                        <span className="text-slate-400 dark:text-slate-500">⇅</span>
-                      )}
-                    </div>
-                  </th>
+                          <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                        )}
+                      </div>
+                    </th>
+                  )}
 
                   {/* Firm Code Sort */}
-                  <th
-                    onClick={() => handleSortChange('firmCode')}
-                    className="p-4 font-bold text-left cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className={sortKey === 'firmCode' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
-                        Firm Code
-                      </span>
-                      {sortKey === 'firmCode' ? (
-                        sortOrder === 'asc' ? (
-                          <span className="text-blue-600 dark:text-blue-400">▲</span>
+                  {isColVisible('firmCode') && (
+                    <th
+                      onClick={() => handleSortChange('firmCode')}
+                      className={`p-4 font-bold text-left cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors ${densityStyles.th}`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className={sortKey === 'firmCode' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
+                          Code
+                        </span>
+                        {sortKey === 'firmCode' ? (
+                          sortOrder === 'asc' ? (
+                            <span className="text-blue-600 dark:text-blue-400">▲</span>
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400">▼</span>
+                          )
                         ) : (
-                          <span className="text-blue-600 dark:text-blue-400">▼</span>
-                        )
-                      ) : (
-                        <span className="text-slate-400 dark:text-slate-500">⇅</span>
-                      )}
-                    </div>
-                  </th>
+                          <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                        )}
+                      </div>
+                    </th>
+                  )}
 
                   {/* Company Sort */}
-                  <th
-                    onClick={() => handleSortChange('company')}
-                    className="p-4 font-bold text-left cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className={sortKey === 'company' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
-                        Company
-                      </span>
-                      {sortKey === 'company' ? (
-                        sortOrder === 'asc' ? (
-                          <span className="text-blue-600 dark:text-blue-400">▲</span>
+                  {isColVisible('company') && (
+                    <th
+                      onClick={() => handleSortChange('company')}
+                      className={`p-4 font-bold text-left cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors ${densityStyles.th}`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className={sortKey === 'company' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
+                          Company
+                        </span>
+                        {sortKey === 'company' ? (
+                          sortOrder === 'asc' ? (
+                            <span className="text-blue-600 dark:text-blue-400">▲</span>
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400">▼</span>
+                          )
                         ) : (
-                          <span className="text-blue-600 dark:text-blue-400">▼</span>
-                        )
-                      ) : (
-                        <span className="text-slate-400 dark:text-slate-500">⇅</span>
-                      )}
-                    </div>
-                  </th>
+                          <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                        )}
+                      </div>
+                    </th>
+                  )}
 
                   {/* Contact Person */}
-                  <th className="p-4 font-bold text-left">Contact</th>
+                  {isColVisible('contact') && (
+                    <th className={`p-4 font-bold text-left ${densityStyles.th}`}>Contact</th>
+                  )}
 
                   {/* Email */}
-                  <th className="p-4 font-bold text-left">Email</th>
+                  {isColVisible('email') && (
+                    <th className={`p-4 font-bold text-left ${densityStyles.th}`}>Email</th>
+                  )}
 
                   {/* Phone */}
-                  <th className="p-4 font-bold text-center">Phone</th>
+                  {isColVisible('phone') && (
+                    <th className={`p-4 font-bold text-center ${densityStyles.th}`}>Phone</th>
+                  )}
 
                   {/* Location (City Sort) */}
-                  <th
-                    onClick={() => handleSortChange('city')}
-                    className="p-4 font-bold text-left cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className={sortKey === 'city' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
-                        Location
-                      </span>
-                      {sortKey === 'city' ? (
-                        sortOrder === 'asc' ? (
-                          <span className="text-blue-600 dark:text-blue-400">▲</span>
+                  {isColVisible('location') && (
+                    <th
+                      onClick={() => handleSortChange('city')}
+                      className={`p-4 font-bold text-left cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors ${densityStyles.th}`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className={sortKey === 'city' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
+                          Location
+                        </span>
+                        {sortKey === 'city' ? (
+                          sortOrder === 'asc' ? (
+                            <span className="text-blue-600 dark:text-blue-400">▲</span>
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400">▼</span>
+                          )
                         ) : (
-                          <span className="text-blue-600 dark:text-blue-400">▼</span>
-                        )
-                      ) : (
-                        <span className="text-slate-400 dark:text-slate-500">⇅</span>
-                      )}
-                    </div>
-                  </th>
+                          <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                        )}
+                      </div>
+                    </th>
+                  )}
 
                   {/* GSTIN */}
-                  <th className="p-4 font-bold text-center">GSTIN</th>
+                  {isColVisible('gstin') && (
+                    <th className={`p-4 font-bold text-center ${densityStyles.th}`}>GSTIN</th>
+                  )}
 
                   {/* Credit Terms Sort */}
-                  <th
-                    onClick={() => handleSortChange('creditLimit')}
-                    className="p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
-                  >
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span className={sortKey === 'creditLimit' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
-                        Credit Terms
-                      </span>
-                      {sortKey === 'creditLimit' ? (
-                        sortOrder === 'asc' ? (
-                          <span className="text-blue-600 dark:text-blue-400">▲</span>
+                  {isColVisible('creditLimit') && (
+                    <th
+                      onClick={() => handleSortChange('creditLimit')}
+                      className={`p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors ${densityStyles.th}`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className={sortKey === 'creditLimit' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
+                          Credit Terms
+                        </span>
+                        {sortKey === 'creditLimit' ? (
+                          sortOrder === 'asc' ? (
+                            <span className="text-blue-600 dark:text-blue-400">▲</span>
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400">▼</span>
+                          )
                         ) : (
-                          <span className="text-blue-600 dark:text-blue-400">▼</span>
-                        )
-                      ) : (
-                        <span className="text-slate-400 dark:text-slate-500">⇅</span>
-                      )}
-                    </div>
-                  </th>
+                          <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                        )}
+                      </div>
+                    </th>
+                  )}
 
                   {/* Status & Approval */}
-                  <th
-                    onClick={() => handleSortChange('approvalStatus')}
-                    className="p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
-                  >
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span className={sortKey === 'approvalStatus' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
-                        Status & Approval
-                      </span>
-                      {sortKey === 'approvalStatus' ? (
-                        sortOrder === 'asc' ? (
-                          <span className="text-blue-600 dark:text-blue-400">▲</span>
+                  {isColVisible('approvalStatus') && (
+                    <th
+                      onClick={() => handleSortChange('approvalStatus')}
+                      className={`p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors ${densityStyles.th}`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className={sortKey === 'approvalStatus' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
+                          Status & Approval
+                        </span>
+                        {sortKey === 'approvalStatus' ? (
+                          sortOrder === 'asc' ? (
+                            <span className="text-blue-600 dark:text-blue-400">▲</span>
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400">▼</span>
+                          )
                         ) : (
-                          <span className="text-blue-600 dark:text-blue-400">▼</span>
-                        )
-                      ) : (
-                        <span className="text-slate-400 dark:text-slate-500">⇅</span>
-                      )}
-                    </div>
-                  </th>
+                          <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                        )}
+                      </div>
+                    </th>
+                  )}
 
                   {/* Created At Sort */}
-                  <th
-                    onClick={() => handleSortChange('createdAt')}
-                    className="p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
-                  >
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span className={sortKey === 'createdAt' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
-                        Created At
-                      </span>
-                      {sortKey === 'createdAt' ? (
-                        sortOrder === 'asc' ? (
-                          <span className="text-blue-600 dark:text-blue-400">▲</span>
+                  {isColVisible('createdAt') && (
+                    <th
+                      onClick={() => handleSortChange('createdAt')}
+                      className={`p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors ${densityStyles.th}`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className={sortKey === 'createdAt' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>
+                          Created At
+                        </span>
+                        {sortKey === 'createdAt' ? (
+                          sortOrder === 'asc' ? (
+                            <span className="text-blue-600 dark:text-blue-400">▲</span>
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400">▼</span>
+                          )
                         ) : (
-                          <span className="text-blue-600 dark:text-blue-400">▼</span>
-                        )
-                      ) : (
-                        <span className="text-slate-400 dark:text-slate-500">⇅</span>
-                      )}
-                    </div>
-                  </th>
+                          <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                        )}
+                      </div>
+                    </th>
+                  )}
 
-                  <th className="p-4 font-bold text-center">Actions</th>
+                  {/* Sticky Action Column Header */}
+                  {isColVisible('actions') && (
+                    <th className={`p-4 font-bold text-center ${densityStyles.th}`}>Actions</th>
+                  )}
                 </tr>
               </thead>
 
@@ -1592,7 +1643,7 @@ const Firms = () => {
                           }`}
                       >
                         {isBulkMode && (
-                          <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <td className={`p-3 text-center ${densityStyles.td}`} onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               checked={isSelected}
@@ -1602,243 +1653,269 @@ const Firms = () => {
                           </td>
                         )}
                         {/* S.No */}
-                        <td className="p-3 text-sm text-slate-500 dark:text-slate-400 text-center font-medium">
-                          {indexOfFirstFirm + index + 1}
-                        </td>
+                        {isColVisible('sno') && (
+                          <td className={`p-3 text-slate-500 dark:text-slate-400 text-center font-medium ${densityStyles.td}`}>
+                            {indexOfFirstFirm + index + 1}
+                          </td>
+                        )}
 
                         {/* Firm Name & ID */}
-                        <td className="p-4 text-sm text-slate-900 dark:text-white font-medium">
-                          <div className="flex items-center gap-3">
-                            <div
-                              onClick={() => handleOpenDrawer(firm, 'details')}
-                              className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 !text-white flex items-center justify-center text-xs font-extrabold shrink-0 shadow-sm cursor-pointer hover:scale-105 transition-transform"
-                              title="View firm details"
-                            >
-                              {initials}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span
-                                  onClick={() => handleOpenDrawer(firm, 'details')}
-                                  className="font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                                  title="View firm details"
-                                >
-                                  {firm.firmName}
-                                </span>
-                                {firm.businessType && (
-                                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/10">
-                                    {firm.businessType}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1 mt-0.5">
-                                <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono font-medium">
-                                  {firm._id}
-                                </span>
-                                <CopyButton text={firm._id} />
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Firm Code */}
-                        <td className="p-4 text-sm">
-                          {firm.firmCode ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 text-xs font-mono font-bold">
-                              <FiHash className="text-[10px] text-slate-400" />
-                              {firm.firmCode}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-xs font-mono">-</span>
-                          )}
-                        </td>
-
-                        {/* Associated Company */}
-                        <td className="p-4 text-sm text-slate-700 dark:text-slate-300">
-                          {company.name ? (
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-lg overflow-hidden bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shrink-0 flex items-center justify-center">
-                                {company.logo ? (
-                                  <OptimizedImage
-                                    src={company.logo}
-                                    alt={company.name || 'Company'}
-                                    className="w-full h-full object-cover"
-                                    width={56}
-                                  />
-                                ) : (
-                                  <span className="text-[10px] font-bold text-slate-500">
-                                    {(company.name || 'C').charAt(0).toUpperCase()}
-                                  </span>
-                                )}
+                        {isColVisible('firmName') && (
+                          <td className={`p-4 text-slate-900 dark:text-white font-medium ${densityStyles.td}`}>
+                            <div className="flex items-center gap-3">
+                              <div
+                                onClick={() => handleOpenDrawer(firm, 'details')}
+                                className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 !text-white flex items-center justify-center text-xs font-extrabold shrink-0 shadow-sm cursor-pointer hover:scale-105 transition-transform"
+                                title="View firm details"
+                              >
+                                {initials}
                               </div>
                               <div>
-                                <div
-                                  onClick={() => navigate(`/companies/${company._id}`)}
-                                  className="font-semibold text-xs text-slate-900 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors"
-                                  title="View company"
-                                >
-                                  {company.name}
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    onClick={() => handleOpenDrawer(firm, 'details')}
+                                    className="font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                                    title="View firm details"
+                                  >
+                                    {firm.firmName}
+                                  </span>
+                                  {firm.businessType && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/10">
+                                      {firm.businessType}
+                                    </span>
+                                  )}
                                 </div>
-                                <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                                  {company.code}
-                                </span>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono font-medium">
+                                    {firm._id}
+                                  </span>
+                                  <CopyButton text={firm._id} />
+                                </div>
                               </div>
                             </div>
-                          ) : (
-                            <span className="text-xs text-slate-400 italic">Not Assigned</span>
-                          )}
-                        </td>
+                          </td>
+                        )}
+
+                        {/* Firm Code */}
+                        {isColVisible('firmCode') && (
+                          <td className={`p-4 ${densityStyles.td}`}>
+                            {firm.firmCode ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 text-xs font-mono font-bold">
+                                <FiHash className="text-[10px] text-slate-400" />
+                                {firm.firmCode}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-xs font-mono">-</span>
+                            )}
+                          </td>
+                        )}
+
+                        {/* Associated Company */}
+                        {isColVisible('company') && (
+                          <td className={`p-4 text-slate-700 dark:text-slate-300 ${densityStyles.td}`}>
+                            {company.name ? (
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-lg overflow-hidden bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shrink-0 flex items-center justify-center">
+                                  {company.logo ? (
+                                    <OptimizedImage
+                                      src={company.logo}
+                                      alt={company.name || 'Company'}
+                                      className="w-full h-full object-cover"
+                                      width={56}
+                                    />
+                                  ) : (
+                                    <span className="text-[10px] font-bold text-slate-500">
+                                      {(company.name || 'C').charAt(0).toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                                <div>
+                                  <div
+                                    onClick={() => navigate(`/companies/${company._id}`)}
+                                    className="font-semibold text-xs text-slate-900 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors"
+                                    title="View company"
+                                  >
+                                    {company.name}
+                                  </div>
+                                  <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                                    {company.code}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400 italic">Not Assigned</span>
+                            )}
+                          </td>
+                        )}
 
                         {/* Contact Person */}
-                        <td className="p-4 text-sm text-slate-700 dark:text-slate-300">
-                          <div>
-                            <div className="flex items-center gap-1.5 font-medium text-slate-900 dark:text-slate-200 text-xs">
-                              <FiUser className="text-slate-400 text-xs shrink-0" />
-                              <span>{firm.contactPerson || '-'}</span>
+                        {isColVisible('contact') && (
+                          <td className={`p-4 text-slate-700 dark:text-slate-300 ${densityStyles.td}`}>
+                            <div>
+                              <div className="flex items-center gap-1.5 font-medium text-slate-900 dark:text-slate-200 text-xs">
+                                <FiUser className="text-slate-400 text-xs shrink-0" />
+                                <span>{firm.contactPerson || '-'}</span>
+                              </div>
+                              {firm.designation && (
+                                <span className="text-[10px] text-slate-400 block font-normal ml-4">
+                                  {firm.designation}
+                                </span>
+                              )}
                             </div>
-                            {firm.designation && (
-                              <span className="text-[10px] text-slate-400 block font-normal ml-4">
-                                {firm.designation}
-                              </span>
-                            )}
-                          </div>
-                        </td>
+                          </td>
+                        )}
 
                         {/* Email */}
-                        <td className="p-4 text-sm text-slate-700 dark:text-slate-300">
-                          <GmailLink email={firm.email} />
-                        </td>
+                        {isColVisible('email') && (
+                          <td className={`p-4 text-slate-700 dark:text-slate-300 ${densityStyles.td}`}>
+                            <GmailLink email={firm.email} />
+                          </td>
+                        )}
 
                         {/* Phone */}
-                        <td className="p-4 text-sm text-center text-slate-700 dark:text-slate-300 font-mono">
-                          {firm.phone ? (
-                            <a
-                              href={`tel:${firm.phone}`}
-                              className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                            >
-                              {firm.phone}
-                            </a>
-                          ) : (
-                            <span className="text-slate-400 text-xs">-</span>
-                          )}
-                        </td>
-
-                        {/* Location */}
-                        <td className="p-4 text-sm text-slate-700 dark:text-slate-300">
-                          <div className="flex items-center gap-1 text-xs font-medium text-slate-800 dark:text-slate-200">
-                            <FiMapPin className="text-rose-500 text-xs shrink-0" />
-                            <span>{firm.city}, {firm.state}</span>
-                            {firm.pincode && (
-                              <span className="text-[10px] font-mono text-slate-400">({firm.pincode})</span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* GSTIN */}
-                        <td className="p-4 text-sm text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            {firm.gstin ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/80 dark:bg-amber-500/10 text-white dark:text-amber-600 border border-amber-500/20 text-xs font-mono font-bold">
-                                {firm.gstin}
-                                <CopyButton text={firm.gstin} />
-                              </span>
+                        {isColVisible('phone') && (
+                          <td className={`p-4 text-center text-slate-700 dark:text-slate-300 font-mono ${densityStyles.td}`}>
+                            {firm.phone ? (
+                              <a
+                                href={`tel:${firm.phone}`}
+                                className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                              >
+                                {firm.phone}
+                              </a>
                             ) : (
                               <span className="text-slate-400 text-xs">-</span>
                             )}
-                            {(firm.panCardUrl || firm.tanCertificateUrl || firm.gstCertificateUrl || firm.cancelledChequeUrl || firm.companySealOrSignatureUrl) && (
-                              <span
-                                className="inline-flex items-center gap-0.5 text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20"
-                                title="Statutory documents attached"
-                              >
-                                <FiFileText size={9} /> KYC Docs
-                              </span>
-                            )}
-                          </div>
-                        </td>
+                          </td>
+                        )}
+
+                        {/* Location */}
+                        {isColVisible('location') && (
+                          <td className={`p-4 text-slate-700 dark:text-slate-300 ${densityStyles.td}`}>
+                            <div className="flex items-center gap-1 text-xs font-medium text-slate-800 dark:text-slate-200">
+                              <FiMapPin className="text-rose-500 text-xs shrink-0" />
+                              <span>{firm.city}, {firm.state}</span>
+                              {firm.pincode && (
+                                <span className="text-[10px] font-mono text-slate-400">({firm.pincode})</span>
+                              )}
+                            </div>
+                          </td>
+                        )}
+
+                        {/* GSTIN */}
+                        {isColVisible('gstin') && (
+                          <td className={`p-4 text-center ${densityStyles.td}`}>
+                            <div className="flex flex-col items-center gap-1">
+                              {firm.gstin ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/80 dark:bg-amber-500/10 text-white dark:text-amber-600 border border-amber-500/20 text-xs font-mono font-bold">
+                                  {firm.gstin}
+                                  <CopyButton text={firm.gstin} />
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 text-xs">-</span>
+                              )}
+                              {(firm.panCardUrl || firm.tanCertificateUrl || firm.gstCertificateUrl || firm.cancelledChequeUrl || firm.companySealOrSignatureUrl) && (
+                                <span
+                                  className="inline-flex items-center gap-0.5 text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20"
+                                  title="Statutory documents attached"
+                                >
+                                  <FiFileText size={9} /> KYC Docs
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        )}
 
                         {/* Credit Terms */}
-                        <td className="p-4 text-sm text-center">
-                          <div className="flex flex-col items-center">
-                            <span className="font-bold text-slate-800 dark:text-slate-200">
-                              ₹{(firm.creditLimit ?? 0).toLocaleString('en-IN')}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              {firm.creditDays ?? 30} days
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Status & Approval (unified StatusBadge) */}
-                        <td className="p-4 text-sm text-center">
-                          <div className="flex flex-col items-center gap-1.5">
-                            <StatusBadge
-                              status={firm.approvalStatus || 'APPROVED'}
-                              size="xs"
-                              dot
-                            />
-                            <StatusBadge
-                              status={firm.isActive ? 'ACTIVE' : 'INACTIVE'}
-                              size="xs"
-                              dot
-                              onClick={() => handleToggleFirmStatus(firm)}
-                              className="cursor-pointer hover:opacity-80"
-                              title={`Click to ${firm.isActive ? 'deactivate' : 'activate'}`}
-                            />
-                          </div>
-                        </td>
-
-                        {/* Created At */}
-                        <td className="p-4 text-sm text-center font-medium">
-                          {firm.createdAt ? (
+                        {isColVisible('creditLimit') && (
+                          <td className={`p-4 text-center ${densityStyles.td}`}>
                             <div className="flex flex-col items-center">
-                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                                <FiCalendar className="text-blue-600 dark:text-blue-400 text-[11px]" />
-                                {formatDateDDMMYYYY(firm.createdAt)}
+                              <span className="font-bold text-slate-800 dark:text-slate-200">
+                                ₹{(firm.creditLimit ?? 0).toLocaleString('en-IN')}
                               </span>
-                              <span className="text-[10px] text-slate-400 font-mono mt-0.5">
-                                {formatDateTimeDDMMYYYY(firm.createdAt).split(', ')[1]}
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {firm.creditDays ?? 30} days
                               </span>
                             </div>
-                          ) : (
-                            <span className="text-slate-400 text-xs font-mono">-</span>
-                          )}
-                        </td>
+                          </td>
+                        )}
+
+                        {/* Status & Approval (unified StatusBadge) */}
+                        {isColVisible('approvalStatus') && (
+                          <td className={`p-4 text-center ${densityStyles.td}`}>
+                            <div className="flex flex-col items-center gap-1.5">
+                              <StatusBadge
+                                status={firm.approvalStatus || 'APPROVED'}
+                                size="xs"
+                                dot
+                              />
+                              <StatusBadge
+                                status={firm.isActive ? 'ACTIVE' : 'INACTIVE'}
+                                size="xs"
+                                dot
+                                onClick={() => handleToggleFirmStatus(firm)}
+                                className="cursor-pointer hover:opacity-80"
+                                title={`Click to ${firm.isActive ? 'deactivate' : 'activate'}`}
+                              />
+                            </div>
+                          </td>
+                        )}
+
+                        {/* Created At */}
+                        {isColVisible('createdAt') && (
+                          <td className={`p-4 text-center font-medium ${densityStyles.td}`}>
+                            {firm.createdAt ? (
+                              <div className="flex flex-col items-center">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                                  <FiCalendar className="text-blue-600 dark:text-blue-400 text-[11px]" />
+                                  {formatDateDDMMYYYY(firm.createdAt)}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                  {formatDateTimeDDMMYYYY(firm.createdAt).split(', ')[1]}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 text-xs font-mono">-</span>
+                            )}
+                          </td>
+                        )}
 
                         {/* Actions */}
-                        <td className="p-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {/* View Details */}
-                            <button
-                              type="button"
-                              onClick={() => handleOpenDrawer(firm, 'details')}
-                              className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                              title="View firm details"
-                            >
-                              <FiEye className="text-base" />
-                            </button>
+                        {isColVisible('actions') && (
+                          <td className={`p-4 text-center ${densityStyles.td}`}>
+                            <div className="flex items-center justify-center gap-1">
+                              {/* View Details */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDrawer(firm, 'details')}
+                                className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                                title="View firm details"
+                              >
+                                <FiEye className="text-base" />
+                              </button>
 
-                            {/* Delete Firm (DELETE /firms/{id}) */}
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteFirm(firm)}
-                              disabled={actionLoadingId === firm._id}
-                              className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200/60 dark:border-rose-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                              title="Delete firm"
-                            >
-                              {actionLoadingId === firm._id ? (
-                                <FiLoader className="text-base animate-spin text-rose-500" />
-                              ) : (
-                                <FiTrash2 className="text-base" />
-                              )}
-                            </button>
-                          </div>
-                        </td>
+                              {/* Delete Firm (DELETE /firms/{id}) */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteFirm(firm)}
+                                disabled={actionLoadingId === firm._id}
+                                className="inline-flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200/60 dark:border-rose-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                                title="Delete firm"
+                              >
+                                {actionLoadingId === firm._id ? (
+                                  <FiLoader className="text-base animate-spin text-rose-500" />
+                                ) : (
+                                  <FiTrash2 className="text-base" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={isBulkMode ? 14 : 13} className="p-4 text-center">
+                    <td colSpan={(isBulkMode ? 1 : 0) + FIRM_COLUMNS.filter(c => isColVisible(c.id)).length} className="p-4 text-center">
                       <EmptyState
                         icon={FiServer}
                         title="No matching firms found"

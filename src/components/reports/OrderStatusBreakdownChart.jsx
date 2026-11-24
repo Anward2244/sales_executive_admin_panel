@@ -570,7 +570,7 @@ export default function OrderStatusBreakdownChart({
   const hasData = formattedData.some((d) => d.count > 0 || d.totalAmount > 0);
 
   return (
-    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-3 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col justify-between">
+    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-3 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col justify-between h-full">
       <div>
         {/* Header & Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">

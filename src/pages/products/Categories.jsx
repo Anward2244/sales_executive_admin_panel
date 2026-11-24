@@ -22,6 +22,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { formatEntityCode } from '@/utils/formatters';
 import { validateEntityCode } from '@/utils/validators';
 import { TableRowSkeleton } from '@/components/ui/Skeleton';
+import { useToast } from '@/context/ToastContext';
 
 const INITIAL_FORM_STATE = {
   name: '',
@@ -54,17 +55,21 @@ const Categories = () => {
   const itemsPerPage = displayPrefs.rowsPerPage || 10;
 
   // Feedback & Modal States
-  const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: '' }
+  const { toast } = useToast();
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [typedConfirmName, setTypedConfirmName] = useState('');
 
-  const showToast = (type, message) => {
-    setToast({ type, message });
-    setTimeout(() => {
-      setToast(null);
-    }, 4000);
-  };
+  const showToast = useCallback((type, message) => {
+    if (type === 'success') {
+      toast.success(message);
+    } else if (type === 'error') {
+      toast.error(message);
+    } else {
+      toast.info(message);
+    }
+  }, [toast]);
 
   // Fetch Categories & Product counts
   const fetchCategories = useCallback(async (isManual = false) => {
@@ -144,6 +149,7 @@ const Categories = () => {
 
   // Start editing a category
   const handleEdit = async (category) => {
+    setIsFormOpen(true);
     setEditingId(category._id);
     setFormError('');
     setIsCodeManuallyEdited(true);
@@ -284,31 +290,7 @@ const Categories = () => {
   const currentCategories = filteredCategories.slice(indexOfFirstItem, indexOfLastItem);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
-      {/* Toast Notification */}
-      {toast && (
-        <div
-          className={`fixed top-20 right-6 z-[9999] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl backdrop-blur-xl border transition-all animate-in fade-in slide-in-from-top-4 ${toast.type === 'success'
-              ? 'bg-emerald-50 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200'
-              : 'bg-rose-50 dark:bg-rose-950/80 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200'
-            }`}
-        >
-          {toast.type === 'success' ? (
-            <FiCheckCircle className="text-xl text-emerald-600 dark:text-emerald-400 shrink-0" />
-          ) : (
-            <FiAlertCircle className="text-xl text-rose-600 dark:text-rose-400 shrink-0" />
-          )}
-          <span className="text-sm font-bold">{toast.message}</span>
-          <button
-            type="button"
-            onClick={() => setToast(null)}
-            className="ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-          >
-            <FiX size={16} />
-          </button>
-        </div>
-      )}
-
+    <div className="space-y-6 w-full pb-10">
       {/* Page Header */}
       <PageHeader
         title="Category Management"
@@ -341,6 +323,26 @@ const Categories = () => {
                 </button>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsFormOpen((prev) => !prev);
+                if (isFormOpen && editingId) {
+                  cancelEdit();
+                }
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer shadow-xs shrink-0 ${
+                isFormOpen
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-blue-500/20'
+                  : 'bg-white/80 dark:bg-slate-900/80 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-blue-600 hover:border-blue-500/30'
+              }`}
+              title={isFormOpen ? 'Hide category form' : 'Open category form'}
+            >
+              <FiPlus className={`text-sm transition-transform duration-200 ${isFormOpen ? 'rotate-45' : ''}`} />
+              <span>{isFormOpen ? 'Hide Form' : 'New Category'}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => fetchCategories(true)}
@@ -357,8 +359,9 @@ const Categories = () => {
       {/* Main Grid: Form (Left) & Categories List (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Create / Edit Form Card */}
-        <div className="lg:col-span-4">
-          <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xl rounded-3xl p-6 transition-all">
+        {isFormOpen && (
+          <div className="lg:col-span-4 animate-in fade-in duration-200">
+            <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xl rounded-3xl p-6 transition-all">
             <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200/80 dark:border-white/10">
               <div className="flex items-center gap-3">
                 <div
@@ -509,9 +512,10 @@ const Categories = () => {
             </form>
           </div>
         </div>
+      )}
 
-        {/* Right Column: Categories List & Filter Table */}
-        <div className="lg:col-span-8 space-y-4">
+      {/* Right Column: Categories List & Filter Table */}
+      <div className={`${isFormOpen ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-4 transition-all duration-300`}>
           {/* Action and Filter Toolbar */}
           <div className="flex items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2.5 sm:p-2 rounded-2xl sm:rounded-full border border-slate-200/80 dark:border-white/10 shadow-xs">
             {/* Status Segmented Tabs */}

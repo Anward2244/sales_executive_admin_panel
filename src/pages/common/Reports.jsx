@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import {
   FiPieChart,
   FiDownload,
@@ -43,6 +44,7 @@ import IndiaOrdersHeatmap from '@/components/reports/IndiaOrdersHeatmap';
 import CustomDatePicker from '@/components/ui/CustomDatePicker';
 import { useTheme } from '@/context/ThemeContext';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
+import { formatCompactCurrency } from '@/utils/formatters';
 import { getReportsApi, getProductsApi, getCategoryApi, getBrandRoutingMatrixApi } from '@/api/axios';
 
 // Format Indian Rupee currency
@@ -177,6 +179,7 @@ const Reports = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDrawerClosing, setIsDrawerClosing] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState('csv'); // 'csv' | 'xlsx'
   const [productViewMode, setProductViewMode] = useState('chart'); // 'chart' | 'table'
   const [productMenuOpen, setProductMenuOpen] = useState(false);
   const [catalogProducts, setCatalogProducts] = useState([]);
@@ -892,30 +895,39 @@ const Reports = () => {
     };
   }, [selectedOrder, isDrawerClosing, hasPrevOrder, hasNextOrder, selectedOrderIndex, handleCloseDrawer]);
 
-  // CSV Export Generators
-  const exportToCSV = (filename, rows) => {
+  // Export Dispatcher (CSV or XLSX)
+  const exportDataset = (filename, rows, sheetName = 'Sheet1') => {
     if (!rows || !rows.length) return;
-    const processRow = (row) =>
-      row
-        .map((val) => {
-          let str = val === null || val === undefined ? '' : String(val);
-          str = str.replace(/"/g, '""');
-          return `"${str}"`;
-        })
-        .join(',');
+    const dateStr = new Date().toISOString().slice(0, 10);
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + rows.map(processRow).join('\r\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `${filename}_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (exportFormat === 'xlsx') {
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      XLSX.writeFile(wb, `${filename}_${dateStr}.xlsx`);
+    } else {
+      const processRow = (row) =>
+        row
+          .map((val) => {
+            let str = val === null || val === undefined ? '' : String(val);
+            str = str.replace(/"/g, '""');
+            return `"${str}"`;
+          })
+          .join(',');
+
+      const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + rows.map(processRow).join('\r\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `${filename}_${dateStr}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
     setExportMenuOpen(false);
   };
 
-  const handleExportOrdersCSV = () => {
+  const handleExportOrders = () => {
     const targetOrders = filteredOrders.length > 0 ? filteredOrders : rangeFilteredOrders;
     if (!targetOrders.length) return;
     const headers = [
@@ -980,10 +992,10 @@ const Reports = () => {
         o.approvedAt ? new Date(o.approvedAt).toLocaleString('en-IN') : '',
       ]);
     });
-    exportToCSV('orders_report', rows);
+    exportDataset('orders_report', rows, 'Orders');
   };
 
-  const handleExportProductsCSV = () => {
+  const handleExportProducts = () => {
     if (!productPerformance.length) return;
     const headers = ['S.No', 'Product Name', 'SKU', 'Orders Count', 'Units Sold', 'Avg Unit Price (INR)', 'Total Revenue (INR)', 'Volume Share (%)', 'Revenue Share (%)'];
     const rows = [headers];
@@ -1004,15 +1016,16 @@ const Reports = () => {
         `${share}%`
       ]);
     });
-    exportToCSV('product_performance_report', rows);
+    exportDataset('product_performance_report', rows, 'Products');
   };
 
-  const handleExportSummaryCSV = () => {
+  const handleExportSummary = () => {
     const headers = ['Metric', 'Value'];
     const rows = [
       headers,
       ['Report Generated At', new Date().toLocaleString('en-IN')],
-      ['Total Orders', summary.totalOrders || 0],
+      ['Reporting Range', reportsPeriodInfo.label || reportsPeriodInfo.badge || 'All Time'],
+      ['Total Orders in Period', rangeFilteredOrders.length],
       ['Total Revenue (INR)', summary.totalRevenue || 0],
       ['Average Order Value (INR)', summary.avgOrderValue || 0],
       ['Total Units Sold', totalUnitsSold],
@@ -1022,11 +1035,11 @@ const Reports = () => {
       rows.push([`Status: ${s._id} Orders Count`, s.count || 0]);
       rows.push([`Status: ${s._id} Total Value (INR)`, s.totalAmount || 0]);
     });
-    exportToCSV('business_summary_report', rows);
+    exportDataset('business_summary_report', rows, 'Executive Summary');
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 w-full pb-16">
       {/* Header */}
       <PageHeader
         title="Reports & Analytics"
@@ -1050,10 +1063,17 @@ const Reports = () => {
               <button
                 type="button"
                 onClick={() => setExportMenuOpen(!exportMenuOpen)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer active:scale-95"
+                className="flex items-center gap-2 px-3.5 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/25 cursor-pointer active:scale-95"
+                title={`Export data for ${reportsPeriodInfo.badge || reportsPeriodInfo.label}`}
               >
-                <FiDownload className="text-base" />
-                <span>Export Report</span>
+                <FiDownload className="text-sm sm:text-base shrink-0" />
+                <span>Export</span>
+                <span className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-bold bg-white/20 rounded-md">
+                  {reportsPeriodInfo.badge || reportsPeriodInfo.label}
+                </span>
+                <FiChevronDown
+                  className={`text-xs opacity-75 transition-transform duration-200 ${exportMenuOpen ? 'rotate-180' : ''}`}
+                />
               </button>
 
               {exportMenuOpen && (
@@ -1062,35 +1082,100 @@ const Reports = () => {
                     className="fixed inset-0 z-20"
                     onClick={() => setExportMenuOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-56 bg-white/40 dark:bg-slate-950/50 backdrop-blur-lg rounded-2xl shadow-xl border border-slate-200 dark:border-white/10 py-2 z-30 animate-in fade-in slide-in-from-top-2 duration-150">
-                    <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                      Download CSV Datasets
+                  <div className="absolute right-0 mt-2 w-72 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200/80 dark:border-white/10 p-3 z-30 animate-in fade-in slide-in-from-top-2 duration-150">
+                    {/* Active Range Header Preview */}
+                    <div className="pb-2.5 mb-2.5 border-b border-slate-200/70 dark:border-white/10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                          Export Dataset
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                          {rangeFilteredOrders.length} {rangeFilteredOrders.length === 1 ? 'Order' : 'Orders'}
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-1 truncate">
+                        {reportsPeriodInfo.label}
+                      </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleExportOrdersCSV}
-                      className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 flex items-center gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <FiShoppingBag className="text-sm text-blue-500" />
-                      <span>Export All Orders (.csv)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleExportProductsCSV}
-                      className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 flex items-center gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <FiBox className="text-sm text-emerald-500" />
-                      <span>Export Product Sales (.csv)</span>
-                    </button>
-                    <div className="h-px bg-slate-200 dark:bg-white/10 my-1" />
-                    <button
-                      type="button"
-                      onClick={handleExportSummaryCSV}
-                      className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 flex items-center gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <FiPieChart className="text-sm text-purple-500" />
-                      <span>Export Executive Summary (.csv)</span>
-                    </button>
+
+                    {/* Format Selector: CSV vs XLSX */}
+                    <div className="mb-2.5">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                        File Format
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200/60 dark:border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setExportFormat('csv')}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            exportFormat === 'csv'
+                              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                          }`}
+                        >
+                          <span>CSV (.csv)</span>
+                          {exportFormat === 'csv' && <FiCheck className="text-xs" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExportFormat('xlsx')}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            exportFormat === 'xlsx'
+                              ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                          }`}
+                        >
+                          <span>Excel (.xlsx)</span>
+                          {exportFormat === 'xlsx' && <FiCheck className="text-xs" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Export Action Options */}
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={handleExportOrders}
+                        className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 rounded-xl flex items-center justify-between transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <FiShoppingBag className="text-sm text-blue-500 shrink-0" />
+                          <span className="truncate">Orders Report</span>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-slate-400 shrink-0">
+                          .{exportFormat}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleExportProducts}
+                        disabled={!productPerformance.length}
+                        className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 rounded-xl flex items-center justify-between transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <FiBox className="text-sm text-emerald-500 shrink-0" />
+                          <span className="truncate">Product Sales Performance</span>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-slate-400 shrink-0">
+                          .{exportFormat}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleExportSummary}
+                        className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 rounded-xl flex items-center justify-between transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <FiPieChart className="text-sm text-purple-500 shrink-0" />
+                          <span className="truncate">Executive Business Summary</span>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-slate-400 shrink-0">
+                          .{exportFormat}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
@@ -1263,8 +1348,11 @@ const Reports = () => {
             {loading ? (
               <Skeleton className="h-7 w-32 rounded-lg my-1" />
             ) : (
-              <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight font-mono">
-                {formatCurrency(summary.totalRevenue || 0)}
+              <div
+                className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight font-mono"
+                title={formatCurrency(summary.totalRevenue || 0)}
+              >
+                {formatCompactCurrency(summary.totalRevenue || 0)}
               </div>
             )}
             <div className="mt-1 flex items-center gap-1.5 kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500">
@@ -1288,8 +1376,11 @@ const Reports = () => {
             {loading ? (
               <Skeleton className="h-7 w-28 rounded-lg my-1" />
             ) : (
-              <div className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight font-mono">
-                {formatCurrency(summary.avgOrderValue || 0)}
+              <div
+                className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight font-mono"
+                title={formatCurrency(summary.avgOrderValue || 0)}
+              >
+                {formatCompactCurrency(summary.avgOrderValue || 0)}
               </div>
             )}
             <div className="mt-1 flex items-center gap-1.5 kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500">
@@ -1325,7 +1416,7 @@ const Reports = () => {
       </div>
 
       {/* Middle Row: Status Breakdown & Daily Trend */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         {/* Order Status Breakdown Bar Chart Card */}
         <OrderStatusBreakdownChart
           statusBreakdown={statusBreakdown}

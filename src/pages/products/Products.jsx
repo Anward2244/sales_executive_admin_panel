@@ -2203,7 +2203,7 @@ const Products = () => {
   };
 
   return (
-    <div className="space-y-3 max-w-7xl mx-auto pb-12">
+    <div className="space-y-3 w-full pb-12">
       {/* Header */}
       <PageHeader
         title="Products Catalog"

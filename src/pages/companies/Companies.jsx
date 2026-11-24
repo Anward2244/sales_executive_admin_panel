@@ -39,6 +39,7 @@ import { formatEntityCode } from '@/utils/formatters';
 import { validateEntityCode } from '@/utils/validators';
 import { TableSkeleton, SkeletonPulse } from '@/components/ui/Skeleton';
 import { StatusBadge, EmptyState, OptimizedImage, SegmentedTabs } from '@/components/ui';
+import { useToast } from '@/context/ToastContext';
 
 const INITIAL_FORM = {
   name: '',
@@ -71,7 +72,8 @@ const Companies = () => {
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
-  const [successToast, setSuccessToast] = useState(null);
+  const { toast } = useToast();
+  const setSuccessToast = useCallback((msg) => { if (msg) toast.success(msg); }, [toast]);
 
   // Slide-Over Drawer State (Details & Edits)
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -87,10 +89,8 @@ const Companies = () => {
     if (location.state?.toastMessage) {
       setSuccessToast(location.state.toastMessage);
       window.history.replaceState({}, document.title);
-      const timer = setTimeout(() => setSuccessToast(null), 4000);
-      return () => clearTimeout(timer);
     }
-  }, [location.state]);
+  }, [location.state, setSuccessToast]);
 
   const handleDeleteCompany = async (company) => {
     if (!company) return;
@@ -512,17 +512,7 @@ const Companies = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Floating Success Toast */}
-      {successToast && (
-        <div className="fixed top-20 right-6 z-[10001] animate-in fade-in slide-in-from-top-3 duration-200">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border backdrop-blur-xl bg-emerald-600/95 text-white border-emerald-400/30 shadow-emerald-500/20">
-            <FiCheckCircle className="text-lg shrink-0" />
-            <span className="text-xs sm:text-sm font-semibold tracking-wide">{successToast}</span>
-          </div>
-        </div>
-      )}
-
+    <div className="space-y-6 w-full pb-12">
       {/* Header */}
       <PageHeader
         title="Companies"

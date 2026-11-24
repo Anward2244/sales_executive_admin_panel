@@ -474,7 +474,7 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      <div className="space-y-6 w-full pb-12">
         <PageHeader
           title="Admin Profile"
           icon={FiShield}
@@ -486,7 +486,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 w-full pb-12">
       {/* Header */}
       <PageHeader
         title="Admin Profile"

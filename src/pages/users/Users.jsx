@@ -15,13 +15,26 @@ import { useConfirm } from '@/context/ConfirmationContext';
 import CopyButton from '@/components/ui/CopyButton';
 import CustomDropdown from '@/components/ui/CustomDropdown';
 import GmailLink from '@/components/ui/GmailLink';
-import { BulkActionBar, BatchProgressModal, BackButton, PageHeader } from '@/components/ui';
-import { useDisplayPreferences } from '@/utils/displayPreferences';
+import { BulkActionBar, BatchProgressModal, BackButton, PageHeader, TableToolbar, StatusBadge, EmptyState, SegmentedTabs } from '@/components/ui';
+import { useDisplayPreferences, getDensityStyles } from '@/utils/displayPreferences';
 import { createPortal } from 'react-dom';
 import { formatPhone, formatEntityCode } from '@/utils/formatters';
 import { TableSkeleton } from '@/components/ui/Skeleton';
-import { StatusBadge, EmptyState, SegmentedTabs } from '@/components/ui';
 import { useToast } from '@/context/ToastContext';
+
+const USER_COLUMNS = [
+  { id: 'sno', label: 'S.No.' },
+  { id: 'user', label: 'User Details', alwaysVisible: true },
+  { id: 'employeeCode', label: 'Emp Code' },
+  { id: 'email', label: 'Email' },
+  { id: 'phone', label: 'Phone' },
+  { id: 'role', label: 'Role' },
+  { id: 'assignedCompanies', label: 'Companies' },
+  { id: 'status', label: 'Status' },
+  { id: 'lastLoginAt', label: 'Last Login' },
+  { id: 'createdAt', label: 'Created At' },
+  { id: 'actions', label: 'Actions', alwaysVisible: true }
+];
 
 const getUserFullName = (user) => {
   if (!user) return '';
@@ -97,8 +110,11 @@ const UsersList = () => {
   const userTab = searchParams.get('tab') || 'all';
 
 
-  // Pagination State
-  const { preferences: displayPrefs } = useDisplayPreferences();
+  // Pagination & Display Preferences
+  const { preferences: displayPrefs, updateTableColumnVisibility, resetTableColumnVisibility } = useDisplayPreferences();
+  const densityStyles = getDensityStyles(displayPrefs.density);
+  const userColumnVisibility = displayPrefs.columnVisibility?.users || {};
+  const isColVisible = (colId) => userColumnVisibility[colId] !== false;
   const usersPerPage = displayPrefs.rowsPerPage || 10;
   const [paginationMeta, setPaginationMeta] = useState(null);
 
@@ -1125,6 +1141,64 @@ const UsersList = () => {
           </div>
         </div>
 
+        {/* Active Filter Chips */}
+        {(Boolean(searchTerm) || Boolean(selectedRole) || (Boolean(selectedStatus) && selectedStatus !== 'all')) && (
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-slate-50/80 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-white/10 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-slate-500 font-semibold mr-1">Active filters:</span>
+              {searchTerm && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  Search: {searchTerm}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchInput('');
+                      handleFilterChange('search', '');
+                    }}
+                    className="hover:text-blue-900 dark:hover:text-blue-100 cursor-pointer ml-0.5"
+                    title="Clear search"
+                  >
+                    <FiX className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {selectedRole && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  Role: {formatRoleName(selectedRole)}
+                  <button
+                    type="button"
+                    onClick={() => handleFilterChange('role', '')}
+                    className="hover:text-blue-900 dark:hover:text-blue-100 cursor-pointer ml-0.5"
+                    title="Clear role filter"
+                  >
+                    <FiX className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {selectedStatus && selectedStatus !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  Status: {selectedStatus}
+                  <button
+                    type="button"
+                    onClick={() => handleFilterChange('status', '')}
+                    className="hover:text-blue-900 dark:hover:text-blue-100 cursor-pointer ml-0.5"
+                    title="Clear status filter"
+                  >
+                    <FiX className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer text-xs"
+            >
+              Clear all filters
+            </button>
+          </div>
+        )}
+
         {/* Content Area */}
         {loading ? (
           <TableSkeleton columns={isBulkMode ? 12 : 11} rows={7} />
@@ -1143,12 +1217,23 @@ const UsersList = () => {
           </div>
         ) : (
           <div className="relative z-10 bg-white/40 dark:bg-transparent border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl shadow-slate-500/30 dark:shadow-black/50 rounded-3xl overflow-hidden flex flex-col h-full isolate will-change-transform">
+            {/* Table Toolbar */}
+            <TableToolbar
+              columns={USER_COLUMNS}
+              visibleColumns={userColumnVisibility}
+              onToggleColumn={(colId, val) => updateTableColumnVisibility('users', colId, val)}
+              onResetColumns={() => resetTableColumnVisibility('users')}
+              totalCount={sortedUsers.length}
+              selectedCount={selectedUserIds.size}
+              className="border-b rounded-b-none border-x-0 border-t-0 bg-white/60 dark:bg-slate-900/60"
+            />
+
             <div className="overflow-auto custom-scrollbar max-h-[70vh]">
               <table className="w-full text-left border-collapse whitespace-nowrap min-w-200">
                 <thead className="sticky top-0 z-20 bg-white/60 dark:bg-slate-900/80 backdrop-blur-md shadow-xs dark:shadow-md border-b border-slate-200/80 dark:border-white/10">
                   <tr className="border-b border-slate-200/80 dark:border-white/10 text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
                     {isBulkMode && (
-                      <th className="p-3 text-center w-12">
+                      <th className={`p-3 text-center w-12 ${densityStyles.th}`}>
                         <input
                           type="checkbox"
                           checked={currentUsers.length > 0 && currentUsers.every((u) => selectedUserIds.has(u._id))}
@@ -1165,92 +1250,114 @@ const UsersList = () => {
                         />
                       </th>
                     )}
-                    <th className="p-3 font-bold text-center w-14">S.No</th>
+                    {isColVisible('sno') && (
+                      <th className={`p-3 font-bold text-center w-14 ${densityStyles.th}`}>S.No</th>
+                    )}
 
                     {/* Name Sort */}
-                    <th
-                      onClick={() => handleSortChange('name')}
-                      className="p-4 font-bold text-left cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span className={sortKey === 'name' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>User</span>
-                        {sortKey === 'name' ? (
-                          sortOrder === 'asc' ? <span className="text-blue-600 dark:text-blue-400">▲</span> : <span className="text-blue-600 dark:text-blue-400">▼</span>
-                        ) : (
-                          <span className="text-slate-400 dark:text-slate-500">⇅</span>
-                        )}
-                      </div>
-                    </th>
+                    {isColVisible('user') && (
+                      <th
+                        onClick={() => handleSortChange('name')}
+                        className={`p-4 font-bold text-left cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors ${densityStyles.th}`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className={sortKey === 'name' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>User</span>
+                          {sortKey === 'name' ? (
+                            sortOrder === 'asc' ? <span className="text-blue-600 dark:text-blue-400">▲</span> : <span className="text-blue-600 dark:text-blue-400">▼</span>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                          )}
+                        </div>
+                      </th>
+                    )}
 
                     {/* Employee Code */}
-                    <th
-                      onClick={() => handleSortChange('employeeCode')}
-                      className="p-4 font-bold text-left cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span className={sortKey === 'employeeCode' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>Emp Code</span>
-                        {sortKey === 'employeeCode' ? (
-                          sortOrder === 'asc' ? <span className="text-blue-600 dark:text-blue-400">▲</span> : <span className="text-blue-600 dark:text-blue-400">▼</span>
-                        ) : (
-                          <span className="text-slate-400 dark:text-slate-500">⇅</span>
-                        )}
-                      </div>
-                    </th>
+                    {isColVisible('employeeCode') && (
+                      <th
+                        onClick={() => handleSortChange('employeeCode')}
+                        className={`p-4 font-bold text-left cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors ${densityStyles.th}`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className={sortKey === 'employeeCode' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>Emp Code</span>
+                          {sortKey === 'employeeCode' ? (
+                            sortOrder === 'asc' ? <span className="text-blue-600 dark:text-blue-400">▲</span> : <span className="text-blue-600 dark:text-blue-400">▼</span>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                          )}
+                        </div>
+                      </th>
+                    )}
 
                     {/* Email */}
-                    <th className="p-4 font-bold text-left">Email</th>
+                    {isColVisible('email') && (
+                      <th className={`p-4 font-bold text-left ${densityStyles.th}`}>Email</th>
+                    )}
 
-                    <th className="p-4 font-bold text-center">Phone</th>
+                    {/* Phone */}
+                    {isColVisible('phone') && (
+                      <th className={`p-4 font-bold text-center ${densityStyles.th}`}>Phone</th>
+                    )}
 
                     {/* Role */}
-                    <th className="p-4 font-bold text-center">Role</th>
+                    {isColVisible('role') && (
+                      <th className={`p-4 font-bold text-center ${densityStyles.th}`}>Role</th>
+                    )}
 
                     {/* Assigned Companies */}
-                    <th
-                      onClick={() => handleSortChange('assignedCompanies')}
-                      className="p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
-                    >
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span className={sortKey === 'assignedCompanies' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>Companies</span>
-                        {sortKey === 'assignedCompanies' ? (
-                          sortOrder === 'asc' ? <span className="text-blue-600 dark:text-blue-400">▲</span> : <span className="text-blue-600 dark:text-blue-400">▼</span>
-                        ) : (
-                          <span className="text-slate-400 dark:text-slate-500">⇅</span>
-                        )}
-                      </div>
-                    </th>
+                    {isColVisible('assignedCompanies') && (
+                      <th
+                        onClick={() => handleSortChange('assignedCompanies')}
+                        className={`p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors ${densityStyles.th}`}
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span className={sortKey === 'assignedCompanies' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>Companies</span>
+                          {sortKey === 'assignedCompanies' ? (
+                            sortOrder === 'asc' ? <span className="text-blue-600 dark:text-blue-400">▲</span> : <span className="text-blue-600 dark:text-blue-400">▼</span>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                          )}
+                        </div>
+                      </th>
+                    )}
 
-                    <th className="p-4 font-bold text-center">Status</th>
+                    {/* Status */}
+                    {isColVisible('status') && (
+                      <th className={`p-4 font-bold text-center ${densityStyles.th}`}>Status</th>
+                    )}
 
                     {/* Last Login */}
-                    <th
-                      onClick={() => handleSortChange('lastLoginAt')}
-                      className="p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
-                    >
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span className={sortKey === 'lastLoginAt' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>Last Login</span>
-                        {sortKey === 'lastLoginAt' ? (
-                          sortOrder === 'asc' ? <span className="text-blue-600 dark:text-blue-400">▲</span> : <span className="text-blue-600 dark:text-blue-400">▼</span>
-                        ) : (
-                          <span className="text-slate-400 dark:text-slate-500">⇅</span>
-                        )}
-                      </div>
-                    </th>
+                    {isColVisible('lastLoginAt') && (
+                      <th
+                        onClick={() => handleSortChange('lastLoginAt')}
+                        className={`p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors ${densityStyles.th}`}
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span className={sortKey === 'lastLoginAt' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>Last Login</span>
+                          {sortKey === 'lastLoginAt' ? (
+                            sortOrder === 'asc' ? <span className="text-blue-600 dark:text-blue-400">▲</span> : <span className="text-blue-600 dark:text-blue-400">▼</span>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                          )}
+                        </div>
+                      </th>
+                    )}
 
                     {/* Created At */}
-                    <th
-                      onClick={() => handleSortChange('createdAt')}
-                      className="p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors"
-                    >
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span className={sortKey === 'createdAt' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>Created At</span>
-                        {sortKey === 'createdAt' ? (
-                          sortOrder === 'asc' ? <span className="text-blue-600 dark:text-blue-400">▲</span> : <span className="text-blue-600 dark:text-blue-400">▼</span>
-                        ) : (
-                          <span className="text-slate-400 dark:text-slate-500">⇅</span>
-                        )}
-                      </div>
-                    </th>
+                    {isColVisible('createdAt') && (
+                      <th
+                        onClick={() => handleSortChange('createdAt')}
+                        className={`p-4 font-bold text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors ${densityStyles.th}`}
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span className={sortKey === 'createdAt' ? 'text-blue-600 dark:text-blue-400 font-extrabold' : ''}>Created At</span>
+                          {sortKey === 'createdAt' ? (
+                            sortOrder === 'asc' ? <span className="text-blue-600 dark:text-blue-400">▲</span> : <span className="text-blue-600 dark:text-blue-400">▼</span>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500">⇅</span>
+                          )}
+                        </div>
+                      </th>
+                    )}
 
                     <th className="p-4 font-bold text-center">Actions</th>
                   </tr>
@@ -1273,7 +1380,7 @@ const UsersList = () => {
                           }`}
                         >
                           {isBulkMode && (
-                            <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <td className={`p-3 text-center ${densityStyles.td}`} onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={isSelected}
@@ -1282,91 +1389,106 @@ const UsersList = () => {
                               />
                             </td>
                           )}
-                          <td className="p-3 text-sm text-slate-500 dark:text-slate-400 text-center font-medium">
-                            {indexOfFirstUser + index + 1}
-                          </td>
+                          {isColVisible('sno') && (
+                            <td className={`p-3 text-slate-500 dark:text-slate-400 text-center font-medium ${densityStyles.td}`}>
+                              {indexOfFirstUser + index + 1}
+                            </td>
+                          )}
 
                           {/* Name & ID */}
-                          <td className="p-4 text-sm text-slate-900 dark:text-white font-medium">
-                            <div
-                              onClick={() => handleOpenUserDrawer(user)}
-                              className="flex items-center gap-3 cursor-pointer group"
-                            >
-                              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 !text-white flex items-center justify-center text-xs font-extrabold shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                                {initials}
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                    {fullName}
-                                  </span>
+                          {isColVisible('user') && (
+                            <td className={`p-4 text-slate-900 dark:text-white font-medium ${densityStyles.td}`}>
+                              <div
+                                onClick={() => handleOpenUserDrawer(user)}
+                                className="flex items-center gap-3 cursor-pointer group"
+                              >
+                                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 !text-white flex items-center justify-center text-xs font-extrabold shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                                  {initials}
                                 </div>
-                                <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
-                                  <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono font-medium">
-                                    {user._id}
-                                  </span>
-                                  <CopyButton text={user._id} />
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                      {fullName}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
+                                    <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono font-medium">
+                                      {user._id}
+                                    </span>
+                                    <CopyButton text={user._id} />
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </td>
+                            </td>
+                          )}
 
                           {/* Employee Code */}
-                          <td className="p-4 text-sm">
-                            {user.employeeCode ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 text-xs font-mono font-bold">
-                                <FiHash className="text-[10px] text-slate-400" />
-                                {user.employeeCode}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 text-xs font-mono">-</span>
-                            )}
-                          </td>
+                          {isColVisible('employeeCode') && (
+                            <td className={`p-4 ${densityStyles.td}`}>
+                              {user.employeeCode ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 text-xs font-mono font-bold">
+                                  <FiHash className="text-[10px] text-slate-400" />
+                                  {user.employeeCode}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 text-xs font-mono">-</span>
+                              )}
+                            </td>
+                          )}
 
                           {/* Email */}
-                          <td className="p-4 text-sm text-slate-700 dark:text-slate-300">
-                            <GmailLink email={user.email} />
-                          </td>
+                          {isColVisible('email') && (
+                            <td className={`p-4 text-slate-700 dark:text-slate-300 ${densityStyles.td}`}>
+                              <GmailLink email={user.email} />
+                            </td>
+                          )}
 
                           {/* Phone */}
-                          <td className="p-4 text-sm text-center text-slate-700 dark:text-slate-300 font-mono">
-                            {user.phone ? (
-                              <a
-                                href={`tel:${user.phone}`}
-                                className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                              >
-                                {user.phone}
-                              </a>
-                            ) : (
-                              <span className="text-slate-400 text-xs">-</span>
-                            )}
-                          </td>
+                          {isColVisible('phone') && (
+                            <td className={`p-4 text-center text-slate-700 dark:text-slate-300 font-mono ${densityStyles.td}`}>
+                              {user.phone ? (
+                                <a
+                                  href={`tel:${user.phone}`}
+                                  className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                >
+                                  {user.phone}
+                                </a>
+                              ) : (
+                                <span className="text-slate-400 text-xs">-</span>
+                              )}
+                            </td>
+                          )}
 
                           {/* Role */}
-                          <td className="p-4 text-sm text-center">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${getRoleBadgeClass(user.role)}`}>
-                              {formatRoleName(user.role)}
-                            </span>
-                          </td>
+                          {isColVisible('role') && (
+                            <td className={`p-4 text-center ${densityStyles.td}`}>
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${getRoleBadgeClass(user.role)}`}>
+                                {formatRoleName(user.role)}
+                              </span>
+                            </td>
+                          )}
 
                           {/* Assigned Companies */}
-                          <td className="p-4 text-sm text-center">
-                            {Array.isArray(user.assignedCompanyIds) && user.assignedCompanyIds.length > 0 ? (
-                              <span
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-blue-500/60 dark:bg-blue-500/10 text-white dark:text-blue-400 border border-blue-500/20"
-                                title={`${user.assignedCompanyIds.length} Assigned ${user.assignedCompanyIds.length === 1 ? 'Company' : 'Companies'}: ${user.assignedCompanyIds.join(', ')}`}
-                              >
-                                <FiBriefcase className="text-xs" />
-                                <span>{user.assignedCompanyIds.length} {user.assignedCompanyIds.length === 1 ? 'Company' : 'Companies'}</span>
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 dark:text-slate-500 text-xs font-mono">-</span>
-                            )}
-                          </td>
+                          {isColVisible('assignedCompanies') && (
+                            <td className={`p-4 text-center ${densityStyles.td}`}>
+                              {Array.isArray(user.assignedCompanyIds) && user.assignedCompanyIds.length > 0 ? (
+                                <span
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-blue-500/60 dark:bg-blue-500/10 text-white dark:text-blue-400 border border-blue-500/20"
+                                  title={`${user.assignedCompanyIds.length} Assigned ${user.assignedCompanyIds.length === 1 ? 'Company' : 'Companies'}: ${user.assignedCompanyIds.join(', ')}`}
+                                >
+                                  <FiBriefcase className="text-xs" />
+                                  <span>{user.assignedCompanyIds.length} {user.assignedCompanyIds.length === 1 ? 'Company' : 'Companies'}</span>
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 dark:text-slate-500 text-xs font-mono">-</span>
+                              )}
+                            </td>
+                          )}
 
                           {/* Status Toggle (PATCH /users/{id}/status) */}
-                          <td className="p-4 text-sm text-center">
-                            <StatusBadge
+                          {isColVisible('status') && (
+                            <td className={`p-4 text-center ${densityStyles.td}`}>
+                              <StatusBadge
                                 status={user.isActive ? 'ACTIVE' : 'INACTIVE'}
                                 size="xs"
                                 dot
@@ -1374,72 +1496,79 @@ const UsersList = () => {
                                 className="cursor-pointer hover:opacity-80"
                                 title={`Click to ${user.isActive ? 'deactivate' : 'activate'} user`}
                               />
-                          </td>
+                            </td>
+                          )}
 
                           {/* Last Login */}
-                          <td className="p-4 text-sm text-center font-medium">
-                            {user.lastLoginAt ? (
-                              <div className="flex flex-col items-center">
-                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                                  <FiClock className="text-blue-600 dark:text-blue-400 text-[11px]" />
-                                  {formatRelativeTime(user.lastLoginAt)}
-                                </span>
-                                <span className="text-[10px] text-slate-400 font-mono mt-0.5" title={new Date(user.lastLoginAt).toLocaleString()}>
-                                  {formatDateDDMMYYYY(user.lastLoginAt)}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-slate-400 dark:text-slate-500 text-xs font-mono">Never</span>
-                            )}
-                          </td>
+                          {isColVisible('lastLoginAt') && (
+                            <td className={`p-4 text-center font-medium ${densityStyles.td}`}>
+                              {user.lastLoginAt ? (
+                                <div className="flex flex-col items-center">
+                                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                                    <FiClock className="text-blue-600 dark:text-blue-400 text-[11px]" />
+                                    {formatRelativeTime(user.lastLoginAt)}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-mono mt-0.5" title={new Date(user.lastLoginAt).toLocaleString()}>
+                                    {formatDateDDMMYYYY(user.lastLoginAt)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 dark:text-slate-500 text-xs font-mono">Never</span>
+                              )}
+                            </td>
+                          )}
 
                           {/* Created At */}
-                          <td className="p-4 text-sm text-center font-medium">
-                            {user.createdAt ? (
-                              <div className="flex flex-col items-center">
-                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                                  <FiCalendar className="text-blue-600 dark:text-blue-400 text-[11px]" />
-                                  {formatDateDDMMYYYY(user.createdAt)}
-                                </span>
-                                <span className="text-[10px] text-slate-400 font-mono mt-0.5">
-                                  {formatDateTimeDDMMYYYY(user.createdAt).split(', ')[1] || ''}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-slate-400 text-xs font-mono">-</span>
-                            )}
-                          </td>
+                          {isColVisible('createdAt') && (
+                            <td className={`p-4 text-center font-medium ${densityStyles.td}`}>
+                              {user.createdAt ? (
+                                <div className="flex flex-col items-center">
+                                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                                    <FiCalendar className="text-blue-600 dark:text-blue-400 text-[11px]" />
+                                    {formatDateDDMMYYYY(user.createdAt)}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                    {formatDateTimeDDMMYYYY(user.createdAt).split(', ')[1] || ''}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 text-xs font-mono">-</span>
+                              )}
+                            </td>
+                          )}
 
-                          {/* Actions */}
-                          <td className="p-4 text-center">
-                            <div className="flex items-center justify-center">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenUserDrawer(user)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white dark:text-blue-400 bg-blue-500/75 dark:bg-blue-500/10 hover:bg-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                                title="View Details"
-                              >
-                                <FiEye size={13} />
-                                <span>View</span>
-                              </button>
-                            </div>
-                          </td>
+                          {/* Sticky Action Column Cell */}
+                          {isColVisible('actions') && (
+                            <td className={`p-4 text-center ${densityStyles.td}`}>
+                              <div className="flex items-center justify-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenUserDrawer(user)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white dark:text-blue-400 bg-blue-500/75 dark:bg-blue-500/10 hover:bg-blue-500/20 rounded-xl transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                                  title="View Details"
+                                >
+                                  <FiEye size={13} />
+                                  <span>View</span>
+                                </button>
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       );
                     })
                   ) : (
                     <tr>
-                        <td colSpan={isBulkMode ? 12 : 11} className="p-4 text-center">
-                          <EmptyState
-                            icon={FiUsers}
-                            title={searchTerm || selectedRole || selectedStatus || userTab !== 'all' ? 'No matching users found' : 'No users found'}
-                            description="Try clearing your search query or switching active filter tabs."
-                            actionText="Reset Filters"
-                            onAction={handleClearFilters}
-                            contained={false}
-                          />
-                        </td>
-                      </tr>
+                      <td colSpan={(isBulkMode ? 1 : 0) + USER_COLUMNS.filter(c => isColVisible(c.id)).length} className="p-4 text-center">
+                        <EmptyState
+                          icon={FiUsers}
+                          title={searchTerm || selectedRole || selectedStatus || userTab !== 'all' ? 'No matching users found' : 'No users found'}
+                          description="Try clearing your search query or switching active filter tabs."
+                          actionText="Reset Filters"
+                          onAction={handleClearFilters}
+                          contained={false}
+                        />
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>

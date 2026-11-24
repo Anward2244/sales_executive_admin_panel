@@ -83,6 +83,28 @@ export const formatCurrency = (amount, includeSymbol = true) => {
 };
 
 /**
+ * Formats monetary amounts into compact Indian currency format (e.g. ₹1.50 Cr, ₹25.40 L, ₹50 K)
+ */
+export const formatCompactCurrency = (amount, includeSymbol = true) => {
+  const num = Number(amount);
+  if (isNaN(num) || num === 0) return includeSymbol ? '₹0' : '0';
+  const prefix = includeSymbol ? '₹' : '';
+  const abs = Math.abs(num);
+  const sign = num < 0 ? '-' : '';
+
+  if (abs >= 10000000) {
+    return `${sign}${prefix}${(abs / 10000000).toFixed(2)} Cr`;
+  }
+  if (abs >= 100000) {
+    return `${sign}${prefix}${(abs / 100000).toFixed(2)} L`;
+  }
+  if (abs >= 10000) {
+    return `${sign}${prefix}${(abs / 1000).toFixed(1)} K`;
+  }
+  return `${sign}${prefix}${abs.toLocaleString('en-IN')}`;
+};
+
+/**
  * Capitalizes first letter of each word (Title Case)
  */
 export const formatTitleCase = (val) => {

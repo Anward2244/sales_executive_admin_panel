@@ -24,7 +24,7 @@ import {
   reviewFirmApi,
   getCompaniesApi
 } from '@/api/axios';
-import { formatEntityCode, formatPhone, formatGSTIN, formatPincode } from '@/utils/formatters';
+import { formatEntityCode, formatPhone, formatGSTIN, formatPincode, formatCompactCurrency } from '@/utils/formatters';
 import { validateEntityCode, validatePhone, validateEmail, validateGSTIN, validatePincode } from '@/utils/validators';
 import { SegmentedTabs, StatusBadge } from '@/components/ui';
 
@@ -857,8 +857,11 @@ const FirmOnboarding = () => {
               <FiDollarSign size={18} />
             </div>
           </div>
-          <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
-            ₹{stats.totalCredit.toLocaleString('en-IN')}
+          <p
+            className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono"
+            title={`₹${stats.totalCredit.toLocaleString('en-IN')}`}
+          >
+            {formatCompactCurrency(stats.totalCredit)}
           </p>
           <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Total requested credit</p>
         </div>
