@@ -982,7 +982,7 @@ const Layout = () => {
           {/* Mobile Profile Dropdown */}
           <div className="relative" ref={mobileProfileDropdownRef}>
             <div
-              className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center !text-white font-bold text-xs shadow-inner cursor-pointer select-none active:scale-95 transition-transform border border-slate-200/80 dark:border-white/10 shrink-0"
+              className="w-8 h-8 bg-white rounded-full overflow-hidden flex items-center justify-center !text-white font-bold text-xs shadow-inner cursor-pointer select-none active:scale-95 transition-transform border border-slate-200/80 dark:border-white/10 shrink-0"
               onClick={() => {
                 setIsProfileDropdownOpen(!isProfileDropdownOpen);
                 setIsNotificationsDropdownOpen(false);
@@ -1008,7 +1008,7 @@ const Layout = () => {
                   : 'bg-white/40 border-slate-200/90 shadow-slate-900/15'
                 }`}>
                 <div className={`px-4 py-2.5 border-b mb-1 flex items-center gap-2.5 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xs shadow-inner shrink-0 border border-slate-200/80 dark:border-white/10">
+                  <div className="w-8 h-8 bg-white rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xs shadow-inner shrink-0 border border-slate-200/80 dark:border-white/10">
                     {userAvatar && !mobileImgError ? (
                       <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
                     ) : (
@@ -1598,7 +1598,7 @@ const Layout = () => {
                   setIsNotificationsDropdownOpen(false);
                 }}
               >
-                <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center !text-white font-bold text-xs shadow-inner shrink-0 border border-slate-200/80 dark:border-white/10">
+                <div className="w-8 h-8 bg-white rounded-full overflow-hidden flex items-center justify-center !text-white font-bold text-xs shadow-inner shrink-0 border border-slate-200/80 dark:border-white/10">
                   {userAvatar && !headerImgError ? (
                     <img
                       src={userAvatar}
@@ -1628,7 +1628,7 @@ const Layout = () => {
                     : 'bg-white/10 border-slate-200 shadow-slate-900/40'
                   }`}>
                   <div className={`px-4 py-2.5 border-b mb-1 flex items-center gap-2.5 ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
-                    <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xs shadow-inner shrink-0 border border-slate-200/80 dark:border-white/10">
+                    <div className="w-8 h-8 bg-white rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xs shadow-inner shrink-0 border border-slate-200/80 dark:border-white/10">
                       {userAvatar && !headerImgError ? (
                         <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
                       ) : (

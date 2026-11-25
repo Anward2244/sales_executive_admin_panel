@@ -27,6 +27,7 @@ import {
 import { formatEntityCode, formatPhone, formatGSTIN, formatPincode, formatCompactCurrency } from '@/utils/formatters';
 import { validateEntityCode, validatePhone, validateEmail, validateGSTIN, validatePincode } from '@/utils/validators';
 import { SegmentedTabs, StatusBadge } from '@/components/ui';
+import { getPollingInterval, isPollingEnabled } from '@/utils/browserNotifications';
 
 const INITIAL_ONBOARD_FORM = {
   companyId: '',
@@ -143,6 +144,20 @@ const FirmOnboarding = () => {
   // Live Polling State
   const [isPollingActive, setIsPollingActive] = useState(true);
   const [lastPolledAt, setLastPolledAt] = useState(null);
+  const [pollingConfigVersion, setPollingConfigVersion] = useState(0);
+
+  useEffect(() => {
+    const handleSettingsChange = () => setPollingConfigVersion((v) => v + 1);
+    window.addEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+    window.addEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    return () => {
+      window.removeEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+      window.removeEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    };
+  }, []);
+
+  const onboardingIntervalMs = getPollingInterval('firmOnboarding', 15);
+  const onboardingIntervalSec = Math.round(onboardingIntervalMs / 1000);
 
   // Fetch Onboarding Requests
   const fetchRequests = useCallback(async (isSilent = false) => {
@@ -189,18 +204,31 @@ const FirmOnboarding = () => {
     fetchRequests();
   }, [fetchRequests]);
 
-  // Background polling for real-time requests (every 15s)
+  // Background polling for real-time requests
   useEffect(() => {
-    if (!isPollingActive) return;
+    if (!isPollingActive || !isPollingEnabled('firmOnboarding')) return;
 
     const intervalId = setInterval(() => {
+      if (document.hidden) return;
       fetchRequests(true).then(() => {
         setLastPolledAt(new Date());
       });
-    }, 15000);
+    }, onboardingIntervalMs);
 
-    return () => clearInterval(intervalId);
-  }, [isPollingActive, fetchRequests]);
+    const onFocus = () => {
+      if (isPollingEnabled('firmOnboarding')) {
+        fetchRequests(true).then(() => {
+          setLastPolledAt(new Date());
+        });
+      }
+    };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [isPollingActive, fetchRequests, onboardingIntervalMs, pollingConfigVersion]);
 
   // Load Companies
   useEffect(() => {
@@ -738,28 +766,30 @@ const FirmOnboarding = () => {
             <button
               type="button"
               onClick={() => setIsPollingActive((prev) => !prev)}
-              className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 ${isPollingActive
+              className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 ${
+                isPollingActive && isPollingEnabled('firmOnboarding')
                   ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
                   : 'border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'
                 }`}
               title={
-                isPollingActive
-                  ? `Live polling active (every 15s). Click to pause.${lastPolledAt ? ` Last checked at ${lastPolledAt.toLocaleTimeString()}` : ''
+                isPollingActive && isPollingEnabled('firmOnboarding')
+                  ? `Live polling active (every ${onboardingIntervalSec}s). Click to pause.${lastPolledAt ? ` Last checked at ${lastPolledAt.toLocaleTimeString()}` : ''
                   }`
                   : 'Polling paused. Click to resume auto-polling.'
               }
             >
               <span className="relative flex h-2 w-2">
-                {isPollingActive && (
+                {isPollingActive && isPollingEnabled('firmOnboarding') && (
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 )}
                 <span
-                  className={`relative inline-flex rounded-full h-2 w-2 ${isPollingActive ? 'bg-emerald-500' : 'bg-slate-400'
+                  className={`relative inline-flex rounded-full h-2 w-2 ${
+                    isPollingActive && isPollingEnabled('firmOnboarding') ? 'bg-emerald-500' : 'bg-slate-400'
                     }`}
                 ></span>
               </span>
               <span className="text-[11px] font-mono font-bold">
-                {isPollingActive ? 'Live (15s)' : 'Paused'}
+                {isPollingActive && isPollingEnabled('firmOnboarding') ? `Live (${onboardingIntervalSec}s)` : 'Paused'}
               </span>
             </button>
 

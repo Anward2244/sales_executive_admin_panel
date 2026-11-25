@@ -55,6 +55,7 @@ import Card from '@/components/ui/Card';
 import CopyButton from '@/components/ui/CopyButton';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY, getDayName } from '@/utils/dateUtils';
 import { BiRupee } from 'react-icons/bi';
+import { getPollingInterval, isPollingEnabled } from '@/utils/browserNotifications';
 
 // High-performance SVG Sparkline for Micro-Trend Visualizations
 const MiniSparkline = ({ data = [], color = '#10b981', height = 26, id = 'spark' }) => {
@@ -387,16 +388,42 @@ const Dashboard = () => {
     }
   }, []);
 
+  const [pollingConfigVersion, setPollingConfigVersion] = useState(0);
+
+  useEffect(() => {
+    const handleSettingsChange = () => setPollingConfigVersion((v) => v + 1);
+    window.addEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+    window.addEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    return () => {
+      window.removeEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+      window.removeEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    };
+  }, []);
+
   useEffect(() => {
     fetchDashboardMetrics();
 
-    // Auto-refresh every 30 seconds
-    const intervalId = setInterval(() => {
-      fetchDashboardMetrics(true);
-    }, 30000);
+    if (!isPollingEnabled('dashboard')) return;
 
-    return () => clearInterval(intervalId);
-  }, [fetchDashboardMetrics]);
+    // Auto-refresh using configured interval (defaults to 30s)
+    const intervalMs = getPollingInterval('dashboard', 30);
+    const intervalId = setInterval(() => {
+      if (document.hidden) return;
+      fetchDashboardMetrics(true);
+    }, intervalMs);
+
+    const onFocus = () => {
+      if (isPollingEnabled('dashboard')) {
+        fetchDashboardMetrics(true);
+      }
+    };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [fetchDashboardMetrics, pollingConfigVersion]);
 
   // Derived Summary & Active Entities Metrics
   const summary = dashboardData?.summary || {};
@@ -1995,7 +2022,7 @@ const Dashboard = () => {
 
           {/* Slide-Over Drawer Container (Pinned to Right) */}
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-6 md:pl-10">
-            <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10 backdrop-blur-2xl">
+            <div className="w-screen max-w-full sm:max-w-2xl md:max-w-3xl bg-white/40 dark:bg-slate-950/25 border-l border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 z-10">
               {/* 1. Sticky Drawer Header */}
               <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0">
                 <div className="flex items-center justify-between gap-2.5">

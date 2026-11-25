@@ -19,10 +19,22 @@ export const DEFAULT_NOTIFICATION_SETTINGS = {
   quietHoursStart: '22:00',
   quietHoursEnd: '07:00',
   categories: {
-    orders: true
+    orders: true,
+    dashboard: true,
+    users: true,
+    firmOnboarding: true,
+    firmAdminOnboarding: true,
+    notifications: true,
+    emailNotifications: true
   },
   pollingIntervals: {
-    orders: 30         // seconds (Purchase Orders & Dispatch)
+    orders: 30,              // seconds (Purchase Orders & Dispatch)
+    dashboard: 30,           // seconds (Dashboard Metrics)
+    users: 15,               // seconds (Users List)
+    firmOnboarding: 15,      // seconds (Firm Onboarding Requests)
+    firmAdminOnboarding: 15, // seconds (Firm Admin Onboarding & Creators)
+    notifications: 15,       // seconds (In-App Notifications)
+    emailNotifications: 20   // seconds (Email Logs & Queues)
   }
 };
 
@@ -75,8 +87,23 @@ export const saveNotificationSettings = (settings) => {
 
 export const getPollingInterval = (categoryKey, fallbackSeconds = 30) => {
   const settings = getNotificationSettings();
-  const val = settings.pollingIntervals?.[categoryKey];
+  let val = settings.pollingIntervals?.[categoryKey];
+  if (val === undefined && categoryKey === 'onboarding') {
+    val = settings.pollingIntervals?.firmOnboarding;
+  }
   return (typeof val === 'number' && val >= 5) ? val * 1000 : fallbackSeconds * 1000;
+};
+
+export const isPollingEnabled = (categoryKey) => {
+  const settings = getNotificationSettings();
+  if (!categoryKey) return true;
+  if (settings.categories && settings.categories[categoryKey] === false) {
+    return false;
+  }
+  if (categoryKey === 'onboarding' && settings.categories && settings.categories.firmOnboarding === false) {
+    return false;
+  }
+  return true;
 };
 
 export const isBrowserAlertsEnabled = () => {

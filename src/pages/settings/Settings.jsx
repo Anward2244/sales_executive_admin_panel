@@ -42,8 +42,14 @@ import {
   FiLock,
   FiUnlock,
   FiGlobe,
-  FiTerminal
+  FiTerminal,
+  FiBriefcase,
+  FiUserCheck,
+  FiMail,
+  FiPlay,
+  FiPause
 } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmationContext';
@@ -59,7 +65,9 @@ import {
   playNotificationSound,
   isQuietHoursActive,
   isSecureOrigin,
-  DEFAULT_NOTIFICATION_SETTINGS
+  DEFAULT_NOTIFICATION_SETTINGS,
+  isPollingEnabled,
+  getPollingInterval
 } from '@/utils/browserNotifications';
 import {
   useDisplayPreferences,
@@ -67,6 +75,89 @@ import {
   DEFAULT_DISPLAY_PREFERENCES
 } from '@/utils/displayPreferences';
 import appIconImg from '@/assets/whatnot_icon.png';
+
+const POLLING_CHANNELS = [
+  {
+    key: 'dashboard',
+    label: 'Dashboard Metrics',
+    moduleBadge: 'Dashboard',
+    route: '/dashboard',
+    desc: 'Real-time telemetry for revenue charts, order counts, company distributions, and sales executive rankings.',
+    icon: FiActivity,
+    color: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+    defaultInterval: 30
+  },
+  {
+    key: 'users',
+    label: 'Users & Team Accounts',
+    moduleBadge: 'Users',
+    route: '/users',
+    desc: 'Live tracking of user accounts, team member statuses, roles, and latest activity timestamps.',
+    icon: FiUsers,
+    color: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+    defaultInterval: 15
+  },
+  {
+    key: 'firmOnboarding',
+    aliasKey: 'onboarding',
+    label: 'Firm Onboarding Requests',
+    moduleBadge: 'Firm Onboarding',
+    route: '/firms/onboarding',
+    desc: 'Monitors incoming onboarding requests, verification statuses, and pending action badges.',
+    icon: FiBriefcase,
+    color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+    defaultInterval: 15
+  },
+  {
+    key: 'firmAdminOnboarding',
+    label: 'Admin Onboarding & Creators',
+    moduleBadge: 'Admin Onboard',
+    route: '/firms/admin-onboard',
+    desc: 'Real-time telemetry for admin direct onboarding, company distributions, and sales creator analytics.',
+    icon: FiUserCheck,
+    color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+    defaultInterval: 15
+  },
+  {
+    key: 'notifications',
+    label: 'In-App Notifications',
+    moduleBadge: 'Alerts',
+    route: '/notifications',
+    desc: 'Live delivery of system announcements, purchase order events, and unread bell badge counts.',
+    icon: FiBell,
+    color: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+    defaultInterval: 15
+  },
+  {
+    key: 'emailNotifications',
+    label: 'Email Logs & Dispatch Queues',
+    moduleBadge: 'Email Logs',
+    route: '/notifications/email',
+    desc: 'Tracks sent, failed, and queued transactional emails, recipients, and dispatch diagnostics.',
+    icon: FiMail,
+    color: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+    defaultInterval: 20
+  },
+  {
+    key: 'orders',
+    label: 'Purchase Orders & Dispatch',
+    moduleBadge: 'Orders',
+    route: '/orders',
+    desc: 'Real-time alerts when sales reps create POs or when dispatch approvals occur.',
+    icon: FiShoppingBag,
+    color: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+    defaultInterval: 30
+  }
+];
+
+const POLLING_INTERVAL_OPTIONS = [
+  { value: 10, label: '10s (High-Frequency)' },
+  { value: 15, label: '15s (Realtime)' },
+  { value: 20, label: '20s (Fast)' },
+  { value: 30, label: '30s (Default)' },
+  { value: 60, label: '60s (Standard)' },
+  { value: 120, label: '2 mins (Eco)' }
+];
 
 const getInitialStorage = () => {
   try {
@@ -88,6 +179,7 @@ const getInitialStorage = () => {
 };
 
 const Settings = () => {
+  const navigate = useNavigate();
   const { setTheme, toggleTheme, isDark } = useTheme();
   const { user } = useAuth();
   const confirmModal = useConfirm();
@@ -159,16 +251,83 @@ const Settings = () => {
 
   // Handle Polling interval change
   const handleIntervalChange = (categoryKey, seconds) => {
+    const updatedIntervals = {
+      ...notificationConfig.pollingIntervals,
+      [categoryKey]: Number(seconds)
+    };
+    // Also sync alias if present (e.g. firmOnboarding -> onboarding)
+    const channel = POLLING_CHANNELS.find((c) => c.key === categoryKey);
+    if (channel?.aliasKey) {
+      updatedIntervals[channel.aliasKey] = Number(seconds);
+    }
+
     const updated = {
       ...notificationConfig,
-      pollingIntervals: {
-        ...notificationConfig.pollingIntervals,
-        [categoryKey]: Number(seconds)
-      }
+      pollingIntervals: updatedIntervals
     };
     const saved = saveNotificationSettings(updated);
     setNotificationConfig(saved);
     triggerFeedback(`Refresh interval for ${categoryKey} set to ${seconds}s`);
+  };
+
+  // Bulk set all polling intervals via presets (e.g., 10s, 15s, 30s, 60s)
+  const handleBulkPollingPreset = (presetSec) => {
+    const updatedIntervals = { ...notificationConfig.pollingIntervals };
+    POLLING_CHANNELS.forEach((ch) => {
+      updatedIntervals[ch.key] = Number(presetSec);
+      if (ch.aliasKey) {
+        updatedIntervals[ch.aliasKey] = Number(presetSec);
+      }
+    });
+    const updated = {
+      ...notificationConfig,
+      pollingIntervals: updatedIntervals
+    };
+    const saved = saveNotificationSettings(updated);
+    setNotificationConfig(saved);
+    triggerFeedback(`All polling intervals set to ${presetSec}s preset`);
+  };
+
+  // Toggle all polling channels on or off simultaneously
+  const handleToggleAllPolling = (enable) => {
+    const updatedCategories = { ...notificationConfig.categories };
+    POLLING_CHANNELS.forEach((ch) => {
+      updatedCategories[ch.key] = enable;
+      if (ch.aliasKey) {
+        updatedCategories[ch.aliasKey] = enable;
+      }
+    });
+    const updated = {
+      ...notificationConfig,
+      categories: updatedCategories
+    };
+    const saved = saveNotificationSettings(updated);
+    setNotificationConfig(saved);
+    triggerFeedback(`All background data polling ${enable ? 'resumed' : 'paused'}`);
+  };
+
+  // Reset polling channels to recommended factory defaults
+  const handleResetPollingDefaults = () => {
+    const updatedIntervals = { ...notificationConfig.pollingIntervals };
+    const updatedCategories = { ...notificationConfig.categories };
+    POLLING_CHANNELS.forEach((ch) => {
+      updatedIntervals[ch.key] = ch.defaultInterval;
+      if (ch.aliasKey) {
+        updatedIntervals[ch.aliasKey] = ch.defaultInterval;
+      }
+      updatedCategories[ch.key] = true;
+      if (ch.aliasKey) {
+        updatedCategories[ch.aliasKey] = true;
+      }
+    });
+    const updated = {
+      ...notificationConfig,
+      categories: updatedCategories,
+      pollingIntervals: updatedIntervals
+    };
+    const saved = saveNotificationSettings(updated);
+    setNotificationConfig(saved);
+    triggerFeedback('Polling channels reset to default intervals');
   };
 
   // Refresh browser permission status
@@ -1231,29 +1390,79 @@ const Settings = () => {
               : 'bg-white/40 border-slate-200/80 shadow-lg shadow-slate-500/30'
               }`}
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                  <FiClock className="text-blue-500" /> Category Channels & Polling Intervals
+                  <FiClock className="text-blue-500" /> Module Auto-Polling & Data Channels
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Granularly subscribe to business events and tune background check intervals
+                  Granularly configure background check frequencies and toggle auto-refresh for each module
                 </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span>
+                    {POLLING_CHANNELS.filter(c => notificationConfig.categories?.[c.key] !== false).length} / {POLLING_CHANNELS.length} Active
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleResetPollingDefaults}
+                  className="px-2.5 py-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white font-semibold text-xs transition-colors cursor-pointer"
+                  title="Reset polling channels to default intervals"
+                >
+                  Reset Defaults
+                </button>
               </div>
             </div>
 
-            <div className="max-w-md">
+            {/* Quick Global Preset Pills */}
+            <div className="flex items-center gap-2 flex-wrap mb-4 pb-3 border-b border-slate-200/60 dark:border-white/5 text-xs">
+              <span className="text-[11px] font-bold uppercase text-slate-400">Quick Presets:</span>
               {[
-                {
-                  key: 'orders',
-                  label: 'Purchase Orders & Dispatch',
-                  desc: 'Real-time alerts when sales reps create POs or when dispatch approvals occur.',
-                  icon: FiShoppingBag,
-                  color: 'text-blue-500 bg-blue-500/10 border-blue-500/20'
-                }
-              ].map((cat) => {
+                { label: '10s (Fast)', sec: 10 },
+                { label: '15s (Realtime)', sec: 15 },
+                { label: '30s (Default)', sec: 30 },
+                { label: '60s (Eco)', sec: 60 }
+              ].map((p) => (
+                <button
+                  key={p.sec}
+                  type="button"
+                  onClick={() => handleBulkPollingPreset(p.sec)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-semibold text-[11px] transition-colors cursor-pointer"
+                >
+                  {p.label}
+                </button>
+              ))}
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleToggleAllPolling(true)}
+                  className="px-2.5 py-1 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-bold text-[11px] transition-colors cursor-pointer"
+                >
+                  Enable All
+                </button>
+                <span className="text-slate-300 dark:text-white/20">|</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleAllPolling(false)}
+                  className="px-2.5 py-1 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 font-bold text-[11px] transition-colors cursor-pointer"
+                >
+                  Pause All
+                </button>
+              </div>
+            </div>
+
+            {/* 7 Channels Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {POLLING_CHANNELS.map((cat) => {
                 const isEnabled = notificationConfig.categories?.[cat.key] !== false;
-                const interval = notificationConfig.pollingIntervals?.[cat.key] || 30;
+                const interval = notificationConfig.pollingIntervals?.[cat.key] || cat.defaultInterval;
                 const IconComponent = cat.icon;
 
                 return (
@@ -1268,14 +1477,28 @@ const Settings = () => {
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className={`p-1.5 rounded-lg border ${cat.color}`}>
-                            <IconComponent className="text-sm" />
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`p-2 rounded-xl border shrink-0 ${cat.color}`}>
+                            <IconComponent className="text-base" />
                           </div>
-                          <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                            {cat.label}
-                          </span>
+                          <div className="min-w-0">
+                            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white block truncate">
+                              {cat.label}
+                            </span>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <button
+                                type="button"
+                                onClick={() => navigate(cat.route)}
+                                className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                                title={`Navigate to ${cat.pageName}`}
+                              >
+                                <span>{cat.moduleBadge}</span>
+                                <FiExternalLink className="text-[9px]" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
+
                         <button
                           type="button"
                           onClick={() => handleCategoryToggle(cat.key)}
@@ -1283,6 +1506,7 @@ const Settings = () => {
                             }`}
                           role="switch"
                           aria-checked={isEnabled}
+                          title={isEnabled ? 'Click to pause auto-polling' : 'Click to enable auto-polling'}
                         >
                           <span
                             className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${isEnabled ? 'translate-x-4' : 'translate-x-0'
@@ -1290,26 +1514,34 @@ const Settings = () => {
                           />
                         </button>
                       </div>
+
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-3 leading-snug">
                         {cat.desc}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-white/5">
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                        Frequency:
-                      </span>
-                      <div className="w-[130px]">
+                    <div className="flex items-center justify-between pt-2.5 border-t border-slate-200/60 dark:border-white/5 gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="relative flex h-2 w-2 shrink-0">
+                          {isEnabled && (
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          )}
+                          <span
+                            className={`relative inline-flex rounded-full h-2 w-2 ${isEnabled ? 'bg-emerald-500' : 'bg-slate-400'
+                              }`}
+                          ></span>
+                        </span>
+                        <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                          {isEnabled ? `${interval}s` : 'Paused'}
+                        </span>
+                      </div>
+
+                      <div className="w-[140px] shrink-0">
                         <CustomDropdown
                           value={interval}
                           disabled={!isEnabled}
                           onChange={(val) => handleIntervalChange(cat.key, Number(val))}
-                          options={[
-                            { value: 15, label: '15s (Realtime)' },
-                            { value: 30, label: '30s (Default)' },
-                            { value: 60, label: '60s (Standard)' },
-                            { value: 120, label: '2 mins (Eco)' }
-                          ]}
+                          options={POLLING_INTERVAL_OPTIONS}
                           statusColor="!py-1 !px-2.5 text-xs font-bold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white"
                         />
                       </div>

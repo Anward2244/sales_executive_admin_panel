@@ -147,9 +147,30 @@ const Categories = () => {
     if (formError) setFormError('');
   };
 
+  // Open & Close Category Form with smooth transition
+  const openForm = (editCategory = null) => {
+    setIsFormOpen(true);
+    if (!editCategory && editingId) {
+      cancelEdit();
+    }
+  };
+
+  const closeForm = () => {
+    setIsFormOpen(false);
+    cancelEdit();
+  };
+
+  const toggleForm = () => {
+    if (isFormOpen) {
+      closeForm();
+    } else {
+      openForm();
+    }
+  };
+
   // Start editing a category
   const handleEdit = async (category) => {
-    setIsFormOpen(true);
+    openForm(category);
     setEditingId(category._id);
     setFormError('');
     setIsCodeManuallyEdited(true);
@@ -326,25 +347,6 @@ const Categories = () => {
 
             <button
               type="button"
-              onClick={() => {
-                setIsFormOpen((prev) => !prev);
-                if (isFormOpen && editingId) {
-                  cancelEdit();
-                }
-              }}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer shadow-xs shrink-0 ${
-                isFormOpen
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-blue-500/20'
-                  : 'bg-white/80 dark:bg-slate-900/80 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-blue-600 hover:border-blue-500/30'
-              }`}
-              title={isFormOpen ? 'Hide category form' : 'Open category form'}
-            >
-              <FiPlus className={`text-sm transition-transform duration-200 ${isFormOpen ? 'rotate-45' : ''}`} />
-              <span>{isFormOpen ? 'Hide Form' : 'New Category'}</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => fetchCategories(true)}
               disabled={refreshing || loading}
               className="p-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:border-blue-500/40 transition-all cursor-pointer shadow-xs disabled:opacity-50 shrink-0"
@@ -356,12 +358,17 @@ const Categories = () => {
         }
       />
 
-      {/* Main Grid: Form (Left) & Categories List (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* Main Container: Form (Left) & Categories List (Right) with Smooth CSS Transition */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Left Column: Create / Edit Form Card */}
-        {isFormOpen && (
-          <div className="lg:col-span-4 animate-in fade-in duration-200">
-            <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xl rounded-3xl p-6 transition-all">
+        <div
+          className={`w-full overflow-hidden transition-all duration-300 ease-in-out ${
+            isFormOpen
+              ? 'max-h-[1400px] opacity-100 scale-100 lg:w-[380px] xl:w-[420px] shrink-0 mb-2 lg:mb-0'
+              : 'max-h-0 opacity-0 scale-95 pointer-events-none lg:w-0 shrink-0 mb-0'
+          }`}
+        >
+          <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-xl rounded-3xl p-6 transition-all min-w-[320px]">
             <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200/80 dark:border-white/10">
               <div className="flex items-center gap-3">
                 <div
@@ -381,15 +388,15 @@ const Categories = () => {
                   </p>
                 </div>
               </div>
-              {editingId && (
-                <button
-                  type="button"
-                  onClick={cancelEdit}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
-                >
-                  Cancel
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={closeForm}
+                className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-all flex items-center gap-1 cursor-pointer"
+                title="Close form"
+              >
+                <FiX size={14} />
+                <span>Close</span>
+              </button>
             </div>
 
             {/* Form Error Alert */}
@@ -500,7 +507,7 @@ const Categories = () => {
                 {editingId && (
                   <button
                     type="button"
-                    onClick={cancelEdit}
+                    onClick={closeForm}
                     disabled={isSubmitting}
                     className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl transition-all text-sm cursor-pointer"
                     title="Cancel Edit"
@@ -512,46 +519,78 @@ const Categories = () => {
             </form>
           </div>
         </div>
-      )}
 
-      {/* Right Column: Categories List & Filter Table */}
-      <div className={`${isFormOpen ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-4 transition-all duration-300`}>
+        {/* Right Column: Categories List & Filter Table with Smooth Flex Transition */}
+        <div className="flex-1 min-w-0 w-full space-y-4 transition-all duration-300 ease-in-out">
           {/* Action and Filter Toolbar */}
-          <div className="flex items-center justify-between bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2.5 sm:p-2 rounded-2xl sm:rounded-full border border-slate-200/80 dark:border-white/10 shadow-xs">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl p-2.5 sm:p-2 rounded-2xl sm:rounded-full border border-slate-200/80 dark:border-white/10 shadow-xs">
             {/* Status Segmented Tabs */}
-            <SegmentedTabs
-              tabs={[
-                {
-                  id: 'all',
-                  label: 'All',
-                  count: countsByTab.all,
-                  bg: 'bg-blue-600',
-                  badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
-                  activeBadgeClass: 'bg-blue-800'
-                },
-                {
-                  id: 'active',
-                  label: 'Active',
-                  count: countsByTab.active,
-                  bg: 'bg-emerald-600',
-                  badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-                  activeBadgeClass: 'bg-emerald-800'
-                },
-                {
-                  id: 'inactive',
-                  label: 'Inactive',
-                  count: countsByTab.inactive,
-                  bg: 'bg-rose-600',
-                  badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
-                  activeBadgeClass: 'bg-rose-800'
-                }
-              ]}
-              activeTab={statusFilter}
-              onChange={(tabId) => {
-                setStatusFilter(tabId);
-                setCurrentPage(1);
-              }}
-            />
+            <div className="w-full sm:w-auto min-w-0">
+              <SegmentedTabs
+                tabs={[
+                  {
+                    id: 'all',
+                    label: 'All',
+                    count: countsByTab.all,
+                    bg: 'bg-blue-600',
+                    badgeClass: 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400',
+                    activeBadgeClass: 'bg-blue-800'
+                  },
+                  {
+                    id: 'active',
+                    label: 'Active',
+                    count: countsByTab.active,
+                    bg: 'bg-emerald-600',
+                    badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+                    activeBadgeClass: 'bg-emerald-800'
+                  },
+                  {
+                    id: 'inactive',
+                    label: 'Inactive',
+                    count: countsByTab.inactive,
+                    bg: 'bg-rose-600',
+                    badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+                    activeBadgeClass: 'bg-rose-800'
+                  }
+                ]}
+                activeTab={statusFilter}
+                onChange={(tabId) => {
+                  setStatusFilter(tabId);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+
+            {/* New / Edit Category Toggle Button */}
+            <button
+              type="button"
+              onClick={toggleForm}
+              className={`flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 text-xs font-bold rounded-xl sm:rounded-full border transition-all cursor-pointer shadow-xs shrink-0 ${
+                isFormOpen
+                  ? editingId
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-amber-500/20'
+                    : 'bg-blue-600 text-white border-blue-600 shadow-blue-500/20'
+                  : 'bg-white/80 dark:bg-slate-900/80 border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-blue-600 hover:border-blue-500/30'
+              }`}
+              title={isFormOpen ? 'Hide category form' : editingId ? 'Edit category form' : 'Open category form'}
+            >
+              {isFormOpen ? (
+                <>
+                  <FiX className="text-sm" />
+                  <span>Hide Form</span>
+                </>
+              ) : editingId ? (
+                <>
+                  <FiEdit2 className="text-sm" />
+                  <span>Edit Category</span>
+                </>
+              ) : (
+                <>
+                  <FiPlus className="text-sm" />
+                  <span>New Category</span>
+                </>
+              )}
+            </button>
           </div>
 
           {/* Table Container */}

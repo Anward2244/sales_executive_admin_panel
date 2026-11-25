@@ -41,6 +41,7 @@ import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import { validateEmail } from '@/utils/validators';
 import { useToast } from '@/context/ToastContext';
+import { getPollingInterval, isPollingEnabled } from '@/utils/browserNotifications';
 
 const EmailNotifications = () => {
   const navigate = useNavigate();
@@ -52,6 +53,17 @@ const EmailNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [pollingConfigVersion, setPollingConfigVersion] = useState(0);
+
+  useEffect(() => {
+    const handleSettingsChange = () => setPollingConfigVersion((v) => v + 1);
+    window.addEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+    window.addEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    return () => {
+      window.removeEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+      window.removeEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    };
+  }, []);
 
   // Pagination state
   const { preferences: displayPrefs } = useDisplayPreferences();
@@ -259,14 +271,20 @@ const EmailNotifications = () => {
     initialFetch();
     initialFetchRecipients();
 
-    // Background polling every 20 seconds
+    // Background polling with configured interval
+    const pollInterval = getPollingInterval('emailNotifications', 20);
     const pollTimer = setInterval(() => {
-      fetchEmailLogs(false, true);
-    }, 20000);
+      if (document.hidden) return;
+      if (isPollingEnabled('emailNotifications')) {
+        fetchEmailLogs(false, true);
+      }
+    }, pollInterval);
 
     const onFocus = () => {
-      fetchEmailLogs(false, true);
-      fetchActiveRecipients();
+      if (isPollingEnabled('emailNotifications')) {
+        fetchEmailLogs(false, true);
+        fetchActiveRecipients();
+      }
     };
     window.addEventListener('focus', onFocus);
 
@@ -275,7 +293,7 @@ const EmailNotifications = () => {
       clearInterval(pollTimer);
       window.removeEventListener('focus', onFocus);
     };
-  }, [fetchEmailLogs, fetchActiveRecipients]);
+  }, [fetchEmailLogs, fetchActiveRecipients, pollingConfigVersion]);
 
   // Status Metrics
   const metrics = useMemo(() => {

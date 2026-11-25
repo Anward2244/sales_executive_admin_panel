@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { getUsersApi, getUserByIdApi, createUserApi, updateUserStatusApi, updateUserApi } from '@/api/axios';
 import {
@@ -21,6 +21,7 @@ import { createPortal } from 'react-dom';
 import { formatPhone, formatEntityCode } from '@/utils/formatters';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { useToast } from '@/context/ToastContext';
+import { getPollingInterval, isPollingEnabled } from '@/utils/browserNotifications';
 
 const USER_COLUMNS = [
   { id: 'sno', label: 'S.No.' },
@@ -118,6 +119,24 @@ const UsersList = () => {
   const usersPerPage = displayPrefs.rowsPerPage || 10;
   const [paginationMeta, setPaginationMeta] = useState(null);
 
+  // Live Polling State
+  const [isPollingActive, setIsPollingActive] = useState(true);
+  const [lastPolledAt, setLastPolledAt] = useState(null);
+  const [pollingConfigVersion, setPollingConfigVersion] = useState(0);
+
+  useEffect(() => {
+    const handleSettingsChange = () => setPollingConfigVersion((v) => v + 1);
+    window.addEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+    window.addEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    return () => {
+      window.removeEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+      window.removeEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    };
+  }, []);
+
+  const userPollingIntervalMs = getPollingInterval('users', 15);
+  const userPollingIntervalSec = Math.round(userPollingIntervalMs / 1000);
+
   const { setUsersUnreadCount } = useOutletContext() || {};
 
   const setCurrentPage = (pageVal) => {
@@ -207,7 +226,7 @@ const UsersList = () => {
   }, [searchInput, setSearchParams]);
 
   // Fetch users from GET /users
-  const fetchUsers = async (isPoll = false) => {
+  const fetchUsers = useCallback(async (isPoll = false) => {
     if (!isPoll) setLoading(true);
     setError('');
     try {
@@ -234,9 +253,17 @@ const UsersList = () => {
         setPaginationMeta(meta);
       }
 
+      // Keep drawer user data in sync if open
+      setDrawerUser((prev) => {
+        if (!prev) return null;
+        const fresh = userList.find((u) => (u._id || u.id) === (prev._id || prev.id));
+        return fresh ? { ...prev, ...fresh } : prev;
+      });
+
       if (setUsersUnreadCount) {
         setUsersUnreadCount(0);
       }
+      setLastPolledAt(new Date());
     } catch (err) {
       console.error('Fetch users error:', err);
       if (!isPoll) {
@@ -245,18 +272,34 @@ const UsersList = () => {
     } finally {
       if (!isPoll) setLoading(false);
     }
-  };
+  }, [setUsersUnreadCount]);
 
+  // Initial Load
   useEffect(() => {
     fetchUsers(false);
+  }, [fetchUsers]);
 
-    // Auto-refresh every 30 seconds
+  // Background polling for real-time users list
+  useEffect(() => {
+    if (!isPollingActive || !isPollingEnabled('users')) return;
+
     const intervalId = setInterval(() => {
+      if (document.hidden) return;
       fetchUsers(true);
-    }, 30000);
+    }, userPollingIntervalMs);
 
-    return () => clearInterval(intervalId);
-  }, []);
+    const onFocus = () => {
+      if (isPollingEnabled('users')) {
+        fetchUsers(true);
+      }
+    };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [isPollingActive, fetchUsers, userPollingIntervalMs, pollingConfigVersion]);
 
 
   // Tab Filtering
@@ -1003,6 +1046,36 @@ const UsersList = () => {
                   </button>
                 )}
               </div>
+
+              {/* Live Polling Status Indicator */}
+              <button
+                type="button"
+                onClick={() => setIsPollingActive((prev) => !prev)}
+                className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 shrink-0 ${
+                  isPollingActive && isPollingEnabled('users')
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                    : 'border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'
+                }`}
+                title={
+                  isPollingActive && isPollingEnabled('users')
+                    ? `Live polling active (every ${userPollingIntervalSec}s). Click to pause.${lastPolledAt ? ` Last checked at ${lastPolledAt.toLocaleTimeString()}` : ''}`
+                    : 'Polling paused. Click to resume auto-polling.'
+                }
+              >
+                <span className="relative flex h-2 w-2">
+                  {isPollingActive && isPollingEnabled('users') && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  )}
+                  <span
+                    className={`relative inline-flex rounded-full h-2 w-2 ${
+                      isPollingActive && isPollingEnabled('users') ? 'bg-emerald-500' : 'bg-slate-400'
+                    }`}
+                  ></span>
+                </span>
+                <span className="text-[11px] font-mono font-bold">
+                  {isPollingActive && isPollingEnabled('users') ? `Live (${userPollingIntervalSec}s)` : 'Paused'}
+                </span>
+              </button>
               
               <button
                 onClick={() => fetchUsers(false)}

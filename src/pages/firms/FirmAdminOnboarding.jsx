@@ -21,6 +21,7 @@ import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { TableRowSkeleton } from '@/components/ui/Skeleton';
 import PageHeader from '@/components/ui/PageHeader';
 import { StatusBadge, SegmentedTabs, EmptyState, OptimizedImage } from '@/components/ui';
+import { getPollingInterval, isPollingEnabled } from '@/utils/browserNotifications';
 import {
   adminOnboardFirmApi,
   getFirmOnboardingStatsApi,
@@ -113,6 +114,20 @@ const FirmAdminOnboarding = () => {
   const [successToast, setSuccessToast] = useState('');
   const [isPollingActive, setIsPollingActive] = useState(true);
   const [lastPolledAt, setLastPolledAt] = useState(null);
+  const [pollingConfigVersion, setPollingConfigVersion] = useState(0);
+
+  useEffect(() => {
+    const handleSettingsChange = () => setPollingConfigVersion((v) => v + 1);
+    window.addEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+    window.addEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    return () => {
+      window.removeEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+      window.removeEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    };
+  }, []);
+
+  const adminOnboardIntervalMs = getPollingInterval('firmAdminOnboarding', 15);
+  const adminOnboardIntervalSec = Math.round(adminOnboardIntervalMs / 1000);
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -242,14 +257,26 @@ const FirmAdminOnboarding = () => {
     fetchData();
   }, [fetchData]);
 
-  // Polling Effect (every 15s)
+  // Polling Effect
   useEffect(() => {
-    if (!isPollingActive) return;
+    if (!isPollingActive || !isPollingEnabled('firmAdminOnboarding')) return;
     const interval = setInterval(() => {
+      if (document.hidden) return;
       fetchData(true);
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [isPollingActive, fetchData]);
+    }, adminOnboardIntervalMs);
+
+    const onFocus = () => {
+      if (isPollingEnabled('firmAdminOnboarding')) {
+        fetchData(true);
+      }
+    };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [isPollingActive, fetchData, adminOnboardIntervalMs, pollingConfigVersion]);
 
   // Global ESC Key Listener to dismiss modals cleanly
   useEffect(() => {
@@ -712,28 +739,30 @@ const FirmAdminOnboarding = () => {
             <button
               type="button"
               onClick={() => setIsPollingActive((prev) => !prev)}
-              className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 ${isPollingActive
-                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
-                : 'border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'
+              className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 ${
+                isPollingActive && isPollingEnabled('firmAdminOnboarding')
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                  : 'border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10'
                 }`}
               title={
-                isPollingActive
-                  ? `Live polling active (every 15s). Click to pause.${lastPolledAt ? ` Last checked at ${lastPolledAt.toLocaleTimeString()}` : ''
+                isPollingActive && isPollingEnabled('firmAdminOnboarding')
+                  ? `Live polling active (every ${adminOnboardIntervalSec}s). Click to pause.${lastPolledAt ? ` Last checked at ${lastPolledAt.toLocaleTimeString()}` : ''
                   }`
                   : 'Polling paused. Click to resume auto-polling.'
               }
             >
               <span className="relative flex h-2 w-2">
-                {isPollingActive && (
+                {isPollingActive && isPollingEnabled('firmAdminOnboarding') && (
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 )}
                 <span
-                  className={`relative inline-flex rounded-full h-2 w-2 ${isPollingActive ? 'bg-emerald-500' : 'bg-slate-400'
+                  className={`relative inline-flex rounded-full h-2 w-2 ${
+                    isPollingActive && isPollingEnabled('firmAdminOnboarding') ? 'bg-emerald-500' : 'bg-slate-400'
                     }`}
                 ></span>
               </span>
               <span className="text-[11px] font-mono font-bold">
-                {isPollingActive ? 'Live (15s)' : 'Paused'}
+                {isPollingActive && isPollingEnabled('firmAdminOnboarding') ? `Live (${adminOnboardIntervalSec}s)` : 'Paused'}
               </span>
             </button>
 

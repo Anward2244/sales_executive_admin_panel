@@ -36,6 +36,7 @@ import SegmentedTabs from '@/components/ui/SegmentedTabs';
 import { useDisplayPreferences } from '@/utils/displayPreferences';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '@/utils/dateUtils';
 import { useToast } from '@/context/ToastContext';
+import { getPollingInterval, isPollingEnabled } from '@/utils/browserNotifications';
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -47,6 +48,17 @@ const Notifications = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [pollingConfigVersion, setPollingConfigVersion] = useState(0);
+
+  useEffect(() => {
+    const handleSettingsChange = () => setPollingConfigVersion((v) => v + 1);
+    window.addEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+    window.addEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    return () => {
+      window.removeEventListener('WhatnotSales:notification-settings-changed', handleSettingsChange);
+      window.removeEventListener('Auric:notification-settings-changed', handleSettingsChange);
+    };
+  }, []);
 
   // Pagination state
   const { preferences: displayPrefs } = useDisplayPreferences();
@@ -209,13 +221,19 @@ const Notifications = () => {
 
     initialFetch();
 
-    // Background polling every 15 seconds
+    // Background polling with configured interval
+    const pollInterval = getPollingInterval('notifications', 15);
     const pollTimer = setInterval(() => {
-      fetchNotifications(false, true);
-    }, 15000);
+      if (document.hidden) return;
+      if (isPollingEnabled('notifications')) {
+        fetchNotifications(false, true);
+      }
+    }, pollInterval);
 
     const onFocus = () => {
-      fetchNotifications(false, true);
+      if (isPollingEnabled('notifications')) {
+        fetchNotifications(false, true);
+      }
     };
     window.addEventListener('focus', onFocus);
 
@@ -224,7 +242,7 @@ const Notifications = () => {
       clearInterval(pollTimer);
       window.removeEventListener('focus', onFocus);
     };
-  }, [fetchNotifications]);
+  }, [fetchNotifications, pollingConfigVersion]);
 
   // Mark Single Notification as Read
   const handleMarkAsRead = async (id, e) => {
