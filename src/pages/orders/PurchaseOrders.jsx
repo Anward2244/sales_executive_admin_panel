@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
@@ -35,6 +35,11 @@ import {
   FiShield,
   FiChevronLeft,
   FiChevronRight,
+  FiChevronDown,
+  FiList,
+  FiUsers,
+  FiMaximize2,
+  FiMinimize2,
   FiUserX
 } from 'react-icons/fi';
 import {
@@ -66,6 +71,13 @@ const STATUS_TABS = [
   { key: 'APPROVED', label: 'Approved' },
   { key: 'DISPATCHED', label: 'Dispatched' },
   { key: 'REJECTED', label: 'Rejected' }
+];
+
+const GROUP_BY_OPTIONS = [
+  { id: 'none', label: 'None', icon: FiList },
+  { id: 'company', label: 'Company Wise', icon: FiBriefcase },
+  { id: 'firm', label: 'Firm Wise', icon: FiMapPin },
+  { id: 'user', label: 'Users Wise', icon: FiUser }
 ];
 
 const PO_COLUMNS = [
@@ -221,6 +233,8 @@ const PurchaseOrders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState('all');
+  const [groupBy, setGroupBy] = useState('none'); // 'none' | 'company' | 'firm' | 'user'
+  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
 
   // Display Preferences & Table UX (Density, Columns, Sticky)
   const {
@@ -322,6 +336,7 @@ const PurchaseOrders = () => {
 
   useEffect(() => {
     fetchOrders(false);
+    loadSelectableEntities();
   }, [fetchOrders]);
 
   // Load companies, firms, products for Create Modal
@@ -805,7 +820,157 @@ const PurchaseOrders = () => {
   const currentOrders = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredOrders.slice(start, start + itemsPerPage);
-  }, [filteredOrders, currentPage]);
+  }, [filteredOrders, currentPage, itemsPerPage]);
+
+  // Grouped Orders Calculation (Company Wise, Firm Wise, Users Wise)
+  const groupedData = useMemo(() => {
+    if (groupBy === 'none') return [];
+
+    const map = new Map();
+
+    filteredOrders.forEach((order) => {
+      let key = '';
+      let title = '';
+      let subtitle = '';
+      let avatar = null;
+      let icon = FiBriefcase;
+
+      if (groupBy === 'company') {
+        const comp = typeof order.companyId === 'object' && order.companyId !== null ? order.companyId : null;
+        const compId = comp?._id || (typeof order.companyId === 'string' ? order.companyId : '');
+        const compName =
+          comp?.name || (compId ? companiesList.find((c) => c._id === compId)?.name : null) || 'Unassigned Company';
+        const compCode = comp?.code || (compId ? companiesList.find((c) => c._id === compId)?.code : null);
+        const compLogo = comp?.logo || (compId ? companiesList.find((c) => c._id === compId)?.logo : null);
+
+        key = compId || compName || 'unassigned_company';
+        title = compName;
+        subtitle = compCode ? `Code: ${compCode}` : '';
+        avatar = compLogo;
+        icon = FiBriefcase;
+      } else if (groupBy === 'firm') {
+        const firm = typeof order.firmId === 'object' && order.firmId !== null ? order.firmId : null;
+        const firmId = firm?._id || (typeof order.firmId === 'string' ? order.firmId : '');
+        const firmName =
+          firm?.firmName || (firmId ? firmsList.find((f) => f._id === firmId)?.firmName : null) || 'Unassigned Firm';
+        const firmCode = firm?.firmCode || (firmId ? firmsList.find((f) => f._id === firmId)?.firmCode : null);
+        const firmCity = firm?.city || (firmId ? firmsList.find((f) => f._id === firmId)?.city : null);
+        const contactPerson =
+          firm?.contactPerson || (firmId ? firmsList.find((f) => f._id === firmId)?.contactPerson : null);
+
+        key = firmId || firmName || 'unassigned_firm';
+        title = firmName;
+        const subParts = [];
+        if (firmCode) subParts.push(`Code: ${firmCode}`);
+        if (firmCity) subParts.push(firmCity);
+        if (contactPerson) subParts.push(`Contact: ${contactPerson}`);
+        subtitle = subParts.join(' • ');
+        icon = FiMapPin;
+      } else if (groupBy === 'user') {
+        const rep =
+          typeof order.salesExecutiveId === 'object' && order.salesExecutiveId !== null
+            ? order.salesExecutiveId
+            : null;
+        const repId = rep?._id || (typeof order.salesExecutiveId === 'string' ? order.salesExecutiveId : '');
+        const repName = rep
+          ? `${rep.firstName || ''} ${rep.lastName || ''}`.trim() || rep.name || 'Sales Representative'
+          : order.createdBy?.name ||
+            (typeof order.createdBy === 'object'
+              ? `${order.createdBy.firstName || ''} ${order.createdBy.lastName || ''}`.trim()
+              : null) ||
+            'Unassigned User';
+        const repEmpCode = rep?.employeeCode;
+        const repEmail = rep?.email;
+
+        key = repId || repName || 'unassigned_user';
+        title = repName;
+        const subParts = [];
+        if (repEmpCode) subParts.push(`Emp ID: ${repEmpCode}`);
+        if (repEmail) subParts.push(repEmail);
+        subtitle = subParts.join(' • ');
+        icon = FiUser;
+      }
+
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          title,
+          subtitle,
+          avatar,
+          icon,
+          orders: [],
+          totalAmount: 0,
+          totalUnits: 0,
+          statusCounts: { PENDING: 0, APPROVED: 0, DISPATCHED: 0, REJECTED: 0 }
+        });
+      }
+
+      const grp = map.get(key);
+      grp.orders.push(order);
+      const amt = Number(order.totalAmount || order.totalValue || order.subtotal || 0) || 0;
+      grp.totalAmount += amt;
+      const units = Array.isArray(order.items)
+        ? order.items.reduce((acc, it) => acc + (Number(it.quantity) || 0), 0)
+        : 0;
+      grp.totalUnits += units;
+      const st = (order.status || 'PENDING').toUpperCase();
+      if (grp.statusCounts[st] !== undefined) {
+        grp.statusCounts[st] += 1;
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.orders.length - a.orders.length);
+  }, [filteredOrders, groupBy, companiesList, firmsList]);
+
+  // Group pagination (e.g. 8 groups per page)
+  const groupsPerPage = 8;
+  const totalGroupPages = Math.max(1, Math.ceil(groupedData.length / groupsPerPage));
+  const currentGroups = useMemo(() => {
+    if (groupBy === 'none') return [];
+    const start = (currentPage - 1) * groupsPerPage;
+    return groupedData.slice(start, start + groupsPerPage);
+  }, [groupedData, currentPage, groupsPerPage, groupBy]);
+
+  const visiblePageOrders = useMemo(() => {
+    if (groupBy === 'none') return currentOrders;
+    return currentGroups.flatMap((g) => g.orders);
+  }, [groupBy, currentOrders, currentGroups]);
+
+  const activeTotalPages = groupBy === 'none' ? totalPages : totalGroupPages;
+
+  const toggleGroupCollapse = (groupKey) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllGroupsCollapse = () => {
+    if (collapsedGroups.size === groupedData.length) {
+      setCollapsedGroups(new Set());
+    } else {
+      setCollapsedGroups(new Set(groupedData.map((g) => g.key)));
+    }
+  };
+
+  const toggleSelectGroupOrders = (groupOrders) => {
+    const groupOrderIds = groupOrders.map((o) => o._id);
+    const allSelected = groupOrderIds.length > 0 && groupOrderIds.every((id) => selectedOrderIds.has(id));
+    setSelectedOrderIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        groupOrderIds.forEach((id) => next.delete(id));
+      } else {
+        groupOrderIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
 
   // Slide-Over Detail Drawer navigation
   const selectedOrderIndex = useMemo(() => {
@@ -893,7 +1058,7 @@ const PurchaseOrders = () => {
   };
 
   const toggleSelectAllCurrentPageOrders = () => {
-    const pageIds = currentOrders.map((o) => o._id);
+    const pageIds = visiblePageOrders.map((o) => o._id);
     const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedOrderIds.has(id));
     setSelectedOrderIds((prev) => {
       const next = new Set(prev);
@@ -921,7 +1086,7 @@ const PurchaseOrders = () => {
   };
 
   const selectAllPageOrders = () => {
-    setSelectedOrderIds(new Set(currentOrders.map((o) => o._id)));
+    setSelectedOrderIds(new Set(visiblePageOrders.map((o) => o._id)));
   };
 
   // Batch Execution Engine
@@ -1218,10 +1383,10 @@ const PurchaseOrders = () => {
           <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Shipped &amp; in transit</p>
         </div>
 
-        {/* Dispatched */}
+        {/* Rejected */}
         <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-xl border border-slate-200/80 dark:border-white/10 shadow-md">
           <div className="flex items-center justify-between">
-            <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">Dispatched</p>
+            <p className="kpi-card-title text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">Rejected</p>
             <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl kpi-icon-rose flex items-center justify-center text-base shrink-0">
               <FiUserX />
             </span>
@@ -1229,7 +1394,7 @@ const PurchaseOrders = () => {
           <p className="kpi-card-value text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight truncate font-mono">
             {stats.rejected}
           </p>
-          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Shipped &amp; in transit</p>
+          <p className="kpi-card-subtitle text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Rejected &amp; Cancelled</p>
         </div>
 
         {/* Total PO Value */}
@@ -1306,7 +1471,7 @@ const PurchaseOrders = () => {
 
       {/* Orders Table Card */}
       <div className="bg-white/60 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl overflow-hidden">
-        {/* Table UX Toolbar: Column Visibility & Counts */}
+        {/* Table UX Toolbar: Column Visibility, Counts & Grouping */}
         <TableToolbar
           columns={PO_COLUMNS}
           visibleColumns={poColumnVisibility}
@@ -1314,6 +1479,81 @@ const PurchaseOrders = () => {
           onResetColumns={() => resetTableColumnVisibility('purchaseOrders')}
           totalCount={filteredOrders.length}
           selectedCount={selectedOrderIds.size}
+          summary={
+            groupBy !== 'none' && groupedData.length > 0 ? (
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 tabular-nums">
+                {groupedData.length}{' '}
+                {groupBy === 'company'
+                  ? groupedData.length === 1
+                    ? 'Company'
+                    : 'Companies'
+                  : groupBy === 'firm'
+                    ? groupedData.length === 1
+                      ? 'Firm'
+                      : 'Firms'
+                    : groupedData.length === 1
+                      ? 'User'
+                      : 'Users'}
+              </span>
+            ) : null
+          }
+          extraActions={
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Group By Selector */}
+              <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-white/5 p-0.5 rounded-xl border border-slate-200/80 dark:border-white/10 text-xs">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 px-2 flex items-center gap-1 select-none">
+                  <FiLayers className="text-xs text-blue-500" />
+                  <span className="hidden sm:inline">Group:</span>
+                </span>
+                {GROUP_BY_OPTIONS.map((opt) => {
+                  const OptIcon = opt.icon;
+                  const isActive = groupBy === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        setGroupBy(opt.id);
+                        setCurrentPage(1);
+                        setCollapsedGroups(new Set());
+                      }}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold border border-blue-500/20'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5'
+                      }`}
+                      title={`Group data ${opt.label.toLowerCase()}`}
+                    >
+                      <OptIcon className="text-xs shrink-0" />
+                      <span>{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Expand / Collapse All Toggle */}
+              {groupBy !== 'none' && groupedData.length > 0 && (
+                <button
+                  type="button"
+                  onClick={toggleAllGroupsCollapse}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-100 dark:bg-white/5 hover:bg-slate-200/60 dark:hover:bg-white/10 rounded-xl border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer"
+                  title={collapsedGroups.size === groupedData.length ? 'Expand all groups' : 'Collapse all groups'}
+                >
+                  {collapsedGroups.size === groupedData.length ? (
+                    <>
+                      <FiMaximize2 className="text-xs" />
+                      <span>Expand All</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiMinimize2 className="text-xs" />
+                      <span>Collapse All</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          }
           className="border-b rounded-b-none border-x-0 border-t-0"
         />
 
@@ -1351,7 +1591,7 @@ const PurchaseOrders = () => {
                       <th className={`${densityStyles.th} pl-5 w-10 text-center`}>
                         <input
                           type="checkbox"
-                          checked={currentOrders.length > 0 && currentOrders.every((o) => selectedOrderIds.has(o._id))}
+                          checked={visiblePageOrders.length > 0 && visiblePageOrders.every((o) => selectedOrderIds.has(o._id))}
                           onChange={toggleSelectAllCurrentPageOrders}
                           className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                         />
@@ -1377,9 +1617,10 @@ const PurchaseOrders = () => {
                 </thead>
 
                 <tbody className="divide-y divide-slate-200/80 dark:divide-white/5 text-xs">
-                  {currentOrders.length > 0 ? (
-                    currentOrders.map((order, idx) => {
-                      const serialNo = (currentPage - 1) * itemsPerPage + idx + 1;
+                  {(() => {
+                    const visibleColCount = PO_COLUMNS.filter((c) => isColVisible(c.id)).length + (isBulkMode ? 1 : 0);
+
+                    const renderOrderRow = (order, idx, serialNo) => {
                       const poNum =
                         order.poNumber || order.orderNumber || order.orderId || `#ORD-${order._id?.slice(-6) || idx + 1}`;
                       const companyName = order.companyId?.name || 'Company';
@@ -1391,8 +1632,8 @@ const PurchaseOrders = () => {
                       const contactPerson = order.firmId?.contactPerson;
                       const repName = order.salesExecutiveId
                         ? `${order.salesExecutiveId.firstName || ''} ${order.salesExecutiveId.lastName || ''}`.trim() ||
-                        order.salesExecutiveId.name ||
-                        'Sales Rep'
+                          order.salesExecutiveId.name ||
+                          'Sales Rep'
                         : 'N/A';
                       const repEmpCode = order.salesExecutiveId?.employeeCode;
                       const repEmail = order.salesExecutiveId?.email;
@@ -1409,8 +1650,9 @@ const PurchaseOrders = () => {
                       return (
                         <tr
                           key={order._id || idx}
-                          className={`hover:bg-slate-100/60 dark:hover:bg-white/[0.03] transition-colors ${selectedOrderIds.has(order._id) ? 'bg-blue-500/[0.06] dark:bg-blue-500/10' : ''
-                            }`}
+                          className={`hover:bg-slate-100/60 dark:hover:bg-white/[0.03] transition-colors ${
+                            selectedOrderIds.has(order._id) ? 'bg-blue-500/[0.06] dark:bg-blue-500/10' : ''
+                          }`}
                         >
                           {isBulkMode && (
                             <td className={`${densityStyles.td} pl-5 text-center`}>
@@ -1722,34 +1964,193 @@ const PurchaseOrders = () => {
                           )}
                         </tr>
                       );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={PO_COLUMNS.filter((c) => isColVisible(c.id)).length + (isBulkMode ? 1 : 0)} className="p-16 text-center text-slate-500 dark:text-slate-400">
-                        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-4">
-                          <FiShoppingCart className="text-2xl" />
-                        </div>
-                        <h3 className="text-base font-bold text-slate-800 dark:text-white">
-                          No matching purchase orders
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1">
-                          {searchTerm || statusFilter !== 'all'
-                            ? 'No purchase orders matched your search or status criteria.'
-                            : 'No purchase orders have been created yet.'}
-                        </p>
-                        {!searchTerm && statusFilter === 'all' && (
-                          <button
-                            type="button"
-                            onClick={handleOpenCreateModal}
-                            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer hover:bg-blue-700"
+                    };
+
+                    if (groupBy !== 'none') {
+                      if (currentGroups.length === 0) {
+                        return (
+                          <tr>
+                            <td
+                              colSpan={visibleColCount}
+                              className="p-16 text-center text-slate-500 dark:text-slate-400"
+                            >
+                              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-4">
+                                <FiShoppingCart className="text-2xl" />
+                              </div>
+                              <h3 className="text-base font-bold text-slate-800 dark:text-white">
+                                No matching purchase orders
+                              </h3>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1">
+                                {searchTerm || statusFilter !== 'all'
+                                  ? 'No purchase orders matched your search or status criteria.'
+                                  : 'No purchase orders have been created yet.'}
+                              </p>
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return currentGroups.map((group) => {
+                        const isCollapsed = collapsedGroups.has(group.key);
+                        const GroupIcon = group.icon;
+                        const groupOrderIds = group.orders.map((o) => o._id);
+                        const allGroupSelected =
+                          groupOrderIds.length > 0 && groupOrderIds.every((id) => selectedOrderIds.has(id));
+                        const someGroupSelected =
+                          groupOrderIds.some((id) => selectedOrderIds.has(id)) && !allGroupSelected;
+
+                        return (
+                          <Fragment key={group.key}>
+                            {/* Group Header Row: Single column with all metadata */}
+                            <tr
+                              onClick={() => toggleGroupCollapse(group.key)}
+                              className="bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200/70 dark:hover:bg-slate-750 transition-colors border-y-2 border-slate-300/80 dark:border-white/10 cursor-pointer select-none"
+                            >
+                              <td colSpan={visibleColCount} className="px-4 py-2.5">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                  {/* Left: Checkbox + Chevron + Icon/Avatar + Title + Subtitle + Orders Badge */}
+                                  <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
+                                    {isBulkMode && (
+                                      <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+                                        <input
+                                          type="checkbox"
+                                          checked={allGroupSelected}
+                                          ref={(el) => {
+                                            if (el) el.indeterminate = someGroupSelected;
+                                          }}
+                                          onChange={() => toggleSelectGroupOrders(group.orders)}
+                                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                          title="Select all orders in this group"
+                                        />
+                                      </div>
+                                    )}
+
+                                    <div className="p-1 rounded-lg hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0">
+                                      {isCollapsed ? (
+                                        <FiChevronRight className="text-base text-slate-500" />
+                                      ) : (
+                                        <FiChevronDown className="text-base text-blue-600 dark:text-blue-400" />
+                                      )}
+                                    </div>
+
+                                    {group.avatar ? (
+                                      <img
+                                        src={group.avatar}
+                                        alt={group.title}
+                                        className="w-7 h-7 rounded-lg object-contain bg-white dark:bg-slate-900 p-0.5 border border-slate-200/80 dark:border-white/10 shrink-0"
+                                      />
+                                    ) : (
+                                      <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20">
+                                        <GroupIcon className="text-sm" />
+                                      </div>
+                                    )}
+
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-bold text-sm text-slate-900 dark:text-white">
+                                          {group.title}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 whitespace-nowrap shrink-0">
+                                          {group.orders.length} {group.orders.length === 1 ? 'order' : 'orders'}
+                                        </span>
+                                      </div>
+                                      {group.subtitle && (
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                          {group.subtitle}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Right: Items + Total Amount + Status breakdown chips */}
+                                  <div className="flex items-center gap-2.5 flex-wrap ml-auto">
+                                    <span
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-200/80 dark:bg-white/10 font-mono text-[11px] font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap"
+                                      title={`${group.totalUnits} items across ${group.orders.length} orders`}
+                                    >
+                                      <FiBox className="text-blue-500 text-[10px]" />
+                                      <span>{group.totalUnits} items</span>
+                                    </span>
+
+                                    <span
+                                      className="px-2.5 py-1 rounded-lg text-xs font-mono font-black bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap"
+                                      title={`Total Procurement Value: ₹${group.totalAmount.toLocaleString('en-IN')}`}
+                                    >
+                                      ₹{group.totalAmount.toLocaleString('en-IN')}
+                                    </span>
+
+                                    <div className="flex items-center gap-1.5 flex-wrap border-l border-slate-300/60 dark:border-white/10 pl-2">
+                                      {group.statusCounts.PENDING > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap">
+                                          {group.statusCounts.PENDING} Pending
+                                        </span>
+                                      )}
+                                      {group.statusCounts.APPROVED > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
+                                          {group.statusCounts.APPROVED} Approved
+                                        </span>
+                                      )}
+                                      {group.statusCounts.DISPATCHED > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 whitespace-nowrap">
+                                          {group.statusCounts.DISPATCHED} Dispatched
+                                        </span>
+                                      )}
+                                      {group.statusCounts.REJECTED > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 whitespace-nowrap">
+                                          {group.statusCounts.REJECTED} Rejected
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+
+                            {/* Group Orders Rows */}
+                            {!isCollapsed &&
+                              group.orders.map((order, orderIdx) => renderOrderRow(order, orderIdx, orderIdx + 1))}
+                          </Fragment>
+                        );
+                      });
+                    }
+
+                    if (currentOrders.length === 0) {
+                      return (
+                        <tr>
+                          <td
+                            colSpan={visibleColCount}
+                            className="p-16 text-center text-slate-500 dark:text-slate-400"
                           >
-                            <FiPlus />
-                            <span>Create First PO</span>
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )}
+                            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-4">
+                              <FiShoppingCart className="text-2xl" />
+                            </div>
+                            <h3 className="text-base font-bold text-slate-800 dark:text-white">
+                              No matching purchase orders
+                            </h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1">
+                              {searchTerm || statusFilter !== 'all'
+                                ? 'No purchase orders matched your search or status criteria.'
+                                : 'No purchase orders have been created yet.'}
+                            </p>
+                            {!searchTerm && statusFilter === 'all' && (
+                              <button
+                                type="button"
+                                onClick={handleOpenCreateModal}
+                                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer hover:bg-blue-700"
+                              >
+                                <FiPlus />
+                                <span>Create First PO</span>
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return currentOrders.map((order, idx) =>
+                      renderOrderRow(order, idx, (currentPage - 1) * itemsPerPage + idx + 1)
+                    );
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -1757,13 +2158,35 @@ const PurchaseOrders = () => {
             {/* Pagination Controls */}
             {filteredOrders.length > 0 && (
               <div className="p-4 border-t border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50 dark:bg-white/2">
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  Showing <span className="font-bold text-slate-800 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                  <span className="font-bold text-slate-800 dark:text-white">
-                    {Math.min(currentPage * itemsPerPage, filteredOrders.length)}
-                  </span>{' '}
-                  of <span className="font-bold text-slate-800 dark:text-white">{filteredOrders.length}</span> orders
-                </span>
+                {groupBy !== 'none' ? (
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Showing groups <span className="font-bold text-slate-800 dark:text-white">{(currentPage - 1) * groupsPerPage + 1}</span> to{' '}
+                    <span className="font-bold text-slate-800 dark:text-white">
+                      {Math.min(currentPage * groupsPerPage, groupedData.length)}
+                    </span>{' '}
+                    of <span className="font-bold text-slate-800 dark:text-white">{groupedData.length}</span>{' '}
+                    {groupBy === 'company'
+                      ? groupedData.length === 1
+                        ? 'company'
+                        : 'companies'
+                      : groupBy === 'firm'
+                        ? groupedData.length === 1
+                          ? 'firm'
+                          : 'firms'
+                        : groupedData.length === 1
+                          ? 'user'
+                          : 'users'}{' '}
+                    (<span className="font-bold text-slate-800 dark:text-white">{filteredOrders.length}</span> total orders)
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Showing <span className="font-bold text-slate-800 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+                    <span className="font-bold text-slate-800 dark:text-white">
+                      {Math.min(currentPage * itemsPerPage, filteredOrders.length)}
+                    </span>{' '}
+                    of <span className="font-bold text-slate-800 dark:text-white">{filteredOrders.length}</span> orders
+                  </span>
+                )}
                 <div className="flex space-x-2">
                   <button
                     type="button"
@@ -1774,7 +2197,7 @@ const PurchaseOrders = () => {
                     &larr; Prev
                   </button>
                   <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                    {Array.from({ length: activeTotalPages }, (_, i) => i + 1).map((num) => (
                       <button
                         key={num}
                         type="button"
@@ -1790,8 +2213,8 @@ const PurchaseOrders = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, activeTotalPages))}
+                    disabled={currentPage === activeTotalPages}
                     className="px-3 py-1.5 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-xl disabled:opacity-40 transition-all text-xs font-bold border border-slate-200/80 dark:border-white/10 cursor-pointer disabled:cursor-not-allowed"
                   >
                     Next &rarr;
