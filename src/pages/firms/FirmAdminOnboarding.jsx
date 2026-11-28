@@ -1199,57 +1199,79 @@ const FirmAdminOnboarding = () => {
           <div className="fixed inset-0 z-[9990] overflow-hidden flex justify-end">
             {/* Backdrop */}
             <div
-              className="fixed inset-0 dark:bg-slate-900/60 backdrop-blur-lg transition-opacity"
+              className="fixed inset-0 dark:bg-slate-950/50 backdrop-blur-md transition-opacity"
               onClick={() => {
                 setSelectedCreator(null);
                 setCreatorFirms([]);
               }}
             />
 
-            <div className="relative w-full max-w-4xl bg-white/40 dark:bg-slate-900 shadow-2xl z-10 flex flex-col h-full border-l border-slate-200 dark:border-white/10 animate-in slide-in-from-right duration-250">
-              {/* Header */}
-              <div className="p-5 border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-900/80 backdrop-blur-md flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-blue-600 to-indigo-600 text-white font-black text-lg flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
-                    {(selectedCreator.fullName || selectedCreator.firstName || 'S').charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-lg font-black text-slate-900 dark:text-white truncate">
-                        {selectedCreator.fullName || `${selectedCreator.firstName || ''} ${selectedCreator.lastName || ''}`.trim()}
-                      </h2>
-                      <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                        {selectedCreator.role || 'SALES_EXECUTIVE'}
-                      </span>
+            <div className="relative w-full max-w-4xl bg-white/40 dark:bg-slate-900/50 shadow-2xl z-10 flex flex-col h-full border-l border-slate-200/80 dark:border-white/10 animate-in slide-in-from-right duration-250">
+              {/* Sticky Drawer Header */}
+              <div className="px-4 sm:px-6 py-3.5 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 text-white font-black text-sm sm:text-base flex items-center justify-center shadow-sm shrink-0 border border-white/20">
+                      {(selectedCreator.fullName || selectedCreator.firstName || 'S').charAt(0).toUpperCase()}
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                      {selectedCreator.email} • {selectedCreator.phone ? formatPhone(selectedCreator.phone) : ''}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-sm sm:text-base font-bold text-white truncate tracking-tight">
+                          {selectedCreator.fullName || `${selectedCreator.firstName || ''} ${selectedCreator.lastName || ''}`.trim()}
+                        </h2>
+                        <span className="px-1.5 py-0.5 rounded-md bg-white/15 text-white font-mono text-[10px] sm:text-[11px] font-bold border border-white/20 uppercase tracking-wide">
+                          {selectedCreator.role || 'SALES_EXECUTIVE'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] sm:text-[11px] text-blue-100/90 truncate flex-wrap">
+                        {selectedCreator.email && (
+                          <span className="truncate">{selectedCreator.email}</span>
+                        )}
+                        {selectedCreator.email && selectedCreator.phone && <span>•</span>}
+                        {selectedCreator.phone && (
+                          <span>{formatPhone(selectedCreator.phone)}</span>
+                        )}
+                        {(selectedCreator.salesExecutiveId || selectedCreator._id) && (
+                          <>
+                            <span>•</span>
+                            <span className="font-mono">ID: {selectedCreator.salesExecutiveId || selectedCreator._id}</span>
+                            <CopyButton
+                              text={selectedCreator.salesExecutiveId || selectedCreator._id}
+                              size={10}
+                              className="text-blue-100/80 hover:text-white"
+                            />
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleOpenOnboardModal(
-                        selectedCreator.salesExecutiveId || selectedCreator._id || selectedCreator.id
-                      )
-                    }
-                    className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-                  >
-                    <FiPlus size={14} />
-                    <span>Onboard for {selectedCreator.firstName || 'Creator'}</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedCreator(null);
-                      setCreatorFirms([]);
-                    }}
-                    className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                  >
-                    <FiX size={18} />
-                  </button>
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleOpenOnboardModal(
+                          selectedCreator.salesExecutiveId || selectedCreator._id || selectedCreator.id
+                        )
+                      }
+                      className="px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white bg-white/15 hover:bg-white/25 border border-white/20 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
+                    >
+                      <FiPlus size={14} />
+                      <span className="hidden sm:inline">Onboard for {selectedCreator.firstName || 'Creator'}</span>
+                      <span className="sm:hidden">Onboard</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCreator(null);
+                        setCreatorFirms([]);
+                      }}
+                      className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer shrink-0"
+                      title="Close drawer (Esc)"
+                    >
+                      <FiX size={18} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1476,31 +1498,56 @@ const FirmAdminOnboarding = () => {
         createPortal(
           <div className="fixed inset-0 z-[9995] overflow-hidden flex justify-end">
             <div
-              className="fixed inset-0 dark:bg-slate-900/60 backdrop-blur-xs"
+              className="fixed inset-0 dark:bg-slate-950/50 backdrop-blur-md transition-opacity"
               onClick={() => setSelectedFirm(null)}
             />
 
-            <div className="relative w-full max-w-2xl bg-white/20 dark:bg-slate-900 backdrop-blur-lg shadow-2xl z-10 flex flex-col h-full border-l border-slate-200 dark:border-white/10 animate-in slide-in-from-right duration-200">
-              {/* Header */}
-              <div className="p-5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-slate-900 dark:text-white">
-                      {selectedFirm.firmName}
-                    </h3>
-                    <StatusBadge status={selectedFirm.approvalStatus || 'APPROVED'} size="xs" dot />
+            <div className="relative w-full max-w-2xl bg-white/40 dark:bg-slate-900/50 shadow-2xl z-10 flex flex-col h-full border-l border-slate-200/80 dark:border-white/10 animate-in slide-in-from-right duration-200">
+              {/* Sticky Drawer Header */}
+              <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 bg-gradient-to-r from-blue-600/70 via-indigo-600/60 to-purple-600/60 dark:from-blue-600/80 dark:via-indigo-600/70 dark:to-purple-600/70 backdrop-blur-md shrink-0">
+                <div className="flex items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white shadow-sm flex items-center justify-center text-sm font-black shrink-0 border border-white/20">
+                      {selectedFirm.firmName ? selectedFirm.firmName.charAt(0).toUpperCase() : 'F'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm sm:text-base font-bold text-white truncate tracking-tight">
+                          {selectedFirm.firmName}
+                        </h3>
+                        {selectedFirm.firmCode && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-white/15 text-white font-mono text-[10px] sm:text-[11px] font-bold border border-white/20">
+                            {selectedFirm.firmCode}
+                          </span>
+                        )}
+                        <StatusBadge status={selectedFirm.approvalStatus || 'APPROVED'} size="xs" dot />
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] sm:text-[11px] text-blue-100/90 font-mono flex-wrap">
+                        <span>ID: {selectedFirm._id}</span>
+                        <CopyButton text={selectedFirm._id} size={10} className="text-blue-100/80 hover:text-white" />
+                        {selectedFirm.createdAt && (
+                          <>
+                            <span className="text-blue-100/70">•</span>
+                            <span className="text-blue-100/80 font-sans">
+                              Created {formatDateDDMMYYYY(selectedFirm.createdAt)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs font-mono text-slate-400 mt-0.5">
-                    Code: {selectedFirm.firmCode || 'N/A'} • Created {formatDateTimeDDMMYYYY(selectedFirm.createdAt)}
-                  </p>
-                </div>
 
-                <button
-                  onClick={() => setSelectedFirm(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10"
-                >
-                  <FiX size={18} />
-                </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFirm(null)}
+                      className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer shrink-0"
+                      title="Close drawer (Esc)"
+                    >
+                      <FiX size={18} />
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Scrollable details */}

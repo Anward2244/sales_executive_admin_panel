@@ -1479,24 +1479,6 @@ const PurchaseOrders = () => {
           onResetColumns={() => resetTableColumnVisibility('purchaseOrders')}
           totalCount={filteredOrders.length}
           selectedCount={selectedOrderIds.size}
-          summary={
-            groupBy !== 'none' && groupedData.length > 0 ? (
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 tabular-nums">
-                {groupedData.length}{' '}
-                {groupBy === 'company'
-                  ? groupedData.length === 1
-                    ? 'Company'
-                    : 'Companies'
-                  : groupBy === 'firm'
-                    ? groupedData.length === 1
-                      ? 'Firm'
-                      : 'Firms'
-                    : groupedData.length === 1
-                      ? 'User'
-                      : 'Users'}
-              </span>
-            ) : null
-          }
           extraActions={
             <div className="flex items-center gap-2 flex-wrap">
               {/* Group By Selector */}
@@ -1517,10 +1499,10 @@ const PurchaseOrders = () => {
                         setCurrentPage(1);
                         setCollapsedGroups(new Set());
                       }}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer outline-none focus:outline-none border transition-colors duration-150 ${
                         isActive
-                          ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold border border-blue-500/20'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5'
+                          ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold border-blue-500/20'
+                          : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5'
                       }`}
                       title={`Group data ${opt.label.toLowerCase()}`}
                     >
@@ -1536,7 +1518,7 @@ const PurchaseOrders = () => {
                 <button
                   type="button"
                   onClick={toggleAllGroupsCollapse}
-                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-100 dark:bg-white/5 hover:bg-slate-200/60 dark:hover:bg-white/10 rounded-xl border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-100 dark:bg-white/5 hover:bg-slate-200/60 dark:hover:bg-white/10 rounded-xl border border-slate-200/80 dark:border-white/10 transition-colors duration-150 outline-none focus:outline-none cursor-pointer"
                   title={collapsedGroups.size === groupedData.length ? 'Expand all groups' : 'Collapse all groups'}
                 >
                   {collapsedGroups.size === groupedData.length ? (
